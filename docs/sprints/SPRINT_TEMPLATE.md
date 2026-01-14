@@ -156,7 +156,7 @@ TOOL: [Read | Edit | Bash | etc.]
 git add <modified-files>
 git commit -m "<type>(<scope>): <description>
 
-Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>"
+AI-assisted: Claude Code and Opus"
 ```
 
 **MCP Checkpoint (Optional):**

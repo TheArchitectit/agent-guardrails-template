@@ -302,7 +302,7 @@ git push origin main
 
 <longer description if needed>
 
-Co-Authored-By: <Agent Name> <email>
+Co-Authored-By: <Agent Name>
 ```
 
 ### Commit Types
@@ -323,9 +323,7 @@ Co-Authored-By: <Agent Name> <email>
 **All AI-generated commits MUST include co-author attribution:**
 
 ```
-Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
-Co-Authored-By: GPT-4 <noreply@openai.com>
-Co-Authored-By: Gemini <noreply@google.com>
+AI-assisted: Claude Code and Opus
 ```
 
 ---

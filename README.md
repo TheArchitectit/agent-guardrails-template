@@ -4,6 +4,13 @@
 
 ---
 
+## Authorship / Attribution
+
+- **Maintainer/Author:** TheArchitectit
+- **AI tooling note:** Created with Claude Code and Opus (no emails, no company contact instructions)
+
+---
+
 ## For AI Agents: How to Apply This Template
 
 **If you are an LLM (Claude, GPT, Gemini, LLaMA, etc.) reading this README, follow these instructions to apply these standards to a repository.**
@@ -64,7 +71,7 @@ COMMAND: git commit -m "docs: add agent guardrails and sprint framework
 Added standardized AI agent safety protocols and sprint task templates.
 Applies to all LLMs and automated systems.
 
-Co-Authored-By: [Your Agent Name] <noreply@provider.com>"
+AI-assisted: Claude Code and Opus"
 ```
 
 ### Option B: Create a NEW Repository with Standards
@@ -114,7 +121,7 @@ COMMAND: git commit -m "feat: initial project setup with agent guardrails
 - Agent guardrails and sprint framework included
 - GitHub templates configured
 
-Co-Authored-By: [Your Agent Name] <noreply@provider.com>"
+AI-assisted: Claude Code and Opus"
 
 STEP 6: Create GitHub repo (if requested)
 ────────────────────────────────────────
@@ -327,7 +334,7 @@ OPTIONAL_VAR=default_value   # Description
 
 <longer description if needed>
 
-Co-Authored-By: Your Name <email@example.com>
+AI-assisted: Claude Code and Opus
 ```
 
 Types: `feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `perf`, `security`
@@ -336,7 +343,7 @@ Types: `feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `perf`, `security`
 
 ## License
 
-[Choose your license - MIT, Apache 2.0, etc.]
+BSD-3-Clause - See [LICENSE](LICENSE) file for details.
 
 ---
 

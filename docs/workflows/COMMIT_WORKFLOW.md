@@ -110,7 +110,7 @@ SPRINT-2026-01-14-add-feature.md:
 
 <optional body - explain why, not what>
 
-Co-Authored-By: <Agent Name> <email>
+AI-assisted: Claude Code and Opus
 ```
 
 ### Type Reference
@@ -146,7 +146,7 @@ GOOD:
 **All AI-generated commits MUST include:**
 
 ```
-Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
+AI-assisted: Claude Code and Opus
 ```
 
 Use HEREDOC for proper formatting:
@@ -157,7 +157,7 @@ fix(parser): handle null input gracefully
 
 Added null check to prevent TypeError when input is undefined.
 
-Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
+AI-assisted: Claude Code and Opus
 EOF
 )"
 ```
@@ -263,7 +263,7 @@ Validate: Syntax + tests pass
 git add src/validator.py
 git commit -m "feat(validator): add input validation
 
-Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>"
+AI-assisted: Claude Code and Opus"
     ↓
 TodoWrite: [completed] "Add input validation"
     ↓
@@ -312,7 +312,7 @@ See [MCP_CHECKPOINTING.md](./MCP_CHECKPOINTING.md) for details.
 +------------------------------------------------------------------+
 | MESSAGE FORMAT:                                                   |
 |   <type>(<scope>): <description>                                  |
-|   Co-Authored-By: <Agent> <email>                                 |
+|   AI-assisted: Claude Code and Opus                              |
 +------------------------------------------------------------------+
 | PRE-COMMIT:                                                       |
 |   [ ] Validation passes                                           |

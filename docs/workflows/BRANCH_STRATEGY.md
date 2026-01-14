@@ -163,7 +163,7 @@ git commit -m "hotfix: fix critical issue
 
 Description of what was fixed and why.
 
-Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>"
+AI-assisted: Claude Code and Opus"
 
 # 3. Test thoroughly
 # Run critical tests
