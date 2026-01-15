@@ -13,6 +13,28 @@ This release expands the Agent Guardrails framework to provide universal support
 
 ## What's Changed
 
+### Completion Gate & Validation Loop (NEW)
+
+**Major addition to SPRINT_TEMPLATE.md:**
+
+- **NEW**: Completion Gate (MANDATORY) section that agents must complete before finishing sprints
+- **NEW**: Validation loop with configurable limits (max 3 cycles, 10 min timeout)
+- **NEW**: Language-specific validation commands for 10+ modern stacks:
+  - JavaScript/TypeScript (React, Next.js, Node.js, Vitest, Jest)
+  - Rust (cargo check, clippy, cargo test)
+  - Go (go test, go vet, golangci-lint)
+  - Python (pytest, mypy, ruff, pylint)
+  - Ruby/Rails (RSpec, Rubocop)
+  - Java/Kotlin (Gradle, Maven)
+  - C#/.NET (dotnet build, dotnet test)
+  - Swift (swift build, swiftlint)
+  - Elixir (mix test, credo)
+- **NEW**: CLI-specific notes for Claude Code and OpenCode compatibility
+- **NEW**: Validation loop template for agents to copy/execute
+- **NEW**: Completion report template for standardized output
+
+This addresses the common problem of agents skipping final steps (commits, docs, validation).
+
 ### Agent Guardrails Documentation
 
 **Major restructure of Agent-Specific Guidelines (docs/AGENT_GUARDRAILS.md):**
@@ -42,6 +64,10 @@ The previous model-specific approach required updating the documentation for eac
 ## Full Changelog
 
 ### Added
+- **Completion Gate** - Mandatory validation section in SPRINT_TEMPLATE.md
+- **Validation Loop** - Configurable cycle/time limits to prevent skipped steps
+- **Multi-Language Validation** - Commands for JS/TS, Rust, Go, Python, Ruby, Java, C#, Swift, Elixir
+- **CLI Compatibility Notes** - Specific guidance for Claude Code and OpenCode users
 - Universal Requirements section for all AI systems
 - Category-based agent guidelines (Commercial, Open Source, Multimodal, Reasoning, Agent Frameworks)
 - Model Compatibility Note confirming 30+ model family support
@@ -64,8 +90,9 @@ The previous model-specific approach required updating the documentation for eac
 | File | Change |
 |------|--------|
 | `docs/AGENT_GUARDRAILS.md` | Major restructure of agent guidelines |
-| `INDEX_MAP.md` | Updated date |
-| `HEADER_MAP.md` | Updated line numbers and date |
+| `docs/sprints/SPRINT_TEMPLATE.md` | Added Completion Gate with multi-language validation |
+| `INDEX_MAP.md` | Added validation/completion keywords |
+| `HEADER_MAP.md` | Updated line numbers for all changed docs |
 
 ---
 
