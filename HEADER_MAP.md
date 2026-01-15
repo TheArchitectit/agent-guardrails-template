@@ -22,48 +22,48 @@
 |------|--------|
 | 1 | # Agent Guardrails & Safety Protocols |
 | 9 | ## Applicability |
-| 26 | ## Purpose |
-| 38 | ## CORE PRINCIPLES |
-| 40 | ### The Four Laws of Agent Safety |
-| 64 | ## SAFETY PROTOCOLS (MANDATORY) |
-| 66 | ### Pre-Execution Checklist |
-| 79 | ### Git Safety Rules |
-| 94 | ### Code Safety Rules |
-| 109 | ## GUARDRAILS |
-| 111 | ### HALT CONDITIONS |
-| 134 | ### FORBIDDEN ACTIONS |
-| 179 | ### SCOPE BOUNDARIES |
-| 203 | ## EXECUTION PROTOCOL |
-| 205 | ### Standard Task Flow |
-| 240 | ### Decision Matrix |
-| 254 | ## ROLLBACK PROCEDURES |
-| 256 | ### Immediate Rollback (Uncommitted Changes) |
-| 269 | ### Rollback After Commit (Not Pushed) |
-| 282 | ### Rollback After Push (REQUIRES USER PERMISSION) |
-| 296 | ## COMMIT MESSAGE FORMAT |
-| 308 | ### Commit Types |
-| 321 | ### Co-Author Attribution |
-| 333 | ## ERROR HANDLING PROTOCOLS |
-| 335 | ### Syntax Error After Edit |
-| 345 | ### Test Failure After Edit |
-| 356 | ### Edit Operation Failed |
-| 367 | ### Unknown Error |
-| 379 | ## VERIFICATION CHECKLIST |
-| 402 | ## AGENT-SPECIFIC GUIDELINES |
-| 404 | ### For Claude (Anthropic) |
-| 414 | ### For GPT Models (OpenAI) |
-| 423 | ### For Gemini (Google) |
-| 432 | ### For Open Source Models (LLaMA, Mistral, etc.) |
-| 441 | ### For Autonomous Agents (CrewAI, LangChain, etc.) |
-| 453 | ## AUDIT REQUIREMENTS |
-| 480 | ## ESCALATION PROCEDURES |
-| 482 | ### When to Escalate to Human |
-| 496 | ### How to Escalate |
-| 508 | ## QUICK REFERENCE CARD |
-| 542 | ## COMPLIANCE |
-| 544 | ### Acknowledgment |
-| 552 | ### Reporting Violations |
-| 563 | ## RELATED DOCUMENTS |
+| 27 | ## Purpose |
+| 39 | ## CORE PRINCIPLES |
+| 41 | ### The Four Laws of Agent Safety |
+| 65 | ## SAFETY PROTOCOLS (MANDATORY) |
+| 67 | ### Pre-Execution Checklist |
+| 80 | ### Git Safety Rules |
+| 95 | ### Code Safety Rules |
+| 110 | ## GUARDRAILS |
+| 112 | ### HALT CONDITIONS |
+| 135 | ### FORBIDDEN ACTIONS |
+| 180 | ### SCOPE BOUNDARIES |
+| 204 | ## EXECUTION PROTOCOL |
+| 206 | ### Standard Task Flow |
+| 241 | ### Decision Matrix |
+| 255 | ## ROLLBACK PROCEDURES |
+| 257 | ### Immediate Rollback (Uncommitted Changes) |
+| 270 | ### Rollback After Commit (Not Pushed) |
+| 283 | ### Rollback After Push (REQUIRES USER PERMISSION) |
+| 297 | ## COMMIT MESSAGE FORMAT |
+| 309 | ### Commit Types |
+| 322 | ### Co-Author Attribution |
+| 332 | ## ERROR HANDLING PROTOCOLS |
+| 334 | ### Syntax Error After Edit |
+| 344 | ### Test Failure After Edit |
+| 355 | ### Edit Operation Failed |
+| 366 | ### Unknown Error |
+| 378 | ## VERIFICATION CHECKLIST |
+| 401 | ## AGENT-SPECIFIC GUIDELINES |
+| 403 | ### Universal Requirements (ALL LLMs and AI Agents) |
+| 419 | ### By Category |
+| 473 | ### Model Compatibility Note |
+| 486 | ## AUDIT REQUIREMENTS |
+| 488 | ### All agents MUST maintain logs of: |
+| 500 | ### Logs should include: |
+| 513 | ## ESCALATION PROCEDURES |
+| 515 | ### When to Escalate to Human |
+| 529 | ### How to Escalate |
+| 541 | ## QUICK REFERENCE CARD |
+| 575 | ## COMPLIANCE |
+| 577 | ### Acknowledgment |
+| 585 | ### Reporting Violations |
+| 596 | ## RELATED DOCUMENTS |
 
 ---
 
@@ -394,6 +394,6 @@
 
 ---
 
-**Last Updated:** 2026-01-14
+**Last Updated:** 2026-01-15
 **Status:** Partial - line numbers will be updated as documents are created
 **Note:** Lines marked with `-` are placeholders for documents not yet created

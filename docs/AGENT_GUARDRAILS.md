@@ -1,7 +1,7 @@
 # Agent Guardrails & Safety Protocols
 
-**Version:** 1.0
-**Last Updated:** 2026-01-10
+**Version:** 1.1
+**Last Updated:** 2026-01-15
 **Applies To:** ALL AI agents, LLMs, and automated systems operating on this codebase
 
 ---
@@ -12,9 +12,10 @@ This document is **MANDATORY** for:
 
 | System Type | Examples | Binding? |
 |-------------|----------|----------|
-| **Large Language Models** | Claude, GPT-4, Gemini, LLaMA, Mistral, Qwen, DeepSeek | YES |
-| **AI Coding Assistants** | Claude Code, GitHub Copilot, Cursor, Cody, Aider | YES |
-| **Autonomous Agents** | AutoGPT, AgentGPT, CrewAI, LangChain agents | YES |
+| **Large Language Models** | Claude, GPT-4/o1/o3, Gemini, LLaMA, Mistral, Qwen, DeepSeek, Cohere, Phi, Falcon, and 30+ other model families | YES |
+| **AI Coding Assistants** | Claude Code, GitHub Copilot, Cursor, Cody, Aider, Continue, Windsurf, and others | YES |
+| **Autonomous Agents** | AutoGPT, AgentGPT, CrewAI, LangChain, LangGraph, Semantic Kernel agents | YES |
+| **Reasoning Models** | o1, o3, DeepSeek-R1, and other chain-of-thought models | YES |
 | **CI/CD Bots** | Dependabot, Renovate, automated PR bots | YES |
 | **Custom Agents** | Any agent built on this codebase (specialists, operators, swarm) | YES |
 | **Human Developers** | Recommended best practices | RECOMMENDED |
@@ -399,52 +400,86 @@ PRE-COMPLETION CHECKLIST:
 
 ## AGENT-SPECIFIC GUIDELINES
 
-### For Claude (Anthropic)
+### Universal Requirements (ALL LLMs and AI Agents)
+
+These guidelines apply to **every** AI system, regardless of provider or architecture:
 
 ```
-- Follow Constitutional AI principles
-- Refuse harmful requests
-- Ask for clarification when ambiguous
-- Use tool calls appropriately
-- Maintain conversation context
+MANDATORY FOR ALL:
+- Follow your platform's responsible AI guidelines
+- Respect safety filters and guardrails
+- Handle context/token limits gracefully
+- Use tool/function calling appropriately when available
+- Report capability limitations honestly
+- Ask for clarification when uncertain
+- Refuse harmful or destructive requests
+- Maintain audit trails of actions
 ```
 
-### For GPT Models (OpenAI)
+### By Category
+
+#### Commercial API-Based Models
+*(Claude, GPT, Gemini, Command R, etc.)*
 
 ```
-- Follow usage policies
-- Respect safety guidelines
-- Use function calling appropriately
-- Handle context limits gracefully
+- Adhere to provider usage policies
+- Respect rate limits and quotas
+- Use official APIs and SDKs
+- Handle API errors gracefully
 ```
 
-### For Gemini (Google)
-
-```
-- Follow responsible AI guidelines
-- Respect safety filters
-- Handle multimodal inputs safely
-- Manage context appropriately
-```
-
-### For Open Source Models (LLaMA, Mistral, etc.)
+#### Open Source / Self-Hosted Models
+*(LLaMA, Mistral, Qwen, DeepSeek, Phi, Falcon, etc.)*
 
 ```
 - Follow local safety configurations
-- Respect system prompts
-- Handle resource limits
-- Report capability limitations
+- Respect system prompts fully
+- Handle resource/memory limits
+- Configure appropriate guardrails
 ```
 
-### For Autonomous Agents (CrewAI, LangChain, etc.)
+#### Multimodal Models
+*(GPT-4V, Gemini Pro Vision, Claude 3, LLaVA, etc.)*
+
+```
+- Handle image/audio/video inputs safely
+- Do not process potentially harmful media
+- Respect privacy in visual content
+- Validate file types before processing
+```
+
+#### Reasoning / Chain-of-Thought Models
+*(o1, o3, DeepSeek-R1, etc.)*
+
+```
+- Allow sufficient reasoning time
+- Do not interrupt reasoning chains
+- Validate final outputs, not intermediate steps
+- Handle extended context requirements
+```
+
+#### Agent Frameworks
+*(CrewAI, LangChain, AutoGPT, LangGraph, Semantic Kernel, etc.)*
 
 ```
 - Implement proper task decomposition
-- Respect iteration limits
+- Respect iteration and recursion limits
 - Handle agent failures gracefully
-- Maintain audit logs
+- Maintain comprehensive audit logs
 - Implement proper stopping conditions
+- Validate inter-agent communications
 ```
+
+### Model Compatibility Note
+
+This guardrails framework is designed to work with:
+
+- **30+ major LLM families** including Claude, GPT, Gemini, LLaMA, Mistral, Qwen, DeepSeek, Cohere, Phi, Falcon, and others
+- **All future models** that follow standard AI assistant patterns
+- **Custom fine-tuned models** based on any architecture
+- **Multi-agent systems** regardless of orchestration framework
+
+If you are an AI system not explicitly listed, these guardrails still apply to you.
 
 ---
 
@@ -531,7 +566,7 @@ ALWAYS escalate if:
 +------------------------------------------------------------------+
 | ROLLBACK: git checkout HEAD -- <file>                             |
 +------------------------------------------------------------------+
-| APPLIES TO: Claude, GPT, Gemini, LLaMA, Mistral, all agents      |
+| APPLIES TO: ALL LLMs, AI assistants, coding agents, and automated systems |
 +------------------------------------------------------------------+
 ```
 
