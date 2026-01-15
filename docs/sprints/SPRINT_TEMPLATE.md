@@ -192,6 +192,264 @@ REPORT FORMAT:
 
 ---
 
+## COMPLETION GATE (MANDATORY)
+
+**This section MUST be completed before marking the sprint done.**
+**Compatible with:** Claude Code, OpenCode, and all LLM agents
+
+### Validation Loop Rules
+
+```
+MAX_CYCLES: 3
+MAX_TIME: 10 minutes
+EXIT_CONDITIONS:
+  - All BLOCKING items pass, OR
+  - MAX_CYCLES reached (report blockers), OR
+  - MAX_TIME exceeded (report status)
+
+LOOP BEHAVIOR:
+  1. Run all validation checks
+  2. If BLOCKING items fail → fix and re-run (cycle++)
+  3. If only NON-BLOCKING items fail → note and proceed
+  4. Report final status to user
+```
+
+### Core Validation Checklist
+
+**Run these checks. Loop until all BLOCKING items pass or limits reached.**
+
+| Check | Command | Pass Condition | Blocking? | Status |
+|-------|---------|----------------|-----------|--------|
+| **Files Saved** | `git status` | No unexpected untracked files | YES | [ ] |
+| **Changes Staged** | `git diff --cached --stat` | Target files staged | YES | [ ] |
+| **Syntax Valid** | See language table below | Exit code 0 | YES | [ ] |
+| **Tests Pass** | See language table below | Exit code 0 | YES | [ ] |
+| **Committed** | `git log -1 --oneline` | Shows sprint commit | YES | [ ] |
+| **Docs Updated** | Manual check | INDEX_MAP.md current (if applicable) | NO | [ ] |
+| **No Secrets** | `git diff --cached` | No API keys, tokens, passwords | YES | [ ] |
+
+**Cycle:** ___ / 3
+**Time Started:** ___:___
+**Current Status:** VALIDATING | PASSED | BLOCKED | TIMEOUT
+
+### Language-Specific Validation Commands
+
+**Select the appropriate commands for your stack:**
+
+#### JavaScript / TypeScript (React, Next.js, Node.js)
+
+```bash
+# Syntax/Type Check
+npx tsc --noEmit                    # TypeScript projects
+npx eslint . --ext .js,.jsx,.ts,.tsx  # Linting
+
+# Tests
+npm test                            # Jest/Vitest (default)
+npm run test:unit                   # Unit tests only
+npx vitest run                      # Vitest
+npx jest --passWithNoTests          # Jest with no-fail on empty
+
+# Build Verification
+npm run build                       # Production build
+npx next build                      # Next.js specific
+```
+
+#### Rust
+
+```bash
+# Syntax/Type Check
+cargo check                         # Fast syntax check
+cargo clippy -- -D warnings         # Linting (strict)
+
+# Tests
+cargo test                          # All tests
+cargo test --lib                    # Library tests only
+cargo test --doc                    # Doc tests
+
+# Build Verification
+cargo build --release               # Release build
+```
+
+#### Go
+
+```bash
+# Syntax/Type Check
+go build ./...                      # Compile check
+go vet ./...                        # Static analysis
+golangci-lint run                   # Comprehensive linting
+
+# Tests
+go test ./...                       # All tests
+go test -v ./...                    # Verbose
+go test -race ./...                 # Race detection
+
+# Build Verification
+go build -o /dev/null ./...         # Build without output
+```
+
+#### Python
+
+```bash
+# Syntax/Type Check
+python -m py_compile *.py           # Syntax check
+python -m mypy .                    # Type checking
+ruff check .                        # Fast linting (2023+)
+pylint **/*.py                      # Traditional linting
+
+# Tests
+pytest                              # Default
+pytest -v                           # Verbose
+python -m pytest --tb=short         # Short traceback
+
+# Build Verification
+pip install -e . --dry-run          # Dry run install
+```
+
+#### Ruby / Rails
+
+```bash
+# Syntax Check
+ruby -c app/**/*.rb                 # Syntax check
+bundle exec rubocop                 # Linting
+
+# Tests
+bundle exec rspec                   # RSpec
+bundle exec rails test              # Rails default
+
+# Build Verification
+bundle exec rails assets:precompile # Asset build
+```
+
+#### Java / Kotlin (Gradle/Maven)
+
+```bash
+# Syntax/Compile
+./gradlew compileJava               # Gradle
+./gradlew compileKotlin             # Kotlin
+mvn compile                         # Maven
+
+# Tests
+./gradlew test                      # Gradle
+mvn test                            # Maven
+
+# Build
+./gradlew build                     # Full build
+mvn package                         # Maven package
+```
+
+#### C# / .NET
+
+```bash
+# Syntax/Build
+dotnet build                        # Build
+dotnet build --no-restore           # Skip restore
+
+# Tests
+dotnet test                         # All tests
+dotnet test --no-build              # Skip rebuild
+
+# Publish
+dotnet publish -c Release           # Release build
+```
+
+#### Swift
+
+```bash
+# Syntax/Build
+swift build                         # Build
+swiftlint                           # Linting
+
+# Tests
+swift test                          # Run tests
+
+# Release
+swift build -c release              # Release build
+```
+
+#### Elixir
+
+```bash
+# Syntax/Compile
+mix compile --warnings-as-errors    # Strict compile
+mix credo --strict                  # Linting
+
+# Tests
+mix test                            # All tests
+
+# Build
+mix release                         # Release build
+```
+
+### CLI-Specific Notes
+
+#### For Claude Code Users
+
+```
+- Use TodoWrite to track validation progress
+- Use Bash tool for running validation commands
+- If validation fails, Claude Code will show errors inline
+- Hooks can automate pre-commit validation (see hooks config)
+```
+
+#### For OpenCode Users
+
+```
+- Use /run or direct shell for validation commands
+- Check exit codes explicitly: echo $?
+- Use /diff to review changes before commit
+- OpenCode supports similar tool patterns to Claude Code
+```
+
+### Validation Loop Template
+
+**Copy and execute this validation sequence:**
+
+```
+VALIDATION CYCLE 1:
+────────────────────
+
+1. [ ] git status                    → Clean? ___
+2. [ ] [syntax check command]        → Pass?  ___
+3. [ ] [test command]                → Pass?  ___
+4. [ ] git diff --cached             → No secrets? ___
+5. [ ] git log -1 (after commit)     → Committed? ___
+
+RESULT: ___ BLOCKING issues found
+
+If BLOCKING > 0 and CYCLE < 3:
+  → Fix issues
+  → Increment CYCLE
+  → Re-run checks
+
+If BLOCKING == 0:
+  → PROCEED to completion report
+```
+
+### Completion Report Template
+
+**After validation passes, report:**
+
+```
+## Completion Gate: PASSED ✓
+
+**Validation Summary:**
+- Cycles Used: X / 3
+- Time Elapsed: X minutes
+- Blocking Issues: 0
+- Non-Blocking Notes: [list any]
+
+**Checks Passed:**
+- [x] Files saved and staged
+- [x] Syntax valid
+- [x] Tests pass
+- [x] Committed
+- [x] No secrets exposed
+
+**Ready for:** Push / Review / Merge
+```
+
+---
+
 ## ACCEPTANCE CRITERIA
 
 | # | Criterion | Test | Pass Condition |
@@ -253,4 +511,4 @@ echo "Rollback complete. File restored to original state."
 **Created:** YYYY-MM-DD
 **Author:** [Name/Agent]
 **Archive Date:** YYYY-MM-DD
-**Version:** 1.0
+**Version:** 1.1

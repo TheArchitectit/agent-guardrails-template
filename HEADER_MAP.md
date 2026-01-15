@@ -75,19 +75,27 @@
 | 12 | ## SAFETY PROTOCOLS (MANDATORY) |
 | 14 | ### Pre-Execution Safety Checks |
 | 24 | ### Guardrails Reference |
-| 30 | ## PROBLEM STATEMENT |
-| 44 | ## SCOPE BOUNDARY |
-| 61 | ## EXECUTION DIRECTIONS |
-| 63 | ### Overview |
-| 82 | ## STEP-BY-STEP EXECUTION |
-| 84 | ### STEP 1: [Title] |
-| 101 | ### STEP 2: [Title] |
-| 123 | ### STEP 3: [Title] |
-| 143 | ### DONE: Report to User |
-| 173 | ## ACCEPTANCE CRITERIA |
-| 183 | ## ROLLBACK PROCEDURE |
-| 198 | ## REFERENCE |
-| 204 | ## QUICK REFERENCE CARD |
+| 28 | ### MCP Checkpoint (Optional) |
+| 39 | ## PROBLEM STATEMENT |
+| 53 | ## SCOPE BOUNDARY |
+| 70 | ## EXECUTION DIRECTIONS |
+| 72 | ### Overview |
+| 91 | ## STEP-BY-STEP EXECUTION |
+| 93 | ### STEP 1: [Title] |
+| 110 | ### STEP 2: [Title] |
+| 132 | ### STEP 3: [Title] |
+| 152 | ### DONE: Commit and Report |
+| 195 | ## COMPLETION GATE (MANDATORY) |
+| 200 | ### Validation Loop Rules |
+| 217 | ### Core Validation Checklist |
+| 235 | ### Language-Specific Validation Commands |
+| 383 | ### CLI-Specific Notes |
+| 403 | ### Validation Loop Template |
+| 428 | ### Completion Report Template |
+| 453 | ## ACCEPTANCE CRITERIA |
+| 463 | ## ROLLBACK PROCEDURE |
+| 478 | ## REFERENCE |
+| 484 | ## QUICK REFERENCE CARD |
 
 ---
 

@@ -25,6 +25,8 @@
 | secrets | SECRETS_MANAGEMENT.md | .github/ | GitHub Secrets setup |
 | sprint | SPRINT_TEMPLATE.md | docs/sprints/ | Sprint task template |
 | sprint-guide | SPRINT_GUIDE.md | docs/sprints/ | How to write sprints |
+| validation | SPRINT_TEMPLATE.md | docs/sprints/ | Completion gate & validation loop |
+| completion | SPRINT_TEMPLATE.md | docs/sprints/ | Pre-completion checklist |
 
 ---
 
