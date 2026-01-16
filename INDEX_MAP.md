@@ -13,6 +13,7 @@
 | test-prod | TEST_PRODUCTION_SEPARATION.md | docs/standards/ | Test/production isolation (MANDATORY) |
 | execution | AGENT_EXECUTION.md | docs/workflows/ | Standard execution protocol |
 | escalation | AGENT_ESCALATION.md | docs/workflows/ | Audit & escalation procedures |
+| how-to-apply | HOW_TO_APPLY.md | docs/ | How to apply guardrails to repos |
 | commit | COMMIT_WORKFLOW.md | docs/workflows/ | When/how to commit |
 | push | GIT_PUSH_PROCEDURES.md | docs/workflows/ | Push safety procedures |
 | branch | BRANCH_STRATEGY.md | docs/workflows/ | Git branching conventions |
@@ -41,11 +42,11 @@
 | **TEST_PRODUCTION_SEPARATION.md** | Test/production isolation standards (MANDATORY) | Before ANY deployment |
 | **AGENT_EXECUTION.md** | Execution protocol and rollback procedures | During task execution |
 | **AGENT_ESCALATION.md** | Audit requirements and escalation procedures | When uncertain or errors occur |
+| **HOW_TO_APPLY.md** | how to apply guardrails to repositories | When setting up agent guardrails |
 | **TESTING_VALIDATION.md** | Validation functions and git diff verification | Before committing changes |
 | **COMMIT_WORKFLOW.md** | Guidelines for commits between to-dos | After completing each task |
 | **GIT_PUSH_PROCEDURES.md** | Pre-push checklist and safety rules | Before pushing to remote |
 | **BRANCH_STRATEGY.md** | Git branching conventions (feature/hotfix/release) | When creating branches |
-| **CODE_REVIEW.md** | Agent self-review and human escalation | After code changes |
 | **ROLLBACK_PROCEDURES.md** | Recovery commands for all scenarios | When errors occur |
 | **MCP_CHECKPOINTING.md** | MCP server checkpoint integration | Before/after critical tasks |
 | **DOCUMENTATION_UPDATES.md** | Post-sprint documentation procedures | After completing sprints |
@@ -103,6 +104,7 @@ agent-guardrails-template/
 ├── .claudeignore             # Token-saving ignores
 ├── docs/
 │   ├── AGENT_GUARDRAILS.md   # Core safety (MANDATORY)
+│   ├── HOW_TO_APPLY.md       # How to apply to repos (NEW)
 │   ├── workflows/
 │   │   ├── INDEX.md
 │   │   ├── AGENT_EXECUTION.md       # Execution protocol
@@ -174,5 +176,5 @@ agent-guardrails-template/
 ---
 
 **Last Updated:** 2026-01-16
-**Document Count:** 20 (excluding INDEX files)
-**Line Count:** ~150
+**Document Count:** 21 (excluding INDEX files)
+**Line Count:** ~170

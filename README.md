@@ -13,152 +13,14 @@
 
 ## For AI Agents: How to Apply This Template
 
-**If you are an LLM (Claude, GPT, Gemini, LLaMA, etc.) reading this README, follow these instructions to apply these standards to a repository.**
+**If you are an LLM (Claude, GPT, Gemini, LLaMA, etc.) reading this README, see [docs/HOW_TO_APPLY.md](docs/HOW_TO_APPLY.md) for detailed instructions and ready-to-use prompts.**
 
-### Option A: Apply to an EXISTING Repository
+**Quick Start Options:**
 
-Execute these steps in order:
-
-```
-STEP 1: Create docs directory structure
-────────────────────────────────
-ACTION: Create directories if they don't exist
-COMMAND: mkdir -p docs/sprints/archive
-
-STEP 1.5: Copy Claude Configuration
-────────────────────────────────
-ACTION: Read CLAUDE.md from this template
-ACTION: Write to TARGET_REPO/CLAUDE.md
-
-ACTION: Read .claudeignore from this template
-ACTION: Write to TARGET_REPO/.claudeignore
-
-STEP 2: Copy AGENT_GUARDRAILS.md
-────────────────────────────────────────
-ACTION: Read docs/AGENT_GUARDRAILS.md from this template
-ACTION: Write to TARGET_REPO/docs/AGENT_GUARDRAILS.md
-
-STEP 3: Copy Sprint Framework
-────────────────────────────────────────
-ACTION: Read docs/sprints/SPRINT_TEMPLATE.md from this template
-ACTION: Write to TARGET_REPO/docs/sprints/SPRINT_TEMPLATE.md
-
-ACTION: Read docs/sprints/SPRINT_GUIDE.md from this template
-ACTION: Write to TARGET_REPO/docs/sprints/SPRINT_GUIDE.md
-
-ACTION: Read docs/sprints/INDEX.md from this template
-ACTION: Write to TARGET_REPO/docs/sprints/INDEX.md
-
-STEP 4: Update target README.md
-────────────────────────────────────────
-ACTION: Add to Documentation section:
-| [**Agent Guardrails**](docs/AGENT_GUARDRAILS.md) | **MANDATORY** safety protocols for ALL AI agents |
-
-ACTION: Add to Contributing section:
-> **AI Agents:** Before contributing, read [Agent Guardrails](docs/AGENT_GUARDRAILS.md)
-
-STEP 5: Copy GitHub templates (optional)
-────────────────────────────────────────
-ACTION: Create .github directory if needed
-ACTION: Copy .github/PULL_REQUEST_TEMPLATE.md
-ACTION: Copy .github/ISSUE_TEMPLATE/bug_report.md
-
-STEP 6: Commit changes
-────────────────────────────────────────
-COMMAND: git add docs/ .github/
-COMMAND: git commit -m "docs: add agent guardrails and sprint framework
-
-Added standardized AI agent safety protocols and sprint task templates.
-Applies to all LLMs and automated systems.
-
-AI-assisted: Claude Code and Opus"
-```
-
-### Option B: Create a NEW Repository with Standards
-
-Execute these steps in order:
-
-```
-STEP 1: Create new repository
-────────────────────────────────────────
-COMMAND: mkdir new-project && cd new-project
-COMMAND: git init
-
-STEP 2: Create directory structure
-────────────────────────────────────────
-COMMAND: mkdir -p src tests docs/sprints/archive .github/ISSUE_TEMPLATE
-
-STEP 3: Copy all template files
-────────────────────────────────
-FILES TO COPY:
-  - INDEX_MAP.md (navigation map)
-  - HEADER_MAP.md (section lookup)
-  - CLAUDE.md
-  - .claudeignore
-  - docs/AGENT_GUARDRAILS.md
-  - docs/workflows/ (all 8 files)
-  - docs/standards/ (all 4 files)
-  - docs/sprints/SPRINT_TEMPLATE.md
-  - docs/sprints/SPRINT_GUIDE.md
-  - docs/sprints/INDEX.md
-  - .github/SECRETS_MANAGEMENT.md
-  - .github/workflows/ (all 3 files)
-  - .github/PULL_REQUEST_TEMPLATE.md
-  - .github/ISSUE_TEMPLATE/bug_report.md
-  - .gitignore
-
-STEP 4: Create README.md
-────────────────────────────────────────
-ACTION: Use the PROJECT README TEMPLATE section below
-ACTION: Customize for the specific project
-
-STEP 5: Initial commit
-────────────────────────────────────────
-COMMAND: git add -A
-COMMAND: git commit -m "feat: initial project setup with agent guardrails
-
-- Project structure initialized
-- Agent guardrails and sprint framework included
-- GitHub templates configured
-
-AI-assisted: Claude Code and Opus"
-
-STEP 6: Create GitHub repo (if requested)
-────────────────────────────────────────
-COMMAND: gh repo create PROJECT_NAME --private --source=. --push
-```
-
-### Verification Checklist
-
-After applying the template, verify:
-
-```
-NAVIGATION MAPS:
-[ ] INDEX_MAP.md exists at root
-[ ] HEADER_MAP.md exists at root
-
-CORE DOCUMENTATION:
-[ ] docs/AGENT_GUARDRAILS.md exists and is complete
-[ ] docs/workflows/ contains 8 workflow documents
-[ ] docs/standards/ contains 4 standards documents
-[ ] docs/sprints/SPRINT_TEMPLATE.md exists
-[ ] docs/sprints/SPRINT_GUIDE.md exists
-[ ] docs/sprints/INDEX.md exists
-
-GITHUB INTEGRATION:
-[ ] .github/SECRETS_MANAGEMENT.md exists
-[ ] .github/workflows/ contains 3 CI workflows
-[ ] .github/PULL_REQUEST_TEMPLATE.md exists
-
-PROJECT FILES:
-[ ] CLAUDE.md configured for project
-[ ] README.md links to INDEX_MAP.md and Agent Guardrails
-[ ] .gitignore exists
-[ ] All docs under 500 lines
-```
-
----
-
+- **Option A:** Apply to an **existing repository** → [docs/HOW_TO_APPLY.md#option-a](docs/HOW_TO_APPLY.md#option-a-apply-to-an-existing-repository)
+- **Option B:** Use **example AI agent prompts** → [docs/HOW_TO_APPLY.md#option-b](docs/HOW_TO_APPLY.md#option-b-example-ai-agent-prompts)
+- **Option C:** Create a **NEW repository** → [docs/HOW_TO_APPLY.md#option-c](docs/HOW_TO_APPLY.md#option-c-create-a-new-repository-with-standards)
+- **Option D:** **Migrate existing documentation** → [docs/HOW_TO_APPLY.md#option-d](docs/HOW_TO_APPLY.md#option-d-migrate-existing-documentation-to-guardrails-structure)
 ## Template Contents
 
 ### Files Included
@@ -171,9 +33,10 @@ PROJECT FILES:
 | `CLAUDE.md` | Optimized context for Claude Code CLI | Recommended |
 | `.claudeignore` | Token-saving ignore rules | Recommended |
 | **Core Documentation** | | |
-| `docs/AGENT_GUARDRAILS.md` | Safety protocols for all AI agents | **YES** |
-| `docs/workflows/*.md` | 8 workflow documents | **YES** |
-| `docs/standards/*.md` | 4 standards documents | **YES** |
+| `docs/AGENT_GUARDRAILS.md` | Core guardrails (MANDATORY) | **YES** |
+| `docs/standards/TEST_PRODUCTION_SEPARATION.md` | Test/production isolation (MANDATORY) | **YES** |
+| `docs/workflows/*.md` | 10 workflow documents | **YES** |
+| `docs/standards/*.md` | 5 standards documents | **YES** |
 | `docs/sprints/*.md` | Sprint framework | **YES** |
 | **GitHub Integration** | | |
 | `.github/SECRETS_MANAGEMENT.md` | GitHub Secrets guide | Recommended |
