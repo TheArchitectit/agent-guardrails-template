@@ -36,6 +36,11 @@ This document defines the code review process for AI agents, including self-revi
 [ ] No command injection vulnerabilities
 [ ] Input validation present where needed
 [ ] No sensitive data logged or exposed
+[ ] Test code does not access production database
+[ ] Production code does not access test database
+[ ] Test users not present in production code
+[ ] Production credentials not in test files
+[ ] Separate test/production environments verified
 ```
 
 ### Functionality
@@ -83,6 +88,9 @@ MANDATORY HUMAN REVIEW:
 [ ] Infrastructure/deployment changes
 [ ] Changes to security configurations
 [ ] Code affecting compliance (GDPR, HIPAA, etc.)
+[ ] Test/production separation unclear
+[ ] Database connection strings not environment-specific
+[ ] Mixed test/production code
 [ ] Any change you're uncertain about
 ```
 
@@ -326,11 +334,13 @@ APPROVED → MERGE
 |   [ ] No secrets in code                                          |
 |   [ ] Only expected files changed                                 |
 |   [ ] Style matches existing code                                 |
+|   [ ] Test/production separation verified                         |
 +------------------------------------------------------------------+
 | REQUEST HUMAN REVIEW FOR:                                         |
 |   • Security changes                                              |
 |   • Database changes                                              |
 |   • Payment code                                                  |
+|   • Test/production separation unclear                            |
 |   • Any uncertainty                                               |
 +------------------------------------------------------------------+
 | ESCALATION:                                                       |

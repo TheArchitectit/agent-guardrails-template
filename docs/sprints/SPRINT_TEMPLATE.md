@@ -18,6 +18,9 @@
 | **READ FIRST** | NEVER edit a file without reading it first | [ ] |
 | **SCOPE LOCK** | Only modify files explicitly in scope | [ ] |
 | **NO FEATURE CREEP** | Do NOT add features or "improve" unrelated code | [ ] |
+| **PRODUCTION FIRST** | Production code created BEFORE test code | [ ] |
+| **TEST/PROD SEPARATION** | Test infrastructure is separate from production | [ ] |
+| **ASK IF UNCERTAIN** | If test/production boundary unclear, ask user | [ ] |
 | **BACKUP AWARENESS** | Know the rollback command before editing | [ ] |
 | **TEST BEFORE COMMIT** | All tests must pass before committing | [ ] |
 
@@ -224,9 +227,14 @@ LOOP BEHAVIOR:
 | **Changes Staged** | `git diff --cached --stat` | Target files staged | YES | [ ] |
 | **Syntax Valid** | See language table below | Exit code 0 | YES | [ ] |
 | **Tests Pass** | See language table below | Exit code 0 | YES | [ ] |
+| **Production Code** | Manual check | Production code exists | YES | [ ] |
+| **Test Infrastructure** | Manual check | Test infrastructure is separate | YES | [ ] |
+| **Test Environment** | Manual check | Test environment isolated | YES | [ ] |
 | **Committed** | `git log -1 --oneline` | Shows sprint commit | YES | [ ] |
 | **Docs Updated** | Manual check | INDEX_MAP.md current (if applicable) | NO | [ ] |
 | **No Secrets** | `git diff --cached` | No API keys, tokens, passwords | YES | [ ] |
+| **No Prod Creds in Tests** | `grep -i "prod" test/*` | No production credentials in test files | YES | [ ] |
+| **No Test Creds in Prod** | `grep -i "test" src/*` | No test credentials in production code | YES | [ ] |
 
 **Cycle:** ___ / 3
 **Time Started:** ___:___
@@ -494,13 +502,23 @@ echo "Rollback complete. File restored to original state."
 | SAFETY:                                                          |
 |   - Read before edit                                             |
 |   - Single file only                                             |
+|   - Production code CREATED FIRST                                |
+|   - Test/production infrastructure SEPARATE                       |
 |   - Test before commit                                           |
 |   - No push without permission                                   |
++------------------------------------------------------------------+
+| TEST/PRODUCTION SEPARATION:                                      |
+|   - Production code BEFORE test code                             |
+|   - Separate database instances                                  |
+|   - Separate service endpoints                                   |
+|   - Separate user accounts                                       |
+|   - AKS USER if uncertain                                        |
 +------------------------------------------------------------------+
 | HALT IF:                                                         |
 |   - Conditions don't match                                       |
 |   - Any check fails                                              |
 |   - Uncertain about anything                                     |
+|   - Test/production boundary unclear                             |
 +------------------------------------------------------------------+
 | ROLLBACK: git checkout HEAD -- [file]                            |
 +------------------------------------------------------------------+

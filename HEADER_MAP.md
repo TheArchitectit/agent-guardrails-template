@@ -29,41 +29,112 @@
 | 67 | ### Pre-Execution Checklist |
 | 80 | ### Git Safety Rules |
 | 95 | ### Code Safety Rules |
-| 110 | ## GUARDRAILS |
-| 112 | ### HALT CONDITIONS |
-| 135 | ### FORBIDDEN ACTIONS |
-| 180 | ### SCOPE BOUNDARIES |
-| 204 | ## EXECUTION PROTOCOL |
-| 206 | ### Standard Task Flow |
-| 241 | ### Decision Matrix |
-| 255 | ## ROLLBACK PROCEDURES |
-| 257 | ### Immediate Rollback (Uncommitted Changes) |
-| 270 | ### Rollback After Commit (Not Pushed) |
-| 283 | ### Rollback After Push (REQUIRES USER PERMISSION) |
-| 297 | ## COMMIT MESSAGE FORMAT |
-| 309 | ### Commit Types |
-| 322 | ### Co-Author Attribution |
-| 332 | ## ERROR HANDLING PROTOCOLS |
-| 334 | ### Syntax Error After Edit |
-| 344 | ### Test Failure After Edit |
-| 355 | ### Edit Operation Failed |
-| 366 | ### Unknown Error |
-| 378 | ## VERIFICATION CHECKLIST |
-| 401 | ## AGENT-SPECIFIC GUIDELINES |
-| 403 | ### Universal Requirements (ALL LLMs and AI Agents) |
-| 419 | ### By Category |
-| 473 | ### Model Compatibility Note |
-| 486 | ## AUDIT REQUIREMENTS |
-| 488 | ### All agents MUST maintain logs of: |
-| 500 | ### Logs should include: |
-| 513 | ## ESCALATION PROCEDURES |
-| 515 | ### When to Escalate to Human |
-| 529 | ### How to Escalate |
-| 541 | ## QUICK REFERENCE CARD |
-| 575 | ## COMPLIANCE |
-| 577 | ### Acknowledgment |
-| 585 | ### Reporting Violations |
-| 596 | ## RELATED DOCUMENTS |
+| 108 | ### Test/Production Separation Rules (MANDATORY) |
+| 117 | ## GUARDRAILS |
+| 119 | ### HALT CONDITIONS |
+| 137 | ### FORBIDDEN ACTIONS |
+| 190 | ### SCOPE BOUNDARIES |
+| 215 | ## QUICK REFERENCE |
+| 242 | ## RELATED DOCUMENTS |
+
+---
+
+## docs/standards/TEST_PRODUCTION_SEPARATION.md
+
+| Line | Header |
+|------|--------|
+| 1 | # Test/Production Separation Standards |
+| 9 | ## Overview |
+| 16 | ## CORE MANDATORY RULES |
+| 18 | ### The Three Laws of Test/Production Separation |
+| 28 | ### Mandatory Pre-Code Checklist |
+| 41 | ## ENVIRONMENT SEPARATION REQUIREMENTS |
+| 43 | ### Database Separation |
+| 57 | ### Service Separation |
+| 82 | ### User Account Separation |
+| 107 | ## CODE CREATION SEQUENCE |
+| 109 | ### Mandatory Order of Operations |
+| 131 | ## TEST CODE LABELING REQUIREMENTS |
+| 133 | ### When to Label vs Remove |
+| 144 | ### Labeling Standards |
+| 159 | ## UNCERTAINTY HANDLING PROTOCOL |
+| 161 | ### Mandatory Ask Triggers |
+| 173 | ### Ask Template |
+| 184 | ### Example Scenarios |
+| 214 | ## VERIFICATION CHECKLISTS |
+| 216 | ### Pre-Commit Verification |
+| 228 | ### Pre-Push Verification |
+| 243 | ### CI/CD Blocking Checks |
+| 258 | ## EXAMPLES AND PATTERNS |
+| 260 | ### Good Pattern: Environment-Specific Config |
+| 281 | ### Good Pattern: Environment Loading |
+| 293 | ### Anti-Pattern: Hardcoded Production URLs |
+| 302 | ### Good Pattern: Environment Variable Loading |
+| 313 | ## BLOCKING VIOLATIONS |
+| 315 | ### Immediate Halt Conditions |
+| 330 | ### Notification Protocol |
+| 340 | ## QUICK REFERENCE |
+
+---
+
+## docs/workflows/AGENT_EXECUTION.md
+
+| Line | Header |
+|------|--------|
+| 1 | # Agent Execution Protocol |
+| 9 | ## Overview |
+| 16 | ## EXECUTION PROTOCOL |
+| 18 | ### Standard Task Flow |
+| 43 | ### Decision Matrix |
+| 51 | ## ROLLBACK PROCEDURES |
+| 53 | ### Immediate Rollback (Uncommitted Changes) |
+| 64 | ### Rollback After Commit (Not Pushed) |
+| 75 | ### Rollback After Push (REQUIRES USER PERMISSION) |
+| 87 | ### Database Rollback Considerations |
+| 99 | ### Service Rollback Procedures |
+| 111 | ## COMMIT MESSAGE FORMAT |
+| 113 | ### Format Template |
+| 121 | ### Commit Types |
+| 130 | ### Good vs Bad Messages |
+| 143 | ### Co-Author Attribution |
+| 153 | ## ERROR HANDLING PROTOCOLS |
+| 155 | ### Syntax Error After Edit |
+| 163 | ### Test Failure After Edit |
+| 173 | ### Edit Operation Failed |
+| 182 | ### Unknown Error |
+| 192 | ### Database Error |
+| 206 | ### Service Error |
+| 221 | ## VERIFICATION CHECKLIST |
+| 223 | ### Before Marking Task Complete |
+| 238 | ### Pre-Commit Verification |
+| 247 | ### Post-Commit Verification |
+| 257 | ## QUICK REFERENCE |
+
+---
+
+## docs/workflows/AGENT_ESCALATION.md
+
+| Line | Header |
+|------|--------|
+| 1 | # Agent Escalation & Guidelines |
+| 9 | ## Overview |
+| 16 | ## AUDIT REQUIREMENTS |
+| 18 | ### All Agents MUST Maintain Logs |
+| 58 | ### Log Format Standard |
+| 81 | ### Audit Log Storage |
+| 92 | ## ESCALATION PROCEDURES |
+| 94 | ### When to Escalate to Human |
+| 108 | ### How to Escalate |
+| 136 | ### Escalation Scenarios |
+| 164 | ## AGENT-SPECIFIC GUIDELINES |
+| 166 | ### Universal Requirements (ALL LLMs and AI Agents) |
+| 176 | ### By Category |
+| 189 | ### Model Compatibility Note |
+| 202 | ## COMPLIANCE |
+| 204 | ### Acknowledgment |
+| 212 | ### Reporting Violations |
+| 225 | ### Violation Categories |
+| 236 | ## QUICK REFERENCE |
 
 ---
 

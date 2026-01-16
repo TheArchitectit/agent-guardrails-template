@@ -1,7 +1,7 @@
 # Agent Guardrails & Safety Protocols
 
-**Version:** 1.1
-**Last Updated:** 2026-01-15
+**Version:** 1.2
+**Last Updated:** 2026-01-16
 **Applies To:** ALL AI agents, LLMs, and automated systems operating on this codebase
 
 ---
@@ -73,16 +73,15 @@ This document defines mandatory safety protocols, guardrails, and behavioral con
 | 1 | **READ FIRST** | NEVER edit a file without reading it first | [ ] |
 | 2 | **SCOPE LOCK** | Only modify files explicitly in scope | [ ] |
 | 3 | **NO FEATURE CREEP** | Do NOT add features, refactor, or "improve" unrelated code | [ ] |
-| 4 | **BACKUP AWARENESS** | Know the rollback command before editing | [ ] |
-| 5 | **TEST BEFORE COMMIT** | All tests must pass before committing | [ ] |
-| 6 | **VERIFY CHANGES** | Review diff before committing | [ ] |
+| 4 | **PRODUCTION FIRST** | Production code created BEFORE test code | [ ] |
+| 5 | **TEST/PROD SEPARATION** | Test infrastructure is separate from production | [ ] |
+| 6 | **BACKUP AWARENESS** | Know the rollback command before editing | [ ] |
+| 7 | **TEST BEFORE COMMIT** | All tests must pass before committing | [ ] |
 
 ### Git Safety Rules
 
-**These rules apply to ALL automated systems:**
-
-| Rule | Description | Consequence of Violation |
-|------|-------------|--------------------------|
+| Rule | Description | Consequence |
+|------|-------------|-------------|
 | **NO FORCE PUSH** | Never use `git push --force` | Data loss, history corruption |
 | **NO AMEND** | Do not amend commits you didn't create this session | Breaks collaborator history |
 | **NO CONFIG CHANGES** | Do not modify git config | Security/identity issues |
@@ -104,6 +103,19 @@ This document defines mandatory safety protocols, guardrails, and behavioral con
 | **NO SECRETS** | Never commit credentials, keys, tokens |
 | **NO BINARY FILES** | Unless explicitly required |
 | **NO GENERATED CODE** | Do not commit build artifacts |
+
+### Test/Production Separation Rules (MANDATORY)
+
+| Rule | Violation Level | Action |
+|------|-----------------|--------|
+| **PRODUCTION CODE FIRST** | CRITICAL | Halt, ask user |
+| **SEPARATE DATABASES** | CRITICAL | Halt, ask user |
+| **SEPARATE SERVICES** | CRITICAL | Halt, ask user |
+| **NO TEST USERS IN PROD** | CRITICAL | Halt, rollback |
+| **NO PROD CREDENTIALS IN TEST** | CRITICAL | Halt, rollback |
+| **ASK IF UNCERTAIN** | HIGH | Ask user before proceeding |
+
+**Full details:** See [TEST_PRODUCTION_SEPARATION.md](standards/TEST_PRODUCTION_SEPARATION.md)
 
 ---
 
@@ -130,6 +142,9 @@ CRITICAL HALT - DO NOT PROCEED:
 [ ] Out of memory errors
 [ ] Timeout errors
 [ ] User requests stop
+[ ] Test/production boundary unclear
+[ ] Attempting to use production DB for tests
+[ ] Attempting to use test DB for production
 ```
 
 ### FORBIDDEN ACTIONS
@@ -154,6 +169,14 @@ CODE CHANGES:
 - Change security configurations
 - Modify authentication/authorization code without review
 
+TEST/PRODUCTION SEPARATION:
+- Deploy test code to production environment
+- Use production database for tests
+- Create test users in production database
+- Write test code that imports production secrets
+- Use production services for test execution
+- Share user accounts across environments
+
 GIT OPERATIONS:
 - Force push to any branch
 - Delete branches without permission
@@ -175,6 +198,7 @@ DATA OPERATIONS:
 - Modify production data
 - Export or transmit user data
 - Store credentials or secrets
+- Mix test and production data
 ```
 
 ### SCOPE BOUNDARIES
@@ -186,359 +210,25 @@ IN SCOPE (may modify):
   - Specific file(s) listed in task
   - Specific line ranges identified
   - Exact changes described
+  - Production code (before test code)
 
 OUT OF SCOPE (DO NOT TOUCH):
   - All other files
   - All other methods/functions in target file
-  - Tests (read-only unless task is test-related)
+  - Tests in production files (read-only unless task is test-related)
   - Documentation (unless task is doc-related)
   - Git hooks and configs
   - CI/CD configurations
   - Dependencies/package files
   - Environment configurations
   - Security-related files
+  - Production database connections in test code
+  - Test database connections in production code
 ```
 
 ---
 
-## EXECUTION PROTOCOL
-
-### Standard Task Flow
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│              UNIVERSAL AGENT EXECUTION FLOW                  │
-├─────────────────────────────────────────────────────────────┤
-│                                                              │
-│  PHASE 1: PREPARATION                                        │
-│  ├── Read task requirements                                  │
-│  ├── Identify scope boundaries                               │
-│  └── Plan execution steps                                    │
-│                                                              │
-│  PHASE 2: VERIFICATION                                       │
-│  ├── Read target file(s)                                     │
-│  ├── Verify preconditions match                              │
-│  └── Confirm rollback procedure known                        │
-│                                                              │
-│  PHASE 3: EXECUTION                                          │
-│  ├── Apply single, focused change                            │
-│  ├── Syntax check immediately                                │
-│  └── If error: HALT and rollback                             │
-│                                                              │
-│  PHASE 4: VALIDATION                                         │
-│  ├── Run related tests                                       │
-│  ├── Perform manual verification                             │
-│  └── If failure: HALT and rollback                           │
-│                                                              │
-│  PHASE 5: COMPLETION                                         │
-│  ├── Commit with proper message                              │
-│  ├── Generate completion report                              │
-│  └── Await user review before push                           │
-│                                                              │
-└─────────────────────────────────────────────────────────────┘
-```
-
-### Decision Matrix
-
-| Condition | Action |
-|-----------|--------|
-| Preconditions match | PROCEED to next step |
-| Preconditions don't match | HALT and report |
-| Test passes | PROCEED to next step |
-| Test fails | ROLLBACK and report |
-| Uncertain about anything | HALT and ask |
-| User requests stop | STOP immediately |
-| Error encountered | ROLLBACK and report |
-
----
-
-## ROLLBACK PROCEDURES
-
-### Immediate Rollback (Uncommitted Changes)
-
-```bash
-# Discard changes to specific file
-git checkout HEAD -- path/to/file.py
-
-# Discard all uncommitted changes
-git checkout HEAD -- .
-
-# Verify clean state
-git status
-```
-
-### Rollback After Commit (Not Pushed)
-
-```bash
-# Undo last commit, keep changes staged
-git reset --soft HEAD~1
-
-# Undo last commit, discard changes
-git reset --hard HEAD~1
-
-# Verify state
-git log --oneline -3
-```
-
-### Rollback After Push (REQUIRES USER PERMISSION)
-
-```bash
-# Create revert commit (safe, preferred method)
-git revert HEAD
-
-# Push revert
-git push origin main
-```
-
-**CRITICAL:** Never use `git push --force` without explicit user permission and understanding of consequences.
-
----
-
-## COMMIT MESSAGE FORMAT
-
-**All commits MUST follow conventional commit format:**
-
-```
-<type>(<scope>): <short description>
-
-<longer description if needed>
-
-Co-Authored-By: <Agent Name>
-```
-
-### Commit Types
-
-| Type | Use For |
-|------|---------|
-| `fix` | Bug fixes |
-| `feat` | New features |
-| `docs` | Documentation only |
-| `refactor` | Code change that doesn't fix bug or add feature |
-| `test` | Adding or updating tests |
-| `chore` | Maintenance tasks |
-| `perf` | Performance improvements |
-| `security` | Security fixes |
-
-### Co-Author Attribution
-
-**All AI-generated commits MUST include co-author attribution:**
-
-```
-AI-assisted: Claude Code and Opus
-```
-
----
-
-## ERROR HANDLING PROTOCOLS
-
-### Syntax Error After Edit
-
-```
-1. IMMEDIATELY execute: git checkout HEAD -- <file>
-2. Report exact error message to user
-3. Report line number if available
-4. DO NOT attempt additional fixes without user guidance
-5. Mark task as FAILED
-```
-
-### Test Failure After Edit
-
-```
-1. IMMEDIATELY execute: git checkout HEAD -- <file>
-2. Capture full test output
-3. Report which test(s) failed
-4. Report failure reason if determinable
-5. DO NOT attempt fixes without user guidance
-6. Mark task as FAILED
-```
-
-### Edit Operation Failed
-
-```
-1. Re-read the target file
-2. Compare expected vs actual content
-3. Report the mismatch to user
-4. Request updated instructions
-5. DO NOT guess at alternative edits
-6. Mark task as BLOCKED
-```
-
-### Unknown Error
-
-```
-1. Capture error message and stack trace
-2. Rollback any partial changes
-3. Report full error context to user
-4. DO NOT retry without user guidance
-5. Mark task as ERROR
-```
-
----
-
-## VERIFICATION CHECKLIST
-
-**Before marking ANY task complete, verify ALL items:**
-
-```
-PRE-COMPLETION CHECKLIST:
-
-[ ] Target file(s) modified correctly
-[ ] No unintended changes (reviewed git diff)
-[ ] Syntax check passes
-[ ] All related tests pass
-[ ] Manual verification confirms expected behavior
-[ ] Commit message follows format
-[ ] Co-author attribution included
-[ ] No files outside scope were modified
-[ ] No new files created (unless required)
-[ ] No dependencies changed
-[ ] No secrets or credentials in changes
-[ ] User has been given completion report
-```
-
----
-
-## AGENT-SPECIFIC GUIDELINES
-
-### Universal Requirements (ALL LLMs and AI Agents)
-
-These guidelines apply to **every** AI system, regardless of provider or architecture:
-
-```
-MANDATORY FOR ALL:
-- Follow your platform's responsible AI guidelines
-- Respect safety filters and guardrails
-- Handle context/token limits gracefully
-- Use tool/function calling appropriately when available
-- Report capability limitations honestly
-- Ask for clarification when uncertain
-- Refuse harmful or destructive requests
-- Maintain audit trails of actions
-```
-
-### By Category
-
-#### Commercial API-Based Models
-*(Claude, GPT, Gemini, Command R, etc.)*
-
-```
-- Adhere to provider usage policies
-- Respect rate limits and quotas
-- Use official APIs and SDKs
-- Handle API errors gracefully
-```
-
-#### Open Source / Self-Hosted Models
-*(LLaMA, Mistral, Qwen, DeepSeek, Phi, Falcon, etc.)*
-
-```
-- Follow local safety configurations
-- Respect system prompts fully
-- Handle resource/memory limits
-- Configure appropriate guardrails
-```
-
-#### Multimodal Models
-*(GPT-4V, Gemini Pro Vision, Claude 3, LLaVA, etc.)*
-
-```
-- Handle image/audio/video inputs safely
-- Do not process potentially harmful media
-- Respect privacy in visual content
-- Validate file types before processing
-```
-
-#### Reasoning / Chain-of-Thought Models
-*(o1, o3, DeepSeek-R1, etc.)*
-
-```
-- Allow sufficient reasoning time
-- Do not interrupt reasoning chains
-- Validate final outputs, not intermediate steps
-- Handle extended context requirements
-```
-
-#### Agent Frameworks
-*(CrewAI, LangChain, AutoGPT, LangGraph, Semantic Kernel, etc.)*
-
-```
-- Implement proper task decomposition
-- Respect iteration and recursion limits
-- Handle agent failures gracefully
-- Maintain comprehensive audit logs
-- Implement proper stopping conditions
-- Validate inter-agent communications
-```
-
-### Model Compatibility Note
-
-This guardrails framework is designed to work with:
-
-- **30+ major LLM families** including Claude, GPT, Gemini, LLaMA, Mistral, Qwen, DeepSeek, Cohere, Phi, Falcon, and others
-- **All future models** that follow standard AI assistant patterns
-- **Custom fine-tuned models** based on any architecture
-- **Multi-agent systems** regardless of orchestration framework
-
-If you are an AI system not explicitly listed, these guardrails still apply to you.
-
----
-
-## AUDIT REQUIREMENTS
-
-### All agents MUST maintain logs of:
-
-```
-1. Files read
-2. Files modified
-3. Commands executed
-4. Tests run
-5. Errors encountered
-6. Decisions made
-7. User interactions
-```
-
-### Logs should include:
-
-```
-- Timestamp
-- Agent identifier
-- Action type
-- Target (file/command)
-- Result (success/failure)
-- Error details (if any)
-```
-
----
-
-## ESCALATION PROCEDURES
-
-### When to Escalate to Human
-
-```
-ALWAYS escalate if:
-- Security-related changes required
-- Production data access needed
-- Destructive operations requested
-- Ambiguous requirements
-- Multiple valid interpretations
-- High-risk changes (auth, payments, etc.)
-- Cross-system changes
-- Changes affecting multiple teams
-```
-
-### How to Escalate
-
-```
-1. Clearly state what you need clarification on
-2. Provide options if applicable
-3. Explain consequences of each option
-4. Wait for human decision
-5. DO NOT proceed without response
-```
-
----
-
-## QUICK REFERENCE CARD
+## QUICK REFERENCE
 
 ```
 +------------------------------------------------------------------+
@@ -548,6 +238,8 @@ ALWAYS escalate if:
 |   - Read before edit                                              |
 |   - Verify before proceeding                                      |
 |   - Test before committing                                        |
+|   - Create production code BEFORE test code                      |
+|   - Separate test/production infrastructure                       |
 |   - Report results to user                                        |
 |   - Include co-author attribution                                 |
 +------------------------------------------------------------------+
@@ -557,12 +249,15 @@ ALWAYS escalate if:
 |   - Modify outside scope                                          |
 |   - Force push or rebase                                          |
 |   - Continue when uncertain                                       |
+|   - Use production DB for tests                                   |
+|   - Create test users in production                               |
 +------------------------------------------------------------------+
 | HALT IF:                                                          |
 |   - Conditions don't match                                        |
 |   - Any check fails                                               |
 |   - Uncertain about anything                                      |
 |   - User requests stop                                            |
+|   - Test/production boundary unclear                              |
 +------------------------------------------------------------------+
 | ROLLBACK: git checkout HEAD -- <file>                             |
 +------------------------------------------------------------------+
@@ -572,47 +267,31 @@ ALWAYS escalate if:
 
 ---
 
-## COMPLIANCE
-
-### Acknowledgment
-
-By operating on this codebase, all AI systems implicitly acknowledge and agree to follow these guardrails. Failure to comply may result in:
-
-1. Task rejection
-2. Output being discarded
-3. Agent being blocked from future operations
-
-### Reporting Violations
-
-If you observe an agent violating these guardrails:
-
-1. Stop the agent immediately
-2. Document the violation
-3. Report to repository maintainers
-4. Review and rollback any unauthorized changes
-
----
-
 ## RELATED DOCUMENTS
 
-### Navigation Maps (Read First for Token Efficiency)
-- [INDEX_MAP.md](../INDEX_MAP.md) - Master navigation, find docs by keyword
-- [HEADER_MAP.md](../HEADER_MAP.md) - All section headers with line numbers
+### Core Guardrails
+- **This document** - Core safety protocols (MANDATORY)
+- [TEST_PRODUCTION_SEPARATION.md](standards/TEST_PRODUCTION_SEPARATION.md) - Test/production isolation (MANDATORY)
 
 ### Workflow Documentation
-- [TESTING_VALIDATION.md](./workflows/TESTING_VALIDATION.md) - Validation protocols
-- [COMMIT_WORKFLOW.md](./workflows/COMMIT_WORKFLOW.md) - Commit guidelines
-- [GIT_PUSH_PROCEDURES.md](./workflows/GIT_PUSH_PROCEDURES.md) - Push safety
-- [ROLLBACK_PROCEDURES.md](./workflows/ROLLBACK_PROCEDURES.md) - Recovery operations
-- [MCP_CHECKPOINTING.md](./workflows/MCP_CHECKPOINTING.md) - Checkpoint integration
+- [AGENT_EXECUTION.md](workflows/AGENT_EXECUTION.md) - Execution protocol and rollback procedures
+- [TESTING_VALIDATION.md](workflows/TESTING_VALIDATION.md) - Validation protocols
+- [COMMIT_WORKFLOW.md](workflows/COMMIT_WORKFLOW.md) - Commit guidelines
+- [GIT_PUSH_PROCEDURES.md](workflows/GIT_PUSH_PROCEDURES.md) - Push safety
+- [ROLLBACK_PROCEDURES.md](workflows/ROLLBACK_PROCEDURES.md) - Recovery operations
+- [MCP_CHECKPOINTING.md](workflows/MCP_CHECKPOINTING.md) - Checkpoint integration
+
+### Agent Operations
+- [AGENT_ESCALATION.md](workflows/AGENT_ESCALATION.md) - Audit requirements and escalation
+- [CODE_REVIEW.md](workflows/CODE_REVIEW.md) - Code review process
 
 ### Standards
-- [LOGGING_PATTERNS.md](./standards/LOGGING_PATTERNS.md) - Structured logging
-- [MODULAR_DOCUMENTATION.md](./standards/MODULAR_DOCUMENTATION.md) - 500-line rule
+- [LOGGING_PATTERNS.md](standards/LOGGING_PATTERNS.md) - Structured logging
+- [MODULAR_DOCUMENTATION.md](standards/MODULAR_DOCUMENTATION.md) - 500-line rule
 
 ### Sprint Framework
-- [Sprint Task Template](./sprints/) - Task execution format
-- [SPRINT_GUIDE.md](./sprints/SPRINT_GUIDE.md) - How to write sprints
+- [Sprint Task Template](sprints/) - Task execution format
+- [SPRINT_GUIDE.md](sprints/SPRINT_GUIDE.md) - How to write sprints
 
 ### Security
 - [SECRETS_MANAGEMENT.md](../.github/SECRETS_MANAGEMENT.md) - GitHub Secrets
@@ -621,5 +300,5 @@ If you observe an agent violating these guardrails:
 
 **Document Owner:** Project Maintainers
 **Review Cycle:** Monthly
-**Last Review:** 2026-01-10
-**Next Review:** 2026-02-10
+**Last Review:** 2026-01-16
+**Next Review:** 2026-02-16

@@ -14,6 +14,7 @@ This directory contains documentation standards that ensure consistency, maintai
 
 | Document | Purpose | Key Rules |
 |----------|---------|-----------|
+| [TEST_PRODUCTION_SEPARATION.md](./TEST_PRODUCTION_SEPARATION.md) | Test/production isolation | MANDATORY separation requirements |
 | [MODULAR_DOCUMENTATION.md](./MODULAR_DOCUMENTATION.md) | 500-line max rule | No doc over 500 lines |
 | [LOGGING_PATTERNS.md](./LOGGING_PATTERNS.md) | Array-based logging | Standard log format |
 | [LOGGING_INTEGRATION.md](./LOGGING_INTEGRATION.md) | External logging hooks | Hook interface spec |
@@ -22,6 +23,18 @@ This directory contains documentation standards that ensure consistency, maintai
 ---
 
 ## Document Summaries
+
+### TEST_PRODUCTION_SEPARATION.md
+Establishes mandatory standards for separating test and production environments. All testing code, data, services, and infrastructure must be completely isolated from production.
+
+**Key sections:**
+- The Three Laws of Test/Production Separation
+- Environment separation requirements (databases, services, users)
+- Code creation sequence (production first, then test)
+- Test code labeling requirements
+- Uncertainty handling protocol
+- Examples, patterns, and anti-patterns
+- Blocking violations checklist
 
 ### MODULAR_DOCUMENTATION.md
 Defines the 500-line maximum rule for all documentation files and provides strategies for splitting large documents.
@@ -69,6 +82,7 @@ Guidance on choosing between OpenAPI and OpenSpec for API documentation.
 
 These standards support the [AGENT_GUARDRAILS.md](../AGENT_GUARDRAILS.md) requirements for:
 
+- **Test/production separation** → TEST_PRODUCTION_SEPARATION.md
 - **Audit requirements** → LOGGING_PATTERNS.md
 - **External integration** → LOGGING_INTEGRATION.md
 - **Documentation quality** → MODULAR_DOCUMENTATION.md
@@ -84,5 +98,5 @@ These standards support the [AGENT_GUARDRAILS.md](../AGENT_GUARDRAILS.md) requir
 
 ---
 
-**Last Updated:** 2026-01-14
-**Document Count:** 4
+**Last Updated:** 2026-01-16
+**Document Count:** 5

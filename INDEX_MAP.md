@@ -10,6 +10,9 @@
 | Keyword | Document | Path | Purpose |
 |---------|----------|------|---------|
 | safety | AGENT_GUARDRAILS.md | docs/ | Mandatory safety protocols |
+| test-prod | TEST_PRODUCTION_SEPARATION.md | docs/standards/ | Test/production isolation (MANDATORY) |
+| execution | AGENT_EXECUTION.md | docs/workflows/ | Standard execution protocol |
+| escalation | AGENT_ESCALATION.md | docs/workflows/ | Audit & escalation procedures |
 | commit | COMMIT_WORKFLOW.md | docs/workflows/ | When/how to commit |
 | push | GIT_PUSH_PROCEDURES.md | docs/workflows/ | Push safety procedures |
 | branch | BRANCH_STRATEGY.md | docs/workflows/ | Git branching conventions |
@@ -34,7 +37,10 @@
 
 | Document | Purpose (one line) | When to Use |
 |----------|-------------------|-------------|
-| **AGENT_GUARDRAILS.md** | Mandatory safety protocols for all AI agents | Before ANY code changes |
+| **AGENT_GUARDRAILS.md** | Core safety protocols (mandatory) | Before ANY code changes |
+| **TEST_PRODUCTION_SEPARATION.md** | Test/production isolation standards (MANDATORY) | Before ANY deployment |
+| **AGENT_EXECUTION.md** | Execution protocol and rollback procedures | During task execution |
+| **AGENT_ESCALATION.md** | Audit requirements and escalation procedures | When uncertain or errors occur |
 | **TESTING_VALIDATION.md** | Validation functions and git diff verification | Before committing changes |
 | **COMMIT_WORKFLOW.md** | Guidelines for commits between to-dos | After completing each task |
 | **GIT_PUSH_PROCEDURES.md** | Pre-push checklist and safety rules | Before pushing to remote |
@@ -96,9 +102,11 @@ agent-guardrails-template/
 ├── CLAUDE.md                 # Claude Code CLI config
 ├── .claudeignore             # Token-saving ignores
 ├── docs/
-│   ├── AGENT_GUARDRAILS.md   # MANDATORY safety
+│   ├── AGENT_GUARDRAILS.md   # Core safety (MANDATORY)
 │   ├── workflows/
 │   │   ├── INDEX.md
+│   │   ├── AGENT_EXECUTION.md       # Execution protocol
+│   │   ├── AGENT_ESCALATION.md      # Audit & escalation
 │   │   ├── TESTING_VALIDATION.md
 │   │   ├── COMMIT_WORKFLOW.md
 │   │   ├── DOCUMENTATION_UPDATES.md
@@ -109,6 +117,7 @@ agent-guardrails-template/
 │   │   └── ROLLBACK_PROCEDURES.md
 │   ├── standards/
 │   │   ├── INDEX.md
+│   │   ├── TEST_PRODUCTION_SEPARATION.md  # Test/production isolation (MANDATORY)
 │   │   ├── MODULAR_DOCUMENTATION.md
 │   │   ├── LOGGING_PATTERNS.md
 │   │   ├── LOGGING_INTEGRATION.md
@@ -164,6 +173,6 @@ agent-guardrails-template/
 
 ---
 
-**Last Updated:** 2026-01-15
-**Document Count:** 17 (excluding INDEX files)
+**Last Updated:** 2026-01-16
+**Document Count:** 20 (excluding INDEX files)
 **Line Count:** ~150

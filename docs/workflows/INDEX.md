@@ -16,6 +16,8 @@ This directory contains operational workflow documentation for AI agents. These 
 
 | Document | Purpose | When to Use |
 |----------|---------|-------------|
+| [AGENT_EXECUTION.md](./AGENT_EXECUTION.md) | Standard execution protocol and rollback | During task execution |
+| [AGENT_ESCALATION.md](./AGENT_ESCALATION.md) | Audit requirements and escalation | When uncertain or errors occur |
 | [TESTING_VALIDATION.md](./TESTING_VALIDATION.md) | Validation and verification protocols | Before committing changes |
 | [COMMIT_WORKFLOW.md](./COMMIT_WORKFLOW.md) | Commit timing and message format | After completing to-dos |
 | [GIT_PUSH_PROCEDURES.md](./GIT_PUSH_PROCEDURES.md) | Push safety and verification | Before pushing to remote |
@@ -28,6 +30,28 @@ This directory contains operational workflow documentation for AI agents. These 
 ---
 
 ## Document Summaries
+
+### AGENT_EXECUTION.md
+Defines the standard execution protocol for AI agents, including task flow, decision matrices, rollback procedures, commit message formats, and error handling protocols.
+
+**Key sections:**
+- Standard task flow (5 phases)
+- Decision matrix
+- Rollback procedures (immediate, post-commit, post-push)
+- Commit message format
+- Error handling protocols
+- Verification checklists
+
+### AGENT_ESCALATION.md
+Defines audit requirements, escalation procedures, and platform-specific guidelines for AI agents operating on this codebase.
+
+**Key sections:**
+- Audit log requirements (what to log)
+- Log format standards
+- When to escalate to human
+- How to escalate (templates and scenarios)
+- Agent-specific guidelines (by category)
+- Compliance and violation reporting
 
 ### TESTING_VALIDATION.md
 Defines validation functions and git diff verification patterns. Use this to understand how to double-check all work before committing.
@@ -106,6 +130,8 @@ Procedures for updating documentation after sprints and code changes.
 
 All workflows in this directory **support** the safety protocols defined in [AGENT_GUARDRAILS.md](../AGENT_GUARDRAILS.md). They provide detailed implementation guidance for:
 
+- **Execution** → AGENT_EXECUTION.md
+- **Audit & escalation** → AGENT_ESCALATION.md
 - **Verification** → TESTING_VALIDATION.md
 - **Commits** → COMMIT_WORKFLOW.md
 - **Rollback** → ROLLBACK_PROCEDURES.md
@@ -121,5 +147,5 @@ All workflows in this directory **support** the safety protocols defined in [AGE
 
 ---
 
-**Last Updated:** 2026-01-14
-**Document Count:** 8
+**Last Updated:** 2026-01-16
+**Document Count:** 10
