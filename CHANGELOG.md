@@ -1,0 +1,238 @@
+# Changelog
+
+All notable changes to the Agent Guardrails Template will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
+
+---
+
+## [Unreleased]
+
+### Added
+
+## [1.5.0] - 2026-01-18
+
+### Added
+
+- CHANGELOG.md - Centralized release notes archive
+- Examples directory with guardrails implementation examples in multiple languages
+- Comprehensive release notes archiving from GitHub releases
+
+### Changed
+
+- All release notes now centralized in this CHANGELOG.md file
+- GitHub releases now reference this file for full release notes
+
+---
+
+## [1.4.0] - 2026-01-16
+
+### Added
+
+- **docs/HOW_TO_APPLY.md** (432 lines) - Comprehensive guide with example AI agent prompts
+  - Option A: Apply to existing repository detailed steps
+  - Option B: Example AI agent prompts (5 ready-to-use prompts)
+  - Option C: Create new repository with standards
+  - Option D: Migrate existing documentation to guardrails structure
+  - Verification checklist
+- `how-to-apply` keyword to INDEX_MAP.md for easy discovery
+
+### Changed
+
+- **README.md** restructured for 500-line compliance
+  - Reduced from 621 lines to 219 lines (65% reduction)
+  - Quick start options link to detailed HOW_TO_APPLY guide
+  - Preserved Template Contents and PROJECT README TEMPLATE
+
+### Improved
+
+- Token efficiency: 65% fewer tokens needed to read README
+- Documentation organization: Better hierarchy with dedicated HOW_TO_APLY.md
+- Agent-friendly prompts: Copy-paste ready prompts for common tasks
+- Faster onboarding: Ready-to-use prompts reduce ambiguity
+
+### Statistics
+
+- Documentation files: 20 → 21 (+1)
+- README lines: 621 → 219 (-402, -65%)
+- HOW_TO_APPLY.md lines: 0 → 432 (+432)
+- 500-line compliance: 17/20 → 21/21 (100%)
+
+---
+
+## [1.3.0] - 2026-01-16
+
+### Added
+
+- **docs/standards/TEST_PRODUCTION_SEPARATION.md** (558 lines) - Mandatory test/production isolation standard
+  - Three Laws of Test/Production Separation
+  - Environment separation requirements (databases, services, users)
+  - Mandatory pre-code checklist
+  - Code creation sequence (production first, then test)
+  - Uncertainty handling protocol (always ask user)
+  - CI/CD blocking checks
+  - Examples, patterns, and anti-patterns
+- **docs/workflows/AGENT_EXECUTION.md** (374 lines) - Execution protocol and rollback procedures
+  - Standard task flow (5 phases)
+  - Decision matrix
+  - Rollback procedures (immediate, post-commit, post-push)
+  - Commit message format
+  - Error handling protocols
+  - Verification checklists
+- **docs/workflows/AGENT_ESCALATION.md** (413 lines) - Audit requirements and escalation procedures
+  - Audit log requirements (what to log)
+  - Log format standards
+  - When to escalate to human
+  - How to escalate (templates and scenarios)
+  - Agent-specific guidelines (by category)
+  - Compliance and violation reporting
+
+### Changed
+
+- **docs/AGENT_GUARDRAILS.md** - Restructured from 626 lines to 267 lines for 500-line compliance
+  - Split into 3 focused documents
+  - Added Test/Production Separation Rules section
+  - CORE GUARDRAILS section retained
+- **docs/workflows/CODE_REVIEW.md** - Added test/production separation review items
+- **docs/sprints/SPRINT_TEMPLATE.md** - Added safety checks for completion gate
+- **docs/workflows/INDEX.md** - Updated to 10 documents
+- **docs/standards/INDEX.md** - Updated to 5 documents
+
+### Security
+
+- **CRITICAL:** All AI agents must verify test/production separation before deployment
+- **BLOCKING VIOLATIONS** that halt deployment:
+  - Deploying test code to production environment
+  - Using production database for tests
+  - Creating test users in production database
+  - Writing test code that imports production secrets
+  - Using production services for test execution
+  - Sharing user accounts across environments
+
+### Breaking Changes
+
+- **MANDATORY:** All AI agents must now comply with test/production separation requirements
+- Agents must ask user when uncertain about test/production boundaries
+- Blocking violations prevent deployment when separation requirements not met
+
+### Statistics
+
+- Documentation files: 17 → 20 (+3)
+- AGENT_GUARDRAILS.md: 626 → 267 lines (-359 lines)
+- Total documentation lines: ~1,500 → 2,672 (+1,172)
+- All documents now comply with 500-line maximum rule
+
+---
+
+## [1.1.0] - 2026-01-15
+
+### Added
+
+- Universal Agent Support framework
+- By-Category Agent Guidelines covering:
+  - Commercial API-Based Models (Claude, GPT, Gemini, Command R)
+  - Open Source / Self-Hosted Models (LLaMA, Mistral, Qwen, DeepSeek, Phi, Falcon)
+  - Multimodal Models (GPT-4V, Gemini Pro Vision, Claude 3, LLaVA)
+  - Reasoning / Chain-of-Thought Models (o1, o3, DeepSeek-R1)
+  - Agent Frameworks (CrewAI, LangChain, AutoGPT, LangGraph, Semantic Kernel)
+- Model Compatibility Note section
+- 30+ major LLM families explicitly supported
+- All future models supported via generic patterns
+
+### Changed
+
+- **docs/AGENT_GUARDRAILS.md** - Major restructure
+  - Replaced model-specific sections with category-based approach
+  - Added Universal Requirements section for ALL LLMs and AI agents
+  - Applicability table expanded with new model types
+  - Enhanced compliance section
+
+### Improved
+
+- Scalability: Framework now supports any current or future AI model
+- Maintenance: Category-based approach easier to maintain than model-specific
+- Coverage: 99%+ of AI agents covered by category system
+
+---
+
+## [1.0.0] - 2026-01-14
+
+### Added
+
+- Initial stable release of Agent Guardrails Template
+- **Core Documentation:**
+  - docs/AGENT_GUARDRAILS.md (626 lines) - Mandatory safety protocols for all AI agents
+- **Sprint Framework:**
+  - docs/sprints/SPRINT_TEMPLATE.md - Task execution template
+  - docs/sprints/SPRINT_GUIDE.md - How to write effective sprint documents
+  - docs/sprints/INDEX.md - Sprint navigation
+- **Workflow Documentation** (8 comprehensive guides):
+  - TESTING_VALIDATION.md - Validation protocols
+  - COMMIT_WORKFLOW.md - Commit guidelines
+  - GIT_PUSH_PROCEDURES.md - Push safety procedures
+  - BRANCH_STRATEGY.md - Git branching conventions
+  - ROLLBACK_PROCEDURES.md - Recovery operations
+  - MCP_CHECKPOINTING.md - MCP server integration
+  - CODE_REVIEW.md - Code review process
+  - DOCUMENTATION_UPDATES.md - Post-sprint doc updates
+- **Standards Documentation** (4 guides):
+  - MODULAR_DOCUMENTATION.md - 500-line max rule
+  - LOGGING_PATTERNS.md - Array-based logging format
+  - LOGGING_INTEGRATION.md - External logging hooks
+  - API_SPECIFICATIONS.md - OpenAPI/OpenSpec guidance
+- **GitHub Integration:**
+  - .github/SECRETS_MANAGEMENT.md - GitHub Secrets guide
+  - .github/workflows/ (3 CI/CD workflows)
+  - .github/PULL_REQUEST_TEMPLATE.md - PR template with AI attribution
+  - .github/ISSUE_TEMPLATE/bug_report.md - Bug report template
+- **Navigation Maps:**
+  - INDEX_MAP.md - Master navigation, find docs by keyword
+  - HEADER_MAP.md - Section-level lookup
+  - CLAUDE.md - Claude Code CLI guidelines
+  - .claudeignore - Token-saving ignore rules
+
+### Features
+
+- Four Laws of Agent Safety
+- Pre-Execution Checklist
+- Git Safety Rules (8 rules)
+- Code Safety Rules (7 rules)
+- Guardrails: HALT CONDITIONS, FORBIDDEN ACTIONS, SCOPE BOUNDARIES
+- Standard Task Flow (5 phases)
+- Rollback Procedures (3 scenarios)
+- Commit Message Format with conventions
+- Error Handling Protocols (4 scenarios)
+- Verification Checklist (pre-completion)
+- Agent-Specific Guidelines for all major AI systems
+- Audit Requirements
+- Escalation Procedures
+
+---
+
+## Version Management
+
+### Version Numbering
+
+This project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html):
+
+- **MAJOR**: Incompatible API changes
+- **MINOR**: Backwards-compatible functionality additions
+- **PATCH**: Backwards-compatible bug fixes
+
+### Release Process
+
+1. Complete all changes
+2. Test and validate
+3. Commit changes with conventional commit message
+4. Update CHANGELOG.md
+5. Create version tag: `git tag v1.X.X`
+6. Push tag: `git push origin v1.X.X`
+7. Create GitHub release with `gh release create`
+
+---
+
+## Links
+
+- **Releases:** [GitHub Releases](https://github.com/TheArchitectit/agent-guardrails-template/releases)
+- **Documentation:** [INDEX_MAP.md](INDEX_MAP.md)
+- **Issues:** [GitHub Issues](https://github.com/TheArchitectit/agent-guardrails-template/issues)
