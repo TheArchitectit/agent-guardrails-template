@@ -10,6 +10,45 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
+## [1.6.0] - 2026-01-18
+
+### Added
+
+- **TOC.md** - Comprehensive table of contents with file listings
+  - Complete catalog of all 85 documents in the template
+  - Organized by category (standards, workflows, examples, etc.)
+  - Includes statistics: total files, category breakdowns, compliance status
+  - Separate from README for cleaner navigation
+
+### Changed
+
+- **README.md** - Rewritten for clarity on what the Agent Guardrails Template is
+  - Now clearly explains "What Is This?" concept
+  - Better project overview and quick start guide
+  - Improved from 220 to 320 lines for better readability
+  - Clearer problem/solution overview
+- **INDEX_MAP.md** - Added `toc` and `examples` keywords to Quick Lookup Table
+  - Updated document counts (21 → 28 docs)
+  - Updated all "Last Updated" dates
+- **HEADER_MAP.md** - Added TOC.md and CHANGELOG.md sections
+  - Updated status and last updated dates
+
+### Improved
+
+- Documentation clarity: README now clearly explains the template's purpose
+- Discoverability: Separate TOC.md makes finding specific documentation easier
+- Navigation: Updated maps reflect new TOC document
+- User experience: Better first-impression for new visitors
+
+### Statistics
+
+- Documentation files: 28 → 28 (+0, reorganized)
+- README lines: 220 → 320 (+100, +45%)
+- TOC.md lines: 0 → ~350 (+350)
+- Total documents cataloged: 85 files
+
+---
+
 ## [1.5.0] - 2026-01-18
 
 ### Added
