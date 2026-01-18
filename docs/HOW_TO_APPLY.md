@@ -9,7 +9,7 @@
 ## Overview
 
 This document provides step-by-step instructions for applying the agent guardrails framework to repositories in different scenarios.
-
+clone from https://github.com/TheArchitectit/agent-guardrails-template
 ---
 
 ## Option A: Apply to an EXISTING Repository
@@ -80,7 +80,7 @@ AI-assisted: Claude Code and Opus"
 ### Prompt 1: Add Guardrails to Existing Repository
 
 ```
-Add the agent guardrails framework from /mnt/ollama/git/agent-guardrails-template
+Add the agent guardrails framework from https://github.com/TheArchitectit/agent-guardrails-template
 to this repository.
 
 REQUIREMENTS:
