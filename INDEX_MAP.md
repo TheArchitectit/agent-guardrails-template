@@ -9,6 +9,7 @@
 
 | Keyword | Document | Path | Purpose |
 |---------|----------|------|---------|
+| toc | TOC.md | ./ | Complete template contents and file listing |
 | safety | AGENT_GUARDRAILS.md | docs/ | Mandatory safety protocols |
 | test-prod | TEST_PRODUCTION_SEPARATION.md | docs/standards/ | Test/production isolation (MANDATORY) |
 | execution | AGENT_EXECUTION.md | docs/workflows/ | Standard execution protocol |
@@ -27,6 +28,7 @@
 | modular | MODULAR_DOCUMENTATION.md | docs/standards/ | 500-line rule |
 | api | API_SPECIFICATIONS.md | docs/standards/ | OpenAPI/OpenSpec guidance |
 | secrets | SECRETS_MANAGEMENT.md | .github/ | GitHub Secrets setup |
+| examples | examples/ | examples/ | Multi-language implementation examples |
 | sprint | SPRINT_TEMPLATE.md | docs/sprints/ | Sprint task template |
 | sprint-guide | SPRINT_GUIDE.md | docs/sprints/ | How to write sprints |
 | validation | SPRINT_TEMPLATE.md | docs/sprints/ | Completion gate & validation loop |
@@ -38,6 +40,7 @@
 
 | Document | Purpose (one line) | When to Use |
 |----------|-------------------|-------------|
+| **TOC.md** | Complete template contents and file listing | When exploring full template |
 | **AGENT_GUARDRAILS.md** | Core safety protocols (mandatory) | Before ANY code changes |
 | **TEST_PRODUCTION_SEPARATION.md** | Test/production isolation standards (MANDATORY) | Before ANY deployment |
 | **AGENT_EXECUTION.md** | Execution protocol and rollback procedures | During task execution |
@@ -55,6 +58,7 @@
 | **LOGGING_INTEGRATION.md** | Webhook/file/queue integration hooks | When adding external logging |
 | **API_SPECIFICATIONS.md** | OpenAPI vs OpenSpec guidance | When documenting APIs |
 | **SECRETS_MANAGEMENT.md** | GitHub Secrets setup and rotation | When handling credentials |
+| **examples/** | Multi-language guardrails implementation examples | When exploring code examples |
 | **SPRINT_TEMPLATE.md** | Copy-paste template for new sprints | When creating tasks |
 | **SPRINT_GUIDE.md** | Best practices for writing sprints | When writing sprint docs |
 
@@ -99,12 +103,14 @@
 ```
 agent-guardrails-template/
 ├── INDEX_MAP.md              ← YOU ARE HERE
+├── TOC.md                   ← Complete file listing and contents
 ├── HEADER_MAP.md             # Section-level lookup
 ├── CLAUDE.md                 # Claude Code CLI config
 ├── .claudeignore             # Token-saving ignores
+├── CHANGELOG.md              # Release notes archive
 ├── docs/
 │   ├── AGENT_GUARDRAILS.md   # Core safety (MANDATORY)
-│   ├── HOW_TO_APPLY.md       # How to apply to repos (NEW)
+│   ├── HOW_TO_APPLY.md       # How to apply to repos
 │   ├── workflows/
 │   │   ├── INDEX.md
 │   │   ├── AGENT_EXECUTION.md       # Execution protocol
@@ -129,6 +135,13 @@ agent-guardrails-template/
 │       ├── SPRINT_TEMPLATE.md
 │       ├── SPRINT_GUIDE.md
 │       └── archive/
+├── examples/               ← Multi-language implementation examples
+│   ├── go/
+│   ├── java/
+│   ├── python/
+│   ├── ruby/
+│   ├── rust/
+│   └── typescript/
 ├── .github/
 │   ├── SECRETS_MANAGEMENT.md
 │   ├── PULL_REQUEST_TEMPLATE.md
@@ -175,6 +188,6 @@ agent-guardrails-template/
 
 ---
 
-**Last Updated:** 2026-01-16
-**Document Count:** 21 (excluding INDEX files)
+**Last Updated:** 2026-01-18
+**Document Count:** 28 (excluding INDEX files)
 **Line Count:** ~170
