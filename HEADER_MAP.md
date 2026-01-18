@@ -10,9 +10,27 @@
 1. Find the document you need in the index below
 2. Locate the specific header/section
 3. Use the line number to read only that section:
-   ```
-   Read file_path with offset=line_number, limit=50
-   ```
+    ```
+    Read file_path with offset=line_number, limit=50
+    ```
+
+---
+
+## TOC.md
+
+| Line | Header |
+|------|--------|
+| 1 | # Template Contents (Table of Contents) |
+| 8 | ## Quick Navigation |
+| 19 | ## Root Files |
+| 35 | ## Documentation Directory |
+| 60 | ## GitHub Integration |
+| 77 | ## Examples Directory |
+| 91 | ## Document Purpose Quick Reference |
+| 101 | ## Document Size Summary |
+| 118 | ## Compliance Status |
+| 122 | ## Quick Lookup |
+| 142 | ## File Templates |
 
 ---
 
@@ -127,7 +145,7 @@
 | 108 | ### How to Escalate |
 | 136 | ### Escalation Scenarios |
 | 164 | ## AGENT-SPECIFIC GUIDELINES |
-| 166 | ### Universal Requirements (ALL LLMs and AI Agents) |
+| 166 | | ### Universal Requirements (ALL LLMs and AI Agents) |
 | 176 | ### By Category |
 | 189 | ### Model Compatibility Note |
 | 202 | ## COMPLIANCE |
@@ -135,6 +153,23 @@
 | 212 | ### Reporting Violations |
 | 225 | ### Violation Categories |
 | 236 | ## QUICK REFERENCE |
+| 242 | ## COMPLIANCE
+
+---
+
+## CHANGELOG.md
+
+| Line | Header |
+|------|--------|
+| 1 | # Changelog |
+| 8 | ## [Unreleased] |
+| 12 | ## [1.5.0] - 2026-01-18 |
+| 27 | ## [1.4.0] - 2026-01-16 |
+| 41 | ## [1.3.0] - 2026-01-16 |
+| 54 | ## [1.1.0] - 2026-01-15 |
+| 61 | ## [1.0.0] - 2026-01-14 |
+| 64 | ## Version Management |
+| 76 | ## Links |
 
 ---
 
@@ -473,6 +508,5 @@
 
 ---
 
-**Last Updated:** 2026-01-15
-**Status:** Partial - line numbers will be updated as documents are created
-**Note:** Lines marked with `-` are placeholders for documents not yet created
+**Last Updated:** 2026-01-18
+**Status:** Complete - all documents and headers accurately mapped
