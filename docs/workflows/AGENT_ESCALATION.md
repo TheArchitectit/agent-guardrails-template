@@ -410,4 +410,6 @@ REPORTING VIOLATION PROTOCOL:
 ---
 
 **Last Updated:** 2026-01-16
+**Authored by:** TheArchitectit
+**Document Owner:** Project Maintainers
 **Line Count:** ~300
