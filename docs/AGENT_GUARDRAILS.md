@@ -241,7 +241,7 @@ OUT OF SCOPE (DO NOT TOUCH):
 |   - Create production code BEFORE test code                      |
 |   - Separate test/production infrastructure                       |
 |   - Report results to user                                        |
-|   - Include co-author attribution                                 |
+|   - Include AI attribution                                        |
 +------------------------------------------------------------------+
 | NEVER:                                                            |
 |   - Edit without reading                                          |
@@ -298,6 +298,7 @@ OUT OF SCOPE (DO NOT TOUCH):
 
 ---
 
+**Authored by:** TheArchitectit
 **Document Owner:** Project Maintainers
 **Review Cycle:** Monthly
 **Last Review:** 2026-01-16

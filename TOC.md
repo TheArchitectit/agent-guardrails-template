@@ -217,6 +217,8 @@ All files follow these conventions:
 
 ---
 
+**Authored by:** TheArchitectit
+**Document Owner:** Project Maintainers
 **Last Updated:** 2026-01-18  
 **Total Files:** 85  
 **Total Lines:** ~7,500

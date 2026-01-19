@@ -152,7 +152,7 @@ IF CONFIGURATION CHANGED:
 
 <optional body - explain why, not what>
 
-AI-assisted: Claude Code and Opus
+Authored by TheArchitectit
 ```
 
 ### Commit Types
@@ -183,12 +183,12 @@ GOOD:
 - "docs(readme): add troubleshooting section"
 ```
 
-### Co-Author Attribution
+### AI Attribution
 
 **All AI-generated commits MUST include:**
 
 ```
-AI-assisted: Claude Code and Opus
+Authored by TheArchitectit
 ```
 
 Use HEREDOC for proper formatting:
@@ -199,7 +199,7 @@ fix(parser): handle null input gracefully
 
 Added null check to prevent TypeError when input is undefined.
 
-AI-assisted: Claude Code and Opus
+Authored by TheArchitectit
 EOF
 )"
 ```
@@ -299,7 +299,7 @@ PRE-COMPLETION CHECKLIST:
 [ ] All related tests pass
 [ ] Manual verification confirms expected behavior
 [ ] Commit message follows format
-[ ] Co-author attribution included
+[ ] AI attribution included
 [ ] No files outside scope were modified
 [ ] No new files created (unless required)
 [ ] No dependencies changed
@@ -356,7 +356,7 @@ PRE-COMPLETION CHECKLIST:
 +------------------------------------------------------------------+
 | COMMIT FORMAT:                                                   |
 |   <type>(<scope>): <description>                                |
-|   AI-assisted: Claude Code and Opus                            |
+|   Authored by TheArchitectit                            |
 +------------------------------------------------------------------+
 ```
 
@@ -371,4 +371,6 @@ PRE-COMPLETION CHECKLIST:
 ---
 
 **Last Updated:** 2026-01-16
+**Authored by:** TheArchitectit
+**Document Owner:** Project Maintainers
 **Line Count:** ~280

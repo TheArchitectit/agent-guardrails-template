@@ -188,6 +188,8 @@ agent-guardrails-template/
 
 ---
 
+**Authored by:** TheArchitectit
+**Document Owner:** Project Maintainers
 **Last Updated:** 2026-01-18
 **Document Count:** 28 (excluding INDEX files)
 **Line Count:** ~170
