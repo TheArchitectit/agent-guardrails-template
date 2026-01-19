@@ -114,7 +114,7 @@
 | 113 | ### Format Template |
 | 121 | ### Commit Types |
 | 130 | ### Good vs Bad Messages |
-| 143 | ### Co-Author Attribution |
+| 143 | ### AI Attribution |
 | 153 | ## ERROR HANDLING PROTOCOLS |
 | 155 | ### Syntax Error After Edit |
 | 163 | ### Test Failure After Edit |
@@ -508,5 +508,7 @@
 
 ---
 
+**Authored by:** TheArchitectit
+**Document Owner:** Project Maintainers
 **Last Updated:** 2026-01-18
 **Status:** Complete - all documents and headers accurately mapped

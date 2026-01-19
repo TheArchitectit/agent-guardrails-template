@@ -265,5 +265,6 @@ Copy the full template from: [SPRINT_TEMPLATE.md](./SPRINT_TEMPLATE.md)
 
 ---
 
+**Authored by:** TheArchitectit
 **Document Owner:** Project Maintainers
 **Review Cycle:** Quarterly

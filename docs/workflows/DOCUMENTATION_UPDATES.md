@@ -297,4 +297,6 @@ Quarterly:
 ---
 
 **Last Updated:** 2026-01-14
+**Authored by:** TheArchitectit
+**Document Owner:** Project Maintainers
 **Line Count:** ~250
