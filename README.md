@@ -280,6 +280,14 @@ BSD-3-Clause - See [LICENSE](LICENSE) file for details.
 
 - **Maintainer:** TheArchitectit
 - **AI Tooling:** Created with Claude Code and Opus
+- Help support my coding plan, with this referral : https://synthetic.new/?referral=UAWqkKQQLFkzMkY
+"Invite your friends to Synthetic and both of you will receive
+
+$10.00 for standard signups.
+$20.00 for pro signups.
+in subscription credit when they subscribe!
+"
+
 
 ---
 
