@@ -36,6 +36,9 @@
 |------|-------|----------|---------|
 | **AGENT_GUARDRAILS.md** | 267 | 13 | Core safety protocols (MANDATORY) |
 | **HOW_TO_APPLY.md** | 432 | 5 | How to apply template with example prompts |
+| **AGENTS_AND_SKILLS_SETUP.md** | ~200 | 6 | Setup guide for Claude Code/OpenCode |
+| **CLCODE_INTEGRATION.md** | ~250 | 7 | Claude Code skills and hooks integration |
+| **OPENCODE_INTEGRATION.md** | ~300 | 8 | OpenCode agents and skills integration |
 
 ### Workflows (`docs/workflows/`)
 
@@ -44,6 +47,7 @@
 | **INDEX.md** | 126 | 5 | Workflow navigation hub |
 | **AGENT_EXECUTION.md** | 280 | 6 | Execution protocol and rollback |
 | **AGENT_ESCALATION.md** | 300 | 6 | Audit requirements and escalation |
+| **AGENT_REVIEW_PROTOCOL.md** | 605 | 12 | Post-work agent/LLM review |
 | **TESTING_VALIDATION.md** | 303 | 9 | Validation protocols and checks |
 | **COMMIT_WORKFLOW.md** | 328 | 8 | Commit timing and message format |
 | **DOCUMENTATION_UPDATES.md** | ~250 | 5 | Post-sprint doc updates |
@@ -52,7 +56,7 @@
 | **CODE_REVIEW.md** | 348 | 7 | Code review and escalation |
 | **MCP_CHECKPOINTING.md** | ~280 | 7 | MCP server checkpointing |
 
-**Total:** 10 workflow documents (INDEX.md + 9 guides)
+**Total:** 11 workflow documents (INDEX.md + 10 guides)
 
 ### Standards (`docs/standards/`)
 
@@ -60,12 +64,17 @@
 |------|-------|--------------|---------|
 | **INDEX.md** | 89 | 4 | Standards navigation hub |
 | **TEST_PRODUCTION_SEPARATION.md** | 558 | 12 | Test/production isolation (MANDATORY) |
+| **PROJECT_CONTEXT_TEMPLATE.md** | 376 | 9 | Project Bible - stack, style, forbidden patterns |
+| **ADVERSARIAL_TESTING.md** | 510 | 12 | Breaker agent, fuzz testing, attack checklists |
+| **DEPENDENCY_GOVERNANCE.md** | 483 | 8 | Package allow-list, license compliance |
+| **INFRASTRUCTURE_STANDARDS.md** | 546 | 11 | IaC, Terraform, no-ClickOps, drift detection |
+| **OPERATIONAL_PATTERNS.md** | 667 | 12 | Health checks, circuit breakers, retry, rate limiting |
 | **MODULAR_DOCUMENTATION.md** | 330 | 8 | 500-line max rule and structure |
 | **LOGGING_PATTERNS.md** | ~280 | 7 | Array-based logging format |
 | **LOGGING_INTEGRATION.md** | ~250 | 7 | External logging hooks |
 | **API_SPECIFICATIONS.md** | ~300 | 6 | OpenAPI vs OpenSpec guidance |
 
-**Total:** 6 standards documents (INDEX.md + 5 guides)
+**Total:** 11 standards documents (INDEX.md + 10 guides)
 
 ### Sprints (`docs/sprints/`)
 
@@ -82,10 +91,10 @@
 | Category | Documents | Total Lines |
 |----------|-----------|-------------|
 | Root docs | 7 | ~1,050 |
-| Workflows | 10 | ~3,000 |
-| Standards | 6 | ~2,000 |
+| Workflows | 11 | ~3,500 |
+| Standards | 11 | ~4,400 |
 | Sprints | 3 | ~816 |
-| **TOTAL** | **26** | **~6,866** |
+| **TOTAL** | **32** | **~9,766** |
 
 ---
 
@@ -140,8 +149,14 @@ Each language example includes:
 |----------|------------------|--------------|
 | **AGENT_GUARDRAILS.md** | All AI agents | Four Laws, Pre-Execution Checklist, Forbidden Actions |
 | **TEST_PRODUCTION_SEPARATION.md** | All AI agents | Three Laws, Blocking Violations, Uncertainty Protocol |
-| **AGENT_EXECUTION.md** | All AI agents | Task Flow, Rollback, Error Handling |
+| **AGENT_EXECUTION.md** | All AI agents | Task Flow, Rollback, Error Handling, Three Strikes Rule |
 | **AGENT_ESCALATION.md** | All AI agents | Audit Requirements, When to Escalate |
+| **AGENT_REVIEW_PROTOCOL.md** | All AI agents | Dual-Agent Review, Cross-Model Review, Review Package |
+| **PROJECT_CONTEXT_TEMPLATE.md** | Project setup | Tech Stack, Style Guide, Forbidden Patterns |
+| **ADVERSARIAL_TESTING.md** | Security testing | Breaker Agent, Attack Vectors, Fuzz Testing |
+| **DEPENDENCY_GOVERNANCE.md** | All AI agents | Package Allow-List, Forbidden Packages |
+| **INFRASTRUCTURE_STANDARDS.md** | DevOps/IaC | Terraform, Drift Detection, No-ClickOps |
+| **OPERATIONAL_PATTERNS.md** | Service developers | Health Checks, Circuit Breakers, Retry, Rate Limiting |
 | **HOW_TO_APPLY.md** | All agents | 4 Options with ready-to-use prompts |
 | **INDEX_MAP.md** | All agents | Find docs by keyword (60-80% token savings) |
 | **HEADER_MAP.md** | All agents | Section-level lookup for targeted reading |
@@ -155,12 +170,12 @@ Each language example includes:
 |----------|-------|-----------|-----------|--------------|
 | Root | 7 | 29 | 408 | ~150 |
 | docs/ | 3 | 238 | 432 | ~333 |
-| docs/workflows/ | 10 | ~200 | ~350 | ~300 |
-| docs/standards/ | 6 | ~250 | ~558 | ~333 |
+| docs/workflows/ | 11 | ~200 | ~605 | ~320 |
+| docs/standards/ | 11 | ~250 | ~667 | ~400 |
 | docs/sprints/ | 3 | 31 | 515 | ~272 |
 | .github/ | 3 | ~50 | ~150 | ~100 |
 | examples/ | 53 | ~30 | ~150 | ~40 |
-| **TOTAL** | **85** | **29** | **558** | **~90** |
+| **TOTAL** | **91** | **29** | **667** | **~110** |
 
 ---
 
@@ -176,11 +191,14 @@ All documents comply with the 500-line maximum rule:
 | AGENT_GUARDRAILS.md | 267 | ✅ |
 | HOW_TO_APPLY.md | 432 | ✅ |
 | TEST_PRODUCTION_SEPARATION.md | 558 | ⚠️ Exceeds - needs split |
-| All workflows | ~280 average | ✅ |
-| All standards | ~300 average | ✅ |
+| AGENT_REVIEW_PROTOCOL.md | 605 | ⚠️ Exceeds - needs split |
+| INFRASTRUCTURE_STANDARDS.md | 546 | ⚠️ Exceeds - needs split |
+| OPERATIONAL_PATTERNS.md | 667 | ⚠️ Exceeds - needs split |
+| All other workflows | ~280 average | ✅ |
+| All other standards | ~380 average | ✅ |
 | All sprints | ~270 average | ✅ |
 
-**Note:** TEST_PRODUCTION_SEPARATION.md is the only document exceeding 500 lines at 558 lines. It will be split in a future release.
+**Note:** 4 documents exceed the 500-line limit. They will be split in a future release.
 
 ---
 
@@ -219,6 +237,6 @@ All files follow these conventions:
 
 **Authored by:** TheArchitectit
 **Document Owner:** Project Maintainers
-**Last Updated:** 2026-01-18  
-**Total Files:** 85  
-**Total Lines:** ~7,500
+**Last Updated:** 2026-01-21  
+**Total Files:** 91  
+**Total Lines:** ~10,000
