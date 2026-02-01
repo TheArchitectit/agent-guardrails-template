@@ -257,7 +257,7 @@ agent-guardrails-template/
 
 See [CHANGELOG.md](CHANGELOG.md) for complete release history.
 
-**Current Version:** v1.5.0 (2026-01-18)
+**Current Version:** v1.7.0 (2026-02-01)
 
 ---
 
@@ -283,5 +283,5 @@ BSD-3-Clause - See [LICENSE](LICENSE) file for details.
 
 ---
 
-**Last Updated:** 2026-01-18  
-**Status:** v1.5.0 - Production Ready
+**Last Updated:** 2026-02-01
+**Status:** v1.7.0 - Production Ready
