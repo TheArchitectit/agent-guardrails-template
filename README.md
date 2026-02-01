@@ -111,6 +111,23 @@ Clear list of actions agents must never perform:
 - **MAX 500 lines per document** - Fast context loading
 - **.claudeignore** - Skip irrelevant files
 
+### 🤖 AI Tool Integration
+
+**Claude Code Support:**
+- `scripts/setup_agents.py` - Generate Claude Code skills and hooks
+- Skills: guardrails-enforcer, commit-validator, env-separator
+- Hooks: pre-execution, post-execution, pre-commit
+
+**OpenCode Support:**
+- `.opencode/oh-my-opencode.jsonc` configuration
+- Skills: guardrails-enforcer, commit-validator, env-separator
+- Agents: guardrails-auditor, doc-indexer
+
+**Script-Based Workflows:**
+- Large code review automation
+- Batch execution with guardrails compliance
+- CI/CD integration patterns
+
 ---
 
 ## Quick Start
@@ -130,6 +147,30 @@ Clear list of actions agents must never perform:
 - **Use example prompts** → [Option B](docs/HOW_TO_APPLY.md#option-b-example-ai-agent-prompts)
 - **Create new repo** → [Option C](docs/HOW_TO_APPLY.md#option-c-create-a-new-repository-with-standards)
 - **Migrate existing docs** → [Option D](docs/HOW_TO_APPLY.md#option-d-migrate-existing-documentation-to-guardrails-structure)
+
+### Setup with AI Tools (New in v1.7.0)
+
+**For Claude Code or OpenCode users, run the setup script:**
+
+```bash
+# Full setup (all skills, agents, and hooks)
+python scripts/setup_agents.py --claude --opencode --full
+
+# Or minimal setup (guardrails-enforcer only)
+python scripts/setup_agents.py --claude --minimal
+python scripts/setup_agents.py --opencode --minimal
+```
+
+**What gets created:**
+- `.claude/skills/` - Claude Code skills (JSON)
+- `.claude/hooks/` - Pre/post execution hooks (shell)
+- `.opencode/` - OpenCode configuration and skills
+- `skills/shared-prompts/` - Reusable prompt components
+
+**Documentation:**
+- [AGENTS_AND_SKILLS_SETUP.md](docs/AGENTS_AND_SKILLS_SETUP.md) - Complete setup guide
+- [CLCODE_INTEGRATION.md](docs/CLCODE_INTEGRATION.md) - Claude Code details
+- [OPENCODE_INTEGRATION.md](docs/OPENCODE_INTEGRATION.md) - OpenCode details
 
 ### For Humans: Use This Template via GitHub
 
@@ -164,6 +205,9 @@ agent-guardrails-template/
 ├── docs/                   ← Documentation
 │   ├── AGENT_GUARDRAILS.md       # Core guardrails (MANDATORY)
 │   ├── HOW_TO_APPLY.md             # How to apply template
+│   ├── AGENTS_AND_SKILLS_SETUP.md  # AI tool setup guide
+│   ├── CLCODE_INTEGRATION.md       # Claude Code integration
+│   ├── OPCODE_INTEGRATION.md       # OpenCode integration
 │   ├── workflows/                   # Operational procedures (10 docs)
 │   │   ├── INDEX.md
 │   │   ├── AGENT_EXECUTION.md       # Execution protocol
@@ -194,6 +238,10 @@ agent-guardrails-template/
 │   ├── ruby/                  # Ruby examples
 │   ├── rust/                  # Rust examples
 │   └── typescript/            # TypeScript examples
+├── scripts/                ← Setup and utility scripts
+│   └── setup_agents.py        # CLI tool for AI tool configuration
+├── skills/                 ← Reusable skill components
+│   └── shared-prompts/        # Shared prompts for agents
 └── .github/                ← GitHub integration
     ├── SECRETS_MANAGEMENT.md  # GitHub Secrets guide
     ├── PULL_REQUEST_TEMPLATE.md
@@ -223,6 +271,7 @@ agent-guardrails-template/
 | [**AGENT_GUARDRAILS.md**](docs/AGENT_GUARDRAILS.md) | EVERYONE | Core safety protocols (MANDATORY) |
 | [**TEST_PRODUCTION_SEPARATION.md**](docs/standards/TEST_PRODUCTION_SEPARATION.md) | EVERYONE | Test/production isolation (MANDATORY) |
 | [**HOW_TO_APPLY.md**](docs/HOW_TO_APPLY.md) | Applying template | Step-by-step instructions with prompts |
+| [**AGENTS_AND_SKILLS_SETUP.md**](docs/AGENTS_AND_SKILLS_SETUP.md) | AI tool users | Setup guide for Claude Code/OpenCode |
 | [**TOC.md**](TOC.md) | Everyone | Complete file listing and organization |
 | [**INDEX_MAP.md**](INDEX_MAP.md) | Everyone | Find docs by keyword (saves 60-80% tokens) |
 
@@ -242,14 +291,15 @@ agent-guardrails-template/
 
 | Metric | Count |
 |--------|-------|
-| **Total Documentation Files** | 26 |
-| **Total Lines** | ~6,866 |
+| **Total Documentation Files** | 31 |
+| **Total Lines** | ~9,000 |
 | **Workflows** | 10 documents |
-| **Standards** | 6 documents  
+| **Standards** | 11 documents |
 | **Examples** | 53 files (6 languages) |
-| **500-Line Compliance** | 25/26 (96%) |
+| **500-Line Compliance** | 30/31 (97%) |
 | **Supported AI Models** | 30+ LLM families |
 | **Programming Languages** | Go, Java, Python, Ruby, Rust, TypeScript |
+| **AI Tool Integrations** | Claude Code, OpenCode |
 
 ---
 
