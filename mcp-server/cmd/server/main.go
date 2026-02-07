@@ -14,6 +14,7 @@ import (
 	"github.com/thearchitectit/guardrail-mcp/internal/cache"
 	"github.com/thearchitectit/guardrail-mcp/internal/config"
 	"github.com/thearchitectit/guardrail-mcp/internal/database"
+	mcpServer "github.com/thearchitectit/guardrail-mcp/internal/mcp"
 	"github.com/thearchitectit/guardrail-mcp/internal/web"
 )
 
@@ -58,6 +59,9 @@ func main() {
 	// Create web server
 	webServer := web.NewServer(cfg, db, redisClient, auditLogger)
 
+	// Create MCP server
+	mcpSrv := mcpServer.NewMCPServer(cfg, db, redisClient, auditLogger)
+
 	// Start servers
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -76,12 +80,10 @@ func main() {
 	go func() {
 		addr := fmt.Sprintf("127.0.0.1:%d", cfg.MCPPort)
 		slog.Info("Starting MCP server", "addr", addr)
-		// TODO: Start MCP SSE server
-		// mcpServer := mcp.NewServer(cfg, db, redisClient, auditLogger)
-		// if err := mcpServer.Start(addr); err != nil && err != http.ErrServerClosed {
-		//     slog.Error("MCP server error", "error", err)
-		//     cancel()
-		// }
+		if err := mcpSrv.Start(addr); err != nil && err != http.ErrServerClosed {
+			slog.Error("MCP server error", "error", err)
+			cancel()
+		}
 	}()
 
 	// Wait for shutdown signal
@@ -101,6 +103,10 @@ func main() {
 
 	if err := webServer.Shutdown(shutdownCtx); err != nil {
 		slog.Error("Web server shutdown error", "error", err)
+	}
+
+	if err := mcpSrv.Shutdown(shutdownCtx); err != nil {
+		slog.Error("MCP server shutdown error", "error", err)
 	}
 
 	slog.Info("Server stopped")
