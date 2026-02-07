@@ -10,6 +10,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
+## [1.9.2] - 2026-02-07
+
+### Fixed
+
+- **Web UI Authentication** - Removed API key requirement for Web UI routes
+  - Web UI (port 8093) is now publicly accessible without authentication
+  - Added skip logic for `/`, `/index.html`, and `/static/*` routes
+  - API endpoints still require valid API key
+  - Health checks and metrics remain unauthenticated
+
 ## [1.9.1] - 2026-02-07
 
 ### Fixed
