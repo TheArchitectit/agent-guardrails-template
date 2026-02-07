@@ -25,13 +25,13 @@ type Config struct {
 	DBName     string `env:"DB_NAME" envDefault:"guardrails"`
 	DBUser     string `env:"DB_USER,required"`
 	DBPassword string `env:"DB_PASSWORD,required"`
-	DBSSLMode  string `env:"DB_SSLMODE" envDefault:"prefer"`
+	DBSSLMode  string `env:"DB_SSLMODE" envDefault:"require"`
 
 	// Redis Configuration
 	RedisHost     string `env:"REDIS_HOST" envDefault:"localhost"`
 	RedisPort     int    `env:"REDIS_PORT" envDefault:"6379"`
 	RedisPassword string `env:"REDIS_PASSWORD"`
-	RedisUseTLS   bool   `env:"REDIS_USE_TLS" envDefault:"false"`
+	RedisUseTLS   bool   `env:"REDIS_USE_TLS" envDefault:"true"`
 
 	// Security Configuration
 	MCPAPIKey string `env:"MCP_API_KEY,required"`
