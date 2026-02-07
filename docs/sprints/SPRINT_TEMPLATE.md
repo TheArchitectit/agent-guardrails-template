@@ -159,7 +159,7 @@ TOOL: [Read | Edit | Bash | etc.]
 git add <modified-files>
 git commit -m "<type>(<scope>): <description>
 
-AI-assisted: Claude Code and Opus"
+Authored by TheArchitectit"
 ```
 
 **MCP Checkpoint (Optional):**
@@ -527,6 +527,6 @@ echo "Rollback complete. File restored to original state."
 ---
 
 **Created:** YYYY-MM-DD
-**Author:** [Name/Agent]
+**Authored by:** TheArchitectit
 **Archive Date:** YYYY-MM-DD
 **Version:** 1.1
