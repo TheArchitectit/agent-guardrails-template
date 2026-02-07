@@ -351,5 +351,7 @@ DO:
 
 ---
 
+**Authored by:** TheArchitectit
+**Document Owner:** Project Maintainers
 **Last Updated:** 2026-01-14
 **Line Count:** ~320

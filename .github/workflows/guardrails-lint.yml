@@ -167,15 +167,15 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Check for Co-Authored-By
+      - name: Check for AI Attribution
         run: |
-          echo "Checking for AI co-author attribution..."
+          echo "Checking for AI attribution..."
           echo ""
 
           # Get full commit messages
           COMMIT_BODIES=$(git log origin/main..HEAD --pretty=format:"%B---COMMIT_SEP---" 2>/dev/null || git log -5 --pretty=format:"%B---COMMIT_SEP---")
 
-          # Check if any commits mention AI tools but lack co-author
+          # Check if any commits mention AI tools but lack attribution
           AI_KEYWORDS="Claude|GPT|Gemini|AI|LLM|Copilot|agent"
 
           MISSING_ATTRIBUTION=""
@@ -183,20 +183,20 @@ jobs:
           while IFS= read -r commit; do
             # Check if commit mentions AI
             if echo "$commit" | grep -qiE "$AI_KEYWORDS"; then
-              # Check if it has Co-Authored-By
-              if ! echo "$commit" | grep -qi "Co-Authored-By:"; then
+              # Check if it has AI attribution
+              if ! echo "$commit" | grep -qi "Authored by TheArchitectit"; then
                 HASH=$(git log --pretty=format:"%h" -1)
-                MISSING_ATTRIBUTION="$MISSING_ATTRIBUTION- Commit may need Co-Authored-By attribution"$'\n'
+                MISSING_ATTRIBUTION="$MISSING_ATTRIBUTION- Commit may need AI attribution"$'\n'
               fi
             fi
           done <<< "$(echo "$COMMIT_BODIES" | tr '---COMMIT_SEP---' '\n')"
 
           if [ -n "$MISSING_ATTRIBUTION" ]; then
-            echo "NOTE: Some commits may need AI co-author attribution:"
+            echo "NOTE: Some commits may need AI attribution:"
             echo "$MISSING_ATTRIBUTION"
             echo ""
             echo "If AI assisted with these commits, add:"
-            echo "  AI-assisted: Claude Code and Opus"
+            echo "  Authored by TheArchitectit"
           else
             echo "Attribution check complete."
           fi

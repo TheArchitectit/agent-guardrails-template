@@ -183,7 +183,6 @@ info:
   version: 1.0.0
   contact:
     name: [Team Name]
-    email: [team@example.com]
 
 servers:
   - url: https://api.example.com/v1
@@ -416,5 +415,7 @@ components:
 
 ---
 
+**Authored by:** TheArchitectit
+**Document Owner:** Project Maintainers
 **Last Updated:** 2026-01-14
 **Line Count:** ~350

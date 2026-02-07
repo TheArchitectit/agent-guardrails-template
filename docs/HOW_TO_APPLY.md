@@ -68,7 +68,7 @@ COMMAND: git commit -m "docs: add agent guardrails and sprint framework
 Added standardized AI agent safety protocols and sprint task templates.
 Applies to all LLMs and automated systems.
 
-AI-assisted: Claude Code and Opus"
+Authored by TheArchitectit"
 ```
 
 ---
@@ -177,7 +177,7 @@ Commands to execute:
 - Added execution protocols and audit requirements
 - All documents under 500-line compliance
 
-AI-assisted: Claude Code and Opus"
+Authored by TheArchitectit"
 
 DO NOT:
 - Modify any source code files
@@ -258,7 +258,7 @@ COMMAND: git commit -m "feat: initial project setup with agent guardrails
 - Agent guardrails and sprint framework included
 - GitHub templates configured
 
-AI-assisted: Claude Code and Opus"
+Authored by TheArchitectit"
 
 STEP 6: Create GitHub repo (if requested)
 ─────────────────────────────────────────────
@@ -350,7 +350,7 @@ COMMAND: git commit -m "docs: restructure documentation to follow guardrails con
 - Added navigation maps (INDEX_MAP.md, HEADER_MAP.md)
 - Updated README.md documentation section
 
-AI-assisted: Claude Code and Opus"
+Authored by TheArchitectit"
 ```
 
 ### Migration Example
@@ -428,5 +428,7 @@ PROJECT FILES:
 
 ---
 
+**Authored by:** TheArchitectit
+**Document Owner:** Project Maintainers
 **Last Updated:** 2026-01-16
 **Line Count:** ~295

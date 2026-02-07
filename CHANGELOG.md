@@ -10,6 +10,48 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
+## [1.7.0] - 2026-02-01
+
+### Added
+
+- **Claude Code Integration** - Full support for Claude Code skills and hooks
+  - `scripts/setup_agents.py` - CLI tool to generate configurations
+  - Skills: guardrails-enforcer, commit-validator, env-separator
+  - Hooks: pre-execution, post-execution, pre-commit
+  - `docs/CLCODE_INTEGRATION.md` - Complete setup guide
+
+- **OpenCode Integration** - Full support for OpenCode agents and skills
+  - `.opencode/oh-my-opencode.jsonc` configuration template
+  - Skills: guardrails-enforcer, commit-validator, env-separator
+  - Agents: guardrails-auditor, doc-indexer
+  - `docs/OPENCODE_INTEGRATION.md` - Complete setup guide
+
+- **Shared Prompts** - Reusable prompt components
+  - `skills/shared-prompts/four-laws.md` - The Four Laws of Agent Safety
+  - `skills/shared-prompts/halt-conditions.md` - When to stop and ask
+
+- **Script-Based Workflows** - Documentation for large-scale operations
+  - `docs/AGENTS_AND_SKILLS_SETUP.md` - Main setup guide
+  - Large code review script examples
+  - Batch execution with guardrails compliance
+  - CI/CD integration patterns
+
+- **Navigation Updates**
+  - Updated `INDEX_MAP.md` with new AI Tools Integration category
+  - Updated `TOC.md` with 3 new documents
+  - Added scripts/ directory to navigation
+
+### Changed
+
+- **README.md** - Updated version to v1.7.0
+
+### Statistics
+
+- Documentation files: 28 → 31 (+3)
+- New code files: 1 (setup_agents.py)
+- New shared resources: 2 (prompt files)
+- Total new files: 6
+
 ## [1.6.0] - 2026-01-18
 
 ### Added
