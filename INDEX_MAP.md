@@ -48,6 +48,8 @@
 | cursor | CURSOR_INTEGRATION.md | docs/ | Cursor rules and configuration |
 | copilot | CLCODE_INTEGRATION.md | docs/ | GitHub Copilot instructions (see Claude Code) |
 | cody | CLCODE_INTEGRATION.md | docs/ | Cody context configuration (see Claude Code) |
+| mcp-server | MCP_SERVER_PLAN.md | docs/plans/ | MCP server implementation plan |
+| guardrail-platform | MCP_SERVER_PLAN.md | docs/plans/ | Guardrail enforcement platform |
 | aider | CLCODE_INTEGRATION.md | docs/ | Aider YAML configuration (see Claude Code) |
 | continue | CLCODE_INTEGRATION.md | docs/ | Continue IDE configuration (see Claude Code) |
 | windsurf | CLCODE_INTEGRATION.md | docs/ | Windsurf rules configuration (see Claude Code) |
