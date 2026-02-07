@@ -110,7 +110,7 @@ SPRINT-2026-01-14-add-feature.md:
 
 <optional body - explain why, not what>
 
-AI-assisted: Claude Code and Opus
+Authored by TheArchitectit
 ```
 
 ### Type Reference
@@ -141,12 +141,14 @@ GOOD:
 - "docs(readme): add troubleshooting section"
 ```
 
-### Co-Author Attribution
+### AI Attribution
 
 **All AI-generated commits MUST include:**
 
 ```
-AI-assisted: Claude Code and Opus
+Authored by TheArchitectit
+```
+Authored by TheArchitectit
 ```
 
 Use HEREDOC for proper formatting:
@@ -157,7 +159,7 @@ fix(parser): handle null input gracefully
 
 Added null check to prevent TypeError when input is undefined.
 
-AI-assisted: Claude Code and Opus
+Authored by TheArchitectit
 EOF
 )"
 ```
@@ -176,7 +178,7 @@ EOF
 [ ] No secrets or credentials included
 [ ] No generated files included
 [ ] Commit message follows format
-[ ] Co-author attribution included
+[ ] AI attribution included
 ```
 
 ### Staging Patterns
@@ -263,7 +265,7 @@ Validate: Syntax + tests pass
 git add src/validator.py
 git commit -m "feat(validator): add input validation
 
-AI-assisted: Claude Code and Opus"
+Authored by TheArchitectit"
     ↓
 TodoWrite: [completed] "Add input validation"
     ↓
@@ -312,7 +314,7 @@ See [MCP_CHECKPOINTING.md](./MCP_CHECKPOINTING.md) for details.
 +------------------------------------------------------------------+
 | MESSAGE FORMAT:                                                   |
 |   <type>(<scope>): <description>                                  |
-|   AI-assisted: Claude Code and Opus                              |
+|   Authored by TheArchitectit                              |
 +------------------------------------------------------------------+
 | PRE-COMMIT:                                                       |
 |   [ ] Validation passes                                           |
@@ -324,4 +326,6 @@ See [MCP_CHECKPOINTING.md](./MCP_CHECKPOINTING.md) for details.
 ---
 
 **Last Updated:** 2026-01-14
+**Authored by:** TheArchitectit
+**Document Owner:** Project Maintainers
 **Line Count:** ~280
