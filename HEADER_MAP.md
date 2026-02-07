@@ -45,15 +45,55 @@
 | 41 | ### The Four Laws of Agent Safety |
 | 65 | ## SAFETY PROTOCOLS (MANDATORY) |
 | 67 | ### Pre-Execution Checklist |
-| 80 | ### Git Safety Rules |
-| 95 | ### Code Safety Rules |
-| 108 | ### Test/Production Separation Rules (MANDATORY) |
-| 117 | ## GUARDRAILS |
-| 119 | ### HALT CONDITIONS |
-| 137 | ### FORBIDDEN ACTIONS |
-| 190 | ### SCOPE BOUNDARIES |
-| 215 | ## QUICK REFERENCE |
-| 242 | ## RELATED DOCUMENTS |
+| 82 | ### Git Safety Rules |
+| 97 | ### Code Safety Rules |
+| 110 | ### Test/Production Separation Rules (MANDATORY) |
+| 119 | ## GUARDRAILS |
+| 121 | ### HALT CONDITIONS |
+| 139 | ### FORBIDDEN ACTIONS |
+| 192 | ### SCOPE BOUNDARIES |
+| 217 | ## QUICK REFERENCE |
+| 244 | ## RELATED DOCUMENTS |
+| 248 | ### Regression Prevention |
+
+---
+
+## .guardrails/pre-work-check.md
+
+| Line | Header |
+|------|--------|
+| 1 | # Pre-Work Regression Check |
+| 7 | ## Quick Checklist |
+| 19 | ## Active Failures Relevant to Current Work |
+| 34 | ## Known Bug Patterns by Category |
+| 63 | ## Prevention Rules in Effect |
+| 78 | ## Files with Known Bug History |
+| 92 | ## Required Verification Steps |
+| 125 | ## When You Find a New Bug |
+| 139 | ## Quick Commands Reference |
+| 163 | ## Remember |
+
+---
+
+## docs/workflows/REGRESSION_PREVENTION.md
+
+| Line | Header |
+|------|--------|
+| 1 | # Regression Prevention Protocol |
+| 14 | ## Overview |
+| 27 | ## Core Philosophy |
+| 41 | ## Failure Registry |
+| 72 | ## Using the Registry |
+| 120 | ## Prevention Rules |
+| 159 | ## Pre-Work Check Protocol |
+| 192 | ## Regression Testing Requirements |
+| 249 | ## CI/CD Integration |
+| 285 | ## Review Protocol |
+| 313 | ## Common Scenarios |
+| 360 | ## Metrics and Success Criteria |
+| 385 | ## Best Practices |
+| 405 | ## Troubleshooting |
+| 425 | ## Quick Reference |
 
 ---
 
@@ -92,6 +132,210 @@
 | 315 | ### Immediate Halt Conditions |
 | 330 | ### Notification Protocol |
 | 340 | ## QUICK REFERENCE |
+
+---
+
+## docs/standards/PROJECT_CONTEXT_TEMPLATE.md
+
+| Line | Header |
+|------|--------|
+| 1 | # Project Context Template (Project Bible) |
+| 9 | ## Overview |
+| 17 | ## HOW TO USE THIS TEMPLATE |
+| 26 | ## TEMPLATE START |
+| 37 | ## 1. TECH STACK CONSTRAINTS (Hard Limits) |
+| 39 | ### Primary Stack |
+| 49 | ### Version Lock Directive |
+| 56 | ### Package Manager |
+| 64 | ## 2. CODING STYLE GUIDE (The "Vibe") |
+| 66 | ### Naming Conventions |
+| 77 | ### Export Patterns |
+| 88 | ### Function Style |
+| 100 | ### Comment Standards |
+| 118 | ## 3. ARCHITECTURAL PATTERNS (Enforced) |
+| 120 | ### Directory Structure |
+| 140 | ### Barrel Pattern (MANDATORY) |
+| 150 | ### Dependency Flow (One-Way Street) |
+| 160 | ### File Size Limits |
+| 171 | ## 4. FORBIDDEN PATTERNS (No-Go Zone) |
+| 173 | ### TypeScript Forbidden |
+| 189 | ### React Forbidden |
+| 210 | ### Database Forbidden |
+| 226 | ### Security Forbidden |
+| 244 | ## 5. CHAIN OF THOUGHT MANDATE |
+| 246 | ### Protocol: Plan Before Execution |
+| 272 | ## 6. VALIDATION REQUIREMENTS |
+| 274 | ### Before Committing |
+| 285 | ### Code Review Checklist |
+| 299 | ## 7. APPROVED DEPENDENCIES |
+| 312 | ## QUICK REFERENCE CARD |
+| 342 | ## EXAMPLE: Filled Template (Next.js Project) |
+
+---
+
+## docs/standards/ADVERSARIAL_TESTING.md
+
+| Line | Header |
+|------|--------|
+| 1 | # Adversarial Testing Protocol (Breaker Agent) |
+| 9 | ## Overview |
+| 17 | ## THE BREAKER AGENT PERSONA |
+| 19 | ### Agent Configuration |
+| 37 | ### Breaker vs Builder Separation |
+| 58 | ## ATTACK VECTOR CATEGORIES |
+| 60 | ### 1. Input Validation Attacks |
+| 62 | #### String Attacks |
+| 74 | #### XSS (Cross-Site Scripting) Attacks |
+| 94 | #### SQL Injection Attacks |
+| 113 | #### Number Attacks |
+| 125 | ### 2. Boundary Condition Attacks |
+| 127 | #### Array/Collection Attacks |
+| 140 | #### Object Attacks |
+| 153 | ### 3. State-Based Attacks |
+| 155 | #### Race Conditions |
+| 173 | #### Session Attacks |
+| 186 | ### 4. Resource Exhaustion Attacks |
+| 188 | #### Memory Exhaustion |
+| 203 | #### CPU Exhaustion (ReDoS) |
+| 219 | ## FUZZ TESTING PROTOCOL |
+| 221 | ### Automated Fuzzing Setup |
+| 278 | ### Fuzz Test Directive |
+| 302 | ## COMPONENT-SPECIFIC ATTACK CHECKLISTS |
+| 304 | ### Form Component Attacks |
+| 322 | ### API Endpoint Attacks |
+| 340 | ### File Upload Attacks |
+| 357 | ### Authentication Attacks |
+| 376 | ## BREAKER AGENT PROMPT TEMPLATE |
+| 418 | ## INTEGRATION WITH CI/CD |
+| 420 | ### Automated Adversarial Tests |
+| 457 | ### Blocking Gate |
+| 477 | ## QUICK REFERENCE |
+
+---
+
+## docs/standards/DEPENDENCY_GOVERNANCE.md
+
+| Line | Header |
+|------|--------|
+| 1 | # Dependency Governance |
+| 9 | ## Overview |
+| 17 | ## WHY DEPENDENCY GOVERNANCE |
+| 19 | ### The Risks of Uncontrolled Dependencies |
+| 45 | ## ALLOW-LIST STRUCTURE |
+| 47 | ### Package Categories |
+| 63 | ### Allow-List Template |
+| 266 | ## AGENT DIRECTIVE |
+| 268 | ### When Agent Wants to Add a Package |
+| 300 | ### Forbidden Package Detection |
+| 317 | ## VALIDATION WORKFLOW |
+| 319 | ### Pre-Install Check |
+| 349 | ### CI/CD Integration |
+| 391 | ## MAINTENANCE |
+| 393 | ### Adding New Packages |
+| 420 | ### Removing Packages |
+| 448 | ## QUICK REFERENCE |
+
+---
+
+## docs/standards/INFRASTRUCTURE_STANDARDS.md
+
+| Line | Header |
+|------|--------|
+| 1 | # Infrastructure Standards (IaC) |
+| 9 | ## Overview |
+| 17 | ## THE NO-CLICKOPS MANDATE |
+| 19 | ### Why ClickOps is Forbidden |
+| 45 | ### The IaC Mandate |
+| 66 | ## TERRAFORM STANDARDS |
+| 68 | ### Directory Structure |
+| 97 | ### Required File Structure |
+| 153 | ## THE PLAN-BEFORE-APPLY PROTOCOL |
+| 155 | ### Never Apply Without Plan Review |
+| 190 | ### Agent IaC Directive |
+| 216 | ## DRIFT DETECTION |
+| 218 | ### What is Drift? |
+| 235 | ### Drift Response Protocol |
+| 256 | ### Automated Drift Detection |
+| 297 | ## STATE FILE MANAGEMENT |
+| 299 | ### State File Security |
+| 316 | ### Backend Configuration |
+| 331 | ### State File Agent Rules |
+| 350 | ## RESOURCE NAMING CONVENTIONS |
+| 352 | ### Standard Naming Pattern |
+| 364 | ### Tagging Standards |
+| 390 | ## SECURITY CONSTRAINTS |
+| 392 | ### Forbidden Configurations |
+| 420 | ### Required Security Controls |
+| 437 | ## CI/CD INTEGRATION |
+| 439 | ### Terraform CI Pipeline |
+| 507 | ## QUICK REFERENCE |
+
+---
+
+## docs/standards/OPERATIONAL_PATTERNS.md
+
+| Line | Header |
+|------|--------|
+| 1 | # Operational Patterns |
+| 9 | ## Overview |
+| 17 | ## HEALTH CHECK PATTERNS |
+| 19 | ### The /health Endpoint |
+| 58 | ### Health Check Implementation |
+| 127 | ### Liveness vs Readiness |
+| 162 | ## CIRCUIT BREAKER PATTERN |
+| 164 | ### Why Circuit Breakers? |
+| 188 | ### Circuit Breaker States |
+| 215 | ### Circuit Breaker Implementation |
+| 299 | ## RETRY PATTERNS |
+| 301 | ### Exponential Backoff |
+| 358 | ### Retry vs Circuit Breaker |
+| 383 | ## GRACEFUL DEGRADATION |
+| 385 | ### Fallback Strategies |
+| 455 | ## RATE LIMITING |
+| 457 | ### Token Bucket Implementation |
+| 518 | ### Rate Limit Headers |
+| 532 | ## TIMEOUT PATTERNS |
+| 534 | ### Request Timeouts |
+| 559 | ### Timeout Hierarchy |
+| 576 | ## OBSERVABILITY |
+| 578 | ### Metrics to Track |
+| 604 | ### Structured Error Logging |
+| 631 | ## QUICK REFERENCE |
+
+---
+
+## docs/workflows/AGENT_REVIEW_PROTOCOL.md
+
+| Line | Header |
+|------|--------|
+| 1 | # Agent Review Protocol |
+| 9 | ## Overview |
+| 17 | ## WHY AGENT REVIEW IS MANDATORY |
+| 19 | ### The Hallucination Problem |
+| 33 | ### The Context Contamination Problem |
+| 49 | ## REVIEW MODELS |
+| 51 | ### Model 1: Dual-Agent Review (Recommended) |
+| 74 | ### Model 2: Cross-Model Review |
+| 99 | ### Model 3: Specialized Agent Review |
+| 122 | ### Model 4: Automated + Agent Hybrid |
+| 157 | ## REVIEWER AGENT PROMPTS |
+| 159 | ### General Code Reviewer Prompt |
+| 216 | ### Security-Focused Reviewer Prompt |
+| 248 | ### Test Quality Reviewer Prompt |
+| 283 | ### Architecture Reviewer Prompt |
+| 320 | ## REVIEW WORKFLOW |
+| 322 | ### Standard Review Flow |
+| 365 | ### Review Package Template |
+| 409 | ## REVIEW DECISION MATRIX |
+| 411 | ### When to APPROVE |
+| 428 | ### When to REQUEST_CHANGES |
+| 446 | ### When to REJECT |
+| 467 | ## REVIEW CYCLE LIMITS |
+| 469 | ### Three Strikes Rule |
+| 492 | ### Context Reset Between Cycles |
+| 509 | ## AUTOMATION INTEGRATION |
+| 511 | ### GitHub Actions Review Gate |
+| 567 | ## QUICK REFERENCE |
 
 ---
 
@@ -508,7 +752,71 @@
 
 ---
 
+## docs/CLCODE_INTEGRATION.md
+
+| Line | Header |
+|------|--------|
+| 1 | # Claude Code Integration |
+| 5 | ## Overview |
+| 13 | ## Setup |
+| 15 | ### 1. Run Setup Script |
+| 34 | ### 2. Verify Installation |
+| 46 | ## How It Works |
+| 48 | ### Skills |
+| 66 | ### Hooks |
+| 76 | ## Skill Details |
+| 78 | ### guardrails-enforcer |
+| 95 | ### commit-validator |
+| 112 | ### env-separator |
+| 126 | ## Customization |
+| 128 | ### Adding a Custom Skill |
+| 143 | ### Modifying Hooks |
+| 159 | ## Advanced Configuration |
+| 161 | ### Skill Selection |
+| 172 | ### Hook Chaining |
+| 190 | ## Troubleshooting |
+| 192 | ### Skills Not Loading |
+| 199 | ### Hooks Not Running |
+| 206 | ### Permission Denied |
+| 213 | ## Best Practices |
+| 220 | ## References |
+
+---
+
+## docs/OPCODE_INTEGRATION.md
+
+| Line | Header |
+|------|--------|
+| 1 | # OpenCode Integration |
+| 5 | ## Overview |
+| 13 | ## Setup |
+| 15 | ### 1. Run Setup Script |
+| 34 | ### 2. Verify Installation |
+| 46 | ## How It Works |
+| 48 | ### Agents |
+| 61 | ### Skills |
+| 74 | ### Hooks |
+| 84 | ## Skill Details |
+| 86 | ### guardrails-enforcer |
+| 103 | ### commit-validator |
+| 120 | ### env-separator |
+| 134 | ## Customization |
+| 136 | ### Adding a Custom Agent |
+| 158 | ### Modifying Hooks |
+| 174 | ## Advanced Configuration |
+| 176 | ### Agent Selection |
+| 187 | ### Hook Chaining |
+| 205 | ## Troubleshooting |
+| 207 | ### Agents Not Loading |
+| 214 | ### Skills Not Loading |
+| 221 | ### Hooks Not Running |
+| 228 | ### Permission Denied |
+| 235 | ## Best Practices |
+| 242 | ## References |
+
+---
+
 **Authored by:** TheArchitectit
 **Document Owner:** Project Maintainers
-**Last Updated:** 2026-01-18
+**Last Updated:** 2026-02-01
 **Status:** Complete - all documents and headers accurately mapped
