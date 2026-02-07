@@ -552,6 +552,7 @@ WHEN VIOLATION DETECTED:
 
 ---
 
+**Authored by:** TheArchitectit
 **Document Owner:** Project Maintainers
 **Review Cycle:** Monthly
 **Last Review:** 2026-01-16

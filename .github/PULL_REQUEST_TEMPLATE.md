@@ -51,5 +51,5 @@ Fixes #
 
 **AI Attribution:** If this PR was created with AI assistance, include:
 ```
-Co-Authored-By: [Agent Name] <noreply@provider.com>
+Authored by TheArchitectit
 ```
