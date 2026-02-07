@@ -22,6 +22,10 @@ type Server struct {
 	db          *database.DB
 	cache       *cache.Client
 	auditLogger *audit.Logger
+	docStore    *database.DocumentStore
+	ruleStore   *database.RuleStore
+	projStore   *database.ProjectStore
+	failStore   *database.FailureStore
 }
 
 // NewServer creates a new web server
@@ -36,6 +40,10 @@ func NewServer(cfg *config.Config, db *database.DB, cache *cache.Client, auditLo
 		db:          db,
 		cache:       cache,
 		auditLogger: auditLogger,
+		docStore:    database.NewDocumentStore(db),
+		ruleStore:   database.NewRuleStore(db),
+		projStore:   database.NewProjectStore(db),
+		failStore:   database.NewFailureStore(db),
 	}
 
 	s.setupMiddleware()
