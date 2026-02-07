@@ -183,9 +183,9 @@ func (dl *DistributedRateLimiter) Allow(ctx context.Context, key string, limit i
 	pipe.Expire(ctx, windowKey, dl.window)
 	_, err := pipe.Exec(ctx)
 	if err != nil {
-		// Fail open on Redis error
-		slog.Warn("Rate limiting Redis error, failing open", "error", err)
-		return true
+		// Fail closed on Redis error - security first
+		slog.Error("Rate limiting Redis error, failing closed", "error", err)
+		return false
 	}
 
 	return incr.Val() <= int64(limit)

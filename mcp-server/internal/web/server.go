@@ -2,6 +2,7 @@ package web
 
 import (
 	"context"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -48,29 +49,27 @@ func (s *Server) setupMiddleware() {
 	// Request ID generation
 	s.echo.Use(middleware.RequestID())
 
-	// Structured logging
-	s.echo.Use(middleware.RequestLoggerWithConfig(middleware.RequestLoggerConfig{
-		LogStatus:   true,
-		LogURI:      true,
-		LogMethod:   true,
-		LogLatency:  true,
-		LogError:    true,
-		HandleError: true,
-		LogValuesFunc: func(c echo.Context, v middleware.RequestLoggerValues) error {
-			// Log request details
-			return nil
-		},
-	}))
-
 	// Recovery from panics
 	s.echo.Use(middleware.Recover())
 
 	// Security headers
 	s.echo.Use(securityHeadersMiddleware())
 
-	// CORS
+	// API Key Authentication (required for all routes except health/metrics)
+	s.echo.Use(APIKeyAuth(s.cfg))
+
+	// Rate Limiting
+	limiter := s.cache.NewDistributedLimiter()
+	s.echo.Use(RateLimitMiddleware(limiter, s.cfg))
+
+	// CORS - restrict in production
+	corsOrigins := []string{"http://localhost:*", "https://localhost:*"}
+	if s.cfg.DBSSLMode == "require" {
+		// In production, be more restrictive
+		corsOrigins = []string{"http://localhost:8081", "https://localhost:8081"}
+	}
 	s.echo.Use(middleware.CORSWithConfig(middleware.CORSConfig{
-		AllowOrigins: []string{"http://localhost:*", "https://localhost:*"},
+		AllowOrigins: corsOrigins,
 		AllowMethods: []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete},
 		AllowHeaders: []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAccept, echo.HeaderAuthorization},
 	}))
@@ -190,17 +189,19 @@ func (s *Server) healthReady(c echo.Context) error {
 
 	// Check database
 	if err := s.db.HealthCheck(ctx); err != nil {
+		slog.Error("Readiness check failed - database", "error", err)
 		return c.JSON(http.StatusServiceUnavailable, map[string]string{
 			"status": "not ready",
-			"reason": "database",
+			// Don't expose which component failed
 		})
 	}
 
 	// Check cache
 	if err := s.cache.HealthCheck(ctx); err != nil {
+		slog.Error("Readiness check failed - cache", "error", err)
 		return c.JSON(http.StatusServiceUnavailable, map[string]string{
 			"status": "not ready",
-			"reason": "cache",
+			// Don't expose which component failed
 		})
 	}
 
