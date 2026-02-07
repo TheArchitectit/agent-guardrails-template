@@ -17,9 +17,14 @@ import (
 func APIKeyAuth(cfg *config.Config) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
-			// Skip health checks and metrics
+			// Skip health checks, metrics, and Web UI routes
 			path := c.Path()
 			if path == "/health/live" || path == "/health/ready" || path == "/metrics" {
+				return next(c)
+			}
+
+			// Skip Web UI routes - these are publicly accessible
+			if path == "/" || path == "/index.html" || strings.HasPrefix(path, "/static/") {
 				return next(c)
 			}
 
@@ -75,9 +80,14 @@ func APIKeyAuth(cfg *config.Config) echo.MiddlewareFunc {
 func RateLimitMiddleware(limiter *cache.DistributedRateLimiter, cfg *config.Config) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
-			// Skip health checks
+			// Skip health checks and Web UI routes
 			path := c.Path()
 			if path == "/health/live" || path == "/health/ready" {
+				return next(c)
+			}
+
+			// Skip Web UI routes - these are publicly accessible
+			if path == "/" || path == "/index.html" || strings.HasPrefix(path, "/static/") {
 				return next(c)
 			}
 
