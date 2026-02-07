@@ -163,7 +163,7 @@ git commit -m "hotfix: fix critical issue
 
 Description of what was fixed and why.
 
-AI-assisted: Claude Code and Opus"
+Authored by TheArchitectit"
 
 # 3. Test thoroughly
 # Run critical tests
@@ -336,4 +336,6 @@ git for-each-ref --sort=-committerdate refs/heads/
 ---
 
 **Last Updated:** 2026-01-14
+**Authored by:** TheArchitectit
+**Document Owner:** Project Maintainers
 **Line Count:** ~280

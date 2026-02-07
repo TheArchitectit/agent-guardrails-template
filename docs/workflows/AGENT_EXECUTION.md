@@ -2,13 +2,166 @@
 
 > Standard task execution flow, rollback procedures, and error handling for AI agents.
 
-**Related:** [../AGENT_GUARDRAILS.md](../AGENT_GUARDRAILS.md) | [TESTING_VALIDATION.md](./TESTING_VALIDATION.md)
+**Related:** [../AGENT_GUARDRAILS.md](../AGENT_GUARDRAILS.md) | [TESTING_VALIDATION.md](./TESTING_VALIDATION.md) | [AGENT_REVIEW_PROTOCOL.md](./AGENT_REVIEW_PROTOCOL.md)
 
 ---
 
 ## Overview
 
-This document defines the standard execution protocol for AI agents, including task flow, decision matrices, rollback procedures, and error handling protocols. All agent operations must follow this protocol to ensure safe, predictable behavior.
+This document defines the standard execution protocol for AI agents, including task flow, decision matrices, rollback procedures, error handling protocols, and **retry limits**. All agent operations must follow this protocol to ensure safe, predictable behavior.
+
+---
+
+## RETRY LIMITS (Three Strikes Rule)
+
+### The Anti-Hallucination Protocol
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│              THREE STRIKES RULE (MANDATORY)                  │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  MAX_ATTEMPTS = 3                                            │
+│                                                              │
+│  ATTEMPT 1: Initial try                                      │
+│    └── If FAIL → Rollback, analyze error, try again         │
+│                                                              │
+│  ATTEMPT 2: Second try with adjusted approach                │
+│    └── If FAIL → Rollback, analyze error, try again         │
+│                                                              │
+│  ATTEMPT 3: Final try                                        │
+│    └── If FAIL → HALT, report to user, DO NOT retry         │
+│                                                              │
+│  AFTER 3 FAILURES:                                           │
+│    - Context is likely "poisoned" with bad assumptions      │
+│    - Stop ALL work on this task                             │
+│    - Report full history to user                            │
+│    - Recommend: Start fresh session                         │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Why Three Strikes?
+
+```
+PROBLEM: Context Contamination
+
+When an agent fails repeatedly on the same task:
+1. Each failure adds incorrect context to the session
+2. Agent starts referencing its own failed attempts
+3. New attempts bias toward the same wrong approach
+4. Quality degrades exponentially
+
+SOLUTION: Hard stop after 3 attempts
+- Forces fresh perspective (new session)
+- Prevents infinite loops of same mistake
+- Escalates to human when agent is stuck
+```
+
+### Attempt Tracking
+
+```
+TRACK FOR EACH TASK:
+
+Task: [description]
+Attempt: ___ / 3
+Last Error: [error message]
+Approach Tried: [what was attempted]
+
+BETWEEN ATTEMPTS:
+1. Rollback all changes
+2. Analyze WHY it failed (not just WHAT failed)
+3. Document the failed approach
+4. Try DIFFERENT approach, not same approach harder
+
+ON THIRD FAILURE:
+1. Compile full failure report
+2. List all three approaches tried
+3. Identify common thread (why all failed)
+4. Escalate with recommendation
+```
+
+### When Counter Resets
+
+```
+COUNTER RESETS:
+- New task (different scope)
+- User provides new information
+- User explicitly says "try again"
+- New session started
+
+COUNTER DOES NOT RESET:
+- Agent decides to "try one more time"
+- Minor variation of same approach
+- Same error with different wording
+```
+
+---
+
+## STABILIZATION MODE (Code Freeze)
+
+### When to Enter Stabilization Mode
+
+```
+TRIGGERS FOR STABILIZATION MODE:
+
+[ ] Agent has failed same task 3 times
+[ ] Multiple unrelated errors occurring
+[ ] User requests "just clean up, no new features"
+[ ] Sprint is behind and quality is suffering
+[ ] Technical debt accumulating rapidly
+```
+
+### Stabilization Mode Rules
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│              STABILIZATION MODE ACTIVE                       │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  ALLOWED:                                                    │
+│    ✓ Simplify existing code                                 │
+│    ✓ Remove unused imports                                  │
+│    ✓ Add missing error handling                             │
+│    ✓ Improve variable names                                 │
+│    ✓ Add comments to complex logic                          │
+│    ✓ Fix obvious bugs                                       │
+│    ✓ Increase test coverage                                 │
+│                                                              │
+│  FORBIDDEN:                                                  │
+│    ✗ New features                                           │
+│    ✗ Architecture changes                                   │
+│    ✗ New dependencies                                       │
+│    ✗ Refactoring that changes behavior                      │
+│    ✗ Any change that could introduce new bugs               │
+│                                                              │
+│  EXIT CRITERIA:                                              │
+│    - All tests pass                                          │
+│    - Lint clean                                              │
+│    - Code review approved                                   │
+│    - User explicitly exits stabilization mode               │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Stabilization Mode Directive
+
+```
+"We are entering STABILIZATION MODE.
+
+MISSION: Simplify and stabilize, not extend.
+
+For the next [X] tasks:
+- Do NOT add new features
+- Do NOT change architecture
+- Focus ONLY on:
+  * Removing complexity
+  * Adding tests
+  * Fixing obvious bugs
+  * Improving readability
+
+Report when ready to exit stabilization mode."
+```
 
 ---
 
@@ -29,6 +182,9 @@ This document defines the standard execution protocol for AI agents, including t
 │  PHASE 2: VERIFICATION                                       │
 │  ├── Read target file(s)                                     │
 │  ├── Verify preconditions match                              │
+│  ├── Check failure registry for affected files               │
+│  ├── Verify no regression patterns match proposed changes    │
+│  ├── Confirm previous fixes remain intact                    │
 │  └── Confirm rollback procedure known                        │
 │                                                              │
 │  PHASE 3: EXECUTION                                          │
@@ -60,6 +216,8 @@ This document defines the standard execution protocol for AI agents, including t
 | Uncertain about anything | HALT and ask |
 | User requests stop | STOP immediately |
 | Error encountered | ROLLBACK and report |
+| **Attempt 3 failed** | **HALT, escalate to user** |
+| **In stabilization mode** | **NO new features** |
 
 ---
 
@@ -152,7 +310,7 @@ IF CONFIGURATION CHANGED:
 
 <optional body - explain why, not what>
 
-AI-assisted: Claude Code and Opus
+Authored by TheArchitectit
 ```
 
 ### Commit Types
@@ -183,12 +341,12 @@ GOOD:
 - "docs(readme): add troubleshooting section"
 ```
 
-### Co-Author Attribution
+### AI Attribution
 
 **All AI-generated commits MUST include:**
 
 ```
-AI-assisted: Claude Code and Opus
+Authored by TheArchitectit
 ```
 
 Use HEREDOC for proper formatting:
@@ -199,7 +357,7 @@ fix(parser): handle null input gracefully
 
 Added null check to prevent TypeError when input is undefined.
 
-AI-assisted: Claude Code and Opus
+Authored by TheArchitectit
 EOF
 )"
 ```
@@ -299,12 +457,14 @@ PRE-COMPLETION CHECKLIST:
 [ ] All related tests pass
 [ ] Manual verification confirms expected behavior
 [ ] Commit message follows format
-[ ] Co-author attribution included
+[ ] AI attribution included
 [ ] No files outside scope were modified
 [ ] No new files created (unless required)
 [ ] No dependencies changed
 [ ] No secrets or credentials in changes
 [ ] User has been given completion report
+[ ] Regression check passes (python scripts/regression_check.py --staged)
+[ ] No previous fixes were undone
 ```
 
 ### Pre-Commit Verification
@@ -338,6 +498,11 @@ PRE-COMPLETION CHECKLIST:
 +------------------------------------------------------------------+
 |              AGENT EXECUTION QUICK REFERENCE                      |
 +------------------------------------------------------------------+
+| RETRY LIMITS:                                                    |
+|   MAX_ATTEMPTS = 3 per task                                      |
+|   After 3 failures → HALT and escalate                          |
+|   Fresh session recommended after failures                       |
++------------------------------------------------------------------+
 | EXECUTION FLOW:                                                  |
 |   1. Preparation → Verify preconditions → Execute → Validate     |
 |   2. If any check fails → ROLLBACK → Report → Stop               |
@@ -354,9 +519,13 @@ PRE-COMPLETION CHECKLIST:
 |   Edit failed → Re-read and ask                                 |
 |   Unknown error → Rollback and report                            |
 +------------------------------------------------------------------+
+| STABILIZATION MODE:                                              |
+|   Only simplify, clean up, add tests                            |
+|   NO new features or architecture changes                       |
++------------------------------------------------------------------+
 | COMMIT FORMAT:                                                   |
 |   <type>(<scope>): <description>                                |
-|   AI-assisted: Claude Code and Opus                            |
+|   Authored by TheArchitectit                            |
 +------------------------------------------------------------------+
 ```
 
@@ -367,8 +536,11 @@ PRE-COMPLETION CHECKLIST:
 - [TESTING_VALIDATION.md](./TESTING_VALIDATION.md) - Validation protocols
 - [ROLLBACK_PROCEDURES.md](./ROLLBACK_PROCEDURES.md) - Recovery operations
 - [COMMIT_WORKFLOW.md](./COMMIT_WORKFLOW.md) - Commit guidelines
+- [AGENT_REVIEW_PROTOCOL.md](./AGENT_REVIEW_PROTOCOL.md) - Post-work verification
 
 ---
 
-**Last Updated:** 2026-01-16
+**Last Updated:** 2026-01-21
+**Authored by:** TheArchitectit
+**Document Owner:** Project Maintainers
 **Line Count:** ~280
