@@ -10,6 +10,49 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
+## [1.9.0] - 2026-02-07
+
+### Added
+
+- **MCP Server** - Full Model Context Protocol implementation
+  - `mcp-server/` - Complete Go-based MCP server
+  - `mark3labs/mcp-go` v0.4.0 for protocol implementation
+  - SSE transport for real-time client communication
+  - Tools: `guardrail_init_session`, `guardrail_validate_bash`,
+    `guardrail_validate_file_edit`, `guardrail_validate_git_operation`,
+    `guardrail_pre_work_check`, `guardrail_get_context`
+  - Resources: `guardrail://quick-reference`, `guardrail://rules/active`
+
+- **Web UI** - Browser-based guardrail management
+  - Document CRUD operations
+  - Prevention rule management
+  - Failure registry viewer
+  - Project configuration
+
+- **Production Deployment** - <your-server-name> (RHEL + Podman)
+  - PostgreSQL 16 for data persistence
+  - Redis 7 for caching and rate limiting
+  - Multi-stage Docker build with distroless image
+  - Security hardening: non-root user (65532), read-only filesystem,
+    dropped capabilities, SELinux labels
+
+### Changed
+
+- **Server Binding** - Changed from `127.0.0.1` to `0.0.0.0` for containerized deployment
+- **Go Version** - Upgraded to Go 1.23.2 for mcp-go compatibility
+
+### Infrastructure
+
+- <your-server-name> endpoints:
+  - MCP: `http://<your-server-ip>:8092`
+  - Web UI: `http://<your-server-ip>:8093`
+
+## [1.8.0] - 2026-02-05
+
+### Added
+
+- Placeholder for v1.8.0 changes
+
 ## [1.7.0] - 2026-02-01
 
 ### Added
