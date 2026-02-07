@@ -29,6 +29,7 @@
 | api | API_SPECIFICATIONS.md | docs/standards/ | OpenAPI/OpenSpec guidance |
 | secrets | SECRETS_MANAGEMENT.md | .github/ | GitHub Secrets setup |
 | examples | examples/ | examples/ | Multi-language implementation examples |
+| regression-examples | regression-prevention/ | examples/regression-prevention/ | Practical regression prevention examples |
 | sprint | SPRINT_TEMPLATE.md | docs/sprints/ | Sprint task template |
 | sprint-guide | SPRINT_GUIDE.md | docs/sprints/ | How to write sprints |
 | validation | SPRINT_TEMPLATE.md | docs/sprints/ | Completion gate & validation loop |
@@ -41,10 +42,26 @@
 | operational | OPERATIONAL_PATTERNS.md | docs/standards/ | Health checks, circuit breakers, retry |
 | retry | AGENT_EXECUTION.md | docs/workflows/ | Three Strikes Rule, retry limits |
 | scope-freeze | SPRINT_TEMPLATE.md | docs/sprints/ | Scope Freeze Protocol |
-| skills | AGENTS_AND_SKILLS_SETUP.md | docs/ | Setup agents and skills for Claude Code/OpenCode |
+| skills | AGENTS_AND_SKILLS_SETUP.md | docs/ | Setup agents and skills for all platforms |
 | claude-code | CLCODE_INTEGRATION.md | docs/ | Claude Code skills and hooks integration |
 | opencode | OPCODE_INTEGRATION.md | docs/ | OpenCode agents and skills integration |
+| cursor | CURSOR_INTEGRATION.md | docs/ | Cursor rules and configuration |
+| copilot | CLCODE_INTEGRATION.md | docs/ | GitHub Copilot instructions (see Claude Code) |
+| cody | CLCODE_INTEGRATION.md | docs/ | Cody context configuration (see Claude Code) |
+| aider | CLCODE_INTEGRATION.md | docs/ | Aider YAML configuration (see Claude Code) |
+| continue | CLCODE_INTEGRATION.md | docs/ | Continue IDE configuration (see Claude Code) |
+| windsurf | CLCODE_INTEGRATION.md | docs/ | Windsurf rules configuration (see Claude Code) |
+| generic | GENERIC_LLM_INTEGRATION.md | docs/ | Generic/local LLM configuration guide |
 | setup | setup_agents.py | scripts/ | CLI tool to generate agent configurations |
+| regression | REGRESSION_PREVENTION.md | docs/workflows/ | Bug tracking and regression prevention protocol |
+| failure-registry | failure-registry.jsonl | .guardrails/ | Append-only bug database (JSONL format) |
+| pre-work-check | pre-work-check.md | .guardrails/ | MANDATORY pre-work regression checklist |
+| log-failure | log_failure.py | scripts/ | CLI tool to log bugs to failure registry |
+| regression-check | regression_check.py | scripts/ | Pre-commit regression pattern scanner |
+| prevention-rules | pattern-rules.json | .guardrails/prevention-rules/ | Regex patterns to prevent regressions |
+| semantic-rules | semantic-rules.json | .guardrails/prevention-rules/ | AST-based prevention rules |
+| bug-fix | REGRESSION_PREVENTION.md | docs/workflows/ | Requirements for bug fixes (regression tests) |
+| known-bugs | failure-registry.jsonl | .guardrails/ | Active/resolved/deprecated bug history |
 
 ---
 
@@ -71,6 +88,7 @@
 | **API_SPECIFICATIONS.md** | OpenAPI vs OpenSpec guidance | When documenting APIs |
 | **SECRETS_MANAGEMENT.md** | GitHub Secrets setup and rotation | When handling credentials |
 | **examples/** | Multi-language guardrails implementation examples | When exploring code examples |
+| **regression-prevention/** | Bug tracking & regression prevention examples | When logging bugs or creating prevention rules |
 | **SPRINT_TEMPLATE.md** | Copy-paste template for new sprints | When creating tasks |
 | **SPRINT_GUIDE.md** | Best practices for writing sprints | When writing sprint docs |
 | **PROJECT_CONTEXT_TEMPLATE.md** | Project Bible - stack, style, forbidden patterns | When setting up new project |
@@ -79,18 +97,22 @@
 | **DEPENDENCY_GOVERNANCE.md** | Package allow-list, license compliance | When adding dependencies |
 | **INFRASTRUCTURE_STANDARDS.md** | IaC, Terraform, no-ClickOps | When managing infrastructure |
 | **OPERATIONAL_PATTERNS.md** | Health checks, circuit breakers, retry | When implementing services |
-| **AGENTS_AND_SKILLS_SETUP.md** | Setup agents and skills for Claude Code/OpenCode | When configuring AI tools |
+| **AGENTS_AND_SKILLS_SETUP.md** | Setup agents and skills for all AI platforms | When configuring AI tools |
 | **CLCODE_INTEGRATION.md** | Claude Code skills and hooks integration | When using Claude Code |
 | **OPENCODE_INTEGRATION.md** | OpenCode agents and skills integration | When using OpenCode |
+| **CURSOR_INTEGRATION.md** | Cursor rules and guardrails integration | When using Cursor |
+| **GENERIC_LLM_INTEGRATION.md** | Generic/local LLM configuration (Ollama, vLLM, etc.) | When using custom LLMs |
 
 ---
 
 ## Category Index
 
 ### AI Tools Integration
-- `AGENTS_AND_SKILLS_SETUP.md` - Setup guide for Claude Code/OpenCode
+- `AGENTS_AND_SKILLS_SETUP.md` - Setup guide for all AI platforms (Claude Code, OpenCode, Cursor, Copilot, etc.)
 - `CLCODE_INTEGRATION.md` - Claude Code skills and hooks
 - `OPENCODE_INTEGRATION.md` - OpenCode agents and skills
+- `CURSOR_INTEGRATION.md` - Cursor rules configuration
+- `GENERIC_LLM_INTEGRATION.md` - Generic/local LLM setup (Ollama, vLLM, etc.)
 
 ### Git Operations
 - `COMMIT_WORKFLOW.md` - Commit timing and format
@@ -187,6 +209,7 @@ agent-guardrails-template/
 │   ├── java/
 │   ├── python/
 │   ├── ruby/
+│   ├── regression-prevention/  # Bug tracking examples
 │   ├── rust/
 │   └── typescript/
 ├── scripts/                ← Setup and utility scripts
@@ -237,11 +260,13 @@ agent-guardrails-template/
 | Setting up AI tools | AGENTS_AND_SKILLS_SETUP.md |
 | Claude Code integration | CLCODE_INTEGRATION.md |
 | OpenCode integration | OPCODE_INTEGRATION.md |
+| Cursor integration | CURSOR_INTEGRATION.md |
+| Generic LLM integration | GENERIC_LLM_INTEGRATION.md |
 
 ---
 
 **Authored by:** TheArchitectit
 **Document Owner:** Project Maintainers
 **Last Updated:** 2026-02-01
-**Document Count:** 37 (excluding INDEX files)
-**Line Count:** ~230
+**Document Count:** 38 (excluding INDEX files)
+**Line Count:** ~248
