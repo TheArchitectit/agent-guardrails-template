@@ -335,10 +335,7 @@ func (s *MCPServer) handleSSE(c echo.Context) error {
 		slog.Warn("SSE endpoint write failed", "session_id", sessionID, "error", err)
 		return nil
 	}
-	if err := c.Response().Flush(); err != nil {
-		slog.Warn("SSE initial flush failed", "session_id", sessionID, "error", err)
-		return nil
-	}
+	c.Response().Flush()
 
 	// Track connection state
 	clientGone := c.Request().Context().Done()
@@ -348,10 +345,7 @@ func (s *MCPServer) handleSSE(c echo.Context) error {
 		slog.Warn("SSE ping write failed", "session_id", sessionID, "error", err)
 		return nil
 	}
-	if err := c.Response().Flush(); err != nil {
-		slog.Warn("SSE ping flush failed", "session_id", sessionID, "error", err)
-		return nil
-	}
+	c.Response().Flush()
 
 	// Keep connection open with periodic pings
 	ticker := time.NewTicker(30 * time.Second)
@@ -364,14 +358,7 @@ func (s *MCPServer) handleSSE(c echo.Context) error {
 				slog.Debug("SSE write failed, client disconnected", "session_id", sessionID, "error", err)
 				return nil
 			}
-			if err := c.Response().Flush(); err != nil {
-				slog.Debug("SSE flush failed, client disconnected", "session_id", sessionID, "error", err)
-				return nil
-			}
-			if err := c.Response().Flush(); err != nil {
-				slog.Debug("SSE double-flush failed, client disconnected", "session_id", sessionID, "error", err)
-				return nil
-			}
+			c.Response().Flush()
 		case <-clientGone:
 			slog.Debug("SSE client disconnected", "session_id", sessionID)
 			return nil
