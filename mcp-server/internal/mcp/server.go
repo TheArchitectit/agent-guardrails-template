@@ -25,7 +25,7 @@ type MCPServer struct {
 	db          *database.DB
 	cache       *cache.Client
 	auditLogger *audit.Logger
-	mcpServer   *server.MCPServer
+	mcpServer   server.MCPServer
 	sessions    map[string]*Session
 	sessionsMu  sync.RWMutex
 }
@@ -50,108 +50,244 @@ func NewMCPServer(cfg *config.Config, db *database.DB, cacheClient *cache.Client
 		sessions:    make(map[string]*Session),
 	}
 
-	// Create MCP server
-	s.mcpServer = server.NewMCPServer(
-		"guardrail-mcp",
-		"1.0.0",
-		server.WithResourceCapabilities(true, true),
-		server.WithToolCapabilities(true),
-	)
+	// Create MCP server using the default server
+	s.mcpServer = server.NewDefaultServer("guardrail-mcp", "1.0.0")
 
-	// Register tools
+	// Register tool handlers
 	s.registerTools()
-
-	// Register resources
-	s.registerResources()
 
 	return s
 }
 
-// registerTools registers all MCP tools
+// registerTools registers all MCP tool handlers
 func (s *MCPServer) registerTools() {
-	// Initialize session tool
-	initTool := mcp.NewTool("guardrail_init_session",
-		mcp.WithDescription("Initialize a validation session for a project"),
-		mcp.WithString("project_slug", mcp.Required(), mcp.Description("Project identifier")),
-		mcp.WithString("agent_type", mcp.Description("Agent type (claude-code, opencode, cursor)"), mcp.Enum("claude-code", "opencode", "cursor", "other")),
-		mcp.WithString("client_version", mcp.Description("Client version")),
-	)
-	s.mcpServer.AddTool(initTool, s.handleInitSession)
+	// Handle tool list requests
+	s.mcpServer.HandleListTools(func(ctx context.Context, cursor *string) (*mcp.ListToolsResult, error) {
+		return &mcp.ListToolsResult{
+			Tools: []mcp.Tool{
+				{
+					Name:        "guardrail_init_session",
+					Description: "Initialize a validation session for a project",
+					InputSchema: mcp.ToolInputSchema{
+						Type: "object",
+						Properties: mcp.ToolInputSchemaProperties{
+							"project_slug": map[string]interface{}{
+								"type":        "string",
+								"description": "Project identifier",
+							},
+							"agent_type": map[string]interface{}{
+								"type":        "string",
+								"description": "Agent type (claude-code, opencode, cursor)",
+							},
+							"client_version": map[string]interface{}{
+								"type":        "string",
+								"description": "Client version",
+							},
+						},
+					},
+				},
+				{
+					Name:        "guardrail_validate_bash",
+					Description: "Validate bash command against forbidden patterns",
+					InputSchema: mcp.ToolInputSchema{
+						Type: "object",
+						Properties: mcp.ToolInputSchemaProperties{
+							"session_token": map[string]interface{}{
+								"type":        "string",
+								"description": "Session token from init_session",
+							},
+							"command": map[string]interface{}{
+								"type":        "string",
+								"description": "Bash command to validate",
+							},
+							"working_directory": map[string]interface{}{
+								"type":        "string",
+								"description": "Current working directory",
+							},
+						},
+					},
+				},
+				{
+					Name:        "guardrail_validate_file_edit",
+					Description: "Validate file edit operation",
+					InputSchema: mcp.ToolInputSchema{
+						Type: "object",
+						Properties: mcp.ToolInputSchemaProperties{
+							"session_token": map[string]interface{}{
+								"type":        "string",
+								"description": "Session token",
+							},
+							"file_path": map[string]interface{}{
+								"type":        "string",
+								"description": "File path",
+							},
+							"old_string": map[string]interface{}{
+								"type":        "string",
+								"description": "Original string",
+							},
+							"new_string": map[string]interface{}{
+								"type":        "string",
+								"description": "New string",
+							},
+						},
+					},
+				},
+				{
+					Name:        "guardrail_validate_git_operation",
+					Description: "Validate git command against guardrails",
+					InputSchema: mcp.ToolInputSchema{
+						Type: "object",
+						Properties: mcp.ToolInputSchemaProperties{
+							"session_token": map[string]interface{}{
+								"type":        "string",
+								"description": "Session token",
+							},
+							"command": map[string]interface{}{
+								"type":        "string",
+								"description": "Git command (push, commit, merge, rebase, reset)",
+							},
+							"is_force": map[string]interface{}{
+								"type":        "boolean",
+								"description": "Whether this is a force operation",
+							},
+						},
+					},
+				},
+				{
+					Name:        "guardrail_pre_work_check",
+					Description: "Run pre-work checklist from failure registry",
+					InputSchema: mcp.ToolInputSchema{
+						Type: "object",
+						Properties: mcp.ToolInputSchemaProperties{
+							"session_token": map[string]interface{}{
+								"type":        "string",
+								"description": "Session token",
+							},
+							"affected_files": map[string]interface{}{
+								"type":        "array",
+								"description": "Files that will be modified",
+							},
+						},
+					},
+				},
+				{
+					Name:        "guardrail_get_context",
+					Description: "Get guardrail context for the session's project",
+					InputSchema: mcp.ToolInputSchema{
+						Type: "object",
+						Properties: mcp.ToolInputSchemaProperties{
+							"session_token": map[string]interface{}{
+								"type":        "string",
+								"description": "Session token",
+							},
+						},
+					},
+				},
+			},
+		}, nil
+	})
 
-	// Validate bash command tool
-	validateBashTool := mcp.NewTool("guardrail_validate_bash",
-		mcp.WithDescription("Validate bash command against forbidden patterns"),
-		mcp.WithString("session_token", mcp.Required(), mcp.Description("Session token from init_session")),
-		mcp.WithString("command", mcp.Required(), mcp.Description("Bash command to validate")),
-		mcp.WithString("working_directory", mcp.Description("Current working directory")),
-	)
-	s.mcpServer.AddTool(validateBashTool, s.handleValidateBash)
+	// Handle tool calls
+	s.mcpServer.HandleCallTool(s.handleToolCall)
 
-	// Validate file edit tool
-	validateEditTool := mcp.NewTool("guardrail_validate_file_edit",
-		mcp.WithDescription("Validate file edit operation"),
-		mcp.WithString("session_token", mcp.Required()),
-		mcp.WithString("file_path", mcp.Required()),
-		mcp.WithString("old_string", mcp.Required()),
-		mcp.WithString("new_string", mcp.Required()),
-		mcp.WithString("change_description", mcp.Description("Description of the change")),
-	)
-	s.mcpServer.AddTool(validateEditTool, s.handleValidateFileEdit)
+	// Handle resource list requests
+	s.mcpServer.HandleListResources(func(ctx context.Context, cursor *string) (*mcp.ListResourcesResult, error) {
+		return &mcp.ListResourcesResult{
+			Resources: []mcp.Resource{
+				{
+					Uri:         "guardrail://quick-reference",
+					Name:        "Quick Reference",
+					Description: "Quick reference card for guardrails",
+					MimeType:    "application/json",
+				},
+				{
+					Uri:         "guardrail://rules/active",
+					Name:        "Active Prevention Rules",
+					Description: "Currently active prevention rules",
+					MimeType:    "application/json",
+				},
+			},
+		}, nil
+	})
 
-	// Validate git operation tool
-	validateGitTool := mcp.NewTool("guardrail_validate_git_operation",
-		mcp.WithDescription("Validate git command against guardrails"),
-		mcp.WithString("session_token", mcp.Required()),
-		mcp.WithString("command", mcp.Required(), mcp.Enum("push", "commit", "merge", "rebase", "reset")),
-		mcp.WithArray("args", mcp.Description("Command arguments")),
-		mcp.WithBoolean("is_force", mcp.Description("Whether this is a force operation")),
-	)
-	s.mcpServer.AddTool(validateGitTool, s.handleValidateGit)
-
-	// Pre-work check tool
-	preWorkTool := mcp.NewTool("guardrail_pre_work_check",
-		mcp.WithDescription("Run pre-work checklist from failure registry"),
-		mcp.WithString("session_token", mcp.Required()),
-		mcp.WithArray("affected_files", mcp.Required(), mcp.Description("Files that will be modified")),
-	)
-	s.mcpServer.AddTool(preWorkTool, s.handlePreWorkCheck)
-
-	// Get context tool
-	getContextTool := mcp.NewTool("guardrail_get_context",
-		mcp.WithDescription("Get guardrail context for the session's project"),
-		mcp.WithString("session_token", mcp.Required()),
-	)
-	s.mcpServer.AddTool(getContextTool, s.handleGetContext)
+	// Handle resource read requests
+	s.mcpServer.HandleReadResource(s.handleReadResource)
 }
 
-// registerResources registers all MCP resources
-func (s *MCPServer) registerResources() {
-	// Quick reference resource
-	quickRefResource := mcp.NewResource(
-		"guardrail://quick-reference",
-		"Quick Reference",
-		mcp.WithResourceDescription("Quick reference card for guardrails"),
-		mcp.WithMIMEType("application/json"),
-	)
-	s.mcpServer.AddResource(quickRefResource, s.handleQuickReference)
+// handleToolCall handles incoming tool calls
+func (s *MCPServer) handleToolCall(ctx context.Context, name string, arguments map[string]interface{}) (*mcp.CallToolResult, error) {
+	switch name {
+	case "guardrail_init_session":
+		return s.handleInitSession(ctx, arguments)
+	case "guardrail_validate_bash":
+		return s.handleValidateBash(ctx, arguments)
+	case "guardrail_validate_file_edit":
+		return s.handleValidateFileEdit(ctx, arguments)
+	case "guardrail_validate_git_operation":
+		return s.handleValidateGit(ctx, arguments)
+	case "guardrail_pre_work_check":
+		return s.handlePreWorkCheck(ctx, arguments)
+	case "guardrail_get_context":
+		return s.handleGetContext(ctx, arguments)
+	default:
+		return &mcp.CallToolResult{
+			Content: []interface{}{
+				mcp.TextContent{
+					Type: "text",
+					Text: fmt.Sprintf("Unknown tool: %s", name),
+				},
+			},
+			IsError: true,
+		}, nil
+	}
+}
 
-	// Active rules resource
-	rulesResource := mcp.NewResource(
-		"guardrail://rules/active",
-		"Active Prevention Rules",
-		mcp.WithResourceDescription("Currently active prevention rules"),
-		mcp.WithMIMEType("application/json"),
-	)
-	s.mcpServer.AddResource(rulesResource, s.handleActiveRules)
+// handleReadResource handles resource read requests
+func (s *MCPServer) handleReadResource(ctx context.Context, uri string) (*mcp.ReadResourceResult, error) {
+	switch uri {
+	case "guardrail://quick-reference":
+		content := map[string]interface{}{
+			"forbidden_commands": []string{
+				"rm -rf /",
+				"git push --force",
+				"git reset --hard",
+			},
+			"required_checks": []string{
+				"pre_work_check",
+				"validate_file_edit",
+			},
+		}
+		contentJSON, _ := json.MarshalIndent(content, "", "  ")
+		return &mcp.ReadResourceResult{
+			Contents: []interface{}{
+				mcp.TextResourceContents{
+					Uri:      uri,
+					MimeType: "application/json",
+					Text:     string(contentJSON),
+				},
+			},
+		}, nil
 
-	// Document resource template
-	docResource := mcp.NewResourceTemplate(
-		"guardrail://docs/{slug}",
-		"Guardrail Document",
-		mcp.WithTemplateDescription("Guardrail document by slug"),
-		mcp.WithMIMEType("text/markdown"),
-	)
-	s.mcpServer.AddResourceTemplate(docResource, s.handleDocument)
+	case "guardrail://rules/active":
+		ruleStore := database.NewRuleStore(s.db)
+		rules, err := ruleStore.GetActiveRules(ctx)
+		if err != nil {
+			return nil, err
+		}
+		rulesJSON, _ := json.MarshalIndent(rules, "", "  ")
+		return &mcp.ReadResourceResult{
+			Contents: []interface{}{
+				mcp.TextResourceContents{
+					Uri:      uri,
+					MimeType: "application/json",
+					Text:     string(rulesJSON),
+				},
+			},
+		}, nil
+
+	default:
+		return nil, fmt.Errorf("unknown resource: %s", uri)
+	}
 }
 
 // Start starts the MCP server
@@ -210,11 +346,14 @@ func (s *MCPServer) handleSSE(c echo.Context) error {
 
 // handleMessage handles incoming messages
 func (s *MCPServer) handleMessage(c echo.Context) error {
-	var request mcp.JSONRPCRequest
+	var request server.JSONRPCRequest
 	if err := c.Bind(&request); err != nil {
-		return c.JSON(http.StatusBadRequest, mcp.JSONRPCResponse{
+		return c.JSON(http.StatusBadRequest, server.JSONRPCResponse{
 			JSONRPC: "2.0",
-			Error: &mcp.JSONRPCError{
+			Error: &struct {
+				Code    int    `json:"code"`
+				Message string `json:"message"`
+			}{
 				Code:    -32700,
 				Message: "Parse error",
 			},
@@ -222,20 +361,23 @@ func (s *MCPServer) handleMessage(c echo.Context) error {
 	}
 
 	// Process request through MCP server
-	response := s.mcpServer.HandleRequest(c.Request().Context(), request)
+	response := s.mcpServer.Request(c.Request().Context(), request)
 
 	return c.JSON(http.StatusOK, response)
 }
 
 // Tool handlers
 
-func (s *MCPServer) handleInitSession(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	projectSlug, _ := request.Params.Arguments["project_slug"].(string)
-	agentType, _ := request.Params.Arguments["agent_type"].(string)
-	clientVersion, _ := request.Params.Arguments["client_version"].(string)
+func (s *MCPServer) handleInitSession(ctx context.Context, args map[string]interface{}) (*mcp.CallToolResult, error) {
+	projectSlug, _ := args["project_slug"].(string)
+	agentType, _ := args["agent_type"].(string)
+	clientVersion, _ := args["client_version"].(string)
 
 	if projectSlug == "" {
-		return mcp.NewToolResultError("project_slug is required"), nil
+		return &mcp.CallToolResult{
+			Content: []interface{}{mcp.TextContent{Type: "text", Text: "project_slug is required"}},
+			IsError: true,
+		}, nil
 	}
 
 	// Create session
@@ -278,14 +420,15 @@ func (s *MCPServer) handleInitSession(ctx context.Context, request mcp.CallToolR
 	}
 
 	resultJSON, _ := json.MarshalIndent(result, "", "  ")
-	return mcp.NewToolResultText(string(resultJSON)), nil
+	return &mcp.CallToolResult{
+		Content: []interface{}{mcp.TextContent{Type: "text", Text: string(resultJSON)}},
+	}, nil
 }
 
-func (s *MCPServer) handleValidateBash(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	command, _ := request.Params.Arguments["command"].(string)
+func (s *MCPServer) handleValidateBash(ctx context.Context, args map[string]interface{}) (*mcp.CallToolResult, error) {
+	command, _ := args["command"].(string)
 
 	// TODO: Implement actual validation against prevention rules
-	// For now, return success
 	result := map[string]interface{}{
 		"valid":      true,
 		"violations": []interface{}{},
@@ -298,32 +441,36 @@ func (s *MCPServer) handleValidateBash(ctx context.Context, request mcp.CallTool
 	}
 
 	resultJSON, _ := json.MarshalIndent(result, "", "  ")
-	return mcp.NewToolResultText(string(resultJSON)), nil
+	return &mcp.CallToolResult{
+		Content: []interface{}{mcp.TextContent{Type: "text", Text: string(resultJSON)}},
+	}, nil
 }
 
-func (s *MCPServer) handleValidateFileEdit(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	filePath, _ := request.Params.Arguments["file_path"].(string)
-	newString, _ := request.Params.Arguments["new_string"].(string)
+func (s *MCPServer) handleValidateFileEdit(ctx context.Context, args map[string]interface{}) (*mcp.CallToolResult, error) {
+	filePath, _ := args["file_path"].(string)
+	newString, _ := args["new_string"].(string)
 
 	// TODO: Implement actual validation
 	result := map[string]interface{}{
 		"valid":      true,
 		"violations": []interface{}{},
 		"meta": map[string]interface{}{
-			"checked_at":     time.Now().Format(time.RFC3339),
+			"checked_at":      time.Now().Format(time.RFC3339),
 			"rules_evaluated": 0,
-			"file":           filePath,
-			"changes_size":   len(newString),
+			"file":            filePath,
+			"changes_size":    len(newString),
 		},
 	}
 
 	resultJSON, _ := json.MarshalIndent(result, "", "  ")
-	return mcp.NewToolResultText(string(resultJSON)), nil
+	return &mcp.CallToolResult{
+		Content: []interface{}{mcp.TextContent{Type: "text", Text: string(resultJSON)}},
+	}, nil
 }
 
-func (s *MCPServer) handleValidateGit(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	command, _ := request.Params.Arguments["command"].(string)
-	isForce, _ := request.Params.Arguments["is_force"].(bool)
+func (s *MCPServer) handleValidateGit(ctx context.Context, args map[string]interface{}) (*mcp.CallToolResult, error) {
+	command, _ := args["command"].(string)
+	isForce, _ := args["is_force"].(bool)
 
 	// Check for force push
 	if command == "push" && isForce {
@@ -342,7 +489,9 @@ func (s *MCPServer) handleValidateGit(ctx context.Context, request mcp.CallToolR
 			"violations": []interface{}{violation},
 		}
 		resultJSON, _ := json.MarshalIndent(result, "", "  ")
-		return mcp.NewToolResultText(string(resultJSON)), nil
+		return &mcp.CallToolResult{
+			Content: []interface{}{mcp.TextContent{Type: "text", Text: string(resultJSON)}},
+		}, nil
 	}
 
 	result := map[string]interface{}{
@@ -350,15 +499,17 @@ func (s *MCPServer) handleValidateGit(ctx context.Context, request mcp.CallToolR
 		"violations": []interface{}{},
 	}
 	resultJSON, _ := json.MarshalIndent(result, "", "  ")
-	return mcp.NewToolResultText(string(resultJSON)), nil
+	return &mcp.CallToolResult{
+		Content: []interface{}{mcp.TextContent{Type: "text", Text: string(resultJSON)}},
+	}, nil
 }
 
-func (s *MCPServer) handlePreWorkCheck(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	affectedFiles, _ := request.Params.Arguments["affected_files"].([]interface{})
+func (s *MCPServer) handlePreWorkCheck(ctx context.Context, args map[string]interface{}) (*mcp.CallToolResult, error) {
+	affectedFilesArg, _ := args["affected_files"].([]interface{})
 
 	// Convert to string slice
-	files := make([]string, len(affectedFiles))
-	for i, f := range affectedFiles {
+	files := make([]string, len(affectedFilesArg))
+	for i, f := range affectedFilesArg {
 		files[i], _ = f.(string)
 	}
 
@@ -367,7 +518,10 @@ func (s *MCPServer) handlePreWorkCheck(ctx context.Context, request mcp.CallTool
 	failures, err := failStore.GetActiveByFiles(ctx, files)
 
 	if err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Failed to check failures: %v", err)), nil
+		return &mcp.CallToolResult{
+			Content: []interface{}{mcp.TextContent{Type: "text", Text: fmt.Sprintf("Failed to check failures: %v", err)}},
+			IsError: true,
+		}, nil
 	}
 
 	// Convert failures to check results
@@ -389,18 +543,23 @@ func (s *MCPServer) handlePreWorkCheck(ctx context.Context, request mcp.CallTool
 	}
 
 	resultJSON, _ := json.MarshalIndent(result, "", "  ")
-	return mcp.NewToolResultText(string(resultJSON)), nil
+	return &mcp.CallToolResult{
+		Content: []interface{}{mcp.TextContent{Type: "text", Text: string(resultJSON)}},
+	}, nil
 }
 
-func (s *MCPServer) handleGetContext(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	sessionToken, _ := request.Params.Arguments["session_token"].(string)
+func (s *MCPServer) handleGetContext(ctx context.Context, args map[string]interface{}) (*mcp.CallToolResult, error) {
+	sessionToken, _ := args["session_token"].(string)
 
 	s.sessionsMu.RLock()
 	session, exists := s.sessions[sessionToken]
 	s.sessionsMu.RUnlock()
 
 	if !exists {
-		return mcp.NewToolResultError("Invalid session token"), nil
+		return &mcp.CallToolResult{
+			Content: []interface{}{mcp.TextContent{Type: "text", Text: "Invalid session token"}},
+			IsError: true,
+		}, nil
 	}
 
 	// Get project context
@@ -408,71 +567,13 @@ func (s *MCPServer) handleGetContext(ctx context.Context, request mcp.CallToolRe
 	proj, err := projStore.GetBySlug(ctx, session.ProjectSlug)
 
 	if err != nil {
-		return mcp.NewToolResultText(fmt.Sprintf("# Default Guardrails\n\nNo project-specific context found for %s", session.ProjectSlug)), nil
+		return &mcp.CallToolResult{
+			Content: []interface{}{mcp.TextContent{Type: "text", Text: fmt.Sprintf("# Default Guardrails\n\nNo project-specific context found for %s", session.ProjectSlug)}},
+		}, nil
 	}
 
-	return mcp.NewToolResultText(proj.GuardrailContext), nil
-}
-
-// Resource handlers
-
-func (s *MCPServer) handleQuickReference(ctx context.Context, request mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
-	content := map[string]interface{}{
-		"forbidden_commands": []string{
-			"rm -rf /",
-			"git push --force",
-			"git reset --hard",
-		},
-		"required_checks": []string{
-			"pre_work_check",
-			"validate_file_edit",
-		},
-	}
-
-	contentJSON, _ := json.MarshalIndent(content, "", "  ")
-	return []mcp.ResourceContents{
-		mcp.TextResourceContents{
-			URI:      "guardrail://quick-reference",
-			MIMEType: "application/json",
-			Text:     string(contentJSON),
-		},
-	}, nil
-}
-
-func (s *MCPServer) handleActiveRules(ctx context.Context, request mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
-	ruleStore := database.NewRuleStore(s.db)
-	rules, err := ruleStore.GetActiveRules(ctx)
-
-	if err != nil {
-		return nil, err
-	}
-
-	rulesJSON, _ := json.MarshalIndent(rules, "", "  ")
-	return []mcp.ResourceContents{
-		mcp.TextResourceContents{
-			URI:      "guardrail://rules/active",
-			MIMEType: "application/json",
-			Text:     string(rulesJSON),
-		},
-	}, nil
-}
-
-func (s *MCPServer) handleDocument(ctx context.Context, request mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
-	slug := request.Params.URI // Extract slug from URI
-
-	docStore := database.NewDocumentStore(s.db)
-	doc, err := docStore.GetBySlug(ctx, slug)
-
-	if err != nil {
-		return nil, fmt.Errorf("document not found: %s", slug)
-	}
-
-	return []mcp.ResourceContents{
-		mcp.TextResourceContents{
-			URI:      request.Params.URI,
-			MIMEType: "text/markdown",
-			Text:     doc.Content,
-		},
+	return &mcp.CallToolResult{
+		Content: []interface{}{mcp.TextContent{Type: "text", Text: proj.GuardrailContext}},
 	}, nil
 }
 

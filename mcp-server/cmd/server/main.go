@@ -66,9 +66,9 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// Start web server
+	// Start web server (bind to 0.0.0.0 for containerized deployment)
 	go func() {
-		addr := fmt.Sprintf("127.0.0.1:%d", cfg.WebPort)
+		addr := fmt.Sprintf("0.0.0.0:%d", cfg.WebPort)
 		slog.Info("Starting web server", "addr", addr)
 		if err := webServer.Start(addr); err != nil && err != http.ErrServerClosed {
 			slog.Error("Web server error", "error", err)
@@ -76,9 +76,9 @@ func main() {
 		}
 	}()
 
-	// Start MCP server
+	// Start MCP server (bind to 0.0.0.0 for containerized deployment)
 	go func() {
-		addr := fmt.Sprintf("127.0.0.1:%d", cfg.MCPPort)
+		addr := fmt.Sprintf("0.0.0.0:%d", cfg.MCPPort)
 		slog.Info("Starting MCP server", "addr", addr)
 		if err := mcpSrv.Start(addr); err != nil && err != http.ErrServerClosed {
 			slog.Error("MCP server error", "error", err)
