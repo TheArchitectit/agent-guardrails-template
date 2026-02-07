@@ -10,6 +10,30 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
+## [1.9.1] - 2026-02-07
+
+### Fixed
+
+- **SSE Compatibility** - Fixed EOF errors with non-interactive clients
+  - Added `WriteHeader(http.StatusOK)` for immediate header commit
+  - Added `X-Accel-Buffering: no` for proxy compatibility
+  - Added `Access-Control-Allow-Origin: *` for CORS
+  - Send immediate ping event after endpoint to prevent client timeout
+  - Better error handling on write/flush operations
+
+- **PostgreSQL Array Scanning** - Fixed TEXT[] array scanning bug
+  - Changed `AffectedFiles` from `pq.StringArray` to `pgtype.Array[string]`
+  - Added `ToStringSlice()` and `ToTextArray()` helper functions
+  - Compatible with pgx v5 driver
+
+### Documentation
+
+- **README.md** - Complete rewrite with MCP Server documentation
+  - Installation and testing instructions
+  - Environment variable reference
+  - curl test examples
+  - Deployment guide for <your-server-name>
+
 ## [1.9.0] - 2026-02-07
 
 ### Added
