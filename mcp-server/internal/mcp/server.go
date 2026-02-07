@@ -316,29 +316,64 @@ func (s *MCPServer) Shutdown(ctx context.Context) error {
 
 // handleSSE handles SSE connections
 func (s *MCPServer) handleSSE(c echo.Context) error {
+	// Set SSE headers
 	c.Response().Header().Set("Content-Type", "text/event-stream")
-	c.Response().Header().Set("Cache-Control", "no-cache")
+	c.Response().Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
 	c.Response().Header().Set("Connection", "keep-alive")
+	c.Response().Header().Set("X-Accel-Buffering", "no") // Disable Nginx buffering
+	c.Response().Header().Set("Access-Control-Allow-Origin", "*")
+	c.Response().WriteHeader(http.StatusOK)
 
 	// Set up SSE session
 	sessionID := generateSessionID()
 	messageEndpoint := fmt.Sprintf("/mcp/v1/message?session_id=%s", sessionID)
 
-	// Send endpoint event
-	fmt.Fprintf(c.Response(), "event: endpoint\ndata: %s\n\n", messageEndpoint)
-	c.Response().Flush()
+	slog.Debug("SSE connection established", "session_id", sessionID)
 
-	// Keep connection open
+	// Send endpoint event immediately
+	if _, err := fmt.Fprintf(c.Response(), "event: endpoint\ndata: %s\n\n", messageEndpoint); err != nil {
+		slog.Warn("SSE endpoint write failed", "session_id", sessionID, "error", err)
+		return nil
+	}
+	if err := c.Response().Flush(); err != nil {
+		slog.Warn("SSE initial flush failed", "session_id", sessionID, "error", err)
+		return nil
+	}
+
+	// Track connection state
+	clientGone := c.Request().Context().Done()
+
+	// Send immediate ping to confirm connection is working
+	if _, err := fmt.Fprintf(c.Response(), "event: ping\ndata: {}\n\n"); err != nil {
+		slog.Warn("SSE ping write failed", "session_id", sessionID, "error", err)
+		return nil
+	}
+	if err := c.Response().Flush(); err != nil {
+		slog.Warn("SSE ping flush failed", "session_id", sessionID, "error", err)
+		return nil
+	}
+
+	// Keep connection open with periodic pings
 	ticker := time.NewTicker(30 * time.Second)
 	defer ticker.Stop()
 
 	for {
 		select {
 		case <-ticker.C:
-			// Send keepalive
-			fmt.Fprintf(c.Response(), "event: ping\ndata: {}\n\n")
-			c.Response().Flush()
-		case <-c.Request().Context().Done():
+			if _, err := fmt.Fprintf(c.Response(), "event: ping\ndata: {}\n\n"); err != nil {
+				slog.Debug("SSE write failed, client disconnected", "session_id", sessionID, "error", err)
+				return nil
+			}
+			if err := c.Response().Flush(); err != nil {
+				slog.Debug("SSE flush failed, client disconnected", "session_id", sessionID, "error", err)
+				return nil
+			}
+			if err := c.Response().Flush(); err != nil {
+				slog.Debug("SSE double-flush failed, client disconnected", "session_id", sessionID, "error", err)
+				return nil
+			}
+		case <-clientGone:
+			slog.Debug("SSE client disconnected", "session_id", sessionID)
 			return nil
 		}
 	}

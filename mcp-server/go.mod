@@ -10,6 +10,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.7.1
 	github.com/labstack/echo/v4 v4.13.3
+	github.com/lib/pq v1.10.9
 	github.com/mark3labs/mcp-go v0.4.0
 	github.com/prometheus/client_golang v1.20.5
 	github.com/sony/gobreaker v1.0.0
