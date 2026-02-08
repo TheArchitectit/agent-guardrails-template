@@ -36,7 +36,7 @@ It ensures that any AI system (Claude, GPT, Gemini, LLaMA, etc.) follows strict 
 
 ---
 
-## MCP Server (New in v1.9.0)
+## MCP Server (New in v1.9.5)
 
 The **Model Context Protocol (MCP) Server** provides real-time guardrail enforcement via a standardized protocol for AI agents and IDEs.
 
@@ -343,7 +343,7 @@ curl -X POST http://localhost:8092/mcp/v1/message \
     },
     "serverInfo": {
       "name": "guardrail-mcp-server",
-      "version": "1.9.0"
+      "version": "1.9.5"
     }
   }
 }
@@ -411,7 +411,7 @@ agent-guardrails-template/
 ├── HEADER_MAP.md          ← Section-level lookup
 ├── CLAUDE.md               ← Claude Code CLI guidelines
 ├── CHANGELOG.md           ← Release notes archive
-├── mcp-server/            ← MCP Server implementation (v1.9.0)
+├── mcp-server/            ← MCP Server implementation (v1.9.5)
 │   ├── src/               # Server source code
 │   ├── deploy/            # Docker deployment configs
 │   └── requirements.txt   # Python dependencies
@@ -522,7 +522,7 @@ agent-guardrails-template/
 
 See [CHANGELOG.md](CHANGELOG.md) for complete release history.
 
-**Current Version:** v1.9.0 (2026-02-07)
+**Current Version:** v1.9.5 (2026-02-08)
 
 ---
 
@@ -557,4 +557,4 @@ in subscription credit when they subscribe!
 ---
 
 **Last Updated:** 2026-02-07
-**Status:** v1.9.0 - Production Ready
+**Status:** v1.9.5 - Production Ready
