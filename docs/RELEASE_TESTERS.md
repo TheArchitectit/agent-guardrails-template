@@ -132,6 +132,13 @@ cd mcp-server
 docker compose -f deploy/podman-compose.yml up -d --build
 ```
 
+Tester-validated Docker variant (recommended when using Docker Desktop/Engine):
+
+```bash
+cd mcp-server
+docker compose -f deploy/docker-compose.example.yml up -d --build
+```
+
 Check status:
 
 ```bash
@@ -144,6 +151,12 @@ Docker equivalent:
 ```bash
 docker compose -f deploy/podman-compose.yml ps
 docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+```
+
+If started with the Docker example file, use:
+
+```bash
+docker compose -f deploy/docker-compose.example.yml ps
 ```
 
 Expected containers:
@@ -444,6 +457,9 @@ Docker-only quick block:
 # Start stack
 cd mcp-server
 docker compose -f deploy/podman-compose.yml up -d --build
+
+# Or use tester-validated Docker compose file
+# docker compose -f deploy/docker-compose.example.yml up -d --build
 
 # Check service state
 docker compose -f deploy/podman-compose.yml ps

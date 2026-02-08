@@ -324,6 +324,14 @@ docker compose -f deploy/podman-compose.yml up -d --build
 docker compose -f deploy/podman-compose.yml ps
 ```
 
+If you need the tester-validated Docker variant:
+
+```bash
+cd mcp-server
+docker compose -f deploy/docker-compose.example.yml up -d --build
+docker compose -f deploy/docker-compose.example.yml ps
+```
+
 ### Testing the MCP Endpoint
 
 **Get session endpoint and initialize:**

@@ -123,6 +123,13 @@ docker compose -f deploy/podman-compose.yml logs -f
 docker compose -f deploy/podman-compose.yml down
 ```
 
+Alternative Docker compose file used by testers:
+
+```bash
+docker compose -f deploy/docker-compose.example.yml up -d --build
+docker compose -f deploy/docker-compose.example.yml ps
+```
+
 ## API Endpoints
 
 ### Health
