@@ -448,13 +448,11 @@ func (s *MCPServer) handleMessage(c echo.Context) error {
 			JSONRPC: "2.0",
 			ID:      nil,
 			Error: &struct {
-				Code    int         `json:"code"`
-				Message string      `json:"message"`
-				Data    interface{} `json:"data,omitempty"`
+				Code    int    `json:"code"`
+				Message string `json:"message"`
 			}{
 				Code:    -32000,
-				Message: "Missing session_id parameter",
-				Data:    map[string]string{"detail": "session_id query parameter is required"},
+				Message: "Missing session_id parameter: session_id query parameter is required",
 			},
 		})
 	}
@@ -476,13 +474,11 @@ func (s *MCPServer) handleMessage(c echo.Context) error {
 			JSONRPC: "2.0",
 			ID:      nil,
 			Error: &struct {
-				Code    int         `json:"code"`
-				Message string      `json:"message"`
-				Data    interface{} `json:"data,omitempty"`
+				Code    int    `json:"code"`
+				Message string `json:"message"`
 			}{
 				Code:    -32700,
-				Message: "Parse error",
-				Data:    map[string]string{"detail": err.Error()},
+				Message: "Parse error: " + err.Error(),
 			},
 		})
 	}
@@ -493,13 +489,11 @@ func (s *MCPServer) handleMessage(c echo.Context) error {
 			JSONRPC: "2.0",
 			ID:      request.ID,
 			Error: &struct {
-				Code    int         `json:"code"`
-				Message string      `json:"message"`
-				Data    interface{} `json:"data,omitempty"`
+				Code    int    `json:"code"`
+				Message string `json:"message"`
 			}{
 				Code:    -32600,
-				Message: "Invalid Request",
-				Data:    map[string]string{"detail": "jsonrpc field must be '2.0'"},
+				Message: "Invalid Request: jsonrpc field must be '2.0'",
 			},
 		})
 	}
