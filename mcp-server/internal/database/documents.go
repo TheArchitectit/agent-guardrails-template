@@ -252,6 +252,26 @@ func (s *DocumentStore) Delete(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
+// Count returns the total number of documents, optionally filtered by category
+func (s *DocumentStore) Count(ctx context.Context, category string) (int, error) {
+	var query string
+	var args []interface{}
+
+	if category != "" {
+		query = `SELECT COUNT(*) FROM documents WHERE category = $1`
+		args = []interface{}{category}
+	} else {
+		query = `SELECT COUNT(*) FROM documents`
+	}
+
+	var count int
+	err := s.db.QueryRowContext(ctx, query, args...).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("failed to count documents: %w", err)
+	}
+	return count, nil
+}
+
 // sanitizeSearchQuery validates and sanitizes search queries
 func sanitizeSearchQuery(query string) (string, error) {
 	// Limit length

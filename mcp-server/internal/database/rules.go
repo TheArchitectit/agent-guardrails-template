@@ -255,6 +255,33 @@ func (s *RuleStore) Delete(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
+// Count returns the total number of rules, optionally filtered by enabled status and category
+func (s *RuleStore) Count(ctx context.Context, enabled *bool, category string) (int, error) {
+	var query string
+	var args []interface{}
+
+	switch {
+	case enabled != nil && category != "":
+		query = `SELECT COUNT(*) FROM prevention_rules WHERE enabled = $1 AND category = $2`
+		args = []interface{}{*enabled, category}
+	case enabled != nil:
+		query = `SELECT COUNT(*) FROM prevention_rules WHERE enabled = $1`
+		args = []interface{}{*enabled}
+	case category != "":
+		query = `SELECT COUNT(*) FROM prevention_rules WHERE category = $1`
+		args = []interface{}{category}
+	default:
+		query = `SELECT COUNT(*) FROM prevention_rules`
+	}
+
+	var count int
+	err := s.db.QueryRowContext(ctx, query, args...).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("failed to count rules: %w", err)
+	}
+	return count, nil
+}
+
 // Toggle enables/disables a rule within a transaction
 func (s *RuleStore) Toggle(ctx context.Context, id uuid.UUID, enabled bool) error {
 	tx, err := s.db.BeginTx(ctx, nil)

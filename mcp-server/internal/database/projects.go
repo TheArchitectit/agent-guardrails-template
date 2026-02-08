@@ -60,13 +60,14 @@ func (s *ProjectStore) GetBySlug(ctx context.Context, slug string) (*models.Proj
 	return &proj, nil
 }
 
-// List retrieves all projects
-func (s *ProjectStore) List(ctx context.Context) ([]models.Project, error) {
+// List retrieves projects with pagination
+func (s *ProjectStore) List(ctx context.Context, limit, offset int) ([]models.Project, error) {
 	rows, err := s.db.QueryContext(ctx, `
 		SELECT id, name, slug, guardrail_context, active_rules, metadata, created_at, updated_at
 		FROM projects
 		ORDER BY updated_at DESC
-	`)
+		LIMIT $1 OFFSET $2
+	`, limit, offset)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list projects: %w", err)
 	}
@@ -143,6 +144,16 @@ func (s *ProjectStore) Update(ctx context.Context, proj *models.Project) error {
 	}
 
 	return nil
+}
+
+// Count returns the total number of projects
+func (s *ProjectStore) Count(ctx context.Context) (int, error) {
+	var count int
+	err := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM projects`).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("failed to count projects: %w", err)
+	}
+	return count, nil
 }
 
 // Delete removes a project within a transaction
