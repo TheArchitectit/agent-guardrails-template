@@ -10,13 +10,49 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
-- **MCP Server Documentation**
-  - Comprehensive API documentation (mcp-server/API.md) with all endpoints
-  - MCP Server-specific CHANGELOG (mcp-server/CHANGELOG.md)
-  - Troubleshooting guide for common deployment issues
-  - Database migration instructions in README.md
+### Changed
+
+## [1.9.3] - 2026-02-07
+
+### Security
+
+- **CORS Origin Validation** - Replaced wildcard CORS with configurable origin validation
+- **Secure Session ID Generation** - Uses crypto/rand instead of timestamp-based IDs
+- **Security Headers** - Added X-Content-Type-Options, X-Frame-Options, X-XSS-Protection, Referrer-Policy
+- **Request Size Limits** - Added 1MB body size limit to prevent DoS
+- **Path Traversal Protection** - Added slug validation to prevent path traversal attacks
+
+### Fixed
+
+- **SQL Injection Vulnerabilities** - Fixed dynamic query building in List methods
+- **Redis Blocking Commands** - Replaced KEYS command with non-blocking SCAN
+- **Context Timeouts** - Added 5-second timeouts to cache operations
+- **Session Memory Leaks** - Added cleanup goroutine for inactive sessions
+- **MCP Protocol Compliance** - SSE endpoint now sends full URLs, proper JSON-RPC ping format
+- **JSON-RPC Validation** - Added session_id and JSON-RPC version validation
+
+### Added
+
+- **Transaction Support** - All Create/Update/Delete operations now use transactions
+- **Model Validation** - Validate() methods for all models (Document, Rule, Project, Failure)
+- **Database Migrations** - Migration system with schema versioning
+- **Connection Pool Monitoring** - Pool health monitoring with capacity warnings
+- **Graceful Shutdown** - Configurable shutdown timeout with SIGQUIT support
+- **Kubernetes Deployment** - Complete K8s manifests with HPA and PDB
+- **API Documentation** - Comprehensive API.md with all REST endpoints
+- **MCP Server CHANGELOG** - Separate changelog for MCP server
+
+### Infrastructure
+
+- **Dockerfile Improvements** - Version injection, CA certificates
+- **Health Checks** - Liveness, readiness, and startup probes
+- **Observability** - /version endpoint, Prometheus metrics, optional pprof
+- **Resource Limits** - CPU/memory limits for all services
 
 ### Changed
+
+- **MCP Server Documentation** - Enhanced README with security features and troubleshooting
+- **Environment Configuration** - Fixed defaults in .env.example to match deployment
 
 - **MCP Server README.md**
   - Added complete project structure including `internal/mcp/`
