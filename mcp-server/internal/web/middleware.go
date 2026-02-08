@@ -32,6 +32,14 @@ func APIKeyAuth(cfg *config.Config) echo.MiddlewareFunc {
 				return next(c)
 			}
 
+			// Skip read-only API endpoints for public browsing
+			if path == "/api/documents" || path == "/api/documents/search" ||
+				strings.HasPrefix(path, "/api/documents/") ||
+				path == "/api/rules" || strings.HasPrefix(path, "/api/rules/") ||
+				path == "/version" {
+				return next(c)
+			}
+
 			// Extract API key from header
 			auth := c.Request().Header.Get("Authorization")
 			if auth == "" {
@@ -97,6 +105,14 @@ func RateLimitMiddleware(limiter *cache.DistributedRateLimiter, cfg *config.Conf
 
 			// Skip SSE endpoint - auth handled via message endpoint
 			if path == "/mcp/v1/sse" {
+				return next(c)
+			}
+
+			// Skip read-only API endpoints for public browsing
+			if path == "/api/documents" || path == "/api/documents/search" ||
+				strings.HasPrefix(path, "/api/documents/") ||
+				path == "/api/rules" || strings.HasPrefix(path, "/api/rules/") ||
+				path == "/version" {
 				return next(c)
 			}
 
