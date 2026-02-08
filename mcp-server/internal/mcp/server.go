@@ -324,19 +324,17 @@ func (s *MCPServer) Start(addr string) error {
 	// Security headers middleware
 	s.echo.Use(s.securityHeadersMiddleware())
 
-	// Request timeout
-	s.echo.Use(middleware.TimeoutWithConfig(middleware.TimeoutConfig{
-		Timeout: s.cfg.RequestTimeout,
-	}))
-
-	// Body limit - prevent DoS via large payloads
+	// Body limit - prevent DoS via large payloads (skip for SSE which has no body)
 	s.echo.Use(middleware.BodyLimit("1M"))
 
-	// SSE endpoint
+	// SSE endpoint - no timeout, long-lived connection
 	s.echo.GET("/mcp/v1/sse", s.handleSSE)
 
-	// Message endpoint
-	s.echo.POST("/mcp/v1/message", s.handleMessage)
+	// Message endpoint - with timeout for request processing
+	// Note: Timeout applied at handler level to allow SSE to stay open
+	s.echo.POST("/mcp/v1/message", s.handleMessage, middleware.TimeoutWithConfig(middleware.TimeoutConfig{
+		Timeout: s.cfg.RequestTimeout,
+	}))
 
 	// Start session cleanup goroutine with panic recovery
 	go s.runSessionCleanup()
