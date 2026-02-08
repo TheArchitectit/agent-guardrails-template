@@ -141,6 +141,7 @@ func (s *Server) searchDocuments(c echo.Context) error {
 // Rule handlers
 
 func (s *Server) listRules(c echo.Context) error {
+	ctx := c.Request().Context()
 	var enabled *bool
 	if enabledParam := c.QueryParam("enabled"); enabledParam != "" {
 		e := enabledParam == "true"
@@ -156,15 +157,22 @@ func (s *Server) listRules(c echo.Context) error {
 		offset = 0
 	}
 
-	rules, err := s.ruleStore.List(c.Request().Context(), enabled, category, limit, offset)
+	rules, err := s.ruleStore.List(ctx, enabled, category, limit, offset)
 	if err != nil {
 		slog.Error("Failed to list rules", "error", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to retrieve rules"})
 	}
 
+	total, err := s.ruleStore.Count(ctx, enabled, category)
+	if err != nil {
+		slog.Warn("Failed to count rules", "error", err)
+		total = len(rules) // Fallback to current page size
+	}
+
 	return c.JSON(http.StatusOK, map[string]interface{}{
 		"data": rules,
 		"pagination": map[string]interface{}{
+			"total":  total,
 			"limit":  limit,
 			"offset": offset,
 		},
@@ -410,9 +418,18 @@ func (s *Server) deleteProject(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid id format"})
 	}
 
-	if err := s.projStore.Delete(c.Request().Context(), parsedUUID); err != nil {
+	// Get project to find the slug
+	proj, err := s.projStore.GetByID(c.Request().Context(), parsedUUID)
+	if err != nil {
+		return c.JSON(http.StatusNotFound, map[string]string{"error": err.Error()})
+	}
+
+	if err := s.projStore.Delete(c.Request().Context(), proj.Slug); err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
+
+	// Invalidate cache
+	s.cache.InvalidateOnProjectChange(c.Request().Context(), proj.Slug)
 
 	return c.NoContent(http.StatusNoContent)
 }
