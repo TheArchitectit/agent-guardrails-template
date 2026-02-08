@@ -120,10 +120,12 @@ spec:
               value: "${JWT_ISSUER:-guardrail-mcp}"
             - name: JWT_EXPIRY
               value: "${JWT_EXPIRY:-15m}"
-            - name: MCP_RATE_LIMIT
-              value: "${MCP_RATE_LIMIT:-1000}"
-            - name: IDE_RATE_LIMIT
-              value: "${IDE_RATE_LIMIT:-500}"
+            - name: RATE_LIMIT_MCP
+              value: "${RATE_LIMIT_MCP:-1000}"
+            - name: RATE_LIMIT_IDE
+              value: "${RATE_LIMIT_IDE:-500}"
+            - name: RATE_LIMIT_SESSION
+              value: "${RATE_LIMIT_SESSION:-100}"
             - name: VERSION
               value: "${VERSION}"
             - name: BUILD_TIME

@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"net/http"
+	"runtime/debug"
 	"time"
 
 	"github.com/labstack/echo/v4"
@@ -13,6 +14,8 @@ import (
 	"github.com/thearchitectit/guardrail-mcp/internal/cache"
 	"github.com/thearchitectit/guardrail-mcp/internal/config"
 	"github.com/thearchitectit/guardrail-mcp/internal/database"
+	loggingMiddleware "github.com/thearchitectit/guardrail-mcp/internal/middleware"
+	metricsMiddleware "github.com/thearchitectit/guardrail-mcp/internal/metrics"
 )
 
 // Server wraps the Echo server with guardrail dependencies
@@ -117,11 +120,11 @@ func (s *Server) setupRoutes() {
 	// API routes with authentication
 	api := s.echo.Group("/api")
 
-	// Document routes
+	// Document routes - order matters: specific routes before parameterized routes
 	api.GET("/documents", s.listDocuments)
+	api.GET("/documents/search", s.searchDocuments)
 	api.GET("/documents/:id", s.getDocument)
 	api.PUT("/documents/:id", s.updateDocument)
-	api.GET("/documents/search", s.searchDocuments)
 
 	// Rule routes
 	api.GET("/rules", s.listRules)
@@ -171,6 +174,68 @@ func (s *Server) Start(addr string) error {
 // Shutdown gracefully shuts down the server
 func (s *Server) Shutdown(ctx context.Context) error {
 	return s.echo.Shutdown(ctx)
+}
+
+// correlationIDMiddleware extracts or generates correlation ID for request tracing
+func correlationIDMiddleware() echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			req := c.Request()
+			res := c.Response()
+
+			// Check for existing correlation ID from upstream
+			correlationID := req.Header.Get("X-Correlation-ID")
+			if correlationID == "" {
+				// Generate new correlation ID using request ID
+				correlationID = res.Header().Get(echo.HeaderXRequestID)
+			}
+
+			// Set correlation ID in response header for downstream tracing
+			res.Header().Set("X-Correlation-ID", correlationID)
+
+			// Store in context for use in handlers and logging
+			c.Set("correlation_id", correlationID)
+
+			// Add to request context for propagation to downstream services
+			ctx := context.WithValue(req.Context(), "correlation_id", correlationID)
+			c.SetRequest(req.WithContext(ctx))
+
+			return next(c)
+		}
+	}
+}
+
+// panicRecoveryMiddleware recovers from panics and records metrics
+func panicRecoveryMiddleware() echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			defer func() {
+				if r := recover(); r != nil {
+					err, ok := r.(error)
+					if !ok {
+						err = echo.NewHTTPError(http.StatusInternalServerError, r)
+					}
+
+					// Record panic metric
+					metricsMiddleware.RecordPanic(c.Path())
+
+					// Log panic with stack trace
+					slog.Error("Panic recovered",
+						"error", err,
+						"path", c.Path(),
+						"method", c.Request().Method,
+						"correlation_id", c.Get("correlation_id"),
+						"request_id", c.Response().Header().Get(echo.HeaderXRequestID),
+						"stack", string(debug.Stack()),
+					)
+
+					// Return 500 error
+					c.Error(err)
+				}
+			}()
+			return next(c)
+		}
+	}
 }
 
 // securityHeadersMiddleware adds security headers

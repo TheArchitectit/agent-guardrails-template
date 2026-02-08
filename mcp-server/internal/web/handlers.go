@@ -27,18 +27,19 @@ const (
 
 func (s *Server) listDocuments(c echo.Context) error {
 	category := c.QueryParam("category")
-	limit, _ := strconv.Atoi(c.QueryParam("limit"))
-	if limit <= 0 || limit > maxPageLimit {
+	limit, err := strconv.Atoi(c.QueryParam("limit"))
+	if err != nil || limit <= 0 || limit > maxPageLimit {
 		limit = defaultPageLimit
 	}
-	offset, _ := strconv.Atoi(c.QueryParam("offset"))
-	if offset < 0 {
+	offset, err := strconv.Atoi(c.QueryParam("offset"))
+	if err != nil || offset < 0 {
 		offset = 0
 	}
 
 	docs, err := s.docStore.List(c.Request().Context(), category, limit, offset)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		slog.Error("Failed to list documents", "error", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to retrieve documents"})
 	}
 
 	return c.JSON(http.StatusOK, map[string]interface{}{
@@ -94,7 +95,7 @@ func (s *Server) updateDocument(c echo.Context) error {
 	s.cache.InvalidateOnDocumentChange(c.Request().Context(), doc.Slug)
 
 	// Audit log
-	keyHash, _ := c.Get("api_key_hash").(string)
+	keyHash := getAPIKeyHash(c)
 	s.auditLogger.LogDocChange(c.Request().Context(), keyHash, doc.Slug, "update")
 
 	return c.JSON(http.StatusOK, doc)
@@ -106,17 +107,24 @@ func (s *Server) searchDocuments(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "query parameter required"})
 	}
 
-	limit, _ := strconv.Atoi(c.QueryParam("limit"))
-	if limit <= 0 || limit > maxSearchResults {
+	limit, err := strconv.Atoi(c.QueryParam("limit"))
+	if err != nil || limit <= 0 || limit > maxSearchResults {
 		limit = defaultSearchLimit
 	}
 
 	docs, err := s.docStore.Search(c.Request().Context(), query, limit)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		slog.Error("Failed to search documents", "error", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to search documents"})
 	}
 
-	return c.JSON(http.StatusOK, docs)
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"data":  docs,
+		"query": query,
+		"pagination": map[string]interface{}{
+			"limit": limit,
+		},
+	})
 }
 
 // Rule handlers
@@ -180,7 +188,7 @@ func (s *Server) createRule(c echo.Context) error {
 	s.cache.InvalidateOnRuleChange(c.Request().Context(), rule.RuleID)
 
 	// Audit log
-	keyHash, _ := c.Get("api_key_hash").(string)
+	keyHash := getAPIKeyHash(c)
 	s.auditLogger.LogRuleChange(c.Request().Context(), keyHash, rule.RuleID, "create")
 
 	return c.JSON(http.StatusCreated, rule)
@@ -207,7 +215,7 @@ func (s *Server) updateRule(c echo.Context) error {
 	s.cache.InvalidateOnRuleChange(c.Request().Context(), rule.RuleID)
 
 	// Audit log
-	keyHash, _ := c.Get("api_key_hash").(string)
+	keyHash := getAPIKeyHash(c)
 	s.auditLogger.LogRuleChange(c.Request().Context(), keyHash, rule.RuleID, "update")
 
 	return c.JSON(http.StatusOK, rule)
@@ -221,22 +229,25 @@ func (s *Server) deleteRule(c echo.Context) error {
 	}
 
 	// Get rule for cache invalidation before deleting
-	rule, _ := s.ruleStore.GetByID(c.Request().Context(), parsedUUID)
-
-	if err := s.ruleStore.Delete(c.Request().Context(), parsedUUID); err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+	rule, err := s.ruleStore.GetByID(c.Request().Context(), parsedUUID)
+	if err != nil {
+		// Rule doesn't exist - return 404
+		return c.JSON(http.StatusNotFound, map[string]string{"error": "rule not found"})
 	}
 
-	// Invalidate cache
-	if rule != nil {
-		s.cache.InvalidateOnRuleChange(c.Request().Context(), rule.RuleID)
+	if err := s.ruleStore.Delete(c.Request().Context(), parsedUUID); err != nil {
+		slog.Error("Failed to delete rule", "rule_id", id, "error", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to delete rule"})
+	}
+
+	// Invalidate cache - log error but don't fail the request
+	if err := s.cache.InvalidateOnRuleChange(c.Request().Context(), rule.RuleID); err != nil {
+		slog.Warn("Failed to invalidate cache after rule deletion", "rule_id", rule.RuleID, "error", err)
 	}
 
 	// Audit log
-	keyHash, _ := c.Get("api_key_hash").(string)
-	if rule != nil {
-		s.auditLogger.LogRuleChange(c.Request().Context(), keyHash, rule.RuleID, "delete")
-	}
+	keyHash := getAPIKeyHash(c)
+	s.auditLogger.LogRuleChange(c.Request().Context(), keyHash, rule.RuleID, "delete")
 
 	return c.NoContent(http.StatusNoContent)
 }
@@ -290,7 +301,7 @@ func (s *Server) patchRule(c echo.Context) error {
 	s.cache.InvalidateOnRuleChange(c.Request().Context(), rule.RuleID)
 
 	// Audit log
-	keyHash, _ := c.Get("api_key_hash").(string)
+	keyHash := getAPIKeyHash(c)
 	s.auditLogger.LogRuleChange(c.Request().Context(), keyHash, rule.RuleID, "patch")
 
 	return c.JSON(http.StatusOK, rule)
@@ -471,7 +482,11 @@ func (s *Server) updateFailure(c echo.Context) error {
 func (s *Server) getStats(c echo.Context) error {
 	ctx := c.Request().Context()
 
-	failCount, _ := s.failStore.Count(ctx)
+	failCount, err := s.failStore.Count(ctx)
+	if err != nil {
+		slog.Error("Failed to get failure count", "error", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to retrieve statistics"})
+	}
 
 	// TODO: Add counts for other entities
 	return c.JSON(http.StatusOK, map[string]interface{}{
@@ -571,6 +586,15 @@ func (s *Server) getQuickReference(c echo.Context) error {
 	return c.JSON(http.StatusOK, map[string]string{
 		"reference": "Quick reference documentation - TODO: Load from docs",
 	})
+}
+
+// getAPIKeyHash safely extracts the API key hash from the context
+func getAPIKeyHash(c echo.Context) string {
+	keyHash, ok := c.Get("api_key_hash").(string)
+	if !ok || keyHash == "" {
+		return "unknown"
+	}
+	return keyHash
 }
 
 // isValidSlug validates a project slug to prevent path traversal attacks

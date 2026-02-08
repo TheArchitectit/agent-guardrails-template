@@ -225,6 +225,11 @@ func (c *Config) Validate() error {
 		return fmt.Errorf("AUDIT_BUFFER_SIZE must be at most 10000, got %d", c.AuditBufferSize)
 	}
 
+	// Validate CORS settings
+	if len(c.CORSAllowedOrigins) == 0 {
+		return fmt.Errorf("CORS_ALLOWED_ORIGINS must not be empty")
+	}
+
 	return nil
 }
 
@@ -315,20 +320,21 @@ func (c *Config) RedisAddr() string {
 // IsHotReloadable returns true if the config key supports hot reloading
 func IsHotReloadable(key string) bool {
 	hotReloadable := map[string]bool{
-		"LOG_LEVEL":            true,
-		"RATE_LIMIT_MCP":       true,
-		"RATE_LIMIT_IDE":       true,
-		"RATE_LIMIT_SESSION":   true,
-		"RATE_LIMIT_WINDOW":    true,
-		"CACHE_TTL_RULES":      true,
-		"CACHE_TTL_DOCS":       true,
-		"CACHE_TTL_SEARCH":     true,
-		"ENABLE_VALIDATION":    true,
-		"ENABLE_METRICS":       true,
-		"ENABLE_AUDIT_LOGGING": true,
-		"ENABLE_CACHE":         true,
-		"CORS_ALLOWED_ORIGINS": true,
-		"CORS_MAX_AGE":         true,
+		"LOG_LEVEL":              true,
+		"RATE_LIMIT_MCP":         true,
+		"RATE_LIMIT_IDE":         true,
+		"RATE_LIMIT_SESSION":     true,
+		"RATE_LIMIT_WINDOW":      true,
+		"RATE_LIMIT_BURST_FACTOR": true,
+		"CACHE_TTL_RULES":        true,
+		"CACHE_TTL_DOCS":         true,
+		"CACHE_TTL_SEARCH":       true,
+		"ENABLE_VALIDATION":      true,
+		"ENABLE_METRICS":         true,
+		"ENABLE_AUDIT_LOGGING":   true,
+		"ENABLE_CACHE":           true,
+		"CORS_ALLOWED_ORIGINS":   true,
+		"CORS_MAX_AGE":           true,
 	}
 	return hotReloadable[key]
 }
@@ -341,6 +347,7 @@ func HotReloadableFields() []string {
 		"RATE_LIMIT_IDE",
 		"RATE_LIMIT_SESSION",
 		"RATE_LIMIT_WINDOW",
+		"RATE_LIMIT_BURST_FACTOR",
 		"CACHE_TTL_RULES",
 		"CACHE_TTL_DOCS",
 		"CACHE_TTL_SEARCH",

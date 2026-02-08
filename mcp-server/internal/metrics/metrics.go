@@ -238,6 +238,18 @@ var (
 		},
 		[]string{"operation"},
 	)
+
+	// CacheOperationDuration tracks cache operation latency
+	CacheOperationDuration = promauto.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Namespace: namespace,
+			Subsystem: "cache",
+			Name:      "operation_duration_seconds",
+			Help:      "Cache operation latency in seconds",
+			Buckets:   []float64{0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1},
+		},
+		[]string{"operation"},
+	)
 )
 
 // Rate limit metrics
@@ -262,6 +274,102 @@ var (
 			Help:      "Total number of allowed requests",
 		},
 		[]string{"key_type"},
+	)
+)
+
+// Panic recovery metrics
+var (
+	// PanicsTotal tracks recovered panics
+	PanicsTotal = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Namespace: namespace,
+			Subsystem: "runtime",
+			Name:      "panics_total",
+			Help:      "Total number of recovered panics",
+		},
+		[]string{"path"},
+	)
+)
+
+// Database metrics
+var (
+	// DBConnectionsActive tracks active database connections
+	DBConnectionsActive = promauto.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Namespace: namespace,
+			Subsystem: "database",
+			Name:      "connections_active",
+			Help:      "Current number of active database connections",
+		},
+		[]string{"state"}, // state: open, in_use, idle
+	)
+
+	// DBConnectionsWaitDuration tracks time waiting for connection
+	DBConnectionsWaitDuration = promauto.NewCounter(
+		prometheus.CounterOpts{
+			Namespace: namespace,
+			Subsystem: "database",
+			Name:      "connections_wait_duration_seconds_total",
+			Help:      "Total time waited for database connections",
+		},
+	)
+
+	// DBConnectionsWaitCount tracks number of waits for connection
+	DBConnectionsWaitCount = promauto.NewCounter(
+		prometheus.CounterOpts{
+			Namespace: namespace,
+			Subsystem: "database",
+			Name:      "connections_wait_count_total",
+			Help:      "Total number of waits for database connections",
+		},
+	)
+
+	// DBQueryDuration tracks database query latency
+	DBQueryDuration = promauto.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Namespace: namespace,
+			Subsystem: "database",
+			Name:      "query_duration_seconds",
+			Help:      "Database query latency in seconds",
+			Buckets:   []float64{0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5},
+		},
+		[]string{"operation", "table"},
+	)
+)
+
+// SLO/Error budget metrics
+var (
+	// SLOCompliance tracks SLO compliance (1 = compliant, 0 = breached)
+	SLOCompliance = promauto.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Namespace: namespace,
+			Subsystem: "slo",
+			Name:      "compliance",
+			Help:      "SLO compliance status (1 = compliant, 0 = breached)",
+		},
+		[]string{"slo_name"},
+	)
+
+	// ErrorBudgetBurnRate tracks error budget burn rate
+	ErrorBudgetBurnRate = promauto.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Namespace: namespace,
+			Subsystem: "slo",
+			Name:      "error_budget_burn_rate",
+			Help:      "Error budget burn rate (1.0 = on track, >1 = burning too fast)",
+		},
+		[]string{"slo_name", "window"},
+	)
+
+	// SLIValue tracks SLI values
+	SLIValue = promauto.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Namespace: namespace,
+			Subsystem: "slo",
+			Name:      "sli_value",
+			Help:      "SLI value (0-1 scale)",
+		},
+		[]string{"slo_name"},
 	)
 )
 
@@ -388,4 +496,53 @@ func DecrementActiveSessions() {
 // RecordSessionExpired records a session expiration
 func RecordSessionExpired() {
 	MCPSessionsExpiredTotal.Inc()
+}
+
+// RecordPanic records a recovered panic
+func RecordPanic(path string) {
+	PanicsTotal.WithLabelValues(path).Inc()
+}
+
+// RecordDBStats records database connection pool statistics
+func RecordDBStats(stats struct {
+	Open          int
+	InUse         int
+	Idle          int
+	WaitDuration  float64
+	WaitCount     int64
+}) {
+	DBConnectionsActive.WithLabelValues("open").Set(float64(stats.Open))
+	DBConnectionsActive.WithLabelValues("in_use").Set(float64(stats.InUse))
+	DBConnectionsActive.WithLabelValues("idle").Set(float64(stats.Idle))
+	DBConnectionsWaitDuration.Add(stats.WaitDuration)
+	DBConnectionsWaitCount.Add(float64(stats.WaitCount))
+}
+
+// RecordDBQuery records database query duration
+func RecordDBQuery(operation, table string, duration time.Duration) {
+	DBQueryDuration.WithLabelValues(operation, table).Observe(duration.Seconds())
+}
+
+// RecordCacheOperation records cache operation duration
+func RecordCacheOperation(operation string, duration time.Duration) {
+	CacheOperationDuration.WithLabelValues(operation).Observe(duration.Seconds())
+}
+
+// RecordSLOCompliance records SLO compliance status
+func RecordSLOCompliance(sloName string, compliant bool) {
+	value := 0.0
+	if compliant {
+		value = 1.0
+	}
+	SLOCompliance.WithLabelValues(sloName).Set(value)
+}
+
+// RecordErrorBudgetBurnRate records error budget burn rate
+func RecordErrorBudgetBurnRate(sloName, window string, rate float64) {
+	ErrorBudgetBurnRate.WithLabelValues(sloName, window).Set(rate)
+}
+
+// RecordSLI records SLI value
+func RecordSLI(sloName string, value float64) {
+	SLIValue.WithLabelValues(sloName).Set(value)
 }
