@@ -4,7 +4,9 @@ import (
 	"context"
 	"log/slog"
 	"net/http"
+	"os"
 	"runtime/debug"
+	"strings"
 	"time"
 
 	"github.com/labstack/echo/v4"
@@ -164,15 +166,28 @@ func (s *Server) setupRoutes() {
 	ide.GET("/rules", s.getIDERules)
 	ide.GET("/quick-reference", s.getQuickReference)
 
-	// Static files (Web UI)
+	// Static files (Web UI) - must be registered BEFORE SPA fallback
 	if s.cfg.WebEnabled {
-		s.echo.Static("/", "/app/static")
-		s.echo.File("/", "/app/static/index.html")
-	}
+		s.echo.Static("/", "/app/web")
+		s.echo.Static("/web", "/app/web")
+		// SPA fallback: serve index.html for non-file routes (client-side routing)
+		// This handles /web, /web/dashboard, /web/rules etc but NOT /web/js/app.js
+		s.echo.GET("/web/*", func(c echo.Context) error {
+			// Check if this is a request for an actual file
+			requestPath := c.Request().URL.Path
 
-	// Web UI static files - served from embedded web directory
-	s.echo.Static("/web", "web")
-	s.echo.File("/web/*", "web/index.html")
+			// If the path has a file extension, try to serve it directly first
+			if strings.Contains(requestPath, ".") {
+				filePath := "/app/web" + strings.TrimPrefix(requestPath, "/web")
+				if _, err := os.Stat(filePath); err == nil {
+					return c.File(filePath)
+				}
+			}
+
+			// For routes without file extension (client-side routes), serve index.html
+			return c.File("/app/web/index.html")
+		})
+	}
 }
 
 // Start starts the server

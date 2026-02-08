@@ -17,6 +17,10 @@ import (
 func APIKeyAuth(cfg *config.Config) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
+			// Use the actual request URL path, not the route pattern
+			// This is critical because c.Path() returns route pattern which may be /*
+			requestPath := c.Request().URL.Path
+
 			// Skip health checks, metrics, Web UI routes, and SSE endpoint
 			path := c.Path()
 			if path == "/health/live" || path == "/health/ready" || path == "/metrics" {
@@ -28,15 +32,44 @@ func APIKeyAuth(cfg *config.Config) echo.MiddlewareFunc {
 			}
 
 			// Skip Web UI routes - these are publicly accessible
-			if path == "/" || path == "/index.html" || strings.HasPrefix(path, "/static/") {
+			// Check both route pattern and actual request path
+			if path == "/" || path == "/index.html" || path == "/web/*" || strings.HasPrefix(path, "/static/") {
+				return next(c)
+			}
+			// Also check actual request path for web UI files
+			if requestPath == "/" || requestPath == "/index.html" ||
+				strings.HasPrefix(requestPath, "/static/") ||
+				strings.HasPrefix(requestPath, "/web/") ||
+				strings.HasPrefix(requestPath, "/assets/") ||
+				strings.HasPrefix(requestPath, "/js/") ||
+				strings.HasPrefix(requestPath, "/css/") ||
+				requestPath == "/web" {
+				return next(c)
+			}
+			// Check for common web file extensions that should be public
+			if strings.HasSuffix(requestPath, ".js") ||
+				strings.HasSuffix(requestPath, ".css") ||
+				strings.HasSuffix(requestPath, ".html") ||
+				strings.HasSuffix(requestPath, ".svg") ||
+				strings.HasSuffix(requestPath, ".png") ||
+				strings.HasSuffix(requestPath, ".jpg") ||
+				strings.HasSuffix(requestPath, ".ico") ||
+				strings.HasSuffix(requestPath, ".json") ||
+				strings.HasSuffix(requestPath, ".woff") ||
+				strings.HasSuffix(requestPath, ".woff2") ||
+				strings.HasSuffix(requestPath, ".ttf") {
 				return next(c)
 			}
 
-			// Skip read-only API endpoints for public browsing
-			if path == "/api/documents" || path == "/api/documents/search" ||
+			// Skip read-only API endpoints for public browsing (GET requests only)
+			method := c.Request().Method
+			if method == "GET" && (path == "/api/documents" || path == "/api/documents/search" ||
 				strings.HasPrefix(path, "/api/documents/") ||
 				path == "/api/rules" || strings.HasPrefix(path, "/api/rules/") ||
-				path == "/version" {
+				path == "/api/stats" || strings.HasPrefix(path, "/api/stats/") ||
+				path == "/api/projects" || strings.HasPrefix(path, "/api/projects/") ||
+				path == "/api/failures" || strings.HasPrefix(path, "/api/failures/") ||
+				path == "/version") {
 				return next(c)
 			}
 
@@ -92,6 +125,9 @@ func APIKeyAuth(cfg *config.Config) echo.MiddlewareFunc {
 func RateLimitMiddleware(limiter *cache.DistributedRateLimiter, cfg *config.Config) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
+			// Use the actual request URL path
+			requestPath := c.Request().URL.Path
+
 			// Skip health checks, Web UI routes, and SSE endpoint
 			path := c.Path()
 			if path == "/health/live" || path == "/health/ready" || path == "/metrics" {
@@ -99,7 +135,31 @@ func RateLimitMiddleware(limiter *cache.DistributedRateLimiter, cfg *config.Conf
 			}
 
 			// Skip Web UI routes - these are publicly accessible
-			if path == "/" || path == "/index.html" || strings.HasPrefix(path, "/static/") {
+			if path == "/" || path == "/index.html" || path == "/web/*" || strings.HasPrefix(path, "/static/") {
+				return next(c)
+			}
+			// Also check actual request path for web UI files
+			if requestPath == "/" || requestPath == "/index.html" ||
+				strings.HasPrefix(requestPath, "/static/") ||
+				strings.HasPrefix(requestPath, "/web/") ||
+				strings.HasPrefix(requestPath, "/assets/") ||
+				strings.HasPrefix(requestPath, "/js/") ||
+				strings.HasPrefix(requestPath, "/css/") ||
+				requestPath == "/web" {
+				return next(c)
+			}
+			// Check for common web file extensions that should be public
+			if strings.HasSuffix(requestPath, ".js") ||
+				strings.HasSuffix(requestPath, ".css") ||
+				strings.HasSuffix(requestPath, ".html") ||
+				strings.HasSuffix(requestPath, ".svg") ||
+				strings.HasSuffix(requestPath, ".png") ||
+				strings.HasSuffix(requestPath, ".jpg") ||
+				strings.HasSuffix(requestPath, ".ico") ||
+				strings.HasSuffix(requestPath, ".json") ||
+				strings.HasSuffix(requestPath, ".woff") ||
+				strings.HasSuffix(requestPath, ".woff2") ||
+				strings.HasSuffix(requestPath, ".ttf") {
 				return next(c)
 			}
 
@@ -108,11 +168,15 @@ func RateLimitMiddleware(limiter *cache.DistributedRateLimiter, cfg *config.Conf
 				return next(c)
 			}
 
-			// Skip read-only API endpoints for public browsing
-			if path == "/api/documents" || path == "/api/documents/search" ||
+			// Skip read-only API endpoints for public browsing (GET requests only)
+			method := c.Request().Method
+			if method == "GET" && (path == "/api/documents" || path == "/api/documents/search" ||
 				strings.HasPrefix(path, "/api/documents/") ||
 				path == "/api/rules" || strings.HasPrefix(path, "/api/rules/") ||
-				path == "/version" {
+				path == "/api/stats" || strings.HasPrefix(path, "/api/stats/") ||
+				path == "/api/projects" || strings.HasPrefix(path, "/api/projects/") ||
+				path == "/api/failures" || strings.HasPrefix(path, "/api/failures/") ||
+				path == "/version") {
 				return next(c)
 			}
 
