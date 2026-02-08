@@ -337,23 +337,32 @@ func (s *Server) patchRule(c echo.Context) error {
 // Project handlers
 
 func (s *Server) listProjects(c echo.Context) error {
-	limit, _ := strconv.Atoi(c.QueryParam("limit"))
-	if limit <= 0 || limit > maxPageLimit {
+	ctx := c.Request().Context()
+	limit, err := strconv.Atoi(c.QueryParam("limit"))
+	if err != nil || limit <= 0 || limit > maxPageLimit {
 		limit = defaultPageLimit
 	}
-	offset, _ := strconv.Atoi(c.QueryParam("offset"))
-	if offset < 0 {
+	offset, err := strconv.Atoi(c.QueryParam("offset"))
+	if err != nil || offset < 0 {
 		offset = 0
 	}
 
-	projects, err := s.projStore.List(c.Request().Context(), limit, offset)
+	projects, err := s.projStore.List(ctx, limit, offset)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		slog.Error("Failed to list projects", "error", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to retrieve projects"})
+	}
+
+	total, err := s.projStore.Count(ctx)
+	if err != nil {
+		slog.Warn("Failed to count projects", "error", err)
+		total = len(projects) // Fallback to current page size
 	}
 
 	return c.JSON(http.StatusOK, map[string]interface{}{
 		"data": projects,
 		"pagination": map[string]interface{}{
+			"total":  total,
 			"limit":  limit,
 			"offset": offset,
 		},

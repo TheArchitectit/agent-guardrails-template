@@ -12,6 +12,39 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Changed
 
+## [1.9.4] - 2026-02-07
+
+### Performance
+
+- **SSE Optimizations** - strings.Builder, pre-allocated buffers, reduced allocations
+- **JSON Encoding** - Buffer pool for JSON marshaling
+- **Database Queries** - Optimized document/rule/project queries
+
+### Error Handling
+
+- **Fixed Silent Failures** - GetByID, Count errors now properly handled
+- **Error Wrapping** - All errors wrapped with context using %w
+- **HTTP Status Codes** - 404 for not found, 500 for server errors
+- **Panic Recovery** - Added recovery middleware with metrics
+
+### Configuration
+
+- **Fixed Env Var Naming** - RATE_LIMIT_MCP, RATE_LIMIT_IDE (was MCP_RATE_LIMIT, IDE_RATE_LIMIT)
+- **Feature Flags** - Added ENABLE_METRICS, ENABLE_AUDIT_LOGGING, ENABLE_CACHE
+- **CORS Config** - Added CORS_ALLOWED_ORIGINS, CORS_MAX_AGE
+
+### Observability
+
+- **Panic Metrics** - Track recovered panics by path
+- **Database Metrics** - Connection pool stats, query duration
+- **SLO Metrics** - Compliance, error budget burn rate, SLI values
+- **Correlation ID** - Request tracing middleware
+
+### API Consistency
+
+- **Route Ordering** - Fixed search routes before parameterized routes
+- **Response Formats** - Standardized across all endpoints
+
 ## [1.9.3] - 2026-02-07
 
 ### Security
