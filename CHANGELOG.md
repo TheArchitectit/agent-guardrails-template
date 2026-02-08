@@ -175,7 +175,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   - Installation and testing instructions
   - Environment variable reference
   - curl test examples
-  - Deployment guide for <your-server-name>
+  - Deployment guide for production servers
 
 ## [1.9.0] - 2026-02-07
 
@@ -196,7 +196,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   - Failure registry viewer
   - Project configuration
 
-- **Production Deployment** - <your-server-name> (RHEL + Podman)
+- **Production Deployment** - RHEL + Podman environment
   - PostgreSQL 16 for data persistence
   - Redis 7 for caching and rate limiting
   - Multi-stage Docker build with distroless image
@@ -210,9 +210,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Infrastructure
 
-- <your-server-name> endpoints:
-  - MCP: `http://<your-server-ip>:8092`
-  - Web UI: `http://<your-server-ip>:8093`
+- Example endpoints:
+  - MCP: `http://localhost:8092`
+  - Web UI: `http://localhost:8093`
 
 ## [1.8.0] - 2026-02-05
 
