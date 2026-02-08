@@ -3,12 +3,18 @@ package database
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"regexp"
 	"strings"
 
 	"github.com/google/uuid"
 	"github.com/thearchitectit/guardrail-mcp/internal/models"
+)
+
+// Search query constants
+const (
+	maxSearchQueryLength = 200
 )
 
 // DocumentStore handles document database operations
@@ -33,10 +39,10 @@ func (s *DocumentStore) GetByID(ctx context.Context, id uuid.UUID) (*models.Docu
 		&doc.Path, &doc.Version, &doc.Metadata, &doc.CreatedAt, &doc.UpdatedAt,
 	)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, sql.ErrNoRows) {
 			return nil, fmt.Errorf("document not found: %s", id)
 		}
-		return nil, err
+		return nil, fmt.Errorf("failed to get document: %w", err)
 	}
 	return &doc, nil
 }
@@ -53,34 +59,40 @@ func (s *DocumentStore) GetBySlug(ctx context.Context, slug string) (*models.Doc
 		&doc.Path, &doc.Version, &doc.Metadata, &doc.CreatedAt, &doc.UpdatedAt,
 	)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, sql.ErrNoRows) {
 			return nil, fmt.Errorf("document not found: %s", slug)
 		}
-		return nil, err
+		return nil, fmt.Errorf("failed to get document: %w", err)
 	}
 	return &doc, nil
 }
 
 // List retrieves documents with pagination
 func (s *DocumentStore) List(ctx context.Context, category string, limit, offset int) ([]models.Document, error) {
+	// Build query with proper parameterization to prevent SQL injection
+	var query string
 	var args []interface{}
-	query := `
-		SELECT id, slug, title, content, category, path, version, metadata, created_at, updated_at
-		FROM documents
-		WHERE 1=1
-	`
 
 	if category != "" {
-		query += ` AND category = $1`
-		args = append(args, category)
+		query = `
+			SELECT id, slug, title, content, category, path, version, metadata, created_at, updated_at
+			FROM documents
+			WHERE category = $1
+			ORDER BY updated_at DESC LIMIT $2 OFFSET $3
+		`
+		args = []interface{}{category, limit, offset}
+	} else {
+		query = `
+			SELECT id, slug, title, content, category, path, version, metadata, created_at, updated_at
+			FROM documents
+			ORDER BY updated_at DESC LIMIT $1 OFFSET $2
+		`
+		args = []interface{}{limit, offset}
 	}
-
-	query += ` ORDER BY updated_at DESC LIMIT $2 OFFSET $3`
-	args = append(args, limit, offset)
 
 	rows, err := s.db.QueryContext(ctx, query, args...)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to list documents: %w", err)
 	}
 	defer rows.Close()
 
@@ -92,12 +104,16 @@ func (s *DocumentStore) List(ctx context.Context, category string, limit, offset
 			&doc.Path, &doc.Version, &doc.Metadata, &doc.CreatedAt, &doc.UpdatedAt,
 		)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to scan document: %w", err)
 		}
 		docs = append(docs, doc)
 	}
 
-	return docs, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating documents: %w", err)
+	}
+
+	return docs, nil
 }
 
 // Search performs full-text search on documents
@@ -108,7 +124,14 @@ func (s *DocumentStore) Search(ctx context.Context, query string, limit int) ([]
 		return nil, fmt.Errorf("invalid search query: %w", err)
 	}
 
-	rows, err := s.db.QueryContext(ctx, `
+	// Use a transaction for consistent search results
+	tx, err := s.db.BeginTx(ctx, &sql.TxOptions{ReadOnly: true})
+	if err != nil {
+		return nil, fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	rows, err := tx.QueryContext(ctx, `
 		SELECT id, slug, title, content, category, path, version, metadata, created_at, updated_at
 		FROM documents
 		WHERE search_vector @@ plainto_tsquery('english', $1)
@@ -116,7 +139,7 @@ func (s *DocumentStore) Search(ctx context.Context, query string, limit int) ([]
 		LIMIT $2
 	`, safeQuery, limit)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to search documents: %w", err)
 	}
 	defer rows.Close()
 
@@ -128,59 +151,102 @@ func (s *DocumentStore) Search(ctx context.Context, query string, limit int) ([]
 			&doc.Path, &doc.Version, &doc.Metadata, &doc.CreatedAt, &doc.UpdatedAt,
 		)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to scan document: %w", err)
 		}
 		docs = append(docs, doc)
 	}
 
-	return docs, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating documents: %w", err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	return docs, nil
 }
 
-// Create inserts a new document
+// Create inserts a new document within a transaction
 func (s *DocumentStore) Create(ctx context.Context, doc *models.Document) error {
-	return s.db.QueryRowContext(ctx, `
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	err = tx.QueryRowContext(ctx, `
 		INSERT INTO documents (slug, title, content, category, path, version, metadata)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		RETURNING id, created_at, updated_at
 	`, doc.Slug, doc.Title, doc.Content, doc.Category, doc.Path, doc.Version, doc.Metadata,
 	).Scan(&doc.ID, &doc.CreatedAt, &doc.UpdatedAt)
-}
-
-// Update updates an existing document
-func (s *DocumentStore) Update(ctx context.Context, doc *models.Document) error {
-	result, err := s.db.ExecContext(ctx, `
-		UPDATE documents
-		SET title = $1, content = $2, category = $3, path = $4, version = version + 1, metadata = $5, updated_at = NOW()
-		WHERE id = $6
-	`, doc.Title, doc.Content, doc.Category, doc.Path, doc.Metadata, doc.ID)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create document: %w", err)
 	}
 
-	rows, err := result.RowsAffected()
-	if err != nil {
-		return err
-	}
-	if rows == 0 {
-		return fmt.Errorf("document not found: %s", doc.ID)
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
 	return nil
 }
 
-// Delete removes a document
-func (s *DocumentStore) Delete(ctx context.Context, id uuid.UUID) error {
-	result, err := s.db.ExecContext(ctx, `DELETE FROM documents WHERE id = $1`, id)
+// Update updates an existing document within a transaction
+func (s *DocumentStore) Update(ctx context.Context, doc *models.Document) error {
+	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	result, err := tx.ExecContext(ctx, `
+		UPDATE documents
+		SET title = $1, content = $2, category = $3, path = $4, version = version + 1, metadata = $5, updated_at = NOW()
+		WHERE id = $6
+	`, doc.Title, doc.Content, doc.Category, doc.Path, doc.Metadata, doc.ID)
+	if err != nil {
+		return fmt.Errorf("failed to update document: %w", err)
 	}
 
 	rows, err := result.RowsAffected()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
+	if rows == 0 {
+		return fmt.Errorf("document not found: %s", doc.ID)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	return nil
+}
+
+// Delete removes a document within a transaction
+func (s *DocumentStore) Delete(ctx context.Context, id uuid.UUID) error {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	result, err := tx.ExecContext(ctx, `DELETE FROM documents WHERE id = $1`, id)
+	if err != nil {
+		return fmt.Errorf("failed to delete document: %w", err)
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
 	}
 	if rows == 0 {
 		return fmt.Errorf("document not found: %s", id)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
 	return nil
@@ -189,8 +255,8 @@ func (s *DocumentStore) Delete(ctx context.Context, id uuid.UUID) error {
 // sanitizeSearchQuery validates and sanitizes search queries
 func sanitizeSearchQuery(query string) (string, error) {
 	// Limit length
-	if len(query) > 200 {
-		return "", fmt.Errorf("query too long (max 200 chars)")
+	if len(query) > maxSearchQueryLength {
+		return "", fmt.Errorf("query too long (max %d chars)", maxSearchQueryLength)
 	}
 
 	// Remove dangerous characters - only allow safe FTS operators

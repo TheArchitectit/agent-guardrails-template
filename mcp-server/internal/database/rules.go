@@ -3,6 +3,7 @@ package database
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -32,7 +33,7 @@ func (s *RuleStore) GetByID(ctx context.Context, id uuid.UUID) (*models.Preventi
 		&rule.Category, &rule.CreatedAt, &rule.UpdatedAt,
 	)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, sql.ErrNoRows) {
 			return nil, fmt.Errorf("rule not found: %s", id)
 		}
 		return nil, fmt.Errorf("failed to get rule: %w", err)
@@ -53,7 +54,7 @@ func (s *RuleStore) GetByRuleID(ctx context.Context, ruleID string) (*models.Pre
 		&rule.Category, &rule.CreatedAt, &rule.UpdatedAt,
 	)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, sql.ErrNoRows) {
 			return nil, fmt.Errorf("rule not found: %s", ruleID)
 		}
 		return nil, fmt.Errorf("failed to get rule: %w", err)
@@ -63,27 +64,43 @@ func (s *RuleStore) GetByRuleID(ctx context.Context, ruleID string) (*models.Pre
 
 // List retrieves rules with optional filters
 func (s *RuleStore) List(ctx context.Context, enabled *bool, category string) ([]models.PreventionRule, error) {
+	// Build query safely without string concatenation to prevent SQL injection
+	var query string
 	var args []interface{}
-	query := `
-		SELECT id, rule_id, name, pattern, pattern_hash, message, severity, enabled, document_id, category, created_at, updated_at
-		FROM prevention_rules
-		WHERE 1=1
-	`
 
-	argIndex := 1
-	if enabled != nil {
-		query += fmt.Sprintf(" AND enabled = $%d", argIndex)
-		args = append(args, *enabled)
-		argIndex++
+	switch {
+	case enabled != nil && category != "":
+		query = `
+			SELECT id, rule_id, name, pattern, pattern_hash, message, severity, enabled, document_id, category, created_at, updated_at
+			FROM prevention_rules
+			WHERE enabled = $1 AND category = $2
+			ORDER BY updated_at DESC
+		`
+		args = []interface{}{*enabled, category}
+	case enabled != nil:
+		query = `
+			SELECT id, rule_id, name, pattern, pattern_hash, message, severity, enabled, document_id, category, created_at, updated_at
+			FROM prevention_rules
+			WHERE enabled = $1
+			ORDER BY updated_at DESC
+		`
+		args = []interface{}{*enabled}
+	case category != "":
+		query = `
+			SELECT id, rule_id, name, pattern, pattern_hash, message, severity, enabled, document_id, category, created_at, updated_at
+			FROM prevention_rules
+			WHERE category = $1
+			ORDER BY updated_at DESC
+		`
+		args = []interface{}{category}
+	default:
+		query = `
+			SELECT id, rule_id, name, pattern, pattern_hash, message, severity, enabled, document_id, category, created_at, updated_at
+			FROM prevention_rules
+			ORDER BY updated_at DESC
+		`
+		args = []interface{}{}
 	}
-
-	if category != "" {
-		query += fmt.Sprintf(" AND category = $%d", argIndex)
-		args = append(args, category)
-		argIndex++
-	}
-
-	query += " ORDER BY updated_at DESC"
 
 	rows, err := s.db.QueryContext(ctx, query, args...)
 	if err != nil {
@@ -105,7 +122,11 @@ func (s *RuleStore) List(ctx context.Context, enabled *bool, category string) ([
 		rules = append(rules, rule)
 	}
 
-	return rules, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating rules: %w", err)
+	}
+
+	return rules, nil
 }
 
 // GetActiveRules retrieves all enabled rules
@@ -138,20 +159,41 @@ func (s *RuleStore) GetActiveRules(ctx context.Context) ([]models.PreventionRule
 	return rules, rows.Err()
 }
 
-// Create inserts a new rule
+// Create inserts a new rule within a transaction
 func (s *RuleStore) Create(ctx context.Context, rule *models.PreventionRule) error {
-	return s.db.QueryRowContext(ctx, `
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	err = tx.QueryRowContext(ctx, `
 		INSERT INTO prevention_rules (rule_id, name, pattern, pattern_hash, message, severity, enabled, document_id, category)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 		RETURNING id, created_at, updated_at
 	`, rule.RuleID, rule.Name, rule.Pattern, rule.PatternHash, rule.Message,
 		rule.Severity, rule.Enabled, rule.DocumentID, rule.Category,
 	).Scan(&rule.ID, &rule.CreatedAt, &rule.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("failed to create rule: %w", err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	return nil
 }
 
-// Update updates an existing rule
+// Update updates an existing rule within a transaction
 func (s *RuleStore) Update(ctx context.Context, rule *models.PreventionRule) error {
-	result, err := s.db.ExecContext(ctx, `
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	result, err := tx.ExecContext(ctx, `
 		UPDATE prevention_rules
 		SET name = $1, pattern = $2, pattern_hash = $3, message = $4, severity = $5, enabled = $6, document_id = $7, category = $8, updated_at = NOW()
 		WHERE id = $9
@@ -163,36 +205,56 @@ func (s *RuleStore) Update(ctx context.Context, rule *models.PreventionRule) err
 
 	rows, err := result.RowsAffected()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get rows affected: %w", err)
 	}
 	if rows == 0 {
 		return fmt.Errorf("rule not found: %s", rule.ID)
 	}
 
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
 	return nil
 }
 
-// Delete removes a rule
+// Delete removes a rule within a transaction
 func (s *RuleStore) Delete(ctx context.Context, id uuid.UUID) error {
-	result, err := s.db.ExecContext(ctx, `DELETE FROM prevention_rules WHERE id = $1`, id)
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	result, err := tx.ExecContext(ctx, `DELETE FROM prevention_rules WHERE id = $1`, id)
 	if err != nil {
 		return fmt.Errorf("failed to delete rule: %w", err)
 	}
 
 	rows, err := result.RowsAffected()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get rows affected: %w", err)
 	}
 	if rows == 0 {
 		return fmt.Errorf("rule not found: %s", id)
 	}
 
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
 	return nil
 }
 
-// Toggle enables/disables a rule
+// Toggle enables/disables a rule within a transaction
 func (s *RuleStore) Toggle(ctx context.Context, id uuid.UUID, enabled bool) error {
-	result, err := s.db.ExecContext(ctx, `
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	result, err := tx.ExecContext(ctx, `
 		UPDATE prevention_rules SET enabled = $1, updated_at = NOW() WHERE id = $2
 	`, enabled, id)
 	if err != nil {
@@ -201,10 +263,14 @@ func (s *RuleStore) Toggle(ctx context.Context, id uuid.UUID, enabled bool) erro
 
 	rows, err := result.RowsAffected()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get rows affected: %w", err)
 	}
 	if rows == 0 {
 		return fmt.Errorf("rule not found: %s", id)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
 	return nil

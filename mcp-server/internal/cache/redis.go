@@ -110,6 +110,10 @@ func (c *Client) SetActiveRules(ctx context.Context, data []byte, ttl time.Durat
 
 // InvalidateOnRuleChange clears rule-related caches
 func (c *Client) InvalidateOnRuleChange(ctx context.Context, ruleID string) error {
+	// Use a timeout context to prevent long-running operations
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
 	pipe := c.client.Pipeline()
 
 	// Delete specific rule cache
@@ -118,39 +122,34 @@ func (c *Client) InvalidateOnRuleChange(ctx context.Context, ruleID string) erro
 	// Delete active rules list
 	pipe.Del(ctx, KeyActiveRules)
 
-	// Delete all search result caches
-	script := `
-		local keys = redis.call('keys', 'guardrail:search:*')
-		for _, key in ipairs(keys) do
-			redis.call('del', key)
-		end
-		return #keys
-	`
-	pipe.Eval(ctx, script, []string{})
-
 	_, err := pipe.Exec(ctx)
-	return err
+	if err != nil {
+		return fmt.Errorf("failed to invalidate rule cache: %w", err)
+	}
+
+	// Delete search result caches using SCAN instead of KEYS for production safety
+	// KEYS is blocking and should not be used in production
+	return c.deleteKeysByPattern(ctx, "guardrail:search:*")
 }
 
 // InvalidateOnDocumentChange clears doc-related caches
 func (c *Client) InvalidateOnDocumentChange(ctx context.Context, slug string) error {
+	// Use a timeout context to prevent long-running operations
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
 	pipe := c.client.Pipeline()
 
 	// Delete specific document cache
 	pipe.Del(ctx, fmt.Sprintf(KeyDocument, slug))
 
-	// Delete search caches
-	script := `
-		local keys = redis.call('keys', 'guardrail:search:*')
-		for _, key in ipairs(keys) do
-			redis.call('del', key)
-		end
-		return #keys
-	`
-	pipe.Eval(ctx, script, []string{})
-
 	_, err := pipe.Exec(ctx)
-	return err
+	if err != nil {
+		return fmt.Errorf("failed to invalidate document cache: %w", err)
+	}
+
+	// Delete search result caches using SCAN instead of KEYS for production safety
+	return c.deleteKeysByPattern(ctx, "guardrail:search:*")
 }
 
 // InvalidateOnProjectChange clears project caches
@@ -192,8 +191,8 @@ func (dl *DistributedRateLimiter) Allow(ctx context.Context, key string, limit i
 }
 
 // PubSub provides access to Redis Pub/Sub for cache coordination
-func (c *Client) PubSub() *redis.PubSub {
-	return c.client.Subscribe(context.Background(), "cache:invalidations")
+func (c *Client) PubSub(ctx context.Context) *redis.PubSub {
+	return c.client.Subscribe(ctx, "cache:invalidations")
 }
 
 // Publish sends a message to a channel
@@ -215,4 +214,35 @@ func (c *Client) BroadcastInvalidation(ctx context.Context, msg InvalidationMess
 		return err
 	}
 	return c.Publish(ctx, "cache:invalidations", data)
+}
+
+// deleteKeysByPattern safely deletes keys matching a pattern using SCAN
+// This is a non-blocking alternative to KEYS for production use
+func (c *Client) deleteKeysByPattern(ctx context.Context, pattern string) error {
+	var cursor uint64
+	var keys []string
+
+	// Use SCAN to iterate through keys in a non-blocking way
+	for {
+		var err error
+		keys, cursor, err = c.client.Scan(ctx, cursor, pattern, 100).Result()
+		if err != nil {
+			return fmt.Errorf("scan failed: %w", err)
+		}
+
+		// Delete keys in batch if any found
+		if len(keys) > 0 {
+			if err := c.client.Del(ctx, keys...).Err(); err != nil {
+				slog.Warn("Failed to delete some keys during cache invalidation", "error", err)
+				// Continue even if some deletions fail
+			}
+		}
+
+		// Exit when cursor returns to 0
+		if cursor == 0 {
+			break
+		}
+	}
+
+	return nil
 }
