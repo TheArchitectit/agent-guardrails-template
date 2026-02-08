@@ -959,3 +959,4 @@ has_more = (offset + limit) < total
 ---
 
 *Last Updated: 2026-02-08*
+*Version: 1.9.5*

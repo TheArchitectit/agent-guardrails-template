@@ -288,10 +288,10 @@ func (s *Server) patchRule(c echo.Context) error {
 	}
 
 	var req struct {
-		Enabled *bool   `json:"enabled,omitempty"`
-		Name    *string `json:"name,omitempty"`
-		Message *string `json:"message,omitempty"`
-		Pattern *string `json:"pattern,omitempty"`
+		Enabled  *bool   `json:"enabled,omitempty"`
+		Name     *string `json:"name,omitempty"`
+		Message  *string `json:"message,omitempty"`
+		Pattern  *string `json:"pattern,omitempty"`
 		Severity *string `json:"severity,omitempty"`
 	}
 	if err := c.Bind(&req); err != nil {
