@@ -10,15 +10,38 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
-- Comprehensive API documentation (API.md)
-- Troubleshooting guide in README.md
-- Database migration instructions in README.md
+### Changed
+
+---
+
+## [1.9.6] - 2026-02-08
+
+### Fixed
+
+- **SSE Client Compatibility** - Restored compatibility with Go SDK and Crush MCP clients
+  - Replaced custom `event: ping` payloads with SSE keepalive comments (`: ping`)
+  - Added per-session response queues for SSE streams
+  - Emits JSON-RPC responses as `event: message` payloads over SSE
+
+- **Session Message Flow** - Improved session-bound message handling
+  - Proper handling for notifications (`202 Accepted`)
+  - Explicit closed-session response (`410 Gone`)
+  - Backpressure response when queues are full (`503 Service Unavailable`)
 
 ### Changed
 
-- Updated README.md with complete project structure
-- Updated README.md with security features documentation
-- Updated .env.example with better organization and documentation
+- **Container Packaging** - Web UI static assets are now bundled into the runtime image
+  - Added `/app/static` copy step in `deploy/Dockerfile`
+
+- **Web UI Access** - Read-only browsing routes are now publicly accessible
+  - `/api/documents` and `/api/documents/*`
+  - `/api/rules` and `/api/rules/*`
+  - `/version`
+
+### Documentation
+
+- Updated README MCP connection/testing instructions for session_id-based message flow
+- Updated troubleshooting guidance for SSE transport behavior
 
 ---
 
@@ -176,4 +199,4 @@ This MCP Server follows [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ---
 
 *Last Updated: 2026-02-08*
-*Current Version: 1.9.5*
+*Current Version: 1.9.6*

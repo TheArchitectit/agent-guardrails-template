@@ -119,7 +119,9 @@ make docker-down
 Server-Sent Events (SSE) endpoint for MCP clients.
 
 - `GET /mcp/v1/sse` - SSE event stream endpoint
-- `POST /mcp/v1/message` - JSON-RPC message endpoint
+- `POST /mcp/v1/message?session_id=<session_id>` - JSON-RPC message endpoint
+
+The `session_id` is provided by the initial SSE `endpoint` event.
 
 ### Web UI API (Port 8081)
 
@@ -160,7 +162,8 @@ Server-Sent Events (SSE) endpoint for MCP clients.
 ## Security Features
 
 ### Authentication & Authorization
-- **API Key Authentication** - All external endpoints require valid API key (MCP_API_KEY or IDE_API_KEY)
+- **API Key Authentication** - Write and IDE endpoints require valid API key (MCP_API_KEY or IDE_API_KEY)
+- **Public Read-Only Web Routes** - `/api/documents*`, `/api/rules*`, and `/version` are browsable without API key
 - **JWT Tokens** - Session tokens for MCP clients with 15-minute expiry
 - **Hashed Key Logging** - API keys are hashed in logs for audit purposes
 
@@ -206,11 +209,15 @@ The MCP server implements the Model Context Protocol for AI assistant integratio
 ### Connecting to MCP Server
 
 ```bash
-# SSE endpoint for MCP clients
-GET http://localhost:8080/mcp/v1/sse
+# 1) Open SSE stream and capture endpoint event
+curl -sN http://localhost:8080/mcp/v1/sse
+# event: endpoint
+# data: http://localhost:8080/mcp/v1/message?session_id=<session_id>
 
-# Send JSON-RPC messages
-POST http://localhost:8080/mcp/v1/message?session_id=<session_id>
+# 2) Send JSON-RPC message to the session-specific URL
+curl -X POST "http://localhost:8080/mcp/v1/message?session_id=<session_id>" \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test-client","version":"1.0"}}}'
 ```
 
 See [API.md](API.md) for complete API documentation.
@@ -273,9 +280,10 @@ See [API.md](API.md) for complete API documentation.
 **Problem:** EOF errors when connecting to `/mcp/v1/sse`
 
 **Solution:**
-- Verify MCP_API_KEY is set correctly in client headers
-- Check that `Authorization: Bearer <key>` header is included
+- Verify the client posts follow-up messages to the `endpoint` URL emitted by SSE
+- Ensure requests use `?session_id=<session_id>` from that endpoint event
 - Ensure no proxy is buffering SSE responses (check X-Accel-Buffering header)
+- If using custom clients, ensure they consume only `event: message` payloads as JSON-RPC
 
 ### API Key Authentication Failures
 
@@ -284,7 +292,7 @@ See [API.md](API.md) for complete API documentation.
 **Solution:**
 - Verify `Authorization: Bearer <api_key>` header format
 - Check that MCP_API_KEY or IDE_API_KEY environment variables are set
-- For Web UI access, no API key is required (publicly accessible)
+- For Web UI access and read-only browsing APIs, no API key is required
 
 ### Database Migration Failures
 
