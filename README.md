@@ -283,7 +283,7 @@ export REDIS_PORT="6379"
 export REDIS_PASSWORD="your-redis-password"
 
 # Service Ports
-# AI01 convention: 8092/8093
+# Example deployment convention: 8092/8093
 # Defaults in compose: 8080/8081
 export MCP_PORT="8092"
 export WEB_PORT="8093"

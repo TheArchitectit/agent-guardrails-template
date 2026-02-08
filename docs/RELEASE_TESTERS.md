@@ -1,6 +1,6 @@
-# MCP Server Tester Guide (AI01)
+# MCP Server Tester Guide (Container Deployment)
 
-> This guide is for external testers validating the Guardrail MCP server stack running on AI01.
+> This guide is for external testers validating the Guardrail MCP server stack on a deployment host.
 
 **Release Target:** v1.9.6  
 **Branch:** `mcpserver`  
@@ -8,12 +8,12 @@
 
 ---
 
-## 1) AI01 Container Architecture (Current)
+## 1) Container Architecture (Current)
 
-The AI01 deployment is a **3-container stack** with strict network separation:
+The deployment is a **3-container stack** with strict network separation:
 
 ```text
-AI01 host
+Deployment host
 |
 |-- guardrail-mcp-server (app)
 |   |-- container port 8080: MCP SSE + JSON-RPC message endpoint
@@ -36,7 +36,7 @@ AI01 host
 - MCP and Web ports are bound to **loopback only** via compose: `127.0.0.1:${MCP_PORT}:8080` and `127.0.0.1:${WEB_PORT}:8081`
 - Postgres and Redis are **not** host-exposed
 - Default host ports are `8080` and `8081`
-- AI01 commonly uses `8092` and `8093` by setting env vars
+- Some environments use `8092` and `8093` by setting env vars
 
 ### Security and runtime constraints
 
@@ -70,10 +70,10 @@ Verify no local port conflict on your target host ports:
 ss -ltnp | grep -E ":(8080|8081|8092|8093)"
 ```
 
-If testing from your laptop against AI01, create an SSH tunnel first:
+If testing from your laptop against the deployment host, create an SSH tunnel first:
 
 ```bash
-ssh -L 8092:127.0.0.1:8092 -L 8093:127.0.0.1:8093 <user>@AI01
+ssh -L 8092:127.0.0.1:8092 -L 8093:127.0.0.1:8093 <user>@<host>
 ```
 
 Then use `http://localhost:8092` and `http://localhost:8093` locally.
@@ -94,7 +94,7 @@ Set at minimum:
 - `JWT_SECRET` (32+ chars minimum; 64+ recommended)
 - `DB_PASSWORD`
 - `REDIS_PASSWORD`
-- `MCP_PORT` / `WEB_PORT` (use `8092` / `8093` on AI01 if required)
+- `MCP_PORT` / `WEB_PORT` (use custom ports like `8092` / `8093` if required)
 
 Example secure generation:
 
@@ -109,7 +109,7 @@ openssl rand -base64 32 # DB/Redis passwords
 
 ## 4) Start the Stack
 
-### Option A: Build and run on AI01
+### Option A: Build and run on target host
 
 ```bash
 cd mcp-server
@@ -371,7 +371,7 @@ Expected:
   - `podman logs guardrail-redis`
   - confirm `.env` credentials match compose env
 
-### Symptom: cannot access from outside AI01
+### Symptom: cannot access from outside deployment host
 
 - Cause: ports are bound to `127.0.0.1` only
 - Fix: use SSH tunnel or put Nginx/Traefik in front
@@ -407,7 +407,7 @@ Use this exact format in issues:
 - Response status/body or SSE event snippet
 
 **Environment:**
-- Host: AI01
+- Host: <deployment-host>
 - OS:
 - Podman version:
 - podman-compose version:

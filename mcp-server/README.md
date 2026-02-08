@@ -5,7 +5,7 @@ A Model Context Protocol (MCP) server for enforcing guardrails across AI coding 
 ## Architecture
 
 ```
-AI01 host (or local VM)
+Deployment host (or local VM)
 |
 |-- guardrail-mcp-server (app container)
 |   |-- :8080 MCP SSE + JSON-RPC message endpoint
