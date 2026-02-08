@@ -73,9 +73,9 @@ func ToTextArray(slice []string) pgtype.Array[string]
 
 ## Deployment Status
 
-**<your-server-name> Production:**
+**Production Deployment:**
 ```
-✅ Container running on <your-server-ip>:8092 (MCP) and :8093 (Web UI)
+✅ Container running on your-server:8092 (MCP) and :8093 (Web UI)
 ✅ PostgreSQL 16 with initialized schema
 ✅ Redis 7 for caching
 ✅ 4 prevention rules active
@@ -87,7 +87,7 @@ func ToTextArray(slice []string) pgtype.Array[string]
 
 ### SSE Endpoint
 ```bash
-curl -N http://<your-server-ip>:8092/mcp/v1/sse
+curl -N http://localhost:8092/mcp/v1/sse
 ```
 
 Expected:
@@ -101,7 +101,7 @@ data: {}
 
 ### MCP Initialize
 ```bash
-curl -X POST http://<your-server-ip>:8092/mcp/v1/message \
+curl -X POST http://localhost:8092/mcp/v1/message \
   -H 'Content-Type: application/json' \
   -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}}}'
 ```
@@ -114,7 +114,7 @@ No migration needed - v1.9.1 is a bugfix release with the same API.
 
 1. Build new image: `docker build -t guardrail-mcp:latest -f deploy/Dockerfile .`
 2. Deploy: `podman-compose up -d`
-3. Test: `curl http://<your-server-ip>:8092/mcp/v1/sse`
+3. Test: `curl http://localhost:8092/mcp/v1/sse`
 
 ---
 
