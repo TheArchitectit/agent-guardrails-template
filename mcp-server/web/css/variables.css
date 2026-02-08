@@ -1,0 +1,178 @@
+/**
+ * Design System Variables
+ * Colors, typography, spacing, and other design tokens
+ */
+
+:root {
+  /* Primary Colors */
+  --color-primary: #3b82f6;
+  --color-primary-dark: #2563eb;
+  --color-primary-light: #60a5fa;
+  --color-primary-subtle: rgba(59, 130, 246, 0.1);
+
+  /* Semantic Colors */
+  --color-success: #10b981;
+  --color-success-dark: #059669;
+  --color-success-subtle: rgba(16, 185, 129, 0.1);
+
+  --color-warning: #f59e0b;
+  --color-warning-dark: #d97706;
+  --color-warning-subtle: rgba(245, 158, 11, 0.1);
+
+  --color-error: #ef4444;
+  --color-error-dark: #dc2626;
+  --color-error-subtle: rgba(239, 68, 68, 0.1);
+
+  --color-info: #06b6d4;
+  --color-info-dark: #0891b2;
+  --color-info-subtle: rgba(6, 182, 212, 0.1);
+
+  /* Background Colors */
+  --color-bg-primary: #0f172a;
+  --color-bg-secondary: #1e293b;
+  --color-bg-tertiary: #334155;
+  --color-bg-elevated: #1e293b;
+
+  /* Surface Colors */
+  --color-surface: #1e293b;
+  --color-surface-hover: #334155;
+  --color-surface-active: #475569;
+
+  /* Border Colors */
+  --color-border: #334155;
+  --color-border-light: #475569;
+  --color-border-dark: #1e293b;
+
+  /* Text Colors */
+  --color-text-primary: #f1f5f9;
+  --color-text-secondary: #94a3b8;
+  --color-text-tertiary: #64748b;
+  --color-text-muted: #475569;
+
+  /* Typography */
+  --font-family-base: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-family-mono: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', monospace;
+
+  /* Font Sizes */
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+  --text-3xl: 1.875rem;
+  --text-4xl: 2.25rem;
+
+  /* Font Weights */
+  --font-normal: 400;
+  --font-medium: 500;
+  --font-semibold: 600;
+  --font-bold: 700;
+
+  /* Line Heights */
+  --leading-tight: 1.25;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.625;
+
+  /* Spacing */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+
+  /* Border Radius */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+  --radius-2xl: 1rem;
+  --radius-full: 9999px;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -2px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -4px rgba(0, 0, 0, 0.5);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
+
+  /* Transitions */
+  --transition-fast: 150ms ease-in-out;
+  --transition-normal: 250ms ease-in-out;
+  --transition-slow: 350ms ease-in-out;
+
+  /* Z-index Scale */
+  --z-dropdown: 100;
+  --z-sticky: 200;
+  --z-modal-backdrop: 300;
+  --z-modal: 400;
+  --z-popover: 500;
+  --z-tooltip: 600;
+  --z-toast: 700;
+
+  /* Layout */
+  --sidebar-width: 260px;
+  --sidebar-collapsed-width: 64px;
+  --header-height: 64px;
+  --container-max-width: 1440px;
+
+  /* Form Elements */
+  --input-height: 2.5rem;
+  --button-height: 2.5rem;
+  --button-height-sm: 2rem;
+  --button-height-lg: 3rem;
+}
+
+/* Severity Color Mapping */
+[data-severity="error"],
+.severity-error {
+  --severity-color: var(--color-error);
+  --severity-bg: var(--color-error-subtle);
+}
+
+[data-severity="warning"],
+.severity-warning {
+  --severity-color: var(--color-warning);
+  --severity-bg: var(--color-warning-subtle);
+}
+
+[data-severity="info"],
+.severity-info {
+  --severity-color: var(--color-info);
+  --severity-bg: var(--color-info-subtle);
+}
+
+[data-severity="success"],
+.severity-success {
+  --severity-color: var(--color-success);
+  --severity-bg: var(--color-success-subtle);
+}
+
+/* Status Color Mapping */
+[data-status="active"],
+.status-active {
+  --status-color: var(--color-success);
+  --status-bg: var(--color-success-subtle);
+}
+
+[data-status="resolved"],
+.status-resolved {
+  --status-color: var(--color-info);
+  --status-bg: var(--color-info-subtle);
+}
+
+[data-status="deprecated"],
+.status-deprecated {
+  --status-color: var(--color-text-tertiary);
+  --status-bg: var(--color-bg-tertiary);
+}
+
+[data-status="disabled"],
+.status-disabled {
+  --status-color: var(--color-text-tertiary);
+  --status-bg: var(--color-bg-tertiary);
+}
