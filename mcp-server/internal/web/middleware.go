@@ -17,9 +17,13 @@ import (
 func APIKeyAuth(cfg *config.Config) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
-			// Skip health checks, metrics, and Web UI routes
+			// Skip health checks, metrics, Web UI routes, and SSE endpoint
 			path := c.Path()
 			if path == "/health/live" || path == "/health/ready" || path == "/metrics" {
+				return next(c)
+			}
+			// Skip SSE endpoint - auth handled via message endpoint
+			if path == "/mcp/v1/sse" {
 				return next(c)
 			}
 
@@ -80,14 +84,19 @@ func APIKeyAuth(cfg *config.Config) echo.MiddlewareFunc {
 func RateLimitMiddleware(limiter *cache.DistributedRateLimiter, cfg *config.Config) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
-			// Skip health checks and Web UI routes
+			// Skip health checks, Web UI routes, and SSE endpoint
 			path := c.Path()
-			if path == "/health/live" || path == "/health/ready" {
+			if path == "/health/live" || path == "/health/ready" || path == "/metrics" {
 				return next(c)
 			}
 
 			// Skip Web UI routes - these are publicly accessible
 			if path == "/" || path == "/index.html" || strings.HasPrefix(path, "/static/") {
+				return next(c)
+			}
+
+			// Skip SSE endpoint - auth handled via message endpoint
+			if path == "/mcp/v1/sse" {
 				return next(c)
 			}
 
