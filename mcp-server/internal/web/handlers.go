@@ -1,9 +1,13 @@
 package web
 
 import (
+	"context"
+	"encoding/json"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
@@ -37,7 +41,13 @@ func (s *Server) listDocuments(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
 
-	return c.JSON(http.StatusOK, docs)
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"data": docs,
+		"pagination": map[string]interface{}{
+			"limit":  limit,
+			"offset": offset,
+		},
+	})
 }
 
 func (s *Server) getDocument(c echo.Context) error {
@@ -118,13 +128,27 @@ func (s *Server) listRules(c echo.Context) error {
 		enabled = &e
 	}
 	category := c.QueryParam("category")
+	limit, _ := strconv.Atoi(c.QueryParam("limit"))
+	if limit <= 0 || limit > maxPageLimit {
+		limit = defaultPageLimit
+	}
+	offset, _ := strconv.Atoi(c.QueryParam("offset"))
+	if offset < 0 {
+		offset = 0
+	}
 
-	rules, err := s.ruleStore.List(c.Request().Context(), enabled, category)
+	rules, err := s.ruleStore.List(c.Request().Context(), enabled, category, limit, offset)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
 
-	return c.JSON(http.StatusOK, rules)
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"data": rules,
+		"pagination": map[string]interface{}{
+			"limit":  limit,
+			"offset": offset,
+		},
+	})
 }
 
 func (s *Server) getRule(c echo.Context) error {
@@ -217,7 +241,7 @@ func (s *Server) deleteRule(c echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
-func (s *Server) toggleRule(c echo.Context) error {
+func (s *Server) patchRule(c echo.Context) error {
 	id := c.Param("id")
 	parsedUUID, err := uuid.Parse(id)
 	if err != nil {
@@ -225,49 +249,87 @@ func (s *Server) toggleRule(c echo.Context) error {
 	}
 
 	var req struct {
-		Enabled bool `json:"enabled"`
+		Enabled *bool   `json:"enabled,omitempty"`
+		Name    *string `json:"name,omitempty"`
+		Message *string `json:"message,omitempty"`
+		Pattern *string `json:"pattern,omitempty"`
+		Severity *string `json:"severity,omitempty"`
 	}
 	if err := c.Bind(&req); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid request body"})
 	}
 
-	if err := s.ruleStore.Toggle(c.Request().Context(), parsedUUID, req.Enabled); err != nil {
+	// Get existing rule
+	rule, err := s.ruleStore.GetByID(c.Request().Context(), parsedUUID)
+	if err != nil {
+		return c.JSON(http.StatusNotFound, map[string]string{"error": err.Error()})
+	}
+
+	// Apply patches
+	if req.Enabled != nil {
+		rule.Enabled = *req.Enabled
+	}
+	if req.Name != nil {
+		rule.Name = *req.Name
+	}
+	if req.Message != nil {
+		rule.Message = *req.Message
+	}
+	if req.Pattern != nil {
+		rule.Pattern = *req.Pattern
+	}
+	if req.Severity != nil {
+		rule.Severity = models.Severity(*req.Severity)
+	}
+
+	if err := s.ruleStore.Update(c.Request().Context(), rule); err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
 
-	// Get rule for cache invalidation
-	rule, _ := s.ruleStore.GetByID(c.Request().Context(), parsedUUID)
-	if rule != nil {
-		s.cache.InvalidateOnRuleChange(c.Request().Context(), rule.RuleID)
+	// Invalidate cache
+	s.cache.InvalidateOnRuleChange(c.Request().Context(), rule.RuleID)
 
-		// Audit log
-		keyHash, _ := c.Get("api_key_hash").(string)
-		s.auditLogger.LogRuleChange(c.Request().Context(), keyHash, rule.RuleID, "toggle")
-	}
+	// Audit log
+	keyHash, _ := c.Get("api_key_hash").(string)
+	s.auditLogger.LogRuleChange(c.Request().Context(), keyHash, rule.RuleID, "patch")
 
-	return c.JSON(http.StatusOK, map[string]string{"status": "updated"})
+	return c.JSON(http.StatusOK, rule)
 }
 
 // Project handlers
 
 func (s *Server) listProjects(c echo.Context) error {
-	projects, err := s.projStore.List(c.Request().Context())
+	limit, _ := strconv.Atoi(c.QueryParam("limit"))
+	if limit <= 0 || limit > maxPageLimit {
+		limit = defaultPageLimit
+	}
+	offset, _ := strconv.Atoi(c.QueryParam("offset"))
+	if offset < 0 {
+		offset = 0
+	}
+
+	projects, err := s.projStore.List(c.Request().Context(), limit, offset)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
 
-	return c.JSON(http.StatusOK, projects)
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"data": projects,
+		"pagination": map[string]interface{}{
+			"limit":  limit,
+			"offset": offset,
+		},
+	})
 }
 
 func (s *Server) getProject(c echo.Context) error {
-	slug := c.Param("slug")
-
-	// Validate slug to prevent path traversal attacks
-	if !isValidSlug(slug) {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid project slug format"})
+	id := c.Param("id")
+	parsedUUID, err := uuid.Parse(id)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid id format"})
 	}
 
-	proj, err := s.projStore.GetBySlug(c.Request().Context(), slug)
+	proj, err := s.projStore.GetByID(c.Request().Context(), parsedUUID)
 	if err != nil {
 		return c.JSON(http.StatusNotFound, map[string]string{"error": err.Error()})
 	}
@@ -289,11 +351,10 @@ func (s *Server) createProject(c echo.Context) error {
 }
 
 func (s *Server) updateProject(c echo.Context) error {
-	slug := c.Param("slug")
-
-	// Validate slug to prevent path traversal attacks
-	if !isValidSlug(slug) {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid project slug format"})
+	id := c.Param("id")
+	parsedUUID, err := uuid.Parse(id)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid id format"})
 	}
 
 	var proj models.Project
@@ -301,31 +362,27 @@ func (s *Server) updateProject(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid request body"})
 	}
 
-	proj.Slug = slug
+	proj.ID = parsedUUID
 	if err := s.projStore.Update(c.Request().Context(), &proj); err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
 
 	// Invalidate cache
-	s.cache.InvalidateOnProjectChange(c.Request().Context(), slug)
+	s.cache.InvalidateOnProjectChange(c.Request().Context(), proj.Slug)
 
 	return c.JSON(http.StatusOK, proj)
 }
 
 func (s *Server) deleteProject(c echo.Context) error {
-	slug := c.Param("slug")
-
-	// Validate slug to prevent path traversal attacks
-	if !isValidSlug(slug) {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid project slug format"})
+	id := c.Param("id")
+	parsedUUID, err := uuid.Parse(id)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid id format"})
 	}
 
-	if err := s.projStore.Delete(c.Request().Context(), slug); err != nil {
+	if err := s.projStore.Delete(c.Request().Context(), parsedUUID); err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
-
-	// Invalidate cache
-	s.cache.InvalidateOnProjectChange(c.Request().Context(), slug)
 
 	return c.NoContent(http.StatusNoContent)
 }
@@ -346,12 +403,19 @@ func (s *Server) listFailures(c echo.Context) error {
 		offset = 0
 	}
 
-	failures, err := s.failStore.List(c.Request().Context(), status, category, projectSlug, limit, offset)
+	failures, total, err := s.failStore.List(c.Request().Context(), status, category, projectSlug, limit, offset)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
 
-	return c.JSON(http.StatusOK, failures)
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"data": failures,
+		"pagination": map[string]interface{}{
+			"limit":  limit,
+			"offset": offset,
+			"total":  total,
+		},
+	})
 }
 
 func (s *Server) getFailure(c echo.Context) error {
@@ -446,34 +510,60 @@ func (s *Server) validateSelection(c echo.Context) error {
 }
 
 func (s *Server) getIDERules(c echo.Context) error {
+	ctx := c.Request().Context()
 	projectSlug := c.QueryParam("project")
+
+	// Try cache first for better performance
+	cacheKey := projectSlug
+	if cacheKey == "" {
+		cacheKey = "default"
+	}
+
+	if cached, err := s.cache.GetIDERules(ctx, cacheKey); err == nil && len(cached) > 0 {
+		// Return cached JSON directly to avoid re-marshaling
+		return c.JSONBlob(http.StatusOK, cached)
+	}
 
 	var rules []models.PreventionRule
 	var err error
 
 	if projectSlug != "" {
 		// Get project to find active rules
-		proj, err := s.projStore.GetBySlug(c.Request().Context(), projectSlug)
+		proj, err := s.projStore.GetBySlug(ctx, projectSlug)
 		if err == nil && len(proj.ActiveRules) > 0 {
-			// Get specific active rules for project
-			for _, ruleID := range proj.ActiveRules {
-				rule, err := s.ruleStore.GetByRuleID(c.Request().Context(), ruleID)
-				if err == nil && rule.Enabled {
-					rules = append(rules, *rule)
-				}
+			// Batch fetch all project rules in a single query (prevents N+1)
+			rules, err = s.ruleStore.GetByRuleIDs(ctx, proj.ActiveRules)
+			if err != nil {
+				slog.Warn("Failed to get project rules, falling back to all active", "error", err)
 			}
 		}
 	}
 
 	// If no project-specific rules, get all active rules
 	if len(rules) == 0 {
-		rules, err = s.ruleStore.GetActiveRules(c.Request().Context())
+		rules, err = s.ruleStore.GetActiveRules(ctx)
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		}
 	}
 
-	return c.JSON(http.StatusOK, rules)
+	// Marshal once for both caching and response
+	rulesJSON, err := json.Marshal(rules)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to marshal rules"})
+	}
+
+	// Cache the result asynchronously to not block the response
+	go func(ctx context.Context, key string, data []byte) {
+		// Use a new context with timeout for cache operation
+		cacheCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+		if cacheErr := s.cache.SetIDERules(cacheCtx, key, data); cacheErr != nil {
+			slog.Warn("Failed to cache IDE rules", "error", cacheErr)
+		}
+	}(ctx, cacheKey, rulesJSON)
+
+	return c.JSONBlob(http.StatusOK, rulesJSON)
 }
 
 func (s *Server) getQuickReference(c echo.Context) error {

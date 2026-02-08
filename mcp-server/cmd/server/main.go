@@ -57,27 +57,23 @@ func main() {
 		os.Exit(0)
 	}
 
-	// Setup structured logging
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
-		Level: slog.LevelInfo,
-	}))
-	slog.SetDefault(logger)
+	// Load configuration first to get log level
+	cfg, err := config.Load()
+	if err != nil {
+		// Use default logger for initial error
+		slog.Error("Failed to load configuration", "error", err)
+		os.Exit(1)
+	}
+
+	// Setup structured logging with configured level
+	setLogLevel(cfg.LogLevel)
 
 	slog.Info("Starting Guardrail MCP Server",
 		"version", version,
 		"build_time", buildTime,
 		"git_commit", gitCommit,
+		"config_schema", cfg.SchemaVersion,
 	)
-
-	// Load configuration
-	cfg, err := config.Load()
-	if err != nil {
-		slog.Error("Failed to load configuration", "error", err)
-		os.Exit(1)
-	}
-
-	// Set log level based on config
-	setLogLevel(cfg.LogLevel)
 
 	// Start pprof server if enabled (for debugging)
 	if cfg.PProfEnabled {

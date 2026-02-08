@@ -91,11 +91,22 @@ func (c *Client) Delete(ctx context.Context, key string) error {
 // Cache keys
 const (
 	KeyActiveRules    = "guardrail:rules:active"
-	KeyDocument       = "guardrail:doc:%s"     // Format with slug
-	KeyRule           = "guardrail:rule:%s"    // Format with rule_id
-	KeyProjectContext = "guardrail:project:%s" // Format with slug
-	KeySearchResults  = "guardrail:search:%s"  // Format with query hash
-	KeySession        = "guardrail:session:%s" // Format with token
+	KeyDocument       = "guardrail:doc:%s"        // Format with slug
+	KeyRule           = "guardrail:rule:%s"       // Format with rule_id
+	KeyProjectContext = "guardrail:project:%s"    // Format with slug
+	KeyProjectRules   = "guardrail:project:%s:rules" // Format with project slug
+	KeyIDERules       = "guardrail:ide:rules:%s"  // Format with project slug or "default"
+	KeySearchResults  = "guardrail:search:%s"     // Format with query hash
+	KeySession        = "guardrail:session:%s"    // Format with token
+)
+
+// Default TTL values for different cache types
+const (
+	TTLActiveRules   = 5 * time.Minute
+	TTLProjectRules  = 10 * time.Minute
+	TTLIDERules      = 2 * time.Minute
+	TTLDocument      = 10 * time.Minute
+	TTLSearchResults = 1 * time.Minute
 )
 
 // GetActiveRules retrieves cached active rules
@@ -154,7 +165,64 @@ func (c *Client) InvalidateOnDocumentChange(ctx context.Context, slug string) er
 
 // InvalidateOnProjectChange clears project caches
 func (c *Client) InvalidateOnProjectChange(ctx context.Context, slug string) error {
-	return c.Delete(ctx, fmt.Sprintf(KeyProjectContext, slug))
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	pipe := c.client.Pipeline()
+
+	// Delete project context and rules caches
+	pipe.Del(ctx, fmt.Sprintf(KeyProjectContext, slug))
+	pipe.Del(ctx, fmt.Sprintf(KeyProjectRules, slug))
+	pipe.Del(ctx, fmt.Sprintf(KeyIDERules, slug))
+
+	_, err := pipe.Exec(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to invalidate project cache: %w", err)
+	}
+
+	return nil
+}
+
+// GetProjectRules retrieves cached project-specific rules
+func (c *Client) GetProjectRules(ctx context.Context, projectSlug string) ([]byte, error) {
+	return c.Get(ctx, fmt.Sprintf(KeyProjectRules, projectSlug))
+}
+
+// SetProjectRules caches project-specific rules
+func (c *Client) SetProjectRules(ctx context.Context, projectSlug string, data []byte) error {
+	return c.Set(ctx, fmt.Sprintf(KeyProjectRules, projectSlug), data, TTLProjectRules)
+}
+
+// GetIDERules retrieves cached IDE rules for a project
+func (c *Client) GetIDERules(ctx context.Context, projectSlug string) ([]byte, error) {
+	return c.Get(ctx, fmt.Sprintf(KeyIDERules, projectSlug))
+}
+
+// SetIDERules caches IDE rules for a project
+func (c *Client) SetIDERules(ctx context.Context, projectSlug string, data []byte) error {
+	return c.Set(ctx, fmt.Sprintf(KeyIDERules, projectSlug), data, TTLIDERules)
+}
+
+// GetOrSet is a cache-aside helper that retrieves from cache or executes fetchFunc
+// and caches the result. This reduces boilerplate for cache lookups.
+func (c *Client) GetOrSet(ctx context.Context, key string, ttl time.Duration, fetchFunc func() ([]byte, error)) ([]byte, error) {
+	// Try cache first
+	if data, err := c.Get(ctx, key); err == nil && len(data) > 0 {
+		return data, nil
+	}
+
+	// Fetch from source
+	data, err := fetchFunc()
+	if err != nil {
+		return nil, err
+	}
+
+	// Cache the result (ignore cache errors to not fail the request)
+	if err := c.Set(ctx, key, data, ttl); err != nil {
+		slog.Warn("Failed to cache data", "key", key, "error", err)
+	}
+
+	return data, nil
 }
 
 // DistributedRateLimiter implements distributed rate limiting
