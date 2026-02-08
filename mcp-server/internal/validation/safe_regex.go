@@ -46,29 +46,43 @@ func getCachedRegex(pattern string) (*regexp.Regexp, error) {
 func SafeRegex(pattern string, input string, timeout time.Duration) (bool, error) {
 	resultChan := make(chan bool, 1)
 	panicChan := make(chan interface{}, 1)
+	doneChan := make(chan struct{})
 
 	go func() {
 		defer func() {
 			if r := recover(); r != nil {
-				panicChan <- r
+				select {
+				case panicChan <- r:
+				case <-doneChan:
+				}
 			}
 		}()
 
 		// Use cached regex instead of compiling each time
 		re, err := getCachedRegex(pattern)
 		if err != nil {
-			resultChan <- false
+			select {
+			case resultChan <- false:
+			case <-doneChan:
+			}
 			return
 		}
-		resultChan <- re.MatchString(input)
+		result := re.MatchString(input)
+		select {
+		case resultChan <- result:
+		case <-doneChan:
+		}
 	}()
 
 	select {
 	case result := <-resultChan:
+		close(doneChan)
 		return result, nil
 	case r := <-panicChan:
+		close(doneChan)
 		return false, fmt.Errorf("regex panic: %v", r)
 	case <-time.After(timeout):
+		close(doneChan)
 		return false, fmt.Errorf("regex timeout after %v - possible ReDoS attack", timeout)
 	}
 }
