@@ -20,7 +20,31 @@ import (
 	"github.com/thearchitectit/guardrail-mcp/internal/cache"
 	"github.com/thearchitectit/guardrail-mcp/internal/config"
 	"github.com/thearchitectit/guardrail-mcp/internal/database"
+	"github.com/thearchitectit/guardrail-mcp/internal/models"
 )
+
+// contextKey is a type-safe context key to avoid string allocation
+// See: https://golang.org/pkg/context/#WithValue
+ type contextKey int
+
+ const (
+	 ctxKeySessionID contextKey = iota
+ )
+
+ // Pre-allocated byte slices for common SSE messages to reduce allocations
+ var (
+	 sseEndpointPrefix = []byte("event: endpoint\ndata: ")
+	 ssePingPrefix     = []byte("event: ping\ndata: ")
+	 sseDoubleNewline  = []byte("\n\n")
+	 ssePingData       = []byte(`{"jsonrpc":"2.0","method":"ping"}`)
+ )
+
+ // jsonBufferPool provides reusable buffers for JSON encoding
+ var jsonBufferPool = sync.Pool{
+	 New: func() interface{} {
+		 return make([]byte, 0, 4096) // Pre-allocate 4KB buffers
+	 },
+ }
 
 // MCPServer wraps the MCP server with guardrail dependencies
 type MCPServer struct {
@@ -250,18 +274,9 @@ func (s *MCPServer) handleToolCall(ctx context.Context, name string, arguments m
 func (s *MCPServer) handleReadResource(ctx context.Context, uri string) (*mcp.ReadResourceResult, error) {
 	switch uri {
 	case "guardrail://quick-reference":
-		content := map[string]interface{}{
-			"forbidden_commands": []string{
-				"rm -rf /",
-				"git push --force",
-				"git reset --hard",
-			},
-			"required_checks": []string{
-				"pre_work_check",
-				"validate_file_edit",
-			},
-		}
-		contentJSON, _ := json.MarshalIndent(content, "", "  ")
+		// Use compact JSON instead of indented for better performance
+		// Pre-allocated response to avoid map allocations
+		contentJSON := []byte(`{"forbidden_commands":["rm -rf /","git push --force","git reset --hard"],"required_checks":["pre_work_check","validate_file_edit"]}`)
 		return &mcp.ReadResourceResult{
 			Contents: []interface{}{
 				mcp.TextResourceContents{
@@ -278,7 +293,8 @@ func (s *MCPServer) handleReadResource(ctx context.Context, uri string) (*mcp.Re
 		if err != nil {
 			return nil, err
 		}
-		rulesJSON, _ := json.MarshalIndent(rules, "", "  ")
+		// Use compact JSON marshaling for better performance
+		rulesJSON, _ := json.Marshal(rules)
 		return &mcp.ReadResourceResult{
 			Contents: []interface{}{
 				mcp.TextResourceContents{
@@ -361,31 +377,11 @@ func (s *MCPServer) Shutdown(ctx context.Context) error {
 	return nil
 }
 
-// handleSSE handles SSE connections
+// handleSSE handles SSE connections with optimized string building
 func (s *MCPServer) handleSSE(c echo.Context) error {
 	// Validate origin for CORS - only allow specific origins
 	origin := c.Request().Header.Get("Origin")
-	allowedOrigins := []string{"http://localhost:*", "https://localhost:*"}
-	if s.cfg.DBSSLMode == "require" {
-		// In production, be more restrictive
-		allowedOrigins = []string{"http://localhost:8081", "https://localhost:8081"}
-	}
-
-	// Check if origin is allowed
-	originAllowed := false
-	for _, allowed := range allowedOrigins {
-		if strings.HasSuffix(allowed, ":*") {
-			// Handle wildcard port matching
-			prefix := strings.TrimSuffix(allowed, ":*")
-			if strings.HasPrefix(origin, prefix) {
-				originAllowed = true
-				break
-			}
-		} else if origin == allowed || allowed == "*" {
-			originAllowed = true
-			break
-		}
-	}
+	originAllowed := isOriginAllowed(origin, s.cfg.DBSSLMode == "require")
 
 	// Set SSE headers
 	c.Response().Header().Set("Content-Type", "text/event-stream")
@@ -405,20 +401,25 @@ func (s *MCPServer) handleSSE(c echo.Context) error {
 	// Generate cryptographically secure session ID
 	sessionID := generateSessionID()
 
-	// Build full message endpoint URL with session ID per MCP 2024-11-05 spec
-	// The endpoint must be an absolute URL that client uses to POST messages
-	scheme := "http"
+	// Build endpoint URL using strings.Builder for efficiency
+	var sb strings.Builder
+	// Pre-allocate capacity: scheme + "://" + host + path + session_id (~100 chars)
+	sb.Grow(100)
 	if c.Request().TLS != nil {
-		scheme = "https"
+		sb.WriteString("https://")
+	} else {
+		sb.WriteString("http://")
 	}
-	host := c.Request().Host
-	messageEndpoint := fmt.Sprintf("%s://%s/mcp/v1/message?session_id=%s", scheme, host, sessionID)
+	sb.WriteString(c.Request().Host)
+	sb.WriteString("/mcp/v1/message?session_id=")
+	sb.WriteString(sessionID)
+	messageEndpoint := sb.String()
 
 	slog.Debug("SSE connection established", "session_id", sessionID)
 
-	// Send endpoint event with full URI per MCP spec
+	// Send endpoint event using pre-allocated buffers
 	// Format: event: endpoint\ndata: <absolute_url>\n\n
-	if _, err := fmt.Fprintf(c.Response(), "event: endpoint\ndata: %s\n\n", messageEndpoint); err != nil {
+	if err := writeSSEEvent(c.Response(), sseEndpointPrefix, messageEndpoint); err != nil {
 		slog.Warn("SSE endpoint write failed", "session_id", sessionID, "error", err)
 		return nil
 	}
@@ -427,9 +428,8 @@ func (s *MCPServer) handleSSE(c echo.Context) error {
 	// Track connection state
 	clientGone := c.Request().Context().Done()
 
-	// Send initial ping with proper JSON-RPC notification format per MCP spec
-	pingData := `{"jsonrpc":"2.0","method":"ping"}`
-	if _, err := fmt.Fprintf(c.Response(), "event: ping\ndata: %s\n\n", pingData); err != nil {
+	// Send initial ping using pre-allocated data
+	if err := writeSSEEvent(c.Response(), ssePingPrefix, string(ssePingData)); err != nil {
 		slog.Warn("SSE initial ping write failed", "session_id", sessionID, "error", err)
 		return nil
 	}
@@ -442,8 +442,7 @@ func (s *MCPServer) handleSSE(c echo.Context) error {
 	for {
 		select {
 		case <-ticker.C:
-			pingData := `{"jsonrpc":"2.0","method":"ping"}`
-			if _, err := fmt.Fprintf(c.Response(), "event: ping\ndata: %s\n\n", pingData); err != nil {
+			if err := writeSSEEvent(c.Response(), ssePingPrefix, string(ssePingData)); err != nil {
 				slog.Debug("SSE write failed, client disconnected", "session_id", sessionID, "error", err)
 				return nil
 			}
@@ -453,6 +452,38 @@ func (s *MCPServer) handleSSE(c echo.Context) error {
 			return nil
 		}
 	}
+}
+
+// isOriginAllowed checks if the origin is in the allowed list
+func isOriginAllowed(origin string, isProduction bool) bool {
+	allowedOrigins := []string{"http://localhost:*", "https://localhost:*"}
+	if isProduction {
+		allowedOrigins = []string{"http://localhost:8081", "https://localhost:8081"}
+	}
+
+	for _, allowed := range allowedOrigins {
+		if strings.HasSuffix(allowed, ":*") {
+			prefix := strings.TrimSuffix(allowed, ":*")
+			if strings.HasPrefix(origin, prefix) {
+				return true
+			}
+		} else if origin == allowed || allowed == "*" {
+			return true
+		}
+	}
+	return false
+}
+
+// writeSSEEvent writes an SSE event efficiently
+func writeSSEEvent(w http.ResponseWriter, prefix []byte, data string) error {
+	if _, err := w.Write(prefix); err != nil {
+		return err
+	}
+	if _, err := w.Write([]byte(data)); err != nil {
+		return err
+	}
+	_, err := w.Write(sseDoubleNewline)
+	return err
 }
 
 // handleMessage handles incoming JSON-RPC messages per MCP specification
@@ -514,8 +545,8 @@ func (s *MCPServer) handleMessage(c echo.Context) error {
 		})
 	}
 
-	// Create context with session ID for tool handlers
-	ctx := context.WithValue(c.Request().Context(), "session_id", sessionID)
+	// Create context with session ID for tool handlers using typed key
+	ctx := context.WithValue(c.Request().Context(), ctxKeySessionID, sessionID)
 
 	// Process request through MCP server
 	response := s.mcpServer.Request(ctx, request)
@@ -590,52 +621,80 @@ func (s *MCPServer) handleInitSession(ctx context.Context, args map[string]inter
 		rules = []models.PreventionRule{}
 	}
 
-	result := map[string]interface{}{
-		"session_token":      sessionID,
-		"expires_at":         time.Now().Add(s.cfg.JWTExpiry).Format(time.RFC3339),
-		"project_context":    contextStr,
-		"active_rules_count": len(rules),
-		"capabilities":       []string{"bash_validation", "git_validation", "edit_validation"},
-	}
+	// Use strings.Builder for efficient JSON string construction
+	// This avoids reflection overhead of json.Marshal for simple structures
+	var sb strings.Builder
+	sb.Grow(256) // Pre-allocate estimated size
+	sb.WriteString(`{"session_token":"`)
+	sb.WriteString(sessionID)
+	sb.WriteString(`","expires_at":"`)
+	sb.WriteString(time.Now().Add(s.cfg.JWTExpiry).Format(time.RFC3339))
+	sb.WriteString(`","project_context":"`)
+	// Escape the context string for JSON
+	jsonEscape(&sb, contextStr)
+	sb.WriteString(`","active_rules_count":`)
+	sb.WriteString(strconv.Itoa(len(rules)))
+	sb.WriteString(`,"capabilities":["bash_validation","git_validation","edit_validation"]}`)
 
-	resultJSON, err := json.MarshalIndent(result, "", "  ")
-	if err != nil {
-		slog.Error("Failed to marshal init session result", "error", err)
-		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: fmt.Sprintf("Internal error: failed to format result: %v", err)}},
-			IsError: true,
-		}, nil
-	}
 	return &mcp.CallToolResult{
-		Content: []interface{}{mcp.TextContent{Type: "text", Text: string(resultJSON)}},
+		Content: []interface{}{mcp.TextContent{Type: "text", Text: sb.String()}},
 	}, nil
+}
+
+// jsonEscape escapes a string for JSON embedding
+// This is faster than json.Marshal for simple strings
+func jsonEscape(sb *strings.Builder, s string) {
+	for _, r := range s {
+		switch r {
+		case '"':
+			sb.WriteString(`\"`)
+		case '\\':
+			sb.WriteString(`\\`)
+		case '\b':
+			sb.WriteString(`\b`)
+		case '\f':
+			sb.WriteString(`\f`)
+		case '\n':
+			sb.WriteString(`\n`)
+		case '\r':
+			sb.WriteString(`\r`)
+		case '\t':
+			sb.WriteString(`\t`)
+		default:
+			if r < 0x20 {
+				sb.WriteString(`\u00`)
+				sb.WriteByte(hexChar(byte(r) >> 4))
+				sb.WriteByte(hexChar(byte(r) & 0x0F))
+			} else {
+				sb.WriteRune(r)
+			}
+		}
+	}
+}
+
+// hexChar returns the hex character for a nibble
+func hexChar(n byte) byte {
+	if n < 10 {
+		return '0' + n
+	}
+	return 'a' + n - 10
 }
 
 func (s *MCPServer) handleValidateBash(ctx context.Context, args map[string]interface{}) (*mcp.CallToolResult, error) {
 	command, _ := args["command"].(string)
 
 	// TODO: Implement actual validation against prevention rules
-	result := map[string]interface{}{
-		"valid":      true,
-		"violations": []interface{}{},
-		"meta": map[string]interface{}{
-			"checked_at":       time.Now().Format(time.RFC3339),
-			"rules_evaluated":  0,
-			"duration_ms":      0,
-			"command_analyzed": command,
-		},
-	}
+	// Use strings.Builder for efficient JSON construction
+	var sb strings.Builder
+	sb.Grow(256)
+	sb.WriteString(`{"valid":true,"violations":[],"meta":{"checked_at":"`)
+	sb.WriteString(time.Now().Format(time.RFC3339))
+	sb.WriteString(`","rules_evaluated":0,"duration_ms":0,"command_analyzed":"`)
+	jsonEscape(&sb, command)
+	sb.WriteString(`"}}`)
 
-	resultJSON, err := json.MarshalIndent(result, "", "  ")
-	if err != nil {
-		slog.Error("Failed to marshal bash validation result", "error", err)
-		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: fmt.Sprintf("Internal error: failed to format result: %v", err)}},
-			IsError: true,
-		}, nil
-	}
 	return &mcp.CallToolResult{
-		Content: []interface{}{mcp.TextContent{Type: "text", Text: string(resultJSON)}},
+		Content: []interface{}{mcp.TextContent{Type: "text", Text: sb.String()}},
 	}, nil
 }
 
@@ -644,27 +703,19 @@ func (s *MCPServer) handleValidateFileEdit(ctx context.Context, args map[string]
 	newString, _ := args["new_string"].(string)
 
 	// TODO: Implement actual validation
-	result := map[string]interface{}{
-		"valid":      true,
-		"violations": []interface{}{},
-		"meta": map[string]interface{}{
-			"checked_at":      time.Now().Format(time.RFC3339),
-			"rules_evaluated": 0,
-			"file":            filePath,
-			"changes_size":    len(newString),
-		},
-	}
+	// Use strings.Builder for efficient JSON construction
+	var sb strings.Builder
+	sb.Grow(256)
+	sb.WriteString(`{"valid":true,"violations":[],"meta":{"checked_at":"`)
+	sb.WriteString(time.Now().Format(time.RFC3339))
+	sb.WriteString(`","rules_evaluated":0,"file":"`)
+	jsonEscape(&sb, filePath)
+	sb.WriteString(`","changes_size":`)
+	sb.WriteString(strconv.Itoa(len(newString)))
+	sb.WriteString(`}}`)
 
-	resultJSON, err := json.MarshalIndent(result, "", "  ")
-	if err != nil {
-		slog.Error("Failed to marshal file edit result", "error", err)
-		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: fmt.Sprintf("Internal error: failed to format result: %v", err)}},
-			IsError: true,
-		}, nil
-	}
 	return &mcp.CallToolResult{
-		Content: []interface{}{mcp.TextContent{Type: "text", Text: string(resultJSON)}},
+		Content: []interface{}{mcp.TextContent{Type: "text", Text: sb.String()}},
 	}, nil
 }
 
@@ -674,47 +725,21 @@ func (s *MCPServer) handleValidateGit(ctx context.Context, args map[string]inter
 
 	// Check for force push
 	if command == "push" && isForce {
-		violation := map[string]interface{}{
-			"rule_id":               "PREVENT-001",
-			"rule_name":             "No Force Push",
-			"severity":              "error",
-			"message":               "git push --force violates guardrail: NO FORCE PUSH",
-			"category":              "git_operation",
-			"action":                "halt",
-			"suggested_alternative": "Use git push --force-with-lease instead",
-		}
-
-		result := map[string]interface{}{
-			"valid":      false,
-			"violations": []interface{}{violation},
-		}
-		resultJSON, err := json.MarshalIndent(result, "", "  ")
-		if err != nil {
-			slog.Error("Failed to marshal git validation result", "error", err)
-			return &mcp.CallToolResult{
-				Content: []interface{}{mcp.TextContent{Type: "text", Text: fmt.Sprintf("Internal error: failed to format result: %v", err)}},
-				IsError: true,
-			}, nil
-		}
+		// Use pre-computed JSON for common error response
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: string(resultJSON)}},
+			Content: []interface{}{mcp.TextContent{
+				Type: "text",
+				Text: `{"valid":false,"violations":[{"rule_id":"PREVENT-001","rule_name":"No Force Push","severity":"error","message":"git push --force violates guardrail: NO FORCE PUSH","category":"git_operation","action":"halt","suggested_alternative":"Use git push --force-with-lease instead"}]}`,
+			}},
 		}, nil
 	}
 
-	result := map[string]interface{}{
-		"valid":      true,
-		"violations": []interface{}{},
-	}
-	resultJSON, err := json.MarshalIndent(result, "", "  ")
-	if err != nil {
-		slog.Error("Failed to marshal git validation result", "error", err)
-		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: fmt.Sprintf("Internal error: failed to format result: %v", err)}},
-			IsError: true,
-		}, nil
-	}
+	// Use pre-computed JSON for success response
 	return &mcp.CallToolResult{
-		Content: []interface{}{mcp.TextContent{Type: "text", Text: string(resultJSON)}},
+		Content: []interface{}{mcp.TextContent{
+			Type: "text",
+			Text: `{"valid":true,"violations":[]}`,
+		}},
 	}, nil
 }
 
@@ -811,25 +836,54 @@ func generateSessionID() string {
 }
 
 // sessionCleanup periodically removes expired sessions to prevent memory leaks
+// Uses batched deletion to minimize lock contention
 func (s *MCPServer) sessionCleanup() {
 	ticker := time.NewTicker(5 * time.Minute)
 	defer ticker.Stop()
 
 	for range ticker.C {
-		s.sessionsMu.Lock()
 		now := time.Now()
-		expiredCount := 0
-		for id, session := range s.sessions {
-			// Remove sessions inactive for more than 1 hour
-			if now.Sub(session.LastActivity) > time.Hour {
-				delete(s.sessions, id)
-				expiredCount++
-			}
-		}
-		s.sessionsMu.Unlock()
+		expiredIDs := s.collectExpiredSessions(now)
 
-		if expiredCount > 0 {
-			slog.Debug("Cleaned up expired sessions", "count", expiredCount)
+		if len(expiredIDs) > 0 {
+			s.deleteSessionsBatch(expiredIDs)
+			slog.Debug("Cleaned up expired sessions", "count", len(expiredIDs))
 		}
+	}
+}
+
+// collectExpiredSessions identifies expired sessions without holding the lock
+func (s *MCPServer) collectExpiredSessions(now time.Time) []string {
+	s.sessionsMu.RLock()
+	defer s.sessionsMu.RUnlock()
+
+	// Pre-allocate with estimated capacity (10% of sessions)
+	expiredCount := 0
+	for _, session := range s.sessions {
+		if now.Sub(session.LastActivity) > time.Hour {
+			expiredCount++
+		}
+	}
+
+	if expiredCount == 0 {
+		return nil
+	}
+
+	expiredIDs := make([]string, 0, expiredCount)
+	for id, session := range s.sessions {
+		if now.Sub(session.LastActivity) > time.Hour {
+			expiredIDs = append(expiredIDs, id)
+		}
+	}
+	return expiredIDs
+}
+
+// deleteSessionsBatch removes multiple sessions with a single lock acquisition
+func (s *MCPServer) deleteSessionsBatch(ids []string) {
+	s.sessionsMu.Lock()
+	defer s.sessionsMu.Unlock()
+
+	for _, id := range ids {
+		delete(s.sessions, id)
 	}
 }

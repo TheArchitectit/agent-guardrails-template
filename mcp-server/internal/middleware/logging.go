@@ -87,11 +87,10 @@ func RequestLoggerWithConfig(config RequestLoggerConfig) echo.MiddlewareFunc {
 			if err != nil {
 				attrs = append(attrs, slog.String("error", err.Error()))
 
-				he := new(echo.HTTPError)
-				if ok := c.Echo().HTTPErrorHandler(err, c); ok {
-					_ = ok
+				// Check if it's an HTTP error for logging purposes
+				if he, ok := err.(*echo.HTTPError); ok {
+					_ = he
 				}
-				_ = he
 			}
 
 			// Determine log level based on status

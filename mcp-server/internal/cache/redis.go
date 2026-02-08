@@ -10,6 +10,7 @@ import (
 
 	"github.com/go-redis/redis/v8"
 	"github.com/thearchitectit/guardrail-mcp/internal/config"
+	"github.com/thearchitectit/guardrail-mcp/internal/metrics"
 )
 
 // Client wraps Redis client with guardrail-specific operations
@@ -72,7 +73,24 @@ func (c *Client) Close() error {
 
 // Get retrieves a value from cache
 func (c *Client) Get(ctx context.Context, key string) ([]byte, error) {
-	return c.client.Get(ctx, key).Bytes()
+	start := time.Now()
+	data, err := c.client.Get(ctx, key).Bytes()
+	duration := time.Since(start)
+
+	if err == redis.Nil {
+		metrics.RecordCacheMiss("get")
+		metrics.RecordCacheOperation("get", duration)
+		return nil, err
+	}
+	if err != nil {
+		metrics.RecordCacheError("get")
+		metrics.RecordCacheOperation("get", duration)
+		return nil, err
+	}
+
+	metrics.RecordCacheHit("get")
+	metrics.RecordCacheOperation("get", duration)
+	return data, nil
 }
 
 // Set stores a value in cache
@@ -80,12 +98,33 @@ func (c *Client) Set(ctx context.Context, key string, value []byte, ttl time.Dur
 	if ttl == 0 {
 		ttl = c.ttl
 	}
-	return c.client.Set(ctx, key, value, ttl).Err()
+
+	start := time.Now()
+	err := c.client.Set(ctx, key, value, ttl).Err()
+	duration := time.Since(start)
+
+	if err != nil {
+		metrics.RecordCacheError("set")
+	} else {
+		metrics.RecordCacheHit("set")
+	}
+	metrics.RecordCacheOperation("set", duration)
+
+	return err
 }
 
 // Delete removes a key from cache
 func (c *Client) Delete(ctx context.Context, key string) error {
-	return c.client.Del(ctx, key).Err()
+	start := time.Now()
+	err := c.client.Del(ctx, key).Err()
+	duration := time.Since(start)
+
+	if err != nil {
+		metrics.RecordCacheError("delete")
+	}
+	metrics.RecordCacheOperation("delete", duration)
+
+	return err
 }
 
 // Cache keys
