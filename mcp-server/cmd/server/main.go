@@ -2,11 +2,14 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"log/slog"
 	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"os/signal"
+	"runtime"
 	"syscall"
 	"time"
 
@@ -18,14 +21,53 @@ import (
 	"github.com/thearchitectit/guardrail-mcp/internal/web"
 )
 
+// Version information - set by ldflags during build
+var (
+	version   = "dev"
+	buildTime = "unknown"
+	gitCommit = "unknown"
+)
+
 func main() {
+	// CLI flags
+	var (
+		showVersion   = flag.Bool("version", false, "Show version information")
+		showHealth    = flag.Bool("health-check", false, "Run health check and exit")
+		healthTimeout = flag.Duration("health-timeout", 5*time.Second, "Health check timeout")
+	)
+	flag.Parse()
+
+	// Show version and exit
+	if *showVersion {
+		fmt.Printf("Guardrail MCP Server\n")
+		fmt.Printf("  Version:   %s\n", version)
+		fmt.Printf("  Build Time: %s\n", buildTime)
+		fmt.Printf("  Git Commit: %s\n", gitCommit)
+		fmt.Printf("  Go Version: %s\n", runtime.Version())
+		os.Exit(0)
+	}
+
+	// Health check mode for container health checks
+	if *showHealth {
+		if err := runHealthCheck(*healthTimeout); err != nil {
+			fmt.Fprintf(os.Stderr, "Health check failed: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Println("Health check passed")
+		os.Exit(0)
+	}
+
 	// Setup structured logging
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
 		Level: slog.LevelInfo,
 	}))
 	slog.SetDefault(logger)
 
-	slog.Info("Starting Guardrail MCP Server")
+	slog.Info("Starting Guardrail MCP Server",
+		"version", version,
+		"build_time", buildTime,
+		"git_commit", gitCommit,
+	)
 
 	// Load configuration
 	cfg, err := config.Load()
@@ -36,6 +78,11 @@ func main() {
 
 	// Set log level based on config
 	setLogLevel(cfg.LogLevel)
+
+	// Start pprof server if enabled (for debugging)
+	if cfg.PProfEnabled {
+		go startPProfServer(cfg.PProfPort)
+	}
 
 	// Initialize audit logger
 	auditLogger := audit.NewLogger(1000)
@@ -57,7 +104,7 @@ func main() {
 	defer redisClient.Close()
 
 	// Create web server
-	webServer := web.NewServer(cfg, db, redisClient, auditLogger)
+	webServer := web.NewServer(cfg, db, redisClient, auditLogger, version)
 
 	// Create MCP server
 	mcpSrv := mcpServer.NewMCPServer(cfg, db, redisClient, auditLogger)
@@ -88,28 +135,87 @@ func main() {
 
 	// Wait for shutdown signal
 	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGTERM, syscall.SIGINT)
+	signal.Notify(quit, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
 
 	select {
-	case <-quit:
-		slog.Info("Shutdown signal received")
+	case sig := <-quit:
+		slog.Info("Shutdown signal received", "signal", sig.String())
 	case <-ctx.Done():
 		slog.Info("Context cancelled")
 	}
 
-	// Graceful shutdown
-	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 30*time.Second)
+	// Graceful shutdown with configurable timeout
+	shutdownTimeout := cfg.ShutdownTimeout
+	if shutdownTimeout == 0 {
+		shutdownTimeout = 30 * time.Second
+	}
+
+	slog.Info("Initiating graceful shutdown", "timeout", shutdownTimeout)
+
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), shutdownTimeout)
 	defer shutdownCancel()
 
+	// Shutdown web server
 	if err := webServer.Shutdown(shutdownCtx); err != nil {
 		slog.Error("Web server shutdown error", "error", err)
 	}
 
+	// Shutdown MCP server
 	if err := mcpSrv.Shutdown(shutdownCtx); err != nil {
 		slog.Error("MCP server shutdown error", "error", err)
 	}
 
-	slog.Info("Server stopped")
+	// Close database connection
+	if err := db.Close(); err != nil {
+		slog.Error("Database close error", "error", err)
+	}
+
+	// Close Redis connection
+	if err := redisClient.Close(); err != nil {
+		slog.Error("Redis close error", "error", err)
+	}
+
+	slog.Info("Server stopped gracefully")
+}
+
+// runHealthCheck performs a health check against the local server
+func runHealthCheck(timeout time.Duration) error {
+	client := &http.Client{
+		Timeout: timeout,
+	}
+
+	// Check liveness endpoint
+	webPort := os.Getenv("WEB_PORT")
+	if webPort == "" {
+		webPort = "8081"
+	}
+
+	resp, err := client.Get(fmt.Sprintf("http://localhost:%s/health/live", webPort))
+	if err != nil {
+		return fmt.Errorf("liveness check failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("liveness check returned status %d", resp.StatusCode)
+	}
+
+	return nil
+}
+
+// startPProfServer starts the pprof debugging server
+func startPProfServer(port int) {
+	addr := fmt.Sprintf("localhost:%d", port)
+	slog.Info("Starting pprof server", "addr", addr)
+
+	// pprof endpoints are registered via _ import
+	// /debug/pprof/ - profile overview
+	// /debug/pprof/profile - CPU profile
+	// /debug/pprof/heap - heap profile
+	// /debug/pprof/goroutine - goroutine profile
+	if err := http.ListenAndServe(addr, nil); err != nil {
+		slog.Error("pprof server error", "error", err)
+	}
 }
 
 func setLogLevel(level string) {

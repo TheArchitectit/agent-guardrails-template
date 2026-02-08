@@ -49,6 +49,8 @@
 | copilot | CLCODE_INTEGRATION.md | docs/ | GitHub Copilot instructions (see Claude Code) |
 | cody | CLCODE_INTEGRATION.md | docs/ | Cody context configuration (see Claude Code) |
 | mcp-server | MCP_SERVER_PLAN.md | docs/plans/ | MCP server implementation plan |
+| mcp-api | API.md | mcp-server/ | MCP server REST API documentation |
+| mcp-changelog | CHANGELOG.md | mcp-server/ | MCP server version history |
 | guardrail-platform | MCP_SERVER_PLAN.md | docs/plans/ | Guardrail enforcement platform |
 | aider | CLCODE_INTEGRATION.md | docs/ | Aider YAML configuration (see Claude Code) |
 | continue | CLCODE_INTEGRATION.md | docs/ | Continue IDE configuration (see Claude Code) |
@@ -91,6 +93,8 @@
 | **SECRETS_MANAGEMENT.md** | GitHub Secrets setup and rotation | When handling credentials |
 | **examples/** | Multi-language guardrails implementation examples | When exploring code examples |
 | **regression-prevention/** | Bug tracking & regression prevention examples | When logging bugs or creating prevention rules |
+| **mcp-server/API.md** | Complete REST API reference for MCP server | When integrating with MCP server |
+| **mcp-server/CHANGELOG.md** | MCP server version history | When tracking MCP server updates |
 | **SPRINT_TEMPLATE.md** | Copy-paste template for new sprints | When creating tasks |
 | **SPRINT_GUIDE.md** | Best practices for writing sprints | When writing sprint docs |
 | **PROJECT_CONTEXT_TEMPLATE.md** | Project Bible - stack, style, forbidden patterns | When setting up new project |
@@ -269,6 +273,6 @@ agent-guardrails-template/
 
 **Authored by:** TheArchitectit
 **Document Owner:** Project Maintainers
-**Last Updated:** 2026-02-01
-**Document Count:** 38 (excluding INDEX files)
-**Line Count:** ~248
+**Last Updated:** 2026-02-07
+**Document Count:** 40 (excluding INDEX files)
+**Line Count:** ~255

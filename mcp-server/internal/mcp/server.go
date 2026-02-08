@@ -2,14 +2,18 @@ package mcp
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 	"github.com/thearchitectit/guardrail-mcp/internal/audit"
@@ -296,6 +300,20 @@ func (s *MCPServer) Start(addr string) error {
 	s.echo.HideBanner = true
 	s.echo.HidePort = true
 
+	// Recovery from panics
+	s.echo.Use(middleware.Recover())
+
+	// Security headers middleware
+	s.echo.Use(s.securityHeadersMiddleware())
+
+	// Request timeout
+	s.echo.Use(middleware.TimeoutWithConfig(middleware.TimeoutConfig{
+		Timeout: s.cfg.RequestTimeout,
+	}))
+
+	// Body limit - prevent DoS via large payloads
+	s.echo.Use(middleware.BodyLimit("1M"))
+
 	// SSE endpoint
 	s.echo.GET("/mcp/v1/sse", s.handleSSE)
 
@@ -304,6 +322,19 @@ func (s *MCPServer) Start(addr string) error {
 
 	slog.Info("Starting MCP SSE server", "addr", addr)
 	return s.echo.Start(addr)
+}
+
+// securityHeadersMiddleware adds security headers to all responses
+func (s *MCPServer) securityHeadersMiddleware() echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			c.Response().Header().Set("X-Content-Type-Options", "nosniff")
+			c.Response().Header().Set("X-Frame-Options", "DENY")
+			c.Response().Header().Set("X-XSS-Protection", "1; mode=block")
+			c.Response().Header().Set("Referrer-Policy", "strict-origin-when-cross-origin")
+			return next(c)
+		}
+	}
 }
 
 // Shutdown gracefully shuts down the server
@@ -316,21 +347,61 @@ func (s *MCPServer) Shutdown(ctx context.Context) error {
 
 // handleSSE handles SSE connections
 func (s *MCPServer) handleSSE(c echo.Context) error {
+	// Validate origin for CORS - only allow specific origins
+	origin := c.Request().Header.Get("Origin")
+	allowedOrigins := []string{"http://localhost:*", "https://localhost:*"}
+	if s.cfg.DBSSLMode == "require" {
+		// In production, be more restrictive
+		allowedOrigins = []string{"http://localhost:8081", "https://localhost:8081"}
+	}
+
+	// Check if origin is allowed
+	originAllowed := false
+	for _, allowed := range allowedOrigins {
+		if strings.HasSuffix(allowed, ":*") {
+			// Handle wildcard port matching
+			prefix := strings.TrimSuffix(allowed, ":*")
+			if strings.HasPrefix(origin, prefix) {
+				originAllowed = true
+				break
+			}
+		} else if origin == allowed || allowed == "*" {
+			originAllowed = true
+			break
+		}
+	}
+
 	// Set SSE headers
 	c.Response().Header().Set("Content-Type", "text/event-stream")
 	c.Response().Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
 	c.Response().Header().Set("Connection", "keep-alive")
 	c.Response().Header().Set("X-Accel-Buffering", "no") // Disable Nginx buffering
-	c.Response().Header().Set("Access-Control-Allow-Origin", "*")
+
+	// Only set CORS headers if origin is allowed
+	if originAllowed && origin != "" {
+		c.Response().Header().Set("Access-Control-Allow-Origin", origin)
+		c.Response().Header().Set("Access-Control-Allow-Methods", "GET")
+		c.Response().Header().Set("Vary", "Origin")
+	}
+
 	c.Response().WriteHeader(http.StatusOK)
 
-	// Set up SSE session
+	// Generate cryptographically secure session ID
 	sessionID := generateSessionID()
-	messageEndpoint := fmt.Sprintf("/mcp/v1/message?session_id=%s", sessionID)
+
+	// Build full message endpoint URL with session ID per MCP 2024-11-05 spec
+	// The endpoint must be an absolute URL that client uses to POST messages
+	scheme := "http"
+	if c.Request().TLS != nil {
+		scheme = "https"
+	}
+	host := c.Request().Host
+	messageEndpoint := fmt.Sprintf("%s://%s/mcp/v1/message?session_id=%s", scheme, host, sessionID)
 
 	slog.Debug("SSE connection established", "session_id", sessionID)
 
-	// Send endpoint event immediately
+	// Send endpoint event with full URI per MCP spec
+	// Format: event: endpoint\ndata: <absolute_url>\n\n
 	if _, err := fmt.Fprintf(c.Response(), "event: endpoint\ndata: %s\n\n", messageEndpoint); err != nil {
 		slog.Warn("SSE endpoint write failed", "session_id", sessionID, "error", err)
 		return nil
@@ -340,21 +411,23 @@ func (s *MCPServer) handleSSE(c echo.Context) error {
 	// Track connection state
 	clientGone := c.Request().Context().Done()
 
-	// Send immediate ping to confirm connection is working
-	if _, err := fmt.Fprintf(c.Response(), "event: ping\ndata: {}\n\n"); err != nil {
-		slog.Warn("SSE ping write failed", "session_id", sessionID, "error", err)
+	// Send initial ping with proper JSON-RPC notification format per MCP spec
+	pingData := `{"jsonrpc":"2.0","method":"ping"}`
+	if _, err := fmt.Fprintf(c.Response(), "event: ping\ndata: %s\n\n", pingData); err != nil {
+		slog.Warn("SSE initial ping write failed", "session_id", sessionID, "error", err)
 		return nil
 	}
 	c.Response().Flush()
 
-	// Keep connection open with periodic pings
+	// Keep connection open with periodic pings (every 30 seconds)
 	ticker := time.NewTicker(30 * time.Second)
 	defer ticker.Stop()
 
 	for {
 		select {
 		case <-ticker.C:
-			if _, err := fmt.Fprintf(c.Response(), "event: ping\ndata: {}\n\n"); err != nil {
+			pingData := `{"jsonrpc":"2.0","method":"ping"}`
+			if _, err := fmt.Fprintf(c.Response(), "event: ping\ndata: %s\n\n", pingData); err != nil {
 				slog.Debug("SSE write failed, client disconnected", "session_id", sessionID, "error", err)
 				return nil
 			}
@@ -366,24 +439,85 @@ func (s *MCPServer) handleSSE(c echo.Context) error {
 	}
 }
 
-// handleMessage handles incoming messages
+// handleMessage handles incoming JSON-RPC messages per MCP specification
 func (s *MCPServer) handleMessage(c echo.Context) error {
-	var request server.JSONRPCRequest
-	if err := c.Bind(&request); err != nil {
+	// Extract session ID from query parameter per MCP spec
+	sessionID := c.QueryParam("session_id")
+	if sessionID == "" {
 		return c.JSON(http.StatusBadRequest, server.JSONRPCResponse{
 			JSONRPC: "2.0",
+			ID:      nil,
 			Error: &struct {
-				Code    int    `json:"code"`
-				Message string `json:"message"`
+				Code    int         `json:"code"`
+				Message string      `json:"message"`
+				Data    interface{} `json:"data,omitempty"`
 			}{
-				Code:    -32700,
-				Message: "Parse error",
+				Code:    -32000,
+				Message: "Missing session_id parameter",
+				Data:    map[string]string{"detail": "session_id query parameter is required"},
 			},
 		})
 	}
 
+	// Validate session exists (sessions are created during SSE connection)
+	s.sessionsMu.RLock()
+	_, sessionExists := s.sessions[sessionID]
+	s.sessionsMu.RUnlock()
+
+	if !sessionExists {
+		// Session may have expired or invalid session ID
+		slog.Warn("Message received for invalid/expired session", "session_id", sessionID)
+		// Still process the request as session validation is handled by individual tools
+	}
+
+	var request server.JSONRPCRequest
+	if err := c.Bind(&request); err != nil {
+		return c.JSON(http.StatusBadRequest, server.JSONRPCResponse{
+			JSONRPC: "2.0",
+			ID:      nil,
+			Error: &struct {
+				Code    int         `json:"code"`
+				Message string      `json:"message"`
+				Data    interface{} `json:"data,omitempty"`
+			}{
+				Code:    -32700,
+				Message: "Parse error",
+				Data:    map[string]string{"detail": err.Error()},
+			},
+		})
+	}
+
+	// Validate JSON-RPC version
+	if request.JSONRPC != "2.0" {
+		return c.JSON(http.StatusBadRequest, server.JSONRPCResponse{
+			JSONRPC: "2.0",
+			ID:      request.ID,
+			Error: &struct {
+				Code    int         `json:"code"`
+				Message string      `json:"message"`
+				Data    interface{} `json:"data,omitempty"`
+			}{
+				Code:    -32600,
+				Message: "Invalid Request",
+				Data:    map[string]string{"detail": "jsonrpc field must be '2.0'"},
+			},
+		})
+	}
+
+	// Create context with session ID for tool handlers
+	ctx := context.WithValue(c.Request().Context(), "session_id", sessionID)
+
 	// Process request through MCP server
-	response := s.mcpServer.Request(c.Request().Context(), request)
+	response := s.mcpServer.Request(ctx, request)
+
+	// Update session last activity if session exists
+	if sessionExists {
+		s.sessionsMu.Lock()
+		if sess, ok := s.sessions[sessionID]; ok {
+			sess.LastActivity = time.Now()
+		}
+		s.sessionsMu.Unlock()
+	}
 
 	return c.JSON(http.StatusOK, response)
 }
@@ -599,6 +733,38 @@ func (s *MCPServer) handleGetContext(ctx context.Context, args map[string]interf
 	}, nil
 }
 
+// generateSessionID creates a cryptographically secure session ID
 func generateSessionID() string {
-	return fmt.Sprintf("sess_%d", time.Now().UnixNano())
+	// Use crypto/rand for secure random generation instead of timestamp
+	b := make([]byte, 16)
+	if _, err := rand.Read(b); err != nil {
+		// Fallback to timestamp only if crypto/rand fails (should never happen)
+		slog.Error("Failed to generate secure random session ID, falling back to timestamp", "error", err)
+		return fmt.Sprintf("sess_%d", time.Now().UnixNano())
+	}
+	return "sess_" + hex.EncodeToString(b)
+}
+
+// sessionCleanup periodically removes expired sessions to prevent memory leaks
+func (s *MCPServer) sessionCleanup() {
+	ticker := time.NewTicker(5 * time.Minute)
+	defer ticker.Stop()
+
+	for range ticker.C {
+		s.sessionsMu.Lock()
+		now := time.Now()
+		expiredCount := 0
+		for id, session := range s.sessions {
+			// Remove sessions inactive for more than 1 hour
+			if now.Sub(session.LastActivity) > time.Hour {
+				delete(s.sessions, id)
+				expiredCount++
+			}
+		}
+		s.sessionsMu.Unlock()
+
+		if expiredCount > 0 {
+			slog.Debug("Cleaned up expired sessions", "count", expiredCount)
+		}
+	}
 }

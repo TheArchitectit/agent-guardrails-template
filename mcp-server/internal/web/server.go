@@ -26,10 +26,11 @@ type Server struct {
 	ruleStore   *database.RuleStore
 	projStore   *database.ProjectStore
 	failStore   *database.FailureStore
+	version     string
 }
 
 // NewServer creates a new web server
-func NewServer(cfg *config.Config, db *database.DB, cache *cache.Client, auditLogger *audit.Logger) *Server {
+func NewServer(cfg *config.Config, db *database.DB, cache *cache.Client, auditLogger *audit.Logger, version string) *Server {
 	e := echo.New()
 	e.HideBanner = true
 	e.HidePort = true
@@ -44,6 +45,7 @@ func NewServer(cfg *config.Config, db *database.DB, cache *cache.Client, auditLo
 		ruleStore:   database.NewRuleStore(db),
 		projStore:   database.NewProjectStore(db),
 		failStore:   database.NewFailureStore(db),
+		version:     version,
 	}
 
 	s.setupMiddleware()
@@ -96,6 +98,9 @@ func (s *Server) setupRoutes() {
 	// Health endpoints (no auth required)
 	s.echo.GET("/health/live", s.healthLive)
 	s.echo.GET("/health/ready", s.healthReady)
+
+	// Version endpoint (no auth required)
+	s.echo.GET("/version", s.versionInfo)
 
 	// Metrics endpoint
 	s.echo.GET("/metrics", echo.WrapHandler(promhttp.Handler()))
@@ -186,32 +191,51 @@ func securityHeadersMiddleware() echo.MiddlewareFunc {
 	}
 }
 
+// versionInfo returns server version information
+func (s *Server) versionInfo(c echo.Context) error {
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"version":   s.version,
+		"service":   "guardrail-mcp",
+		"timestamp": time.Now().UTC().Format(time.RFC3339),
+	})
+}
+
 // Health handlers
 func (s *Server) healthLive(c echo.Context) error {
-	return c.JSON(http.StatusOK, map[string]string{"status": "alive"})
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"status":    "alive",
+		"version":   s.version,
+		"timestamp": time.Now().UTC().Format(time.RFC3339),
+	})
 }
 
 func (s *Server) healthReady(c echo.Context) error {
-	ctx, cancel := context.WithTimeout(c.Request().Context(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request().Context(), s.cfg.HealthCheckTimeout)
 	defer cancel()
 
 	// Check database
 	if err := s.db.HealthCheck(ctx); err != nil {
 		slog.Error("Readiness check failed - database", "error", err)
-		return c.JSON(http.StatusServiceUnavailable, map[string]string{
-			"status": "not ready",
-			// Don't expose which component failed
+		return c.JSON(http.StatusServiceUnavailable, map[string]interface{}{
+			"status":    "not ready",
+			"timestamp": time.Now().UTC().Format(time.RFC3339),
+			// Don't expose which component failed for security
 		})
 	}
 
 	// Check cache
 	if err := s.cache.HealthCheck(ctx); err != nil {
 		slog.Error("Readiness check failed - cache", "error", err)
-		return c.JSON(http.StatusServiceUnavailable, map[string]string{
-			"status": "not ready",
-			// Don't expose which component failed
+		return c.JSON(http.StatusServiceUnavailable, map[string]interface{}{
+			"status":    "not ready",
+			"timestamp": time.Now().UTC().Format(time.RFC3339),
+			// Don't expose which component failed for security
 		})
 	}
 
-	return c.JSON(http.StatusOK, map[string]string{"status": "ready"})
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"status":    "ready",
+		"version":   s.version,
+		"timestamp": time.Now().UTC().Format(time.RFC3339),
+	})
 }
