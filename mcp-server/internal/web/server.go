@@ -169,6 +169,10 @@ func (s *Server) setupRoutes() {
 		s.echo.Static("/", "/app/static")
 		s.echo.File("/", "/app/static/index.html")
 	}
+
+	// Web UI static files - served from embedded web directory
+	s.echo.Static("/web", "web")
+	s.echo.File("/web/*", "web/index.html")
 }
 
 // Start starts the server
