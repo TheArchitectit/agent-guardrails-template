@@ -26,6 +26,7 @@ const (
 // Document handlers
 
 func (s *Server) listDocuments(c echo.Context) error {
+	ctx := c.Request().Context()
 	category := c.QueryParam("category")
 	limit, err := strconv.Atoi(c.QueryParam("limit"))
 	if err != nil || limit <= 0 || limit > maxPageLimit {
@@ -36,15 +37,22 @@ func (s *Server) listDocuments(c echo.Context) error {
 		offset = 0
 	}
 
-	docs, err := s.docStore.List(c.Request().Context(), category, limit, offset)
+	docs, err := s.docStore.List(ctx, category, limit, offset)
 	if err != nil {
 		slog.Error("Failed to list documents", "error", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to retrieve documents"})
 	}
 
+	total, err := s.docStore.Count(ctx, category)
+	if err != nil {
+		slog.Warn("Failed to count documents", "error", err)
+		total = len(docs) // Fallback to current page size
+	}
+
 	return c.JSON(http.StatusOK, map[string]interface{}{
 		"data": docs,
 		"pagination": map[string]interface{}{
+			"total":  total,
 			"limit":  limit,
 			"offset": offset,
 		},
@@ -88,11 +96,14 @@ func (s *Server) updateDocument(c echo.Context) error {
 
 	doc.ID = parsedUUID
 	if err := s.docStore.Update(c.Request().Context(), &doc); err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		slog.Error("Failed to update document", "doc_id", id, "error", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to update document"})
 	}
 
-	// Invalidate cache
-	s.cache.InvalidateOnDocumentChange(c.Request().Context(), doc.Slug)
+	// Invalidate cache - log error but don't fail the request
+	if err := s.cache.InvalidateOnDocumentChange(c.Request().Context(), doc.Slug); err != nil {
+		slog.Warn("Failed to invalidate document cache", "slug", doc.Slug, "error", err)
+	}
 
 	// Audit log
 	keyHash := getAPIKeyHash(c)
@@ -136,18 +147,19 @@ func (s *Server) listRules(c echo.Context) error {
 		enabled = &e
 	}
 	category := c.QueryParam("category")
-	limit, _ := strconv.Atoi(c.QueryParam("limit"))
-	if limit <= 0 || limit > maxPageLimit {
+	limit, err := strconv.Atoi(c.QueryParam("limit"))
+	if err != nil || limit <= 0 || limit > maxPageLimit {
 		limit = defaultPageLimit
 	}
-	offset, _ := strconv.Atoi(c.QueryParam("offset"))
-	if offset < 0 {
+	offset, err := strconv.Atoi(c.QueryParam("offset"))
+	if err != nil || offset < 0 {
 		offset = 0
 	}
 
 	rules, err := s.ruleStore.List(c.Request().Context(), enabled, category, limit, offset)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		slog.Error("Failed to list rules", "error", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to retrieve rules"})
 	}
 
 	return c.JSON(http.StatusOK, map[string]interface{}{
@@ -168,7 +180,11 @@ func (s *Server) getRule(c echo.Context) error {
 
 	rule, err := s.ruleStore.GetByID(c.Request().Context(), parsedUUID)
 	if err != nil {
-		return c.JSON(http.StatusNotFound, map[string]string{"error": err.Error()})
+		if err.Error() == fmt.Sprintf("rule not found: %s", parsedUUID) {
+			return c.JSON(http.StatusNotFound, map[string]string{"error": "rule not found"})
+		}
+		slog.Error("Failed to get rule", "rule_id", id, "error", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to retrieve rule"})
 	}
 
 	return c.JSON(http.StatusOK, rule)
@@ -181,11 +197,14 @@ func (s *Server) createRule(c echo.Context) error {
 	}
 
 	if err := s.ruleStore.Create(c.Request().Context(), &rule); err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		slog.Error("Failed to create rule", "error", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to create rule"})
 	}
 
-	// Invalidate cache
-	s.cache.InvalidateOnRuleChange(c.Request().Context(), rule.RuleID)
+	// Invalidate cache - log error but don't fail the request
+	if err := s.cache.InvalidateOnRuleChange(c.Request().Context(), rule.RuleID); err != nil {
+		slog.Warn("Failed to invalidate rule cache", "rule_id", rule.RuleID, "error", err)
+	}
 
 	// Audit log
 	keyHash := getAPIKeyHash(c)

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -763,25 +764,15 @@ func (s *MCPServer) handlePreWorkCheck(ctx context.Context, args map[string]inte
 		}, nil
 	}
 
-	// Convert failures to check results
-	checks := make([]map[string]interface{}, len(failures))
-	for i, f := range failures {
-		checks[i] = map[string]interface{}{
-			"failure_id":    f.FailureID,
-			"severity":      f.Severity,
-			"message":       f.ErrorMessage,
-			"root_cause":    f.RootCause,
-			"affected_file": f.AffectedFiles,
-		}
-	}
-
+	// Use failures directly instead of creating intermediate maps
+	// Use compact JSON marshaling for better performance
 	result := map[string]interface{}{
 		"passed":         len(failures) == 0,
-		"checks":         checks,
+		"checks":         failures,
 		"files_affected": files,
 	}
 
-	resultJSON, err := json.MarshalIndent(result, "", "  ")
+	resultJSON, err := json.Marshal(result)
 	if err != nil {
 		slog.Error("Failed to marshal pre-work check result", "error", err)
 		return &mcp.CallToolResult{
