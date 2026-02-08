@@ -166,8 +166,8 @@ func (s *Server) setupRoutes() {
 
 	// Static files (Web UI)
 	if s.cfg.WebEnabled {
-		s.echo.Static("/", "static")
-		s.echo.File("/", "static/index.html")
+		s.echo.Static("/", "/app/static")
+		s.echo.File("/", "/app/static/index.html")
 	}
 }
 

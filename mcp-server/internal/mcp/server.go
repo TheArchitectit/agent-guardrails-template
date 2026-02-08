@@ -36,9 +36,9 @@ const (
 // Pre-allocated byte slices for common SSE messages to reduce allocations
 var (
 	sseEndpointPrefix = []byte("event: endpoint\ndata: ")
-	ssePingPrefix     = []byte("event: ping\ndata: ")
+	sseMessagePrefix  = []byte("event: message\ndata: ")
 	sseDoubleNewline  = []byte("\n\n")
-	ssePingData       = []byte(`{"jsonrpc":"2.0","method":"ping"}`)
+	ssePingComment    = []byte(": ping\n\n")
 )
 
 // jsonBufferPool provides reusable buffers for JSON encoding
@@ -68,6 +68,8 @@ type Session struct {
 	ClientVersion string
 	CreatedAt     time.Time
 	LastActivity  time.Time
+	ResponseQueue chan []byte
+	Closed        chan struct{}
 }
 
 // NewMCPServer creates a new MCP server
@@ -401,6 +403,29 @@ func (s *MCPServer) handleSSE(c echo.Context) error {
 	// Generate cryptographically secure session ID
 	sessionID := generateSessionID()
 
+	now := time.Now()
+	session := &Session{
+		ID:            sessionID,
+		CreatedAt:     now,
+		LastActivity:  now,
+		ResponseQueue: make(chan []byte, 100),
+		Closed:        make(chan struct{}),
+	}
+
+	// Store session in map (sessions are created during SSE connection).
+	s.sessionsMu.Lock()
+	s.sessions[sessionID] = session
+	s.sessionsMu.Unlock()
+
+	defer func() {
+		s.sessionsMu.Lock()
+		if current, ok := s.sessions[sessionID]; ok && current == session {
+			delete(s.sessions, sessionID)
+			close(session.Closed)
+		}
+		s.sessionsMu.Unlock()
+	}()
+
 	// Build endpoint URL using strings.Builder for efficiency
 	var sb strings.Builder
 	// Pre-allocate capacity: scheme + "://" + host + path + session_id (~100 chars)
@@ -428,9 +453,11 @@ func (s *MCPServer) handleSSE(c echo.Context) error {
 	// Track connection state
 	clientGone := c.Request().Context().Done()
 
-	// Send initial ping using pre-allocated data
-	if err := writeSSEEvent(c.Response(), ssePingPrefix, string(ssePingData)); err != nil {
-		slog.Warn("SSE initial ping write failed", "session_id", sessionID, "error", err)
+	// Send initial keep-alive comment. Use SSE comments instead of a custom
+	// `event: ping` payload because some SDKs treat all event data as JSON-RPC
+	// and fail on non-message events.
+	if err := writeSSEComment(c.Response(), ssePingComment); err != nil {
+		slog.Warn("SSE initial keep-alive write failed", "session_id", sessionID, "error", err)
 		return nil
 	}
 	c.Response().Flush()
@@ -441,8 +468,14 @@ func (s *MCPServer) handleSSE(c echo.Context) error {
 
 	for {
 		select {
+		case payload := <-session.ResponseQueue:
+			if err := writeSSEEvent(c.Response(), sseMessagePrefix, string(payload)); err != nil {
+				slog.Debug("SSE response write failed, client disconnected", "session_id", sessionID, "error", err)
+				return nil
+			}
+			c.Response().Flush()
 		case <-ticker.C:
-			if err := writeSSEEvent(c.Response(), ssePingPrefix, string(ssePingData)); err != nil {
+			if err := writeSSEComment(c.Response(), ssePingComment); err != nil {
 				slog.Debug("SSE write failed, client disconnected", "session_id", sessionID, "error", err)
 				return nil
 			}
@@ -486,6 +519,13 @@ func writeSSEEvent(w http.ResponseWriter, prefix []byte, data string) error {
 	return err
 }
 
+// writeSSEComment writes an SSE comment line for keep-alive without emitting
+// an event payload.
+func writeSSEComment(w http.ResponseWriter, comment []byte) error {
+	_, err := w.Write(comment)
+	return err
+}
+
 // handleMessage handles incoming JSON-RPC messages per MCP specification
 func (s *MCPServer) handleMessage(c echo.Context) error {
 	// Extract session ID from query parameter per MCP spec
@@ -506,7 +546,7 @@ func (s *MCPServer) handleMessage(c echo.Context) error {
 
 	// Validate session exists (sessions are created during SSE connection)
 	s.sessionsMu.RLock()
-	_, sessionExists := s.sessions[sessionID]
+	session, sessionExists := s.sessions[sessionID]
 	s.sessionsMu.RUnlock()
 
 	if !sessionExists {
@@ -556,8 +596,65 @@ func (s *MCPServer) handleMessage(c echo.Context) error {
 		s.sessionsMu.Lock()
 		if sess, ok := s.sessions[sessionID]; ok {
 			sess.LastActivity = time.Now()
+			session = sess
 		}
 		s.sessionsMu.Unlock()
+	}
+
+	// For SSE sessions, queue JSON-RPC responses onto the SSE stream as
+	// `event: message` payloads.
+	if sessionExists && session != nil && session.ResponseQueue != nil {
+		// Notifications (no ID) do not require a response payload.
+		if request.ID == nil {
+			return c.NoContent(http.StatusAccepted)
+		}
+
+		responseJSON, err := json.Marshal(response)
+		if err != nil {
+			slog.Error("Failed to marshal JSON-RPC response", "session_id", sessionID, "error", err)
+			return c.JSON(http.StatusInternalServerError, server.JSONRPCResponse{
+				JSONRPC: "2.0",
+				ID:      request.ID,
+				Error: &struct {
+					Code    int    `json:"code"`
+					Message string `json:"message"`
+				}{
+					Code:    -32603,
+					Message: "Internal error: failed to encode response",
+				},
+			})
+		}
+
+		select {
+		case session.ResponseQueue <- responseJSON:
+			return c.NoContent(http.StatusAccepted)
+		case <-session.Closed:
+			slog.Warn("SSE session closed before response enqueue", "session_id", sessionID)
+			return c.JSON(http.StatusGone, server.JSONRPCResponse{
+				JSONRPC: "2.0",
+				ID:      request.ID,
+				Error: &struct {
+					Code    int    `json:"code"`
+					Message string `json:"message"`
+				}{
+					Code:    -32000,
+					Message: "Session closed",
+				},
+			})
+		case <-time.After(1 * time.Second):
+			slog.Warn("SSE response queue full", "session_id", sessionID)
+			return c.JSON(http.StatusServiceUnavailable, server.JSONRPCResponse{
+				JSONRPC: "2.0",
+				ID:      request.ID,
+				Error: &struct {
+					Code    int    `json:"code"`
+					Message string `json:"message"`
+				}{
+					Code:    -32000,
+					Message: "Session busy",
+				},
+			})
+		}
 	}
 
 	return c.JSON(http.StatusOK, response)
