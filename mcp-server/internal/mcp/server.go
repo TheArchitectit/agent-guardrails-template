@@ -320,8 +320,24 @@ func (s *MCPServer) Start(addr string) error {
 	// Message endpoint
 	s.echo.POST("/mcp/v1/message", s.handleMessage)
 
+	// Start session cleanup goroutine with panic recovery
+	go s.runSessionCleanup()
+
 	slog.Info("Starting MCP SSE server", "addr", addr)
 	return s.echo.Start(addr)
+}
+
+// runSessionCleanup runs the session cleanup loop with panic recovery
+func (s *MCPServer) runSessionCleanup() {
+	defer func() {
+		if r := recover(); r != nil {
+			slog.Error("Session cleanup goroutine panicked, restarting", "panic", r)
+			// Restart the cleanup goroutine after a delay
+			time.Sleep(5 * time.Second)
+			go s.runSessionCleanup()
+		}
+	}()
+	s.sessionCleanup()
 }
 
 // securityHeadersMiddleware adds security headers to all responses
@@ -548,18 +564,31 @@ func (s *MCPServer) handleInitSession(ctx context.Context, args map[string]inter
 	// Audit log
 	s.auditLogger.LogSession(ctx, audit.EventSessionCreated, sessionID, projectSlug)
 
-	// Get project context
+	// Get project context with timeout
+	projCtx, projCancel := context.WithTimeout(ctx, 5*time.Second)
+	defer projCancel()
+
 	projStore := database.NewProjectStore(s.db)
-	proj, _ := projStore.GetBySlug(ctx, projectSlug)
+	proj, projErr := projStore.GetBySlug(projCtx, projectSlug)
+	if projErr != nil {
+		slog.Warn("Failed to get project context", "project_slug", projectSlug, "error", projErr)
+	}
 
 	contextStr := ""
 	if proj != nil {
 		contextStr = proj.GuardrailContext
 	}
 
-	// Get active rules count
+	// Get active rules count with timeout
+	rulesCtx, rulesCancel := context.WithTimeout(ctx, 5*time.Second)
+	defer rulesCancel()
+
 	ruleStore := database.NewRuleStore(s.db)
-	rules, _ := ruleStore.GetActiveRules(ctx)
+	rules, rulesErr := ruleStore.GetActiveRules(rulesCtx)
+	if rulesErr != nil {
+		slog.Error("Failed to get active rules", "error", rulesErr)
+		rules = []models.PreventionRule{}
+	}
 
 	result := map[string]interface{}{
 		"session_token":      sessionID,
@@ -569,7 +598,14 @@ func (s *MCPServer) handleInitSession(ctx context.Context, args map[string]inter
 		"capabilities":       []string{"bash_validation", "git_validation", "edit_validation"},
 	}
 
-	resultJSON, _ := json.MarshalIndent(result, "", "  ")
+	resultJSON, err := json.MarshalIndent(result, "", "  ")
+	if err != nil {
+		slog.Error("Failed to marshal init session result", "error", err)
+		return &mcp.CallToolResult{
+			Content: []interface{}{mcp.TextContent{Type: "text", Text: fmt.Sprintf("Internal error: failed to format result: %v", err)}},
+			IsError: true,
+		}, nil
+	}
 	return &mcp.CallToolResult{
 		Content: []interface{}{mcp.TextContent{Type: "text", Text: string(resultJSON)}},
 	}, nil
@@ -590,7 +626,14 @@ func (s *MCPServer) handleValidateBash(ctx context.Context, args map[string]inte
 		},
 	}
 
-	resultJSON, _ := json.MarshalIndent(result, "", "  ")
+	resultJSON, err := json.MarshalIndent(result, "", "  ")
+	if err != nil {
+		slog.Error("Failed to marshal bash validation result", "error", err)
+		return &mcp.CallToolResult{
+			Content: []interface{}{mcp.TextContent{Type: "text", Text: fmt.Sprintf("Internal error: failed to format result: %v", err)}},
+			IsError: true,
+		}, nil
+	}
 	return &mcp.CallToolResult{
 		Content: []interface{}{mcp.TextContent{Type: "text", Text: string(resultJSON)}},
 	}, nil
@@ -612,7 +655,14 @@ func (s *MCPServer) handleValidateFileEdit(ctx context.Context, args map[string]
 		},
 	}
 
-	resultJSON, _ := json.MarshalIndent(result, "", "  ")
+	resultJSON, err := json.MarshalIndent(result, "", "  ")
+	if err != nil {
+		slog.Error("Failed to marshal file edit result", "error", err)
+		return &mcp.CallToolResult{
+			Content: []interface{}{mcp.TextContent{Type: "text", Text: fmt.Sprintf("Internal error: failed to format result: %v", err)}},
+			IsError: true,
+		}, nil
+	}
 	return &mcp.CallToolResult{
 		Content: []interface{}{mcp.TextContent{Type: "text", Text: string(resultJSON)}},
 	}, nil
@@ -638,7 +688,14 @@ func (s *MCPServer) handleValidateGit(ctx context.Context, args map[string]inter
 			"valid":      false,
 			"violations": []interface{}{violation},
 		}
-		resultJSON, _ := json.MarshalIndent(result, "", "  ")
+		resultJSON, err := json.MarshalIndent(result, "", "  ")
+		if err != nil {
+			slog.Error("Failed to marshal git validation result", "error", err)
+			return &mcp.CallToolResult{
+				Content: []interface{}{mcp.TextContent{Type: "text", Text: fmt.Sprintf("Internal error: failed to format result: %v", err)}},
+				IsError: true,
+			}, nil
+		}
 		return &mcp.CallToolResult{
 			Content: []interface{}{mcp.TextContent{Type: "text", Text: string(resultJSON)}},
 		}, nil
@@ -648,7 +705,14 @@ func (s *MCPServer) handleValidateGit(ctx context.Context, args map[string]inter
 		"valid":      true,
 		"violations": []interface{}{},
 	}
-	resultJSON, _ := json.MarshalIndent(result, "", "  ")
+	resultJSON, err := json.MarshalIndent(result, "", "  ")
+	if err != nil {
+		slog.Error("Failed to marshal git validation result", "error", err)
+		return &mcp.CallToolResult{
+			Content: []interface{}{mcp.TextContent{Type: "text", Text: fmt.Sprintf("Internal error: failed to format result: %v", err)}},
+			IsError: true,
+		}, nil
+	}
 	return &mcp.CallToolResult{
 		Content: []interface{}{mcp.TextContent{Type: "text", Text: string(resultJSON)}},
 	}, nil
@@ -692,7 +756,14 @@ func (s *MCPServer) handlePreWorkCheck(ctx context.Context, args map[string]inte
 		"files_affected": files,
 	}
 
-	resultJSON, _ := json.MarshalIndent(result, "", "  ")
+	resultJSON, err := json.MarshalIndent(result, "", "  ")
+	if err != nil {
+		slog.Error("Failed to marshal pre-work check result", "error", err)
+		return &mcp.CallToolResult{
+			Content: []interface{}{mcp.TextContent{Type: "text", Text: fmt.Sprintf("Internal error: failed to format result: %v", err)}},
+			IsError: true,
+		}, nil
+	}
 	return &mcp.CallToolResult{
 		Content: []interface{}{mcp.TextContent{Type: "text", Text: string(resultJSON)}},
 	}, nil
