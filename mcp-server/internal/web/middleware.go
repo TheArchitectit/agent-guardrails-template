@@ -96,9 +96,9 @@ func RateLimitMiddleware(limiter *cache.DistributedRateLimiter, cfg *config.Conf
 			keyType := c.Get("api_key_type")
 
 			if strings.HasPrefix(path, "/ide") {
-				limit = cfg.IDERateLimit
+				limit = cfg.RateLimitIDE
 			} else {
-				limit = cfg.MCPRateLimit
+				limit = cfg.RateLimitMCP
 			}
 
 			// Use API key hash as rate limit key

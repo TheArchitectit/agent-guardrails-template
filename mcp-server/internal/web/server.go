@@ -59,8 +59,17 @@ func (s *Server) setupMiddleware() {
 	// Request ID generation
 	s.echo.Use(middleware.RequestID())
 
-	// Recovery from panics
-	s.echo.Use(middleware.Recover())
+	// Correlation ID propagation
+	s.echo.Use(correlationIDMiddleware())
+
+	// Recovery from panics with metrics
+	s.echo.Use(panicRecoveryMiddleware())
+
+	// Prometheus metrics middleware
+	s.echo.Use(metricsMiddleware.PrometheusMiddleware())
+
+	// Request logging
+	s.echo.Use(loggingMiddleware.RequestLogger())
 
 	// Security headers
 	s.echo.Use(securityHeadersMiddleware())
@@ -120,14 +129,14 @@ func (s *Server) setupRoutes() {
 	api.POST("/rules", s.createRule)
 	api.PUT("/rules/:id", s.updateRule)
 	api.DELETE("/rules/:id", s.deleteRule)
-	api.POST("/rules/:id/toggle", s.toggleRule)
+	api.PATCH("/rules/:id", s.patchRule)
 
 	// Project routes
 	api.GET("/projects", s.listProjects)
-	api.GET("/projects/:slug", s.getProject)
+	api.GET("/projects/:id", s.getProject)
 	api.POST("/projects", s.createProject)
-	api.PUT("/projects/:slug", s.updateProject)
-	api.DELETE("/projects/:slug", s.deleteProject)
+	api.PUT("/projects/:id", s.updateProject)
+	api.DELETE("/projects/:id", s.deleteProject)
 
 	// Failure registry routes
 	api.GET("/failures", s.listFailures)
