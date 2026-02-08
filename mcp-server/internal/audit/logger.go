@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"log/slog"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -52,15 +53,26 @@ type Event struct {
 // Logger handles audit event recording
 type Logger struct {
 	backend chan Event
+	done    chan struct{}
+	wg      sync.WaitGroup
 }
 
 // NewLogger creates an audit logger
 func NewLogger(bufferSize int) *Logger {
 	l := &Logger{
 		backend: make(chan Event, bufferSize),
+		done:    make(chan struct{}),
 	}
+	l.wg.Add(1)
 	go l.process()
 	return l
+}
+
+// Stop gracefully shuts down the audit logger
+func (l *Logger) Stop() {
+	close(l.done)
+	l.wg.Wait()
+	close(l.backend)
 }
 
 // Log records an audit event
@@ -83,13 +95,26 @@ func (l *Logger) Log(ctx context.Context, event Event) {
 
 // process writes events to persistent storage
 func (l *Logger) process() {
-	for event := range l.backend {
-		// Write to structured log (forward to SIEM if configured)
-		data, _ := json.Marshal(event)
-		slog.Info("AUDIT", "event", string(data))
+	defer l.wg.Done()
+	for {
+		select {
+		case event, ok := <-l.backend:
+			if !ok {
+				return
+			}
+			// Write to structured log (forward to SIEM if configured)
+			data, err := json.Marshal(event)
+			if err != nil {
+				slog.Error("Failed to marshal audit event", "error", err)
+				continue
+			}
+			slog.Info("AUDIT", "event", string(data))
 
-		// TODO: Write to database for long-term storage
-		// This enables querying audit history via Web UI
+			// TODO: Write to database for long-term storage
+			// This enables querying audit history via Web UI
+		case <-l.done:
+			return
+		}
 	}
 }
 

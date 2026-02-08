@@ -10,6 +10,33 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
+- **MCP Server Documentation**
+  - Comprehensive API documentation (mcp-server/API.md) with all endpoints
+  - MCP Server-specific CHANGELOG (mcp-server/CHANGELOG.md)
+  - Troubleshooting guide for common deployment issues
+  - Database migration instructions in README.md
+
+### Changed
+
+- **MCP Server README.md**
+  - Added complete project structure including `internal/mcp/`
+  - Expanded API endpoints documentation with all routes
+  - Added database migration section
+  - Added comprehensive security features documentation
+  - Added development commands (fmt, lint, vuln)
+  - Added troubleshooting section
+
+- **MCP Server .env.example**
+  - Reorganized with better section headers
+  - Added profiling configuration options
+  - Added health check timeout configuration
+  - Added build information variables
+  - Improved documentation for each setting
+
+---
+
+### Added
+
 ## [1.9.2] - 2026-02-07
 
 ### Fixed
