@@ -21,6 +21,7 @@ import (
 	"github.com/thearchitectit/guardrail-mcp/internal/cache"
 	"github.com/thearchitectit/guardrail-mcp/internal/config"
 	"github.com/thearchitectit/guardrail-mcp/internal/database"
+	"github.com/thearchitectit/guardrail-mcp/internal/metrics"
 	"github.com/thearchitectit/guardrail-mcp/internal/models"
 )
 
