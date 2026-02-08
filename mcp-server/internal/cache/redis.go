@@ -130,13 +130,13 @@ func (c *Client) Delete(ctx context.Context, key string) error {
 // Cache keys
 const (
 	KeyActiveRules    = "guardrail:rules:active"
-	KeyDocument       = "guardrail:doc:%s"        // Format with slug
-	KeyRule           = "guardrail:rule:%s"       // Format with rule_id
-	KeyProjectContext = "guardrail:project:%s"    // Format with slug
+	KeyDocument       = "guardrail:doc:%s"           // Format with slug
+	KeyRule           = "guardrail:rule:%s"          // Format with rule_id
+	KeyProjectContext = "guardrail:project:%s"       // Format with slug
 	KeyProjectRules   = "guardrail:project:%s:rules" // Format with project slug
-	KeyIDERules       = "guardrail:ide:rules:%s"  // Format with project slug or "default"
-	KeySearchResults  = "guardrail:search:%s"     // Format with query hash
-	KeySession        = "guardrail:session:%s"    // Format with token
+	KeyIDERules       = "guardrail:ide:rules:%s"     // Format with project slug or "default"
+	KeySearchResults  = "guardrail:search:%s"        // Format with query hash
+	KeySession        = "guardrail:session:%s"       // Format with token
 )
 
 // Default TTL values for different cache types

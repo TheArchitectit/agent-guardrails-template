@@ -9,7 +9,7 @@ import (
 )
 
 // RequestLoggerConfig defines config for RequestLogger middleware
- type RequestLoggerConfig struct {
+type RequestLoggerConfig struct {
 	// Skipper defines a function to skip middleware
 	Skipper func(c echo.Context) bool
 
@@ -86,11 +86,6 @@ func RequestLoggerWithConfig(config RequestLoggerConfig) echo.MiddlewareFunc {
 			// Add error if present
 			if err != nil {
 				attrs = append(attrs, slog.String("error", err.Error()))
-
-				// Check if it's an HTTP error for logging purposes
-				if he, ok := err.(*echo.HTTPError); ok {
-					_ = he
-				}
 			}
 
 			// Determine log level based on status

@@ -68,11 +68,11 @@ type Config struct {
 	RedisReadTimeout  time.Duration `env:"REDIS_READ_TIMEOUT" envDefault:"3s"`
 
 	// TLS Configuration
-	TLSEnabled     bool   `env:"TLS_ENABLED" envDefault:"false"`
-	TLSCertPath    string `env:"TLS_CERT_PATH"`
-	TLSKeyPath     string `env:"TLS_KEY_PATH"`
-	TLSCAPath      string `env:"TLS_CA_PATH"`
-	TLSMinVersion  string `env:"TLS_MIN_VERSION" envDefault:"1.3"`
+	TLSEnabled    bool   `env:"TLS_ENABLED" envDefault:"false"`
+	TLSCertPath   string `env:"TLS_CERT_PATH"`
+	TLSKeyPath    string `env:"TLS_KEY_PATH"`
+	TLSCAPath     string `env:"TLS_CA_PATH"`
+	TLSMinVersion string `env:"TLS_MIN_VERSION" envDefault:"1.3"`
 
 	// Security Configuration
 	MCPAPIKey string `env:"MCP_API_KEY,required"`
@@ -85,11 +85,11 @@ type Config struct {
 	JWTRotationHours time.Duration `env:"JWT_ROTATION_HOURS" envDefault:"168h"` // 7 days
 
 	// Rate Limiting Configuration (prefixed consistently)
-	RateLimitMCP           int           `env:"RATE_LIMIT_MCP" envDefault:"1000"`
-	RateLimitIDE           int           `env:"RATE_LIMIT_IDE" envDefault:"500"`
-	RateLimitSession       int           `env:"RATE_LIMIT_SESSION" envDefault:"100"`
-	RateLimitWindow        time.Duration `env:"RATE_LIMIT_WINDOW" envDefault:"1m"`
-	RateLimitBurstFactor   float64       `env:"RATE_LIMIT_BURST_FACTOR" envDefault:"1.5"`
+	RateLimitMCP         int           `env:"RATE_LIMIT_MCP" envDefault:"1000"`
+	RateLimitIDE         int           `env:"RATE_LIMIT_IDE" envDefault:"500"`
+	RateLimitSession     int           `env:"RATE_LIMIT_SESSION" envDefault:"100"`
+	RateLimitWindow      time.Duration `env:"RATE_LIMIT_WINDOW" envDefault:"1m"`
+	RateLimitBurstFactor float64       `env:"RATE_LIMIT_BURST_FACTOR" envDefault:"1.5"`
 
 	// Cache TTL Configuration
 	CacheTTLRules  time.Duration `env:"CACHE_TTL_RULES" envDefault:"5m"`
@@ -97,14 +97,25 @@ type Config struct {
 	CacheTTLSearch time.Duration `env:"CACHE_TTL_SEARCH" envDefault:"2m"`
 
 	// Feature Flags (hot-reloadable)
-	EnableValidation    bool `env:"ENABLE_VALIDATION" envDefault:"true"`
-	EnableMetrics       bool `env:"ENABLE_METRICS" envDefault:"true"`
-	EnableAuditLogging  bool `env:"ENABLE_AUDIT_LOGGING" envDefault:"true"`
-	EnableCache         bool `env:"ENABLE_CACHE" envDefault:"true"`
+	EnableValidation   bool `env:"ENABLE_VALIDATION" envDefault:"true"`
+	EnableMetrics      bool `env:"ENABLE_METRICS" envDefault:"true"`
+	EnableAuditLogging bool `env:"ENABLE_AUDIT_LOGGING" envDefault:"true"`
+	EnableCache        bool `env:"ENABLE_CACHE" envDefault:"true"`
 
 	// Audit Logging Configuration
-	AuditBufferSize   int           `env:"AUDIT_BUFFER_SIZE" envDefault:"1000"`
+	AuditBufferSize    int           `env:"AUDIT_BUFFER_SIZE" envDefault:"1000"`
 	AuditFlushInterval time.Duration `env:"AUDIT_FLUSH_INTERVAL" envDefault:"5s"`
+
+	// Circuit Breaker Configuration
+	CircuitBreakerEnabled          bool          `env:"CIRCUIT_BREAKER_ENABLED" envDefault:"true"`
+	CircuitBreakerFailureThreshold int           `env:"CIRCUIT_BREAKER_FAILURE_THRESHOLD" envDefault:"5"`
+	CircuitBreakerSuccessThreshold int           `env:"CIRCUIT_BREAKER_SUCCESS_THRESHOLD" envDefault:"2"`
+	CircuitBreakerTimeout          time.Duration `env:"CIRCUIT_BREAKER_TIMEOUT" envDefault:"30s"`
+	CircuitBreakerMaxRequests      int           `env:"CIRCUIT_BREAKER_MAX_REQUESTS" envDefault:"3"`
+	CircuitBreakerInterval         time.Duration `env:"CIRCUIT_BREAKER_INTERVAL" envDefault:"10s"`
+
+	// Production Mode Indicator
+	ProductionMode bool `env:"PRODUCTION_MODE" envDefault:"false"`
 }
 
 // Load reads configuration from environment variables
@@ -230,6 +241,23 @@ func (c *Config) Validate() error {
 		return fmt.Errorf("CORS_ALLOWED_ORIGINS must not be empty")
 	}
 
+	// Validate circuit breaker settings
+	if c.CircuitBreakerFailureThreshold < 1 {
+		return fmt.Errorf("CIRCUIT_BREAKER_FAILURE_THRESHOLD must be at least 1, got %d", c.CircuitBreakerFailureThreshold)
+	}
+	if c.CircuitBreakerSuccessThreshold < 1 {
+		return fmt.Errorf("CIRCUIT_BREAKER_SUCCESS_THRESHOLD must be at least 1, got %d", c.CircuitBreakerSuccessThreshold)
+	}
+	if err := ValidateTimeout("CIRCUIT_BREAKER_TIMEOUT", c.CircuitBreakerTimeout, 1*time.Second, 5*time.Minute); err != nil {
+		return err
+	}
+	if c.CircuitBreakerMaxRequests < 1 {
+		return fmt.Errorf("CIRCUIT_BREAKER_MAX_REQUESTS must be at least 1, got %d", c.CircuitBreakerMaxRequests)
+	}
+	if err := ValidateTimeout("CIRCUIT_BREAKER_INTERVAL", c.CircuitBreakerInterval, 1*time.Second, 5*time.Minute); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -259,8 +287,8 @@ func ValidateAPIKey(key, name string) error {
 
 	// Check for common weak patterns
 	weakPatterns := []string{
-		`^[a-zA-Z]+$`,           // Only letters
-		`^[0-9]+$`,              // Only numbers
+		`^[a-zA-Z]+$`,            // Only letters
+		`^[0-9]+$`,               // Only numbers
 		`^(password|secret|key)`, // Common weak prefixes
 	}
 
@@ -320,21 +348,21 @@ func (c *Config) RedisAddr() string {
 // IsHotReloadable returns true if the config key supports hot reloading
 func IsHotReloadable(key string) bool {
 	hotReloadable := map[string]bool{
-		"LOG_LEVEL":              true,
-		"RATE_LIMIT_MCP":         true,
-		"RATE_LIMIT_IDE":         true,
-		"RATE_LIMIT_SESSION":     true,
-		"RATE_LIMIT_WINDOW":      true,
+		"LOG_LEVEL":               true,
+		"RATE_LIMIT_MCP":          true,
+		"RATE_LIMIT_IDE":          true,
+		"RATE_LIMIT_SESSION":      true,
+		"RATE_LIMIT_WINDOW":       true,
 		"RATE_LIMIT_BURST_FACTOR": true,
-		"CACHE_TTL_RULES":        true,
-		"CACHE_TTL_DOCS":         true,
-		"CACHE_TTL_SEARCH":       true,
-		"ENABLE_VALIDATION":      true,
-		"ENABLE_METRICS":         true,
-		"ENABLE_AUDIT_LOGGING":   true,
-		"ENABLE_CACHE":           true,
-		"CORS_ALLOWED_ORIGINS":   true,
-		"CORS_MAX_AGE":           true,
+		"CACHE_TTL_RULES":         true,
+		"CACHE_TTL_DOCS":          true,
+		"CACHE_TTL_SEARCH":        true,
+		"ENABLE_VALIDATION":       true,
+		"ENABLE_METRICS":          true,
+		"ENABLE_AUDIT_LOGGING":    true,
+		"ENABLE_CACHE":            true,
+		"CORS_ALLOWED_ORIGINS":    true,
+		"CORS_MAX_AGE":            true,
 	}
 	return hotReloadable[key]
 }

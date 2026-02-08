@@ -26,26 +26,26 @@ import (
 
 // contextKey is a type-safe context key to avoid string allocation
 // See: https://golang.org/pkg/context/#WithValue
- type contextKey int
+type contextKey int
 
- const (
-	 ctxKeySessionID contextKey = iota
- )
+const (
+	ctxKeySessionID contextKey = iota
+)
 
- // Pre-allocated byte slices for common SSE messages to reduce allocations
- var (
-	 sseEndpointPrefix = []byte("event: endpoint\ndata: ")
-	 ssePingPrefix     = []byte("event: ping\ndata: ")
-	 sseDoubleNewline  = []byte("\n\n")
-	 ssePingData       = []byte(`{"jsonrpc":"2.0","method":"ping"}`)
- )
+// Pre-allocated byte slices for common SSE messages to reduce allocations
+var (
+	sseEndpointPrefix = []byte("event: endpoint\ndata: ")
+	ssePingPrefix     = []byte("event: ping\ndata: ")
+	sseDoubleNewline  = []byte("\n\n")
+	ssePingData       = []byte(`{"jsonrpc":"2.0","method":"ping"}`)
+)
 
- // jsonBufferPool provides reusable buffers for JSON encoding
- var jsonBufferPool = sync.Pool{
-	 New: func() interface{} {
-		 return make([]byte, 0, 4096) // Pre-allocate 4KB buffers
-	 },
- }
+// jsonBufferPool provides reusable buffers for JSON encoding
+var jsonBufferPool = sync.Pool{
+	New: func() interface{} {
+		return make([]byte, 0, 4096) // Pre-allocate 4KB buffers
+	},
+}
 
 // MCPServer wraps the MCP server with guardrail dependencies
 type MCPServer struct {
@@ -382,7 +382,7 @@ func (s *MCPServer) Shutdown(ctx context.Context) error {
 func (s *MCPServer) handleSSE(c echo.Context) error {
 	// Validate origin for CORS - only allow specific origins
 	origin := c.Request().Header.Get("Origin")
-	originAllowed := isOriginAllowed(origin, s.cfg.DBSSLMode == "require")
+	originAllowed := isOriginAllowed(origin, s.cfg.ProductionMode)
 
 	// Set SSE headers
 	c.Response().Header().Set("Content-Type", "text/event-stream")
@@ -592,6 +592,9 @@ func (s *MCPServer) handleInitSession(ctx context.Context, args map[string]inter
 	s.sessionsMu.Lock()
 	s.sessions[sessionID] = session
 	s.sessionsMu.Unlock()
+
+	// Record metrics
+	metrics.IncrementActiveSessions()
 
 	// Audit log
 	s.auditLogger.LogSession(ctx, audit.EventSessionCreated, sessionID, projectSlug)
