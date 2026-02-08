@@ -1,6 +1,7 @@
 package audit
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"log/slog"
@@ -9,6 +10,20 @@ import (
 
 	"github.com/google/uuid"
 )
+
+// bufferPool provides reusable buffers for JSON encoding
+var bufferPool = sync.Pool{
+	New: func() interface{} {
+		return new(bytes.Buffer)
+	},
+}
+
+// encoderPool provides reusable JSON encoders
+var encoderPool = sync.Pool{
+	New: func() interface{} {
+		return json.NewEncoder(new(bytes.Buffer))
+	},
+}
 
 // EventType represents categories of audit events
 type EventType string
@@ -94,6 +109,7 @@ func (l *Logger) Log(ctx context.Context, event Event) {
 }
 
 // process writes events to persistent storage
+// Uses buffer pooling to reduce allocations during JSON encoding
 func (l *Logger) process() {
 	defer l.wg.Done()
 	for {
@@ -102,13 +118,27 @@ func (l *Logger) process() {
 			if !ok {
 				return
 			}
-			// Write to structured log (forward to SIEM if configured)
-			data, err := json.Marshal(event)
-			if err != nil {
+			// Get buffer from pool
+			buf := bufferPool.Get().(*bytes.Buffer)
+			buf.Reset()
+
+			// Encode event to buffer
+			encoder := json.NewEncoder(buf)
+			if err := encoder.Encode(event); err != nil {
 				slog.Error("Failed to marshal audit event", "error", err)
+				bufferPool.Put(buf)
 				continue
 			}
+
+			// Remove trailing newline from encoder and log
+			data := buf.Bytes()
+			if len(data) > 0 && data[len(data)-1] == '\n' {
+				data = data[:len(data)-1]
+			}
 			slog.Info("AUDIT", "event", string(data))
+
+			// Return buffer to pool
+			bufferPool.Put(buf)
 
 			// TODO: Write to database for long-term storage
 			// This enables querying audit history via Web UI
