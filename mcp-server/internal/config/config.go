@@ -15,9 +15,19 @@ type Config struct {
 	LogLevel       string        `env:"LOG_LEVEL" envDefault:"info"`
 	RequestTimeout time.Duration `env:"REQUEST_TIMEOUT" envDefault:"30s"`
 
+	// Graceful Shutdown Configuration
+	ShutdownTimeout time.Duration `env:"SHUTDOWN_TIMEOUT" envDefault:"30s"`
+
 	// Web UI Configuration
 	WebPort    int  `env:"WEB_PORT" envDefault:"8081"`
 	WebEnabled bool `env:"WEB_ENABLED" envDefault:"true"`
+
+	// Profiling Configuration
+	PProfEnabled bool `env:"PPROF_ENABLED" envDefault:"false"`
+	PProfPort    int  `env:"PPROF_PORT" envDefault:"6060"`
+
+	// Health Check Configuration
+	HealthCheckTimeout time.Duration `env:"HEALTH_CHECK_TIMEOUT" envDefault:"3s"`
 
 	// Database Configuration
 	DBHost     string `env:"DB_HOST" envDefault:"localhost"`
@@ -67,6 +77,14 @@ func Load() (*Config, error) {
 	// Validate JWT secret
 	if err := ValidateJWTSecret(cfg.JWTSecret); err != nil {
 		return nil, fmt.Errorf("JWT_SECRET validation failed: %w", err)
+	}
+
+	// Validate timeouts
+	if cfg.ShutdownTimeout < 5*time.Second {
+		return nil, fmt.Errorf("SHUTDOWN_TIMEOUT must be at least 5s, got %v", cfg.ShutdownTimeout)
+	}
+	if cfg.ShutdownTimeout > 5*time.Minute {
+		return nil, fmt.Errorf("SHUTDOWN_TIMEOUT must be at most 5m, got %v", cfg.ShutdownTimeout)
 	}
 
 	return &cfg, nil

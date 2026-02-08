@@ -3,6 +3,7 @@ package web
 import (
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
@@ -10,13 +11,21 @@ import (
 	"github.com/thearchitectit/guardrail-mcp/internal/security"
 )
 
+// Pagination and validation constants
+const (
+	defaultPageLimit   = 20
+	maxPageLimit       = 100
+	maxSearchResults   = 50
+	defaultSearchLimit = 20
+)
+
 // Document handlers
 
 func (s *Server) listDocuments(c echo.Context) error {
 	category := c.QueryParam("category")
 	limit, _ := strconv.Atoi(c.QueryParam("limit"))
-	if limit <= 0 || limit > 100 {
-		limit = 20
+	if limit <= 0 || limit > maxPageLimit {
+		limit = defaultPageLimit
 	}
 	offset, _ := strconv.Atoi(c.QueryParam("offset"))
 	if offset < 0 {
@@ -33,12 +42,12 @@ func (s *Server) listDocuments(c echo.Context) error {
 
 func (s *Server) getDocument(c echo.Context) error {
 	id := c.Param("id")
-	uuid, err := uuid.Parse(id)
+	parsedUUID, err := uuid.Parse(id)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid id format"})
 	}
 
-	doc, err := s.docStore.GetByID(c.Request().Context(), uuid)
+	doc, err := s.docStore.GetByID(c.Request().Context(), parsedUUID)
 	if err != nil {
 		return c.JSON(http.StatusNotFound, map[string]string{"error": err.Error()})
 	}
@@ -48,7 +57,7 @@ func (s *Server) getDocument(c echo.Context) error {
 
 func (s *Server) updateDocument(c echo.Context) error {
 	id := c.Param("id")
-	uuid, err := uuid.Parse(id)
+	parsedUUID, err := uuid.Parse(id)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid id format"})
 	}
@@ -66,7 +75,7 @@ func (s *Server) updateDocument(c echo.Context) error {
 		})
 	}
 
-	doc.ID = uuid
+	doc.ID = parsedUUID
 	if err := s.docStore.Update(c.Request().Context(), &doc); err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
@@ -88,8 +97,8 @@ func (s *Server) searchDocuments(c echo.Context) error {
 	}
 
 	limit, _ := strconv.Atoi(c.QueryParam("limit"))
-	if limit <= 0 || limit > 50 {
-		limit = 20
+	if limit <= 0 || limit > maxSearchResults {
+		limit = defaultSearchLimit
 	}
 
 	docs, err := s.docStore.Search(c.Request().Context(), query, limit)
@@ -120,12 +129,12 @@ func (s *Server) listRules(c echo.Context) error {
 
 func (s *Server) getRule(c echo.Context) error {
 	id := c.Param("id")
-	uuid, err := uuid.Parse(id)
+	parsedUUID, err := uuid.Parse(id)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid id format"})
 	}
 
-	rule, err := s.ruleStore.GetByID(c.Request().Context(), uuid)
+	rule, err := s.ruleStore.GetByID(c.Request().Context(), parsedUUID)
 	if err != nil {
 		return c.JSON(http.StatusNotFound, map[string]string{"error": err.Error()})
 	}
@@ -155,7 +164,7 @@ func (s *Server) createRule(c echo.Context) error {
 
 func (s *Server) updateRule(c echo.Context) error {
 	id := c.Param("id")
-	uuid, err := uuid.Parse(id)
+	parsedUUID, err := uuid.Parse(id)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid id format"})
 	}
@@ -165,7 +174,7 @@ func (s *Server) updateRule(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid request body"})
 	}
 
-	rule.ID = uuid
+	rule.ID = parsedUUID
 	if err := s.ruleStore.Update(c.Request().Context(), &rule); err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
@@ -182,15 +191,15 @@ func (s *Server) updateRule(c echo.Context) error {
 
 func (s *Server) deleteRule(c echo.Context) error {
 	id := c.Param("id")
-	uuid, err := uuid.Parse(id)
+	parsedUUID, err := uuid.Parse(id)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid id format"})
 	}
 
 	// Get rule for cache invalidation before deleting
-	rule, _ := s.ruleStore.GetByID(c.Request().Context(), uuid)
+	rule, _ := s.ruleStore.GetByID(c.Request().Context(), parsedUUID)
 
-	if err := s.ruleStore.Delete(c.Request().Context(), uuid); err != nil {
+	if err := s.ruleStore.Delete(c.Request().Context(), parsedUUID); err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
 
@@ -210,7 +219,7 @@ func (s *Server) deleteRule(c echo.Context) error {
 
 func (s *Server) toggleRule(c echo.Context) error {
 	id := c.Param("id")
-	uuid, err := uuid.Parse(id)
+	parsedUUID, err := uuid.Parse(id)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid id format"})
 	}
@@ -222,12 +231,12 @@ func (s *Server) toggleRule(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid request body"})
 	}
 
-	if err := s.ruleStore.Toggle(c.Request().Context(), uuid, req.Enabled); err != nil {
+	if err := s.ruleStore.Toggle(c.Request().Context(), parsedUUID, req.Enabled); err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
 
 	// Get rule for cache invalidation
-	rule, _ := s.ruleStore.GetByID(c.Request().Context(), uuid)
+	rule, _ := s.ruleStore.GetByID(c.Request().Context(), parsedUUID)
 	if rule != nil {
 		s.cache.InvalidateOnRuleChange(c.Request().Context(), rule.RuleID)
 
@@ -253,6 +262,11 @@ func (s *Server) listProjects(c echo.Context) error {
 func (s *Server) getProject(c echo.Context) error {
 	slug := c.Param("slug")
 
+	// Validate slug to prevent path traversal attacks
+	if !isValidSlug(slug) {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid project slug format"})
+	}
+
 	proj, err := s.projStore.GetBySlug(c.Request().Context(), slug)
 	if err != nil {
 		return c.JSON(http.StatusNotFound, map[string]string{"error": err.Error()})
@@ -277,6 +291,11 @@ func (s *Server) createProject(c echo.Context) error {
 func (s *Server) updateProject(c echo.Context) error {
 	slug := c.Param("slug")
 
+	// Validate slug to prevent path traversal attacks
+	if !isValidSlug(slug) {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid project slug format"})
+	}
+
 	var proj models.Project
 	if err := c.Bind(&proj); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid request body"})
@@ -296,6 +315,11 @@ func (s *Server) updateProject(c echo.Context) error {
 func (s *Server) deleteProject(c echo.Context) error {
 	slug := c.Param("slug")
 
+	// Validate slug to prevent path traversal attacks
+	if !isValidSlug(slug) {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid project slug format"})
+	}
+
 	if err := s.projStore.Delete(c.Request().Context(), slug); err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
@@ -314,8 +338,8 @@ func (s *Server) listFailures(c echo.Context) error {
 	projectSlug := c.QueryParam("project")
 
 	limit, _ := strconv.Atoi(c.QueryParam("limit"))
-	if limit <= 0 || limit > 100 {
-		limit = 20
+	if limit <= 0 || limit > maxPageLimit {
+		limit = defaultPageLimit
 	}
 	offset, _ := strconv.Atoi(c.QueryParam("offset"))
 	if offset < 0 {
@@ -332,12 +356,12 @@ func (s *Server) listFailures(c echo.Context) error {
 
 func (s *Server) getFailure(c echo.Context) error {
 	id := c.Param("id")
-	uuid, err := uuid.Parse(id)
+	parsedUUID, err := uuid.Parse(id)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid id format"})
 	}
 
-	failure, err := s.failStore.GetByID(c.Request().Context(), uuid)
+	failure, err := s.failStore.GetByID(c.Request().Context(), parsedUUID)
 	if err != nil {
 		return c.JSON(http.StatusNotFound, map[string]string{"error": err.Error()})
 	}
@@ -360,7 +384,7 @@ func (s *Server) createFailure(c echo.Context) error {
 
 func (s *Server) updateFailure(c echo.Context) error {
 	id := c.Param("id")
-	uuid, err := uuid.Parse(id)
+	parsedUUID, err := uuid.Parse(id)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid id format"})
 	}
@@ -370,7 +394,7 @@ func (s *Server) updateFailure(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid request body"})
 	}
 
-	failure.ID = uuid
+	failure.ID = parsedUUID
 	if err := s.failStore.Update(c.Request().Context(), &failure); err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
@@ -457,4 +481,26 @@ func (s *Server) getQuickReference(c echo.Context) error {
 	return c.JSON(http.StatusOK, map[string]string{
 		"reference": "Quick reference documentation - TODO: Load from docs",
 	})
+}
+
+// isValidSlug validates a project slug to prevent path traversal attacks
+// Valid slugs contain only alphanumeric characters, hyphens, and underscores
+func isValidSlug(slug string) bool {
+	if slug == "" {
+		return false
+	}
+	if len(slug) > 100 {
+		return false
+	}
+	// Check for path traversal attempts
+	if strings.Contains(slug, "..") || strings.Contains(slug, "/") || strings.Contains(slug, "\\") {
+		return false
+	}
+	// Only allow alphanumeric, hyphens, and underscores
+	for _, r := range slug {
+		if !((r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '-' || r == '_') {
+			return false
+		}
+	}
+	return true
 }
