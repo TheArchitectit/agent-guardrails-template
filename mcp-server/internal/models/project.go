@@ -1,10 +1,12 @@
 package models
 
 import (
+	"encoding/json"
 	"fmt"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/lib/pq"
 )
 
 // Project represents a project with guardrail configuration
@@ -13,8 +15,8 @@ type Project struct {
 	Name             string         `json:"name" db:"name"`
 	Slug             string         `json:"slug" db:"slug"`
 	GuardrailContext string         `json:"guardrail_context" db:"guardrail_context"`
-	ActiveRules      []string       `json:"active_rules" db:"active_rules"`
-	Metadata         map[string]any `json:"metadata" db:"metadata"`
+	ActiveRules      pq.StringArray `json:"active_rules" db:"active_rules"`
+	Metadata         []byte         `json:"-" db:"metadata"`
 	CreatedAt        time.Time      `json:"created_at" db:"created_at"`
 	UpdatedAt        time.Time      `json:"updated_at" db:"updated_at"`
 }
@@ -87,4 +89,28 @@ func isValidSlugChar(r rune) bool {
 		(r >= 'A' && r <= 'Z') ||
 		(r >= '0' && r <= '9') ||
 		r == '-' || r == '_'
+}
+
+// GetMetadata returns the metadata as a map
+func (p *Project) GetMetadata() map[string]any {
+	if len(p.Metadata) == 0 {
+		return nil
+	}
+	var result map[string]any
+	if err := json.Unmarshal(p.Metadata, &result); err != nil {
+		return nil
+	}
+	return result
+}
+
+// MarshalJSON implements custom JSON marshaling for Project
+func (p Project) MarshalJSON() ([]byte, error) {
+	type Alias Project
+	return json.Marshal(&struct {
+		Metadata map[string]any `json:"metadata"`
+		*Alias
+	}{
+		Metadata: p.GetMetadata(),
+		Alias:    (*Alias)(&p),
+	})
 }
