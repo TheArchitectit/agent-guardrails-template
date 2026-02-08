@@ -280,8 +280,8 @@ func TestMaskSecret(t *testing.T) {
 	}{
 		{"normal secret", "supersecretpassword123", "supe****d123"},
 		{"short secret", "tiny", "****"},
-		{"8 char secret", "eightchr", "eigh****hchr"},
-		{"exact 8 chars", "12345678", "1234****5678"},
+		{"8 char secret", "eightchr", "****"},
+		{"exact 8 chars", "12345678", "****"},
 		{"long secret", strings.Repeat("a", 100), "aaaa****" + strings.Repeat("a", 96)[96-4:]},
 	}
 
