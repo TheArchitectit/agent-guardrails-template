@@ -77,7 +77,7 @@ class Failures {
 
       const params = {};
       if (statusFilter?.value) params.status = statusFilter.value;
-      if (severityFilter?.value) params.category = severityFilter.value;
+      if (severityFilter?.value) params.severity = severityFilter.value;
 
       const response = await window.api.listFailures({
         limit: 100,
