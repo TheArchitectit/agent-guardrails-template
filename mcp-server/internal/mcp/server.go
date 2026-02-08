@@ -230,7 +230,6 @@ func (s *MCPServer) registerTools() {
 							"description": "The authorized scope prefix (e.g., /app/src)",
 						},
 					},
-					Required: []string{"file_path", "authorized_scope"},
 				},
 			},
 			{
@@ -244,7 +243,6 @@ func (s *MCPServer) registerTools() {
 							"description": "The commit message to validate",
 						},
 					},
-					Required: []string{"message"},
 				},
 			},
 			{
@@ -262,7 +260,6 @@ func (s *MCPServer) registerTools() {
 							"description": "Code content to check against regression patterns",
 						},
 					},
-					Required: []string{"file_paths"},
 				},
 			},
 			{
@@ -281,7 +278,6 @@ func (s *MCPServer) registerTools() {
 							"enum":        []string{"test", "prod"},
 						},
 					},
-					Required: []string{"file_path", "environment"},
 				},
 			},
 			{
@@ -303,10 +299,10 @@ func (s *MCPServer) registerTools() {
 							"description": "Whether there are unpushed commits",
 						},
 					},
-					Required: []string{"branch"},
 				},
 			},
-		}, nil
+		},
+	}, nil
 	})
 
 	// Handle tool calls
