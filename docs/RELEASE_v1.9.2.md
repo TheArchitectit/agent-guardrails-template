@@ -14,7 +14,7 @@ Bugfix release that removes the API key authentication requirement from the Web 
 
 ## Problem
 
-After deploying v1.9.1, accessing the Web UI at `http://<your-server-ip>:8093` returned:
+After deploying v1.9.1, accessing the Web UI returned an authentication error:
 ```json
 {"message":"Missing authorization header"}
 ```
@@ -63,8 +63,8 @@ Applied to both:
 ## Migration from v1.9.1
 
 1. Build new image: `docker build -t guardrail-mcp:latest -f deploy/Dockerfile .`
-2. Deploy to <your-server-name>: Transfer image and restart container
-3. Verify: Access `http://<your-server-ip>:8093` without API key
+2. Deploy to your server: Transfer image and restart container
+3. Verify: Access the Web UI without API key
 
 ---
 
@@ -72,18 +72,18 @@ Applied to both:
 
 ### Web UI (should work without auth)
 ```bash
-curl http://<your-server-ip>:8093/
-curl http://<your-server-ip>:8093/index.html
-curl http://<your-server-ip>:8093/static/style.css
+curl http://localhost:8093/
+curl http://localhost:8093/index.html
+curl http://localhost:8093/static/style.css
 ```
 
 ### API endpoints (still require auth)
 ```bash
 # Should fail with 401
-curl http://<your-server-ip>:8093/mcp/v1/sse
+curl http://localhost:8092/mcp/v1/sse
 
 # Should succeed with valid key
-curl -H "Authorization: Bearer $MCP_API_KEY" http://<your-server-ip>:8092/mcp/v1/sse
+curl -H "Authorization: Bearer $MCP_API_KEY" http://localhost:8092/mcp/v1/sse
 ```
 
 ---

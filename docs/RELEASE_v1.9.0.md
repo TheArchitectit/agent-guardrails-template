@@ -55,12 +55,12 @@ Browser-based interface for managing guardrails:
 
 ### Infrastructure
 
-#### Production Deployment (<your-server-name>)
+#### Production Deployment
 
-Successfully deployed to <your-server-name> (RHEL 8 + Podman):
+Successfully deployed to production (RHEL 8 + Podman):
 
 ```
-<your-server-name> (<your-server-ip>)
+Production Server
 ├── guardrail-redis (Redis 7-alpine)
 ├── guardrail-postgres (PostgreSQL 16-alpine)
 └── guardrail-mcp-server (distroless/static:nonroot)
@@ -88,13 +88,13 @@ Successfully deployed to <your-server-name> (RHEL 8 + Podman):
 
 ### MCP Protocol
 ```
-http://<your-server-ip>:8092/mcp/v1/sse
-http://<your-server-ip>:8092/mcp/v1/message
+http://localhost:8092/mcp/v1/sse
+http://localhost:8092/mcp/v1/message
 ```
 
 ### Web UI
 ```
-http://<your-server-ip>:8093
+http://localhost:8093
 ```
 
 ---
@@ -153,16 +153,16 @@ docker build -t guardrail-mcp:latest -f deploy/Dockerfile .
 docker save guardrail-mcp:latest > guardrail-mcp.tar
 ```
 
-### Deploy to <your-server-name>
+### Deploy to Production Server
 
 ```bash
 # Copy files
-scp guardrail-mcp.tar user@<your-server-ip>:/opt/guardrail-mcp/
-scp .env user@<your-server-ip>:/opt/guardrail-mcp/
-scp deploy/podman-compose.yml user@<your-server-ip>:/opt/guardrail-mcp/
+scp guardrail-mcp.tar user@your-server:/opt/guardrail-mcp/
+scp .env user@your-server:/opt/guardrail-mcp/
+scp deploy/podman-compose.yml user@your-server:/opt/guardrail-mcp/
 
-# On <your-server-name>
-ssh user@<your-server-ip>
+# On server
+ssh user@your-server
 cd /opt/guardrail-mcp
 sudo podman load -i guardrail-mcp.tar
 sudo podman-compose up -d
@@ -180,7 +180,7 @@ Add to Claude Code settings:
 {
   "mcpServers": {
     "guardrails": {
-      "url": "http://<your-server-ip>:8092/mcp/v1/sse",
+      "url": "http://your-server:8092/mcp/v1/sse",
       "headers": {
         "Authorization": "Bearer <MCP_API_KEY>"
       }
@@ -199,7 +199,7 @@ Add to `.opencode/oh-my-opencode.jsonc`:
     "servers": [
       {
         "name": "guardrails",
-        "url": "http://<your-server-ip>:8092/mcp/v1/sse",
+        "url": "http://your-server:8092/mcp/v1/sse",
         "apiKey": "<MCP_API_KEY>"
       }
     ]
@@ -214,7 +214,7 @@ Add to `.opencode/oh-my-opencode.jsonc`:
 ### MCP Initialize
 
 ```bash
-curl -s -X POST http://<your-server-ip>:8092/mcp/v1/message \
+curl -s -X POST http://localhost:8092/mcp/v1/message \
   -H 'Content-Type: application/json' \
   -d '{
     "jsonrpc": "2.0",
@@ -252,7 +252,7 @@ curl -s -X POST http://<your-server-ip>:8092/mcp/v1/message \
 ### SSE Stream
 
 ```bash
-curl -s -N http://<your-server-ip>:8092/mcp/v1/sse
+curl -s -N http://localhost:8092/mcp/v1/sse
 ```
 
 **Expected Output:**
@@ -287,7 +287,7 @@ None.
 
 1. Update `.env` file with new required variables
 2. Build new container image
-3. Deploy to <your-server-name>
+3. Deploy to your production server
 4. Update client configurations with new MCP endpoint
 
 ---
