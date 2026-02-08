@@ -12,6 +12,43 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Changed
 
+## [1.9.5] - 2026-02-08
+
+### Final Production Polish
+
+- **Code Consistency** - Standardized patterns across all packages
+- **Edge Case Handling** - Added boundary condition checks
+- **Technical Debt** - Cleaned up TODOs and FIXMEs
+- **Final Security Review** - Verified all security measures
+
+### Production Readiness
+
+- **Configuration** - Verified all defaults are production-appropriate
+- **Graceful Shutdown** - Improved shutdown sequence
+- **Health Checks** - Accurate readiness/liveness probes
+- **Resource Limits** - CPU/memory quotas configured
+
+### Integration Testing
+
+- **Build Verification** - Clean build with no errors
+- **Test Coverage** - Added document model tests
+- **Error Scenarios** - Verified error handling paths
+- **Shutdown Behavior** - Tested graceful termination
+
+### Documentation
+
+- **API.md** - Updated to match implementation
+- **README** - Verified accuracy
+- **Deployment Guides** - Reviewed and corrected
+- **Release Notes** - Complete for all versions
+
+### Code Quality
+
+- **Formatting** - All files formatted with gofmt
+- **Imports** - Optimized and organized
+- **Linting** - All lint checks pass
+- **Unused Code** - Removed dead code
+
 ## [1.9.4] - 2026-02-07
 
 ### Performance
