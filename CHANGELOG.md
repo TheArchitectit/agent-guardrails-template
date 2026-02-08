@@ -14,6 +14,53 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [1.10.0] - 2026-02-08
+
+### Added
+
+- **MCP Gap Implementation** - 5 new MCP tools for agent safety
+  - `guardrail_validate_scope` - Check if file path is within authorized scope
+  - `guardrail_validate_commit` - Validate conventional commit format
+  - `guardrail_prevent_regression` - Check failure registry for pattern matches
+  - `guardrail_check_test_prod_separation` - Verify test/production isolation
+  - `guardrail_validate_push` - Validate git push safety conditions
+
+- **MCP Documentation Resources** - 6 new MCP resources for documentation access
+  - `guardrail://docs/agent-guardrails` - Core safety protocols
+  - `guardrail://docs/four-laws` - Four Laws of Agent Safety
+  - `guardrail://docs/halt-conditions` - When to stop and ask
+  - `guardrail://docs/workflows` - Workflow documentation index
+  - `guardrail://docs/standards` - Standards documentation index
+  - `guardrail://docs/pre-work-checklist` - Pre-work regression checklist
+
+- **Web UI Management Interface** - Complete SPA for guardrail management
+  - Dashboard with system stats and health status
+  - Documents browser (CRUD + full-text search)
+  - Rules management (CRUD + toggle switches)
+  - Projects management with context editing
+  - Failure registry viewer with status updates
+  - IDE Tools validation interface
+  - 26 API endpoints implemented in JavaScript client
+
+- **Documentation Parity** - Organized 73 markdown files
+  - Consolidated "Four Laws" to canonical source
+  - Extracted 10 actionable prevention rules to JSON
+  - Created document ingestion script for full-text search
+  - Added MCP resource handlers for all critical docs
+
+### Changed
+
+- **INDEX_MAP.md** - Updated with new sprint documents and canonical sources
+- **docs/AGENT_GUARDRAILS.md** - Now references canonical Four Laws
+
+### Fixed
+
+- **MCP Server Build** - Fixed syntax errors in server.go
+  - Removed unsupported Required fields from ToolInputSchema
+  - Fixed missing closing brace for ListToolsResult struct
+
+---
+
 ## [1.9.6] - 2026-02-08
 
 ### Fixed

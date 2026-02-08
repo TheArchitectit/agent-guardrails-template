@@ -36,13 +36,13 @@ It ensures that any AI system (Claude, GPT, Gemini, LLaMA, etc.) follows strict 
 
 ---
 
-## MCP Server (Updated in v1.9.6)
+## MCP Server (Updated in v1.10.0)
 
 The **Model Context Protocol (MCP) Server** provides real-time guardrail enforcement via a standardized protocol for AI agents and IDEs.
 
 ### Features
 
-**6 MCP Tools:**
+**11 MCP Tools:**
 
 | Tool | Purpose |
 |------|---------|
@@ -52,25 +52,40 @@ The **Model Context Protocol (MCP) Server** provides real-time guardrail enforce
 | `guardrail_validate_git_operation` | Validate git commands for safety |
 | `guardrail_pre_work_check` | Run pre-work checklist validation |
 | `guardrail_get_context` | Get project context and guardrail rules |
+| `guardrail_validate_scope` | Check if file path is within authorized scope |
+| `guardrail_validate_commit` | Validate conventional commit format |
+| `guardrail_prevent_regression` | Check failure registry for pattern matches |
+| `guardrail_check_test_prod_separation` | Verify test/production isolation |
+| `guardrail_validate_push` | Validate git push safety conditions |
 
-**2 MCP Resources:**
+**8 MCP Resources:**
 
 | Resource | Description |
 |----------|-------------|
 | `guardrail://quick-reference` | Quick reference card for agents |
 | `guardrail://rules/active` | Active prevention rules for current session |
+| `guardrail://docs/agent-guardrails` | Core safety protocols documentation |
+| `guardrail://docs/four-laws` | Four Laws of Agent Safety (canonical) |
+| `guardrail://docs/halt-conditions` | When to stop and ask for help |
+| `guardrail://docs/workflows` | Workflow documentation index |
+| `guardrail://docs/standards` | Standards documentation index |
+| `guardrail://docs/pre-work-checklist` | Pre-work regression checklist |
 
 **Endpoints:**
 
 - **SSE Stream:** `GET /mcp/v1/sse` - Real-time event streaming
 - **Message Handler:** `POST /mcp/v1/message?session_id=<session_id>` - JSON-RPC 2.0 protocol
+- **Web UI:** `GET /web` - Complete management interface
 
-**Web UI (Port 8093):**
+**Web UI (Port 8080/8081):**
 
 Browser-based guardrail management interface:
-- Document and rule management
-- Session monitoring
-- Configuration management
+- Dashboard with system stats
+- Document browser with search
+- Rules management (CRUD + toggle)
+- Projects management
+- Failure registry viewer
+- IDE Tools validation interface
 
 **Infrastructure:**
 
