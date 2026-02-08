@@ -24,12 +24,12 @@ func New(cfg *config.Config) (*Client, error) {
 	opts := &redis.Options{
 		Addr:         cfg.RedisAddr(),
 		Password:     cfg.RedisPassword,
-		DB:           0,
-		PoolSize:     20,
-		MinIdleConns: 5,
-		MaxRetries:   3,
-		ReadTimeout:  3 * time.Second,
-		WriteTimeout: 3 * time.Second,
+		DB:           cfg.RedisDB,
+		PoolSize:     cfg.RedisPoolSize,
+		MinIdleConns: cfg.RedisMinIdleConns,
+		MaxRetries:   cfg.RedisMaxRetries,
+		ReadTimeout:  cfg.RedisReadTimeout,
+		WriteTimeout: cfg.RedisReadTimeout,
 	}
 
 	// TLS for production
