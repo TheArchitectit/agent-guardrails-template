@@ -111,7 +111,14 @@ func (l *Logger) Log(ctx context.Context, event Event) {
 // process writes events to persistent storage
 // Uses buffer pooling to reduce allocations during JSON encoding
 func (l *Logger) process() {
-	defer l.wg.Done()
+	defer func() {
+		if r := recover(); r != nil {
+			slog.Error("Audit logger process panicked, recovering", "panic", r)
+			// Restart the process goroutine to ensure audit logging continues
+			go l.process()
+		}
+		l.wg.Done()
+	}()
 	for {
 		select {
 		case event, ok := <-l.backend:

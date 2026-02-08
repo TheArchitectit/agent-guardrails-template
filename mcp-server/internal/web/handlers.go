@@ -3,6 +3,7 @@ package web
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -459,7 +460,7 @@ func (s *Server) listFailures(c echo.Context) error {
 		offset = 0
 	}
 
-	failures, total, err := s.failStore.List(c.Request().Context(), status, category, projectSlug, limit, offset)
+	failures, err := s.failStore.List(c.Request().Context(), status, category, projectSlug, limit, offset)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
@@ -469,7 +470,7 @@ func (s *Server) listFailures(c echo.Context) error {
 		"pagination": map[string]interface{}{
 			"limit":  limit,
 			"offset": offset,
-			"total":  total,
+			"count":  len(failures),
 		},
 	})
 }
@@ -527,18 +528,56 @@ func (s *Server) updateFailure(c echo.Context) error {
 func (s *Server) getStats(c echo.Context) error {
 	ctx := c.Request().Context()
 
-	failCount, err := s.failStore.Count(ctx)
-	if err != nil {
-		slog.Error("Failed to get failure count", "error", err)
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to retrieve statistics"})
+	// Fetch all counts concurrently for better performance
+	type countResult struct {
+		name  string
+		count int64
+		err   error
 	}
 
-	// TODO: Add counts for other entities
+	counts := make(chan countResult, 4)
+
+	// Document count
+	go func() {
+		count, err := s.docStore.Count(ctx, "")
+		counts <- countResult{"documents", int64(count), err}
+	}()
+
+	// Rule count
+	go func() {
+		count, err := s.ruleStore.Count(ctx, nil, "")
+		counts <- countResult{"rules", int64(count), err}
+	}()
+
+	// Project count
+	go func() {
+		count, err := s.projStore.Count(ctx)
+		counts <- countResult{"projects", int64(count), err}
+	}()
+
+	// Failure count
+	go func() {
+		count, err := s.failStore.Count(ctx)
+		counts <- countResult{"failures", count, err}
+	}()
+
+	// Collect results
+	stats := make(map[string]int64)
+	for i := 0; i < 4; i++ {
+		result := <-counts
+		if result.err != nil {
+			slog.Error("Failed to get count", "entity", result.name, "error", result.err)
+			stats[result.name] = 0
+		} else {
+			stats[result.name] = result.count
+		}
+	}
+
 	return c.JSON(http.StatusOK, map[string]interface{}{
-		"documents_count": 0, // TODO: Implement count
-		"rules_count":     0, // TODO: Implement count
-		"projects_count":  0, // TODO: Implement count
-		"failures_count":  failCount,
+		"documents_count": stats["documents"],
+		"rules_count":     stats["rules"],
+		"projects_count":  stats["projects"],
+		"failures_count":  stats["failures"],
 	})
 }
 
