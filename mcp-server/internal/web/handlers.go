@@ -301,7 +301,11 @@ func (s *Server) patchRule(c echo.Context) error {
 	// Get existing rule
 	rule, err := s.ruleStore.GetByID(c.Request().Context(), parsedUUID)
 	if err != nil {
-		return c.JSON(http.StatusNotFound, map[string]string{"error": err.Error()})
+		if err.Error() == fmt.Sprintf("rule not found: %s", parsedUUID) {
+			return c.JSON(http.StatusNotFound, map[string]string{"error": "rule not found"})
+		}
+		slog.Error("Failed to get rule for patch", "rule_id", id, "error", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to retrieve rule"})
 	}
 
 	// Apply patches
@@ -322,11 +326,14 @@ func (s *Server) patchRule(c echo.Context) error {
 	}
 
 	if err := s.ruleStore.Update(c.Request().Context(), rule); err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		slog.Error("Failed to patch rule", "rule_id", id, "error", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to update rule"})
 	}
 
-	// Invalidate cache
-	s.cache.InvalidateOnRuleChange(c.Request().Context(), rule.RuleID)
+	// Invalidate cache - log error but don't fail the request
+	if err := s.cache.InvalidateOnRuleChange(c.Request().Context(), rule.RuleID); err != nil {
+		slog.Warn("Failed to invalidate rule cache after patch", "rule_id", rule.RuleID, "error", err)
+	}
 
 	// Audit log
 	keyHash := getAPIKeyHash(c)
