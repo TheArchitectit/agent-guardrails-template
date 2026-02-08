@@ -91,6 +91,11 @@ func main() {
 	}
 	defer db.Close()
 
+	// Start database metrics collector
+	dbMetricsCollector := database.NewMetricsCollector(db, 15*time.Second)
+	dbMetricsCollector.Start()
+	defer dbMetricsCollector.Stop()
+
 	// Connect to Redis
 	redisClient, err := cache.New(cfg)
 	if err != nil {
