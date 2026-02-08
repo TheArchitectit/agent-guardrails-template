@@ -14,8 +14,8 @@ import (
 	"github.com/thearchitectit/guardrail-mcp/internal/cache"
 	"github.com/thearchitectit/guardrail-mcp/internal/config"
 	"github.com/thearchitectit/guardrail-mcp/internal/database"
-	loggingMiddleware "github.com/thearchitectit/guardrail-mcp/internal/middleware"
 	metricsMiddleware "github.com/thearchitectit/guardrail-mcp/internal/metrics"
+	loggingMiddleware "github.com/thearchitectit/guardrail-mcp/internal/middleware"
 )
 
 // Server wraps the Echo server with guardrail dependencies
@@ -85,15 +85,20 @@ func (s *Server) setupMiddleware() {
 	s.echo.Use(RateLimitMiddleware(limiter, s.cfg))
 
 	// CORS - restrict in production
-	corsOrigins := []string{"http://localhost:*", "https://localhost:*"}
-	if s.cfg.DBSSLMode == "require" {
-		// In production, be more restrictive
-		corsOrigins = []string{"http://localhost:8081", "https://localhost:8081"}
+	corsOrigins := s.cfg.CORSAllowedOrigins
+	if len(corsOrigins) == 0 || (len(corsOrigins) == 1 && corsOrigins[0] == "*") {
+		// Default to restrictive localhost origins if not configured
+		if s.cfg.ProductionMode {
+			corsOrigins = []string{"http://localhost:8081", "https://localhost:8081"}
+		} else {
+			corsOrigins = []string{"http://localhost:*", "https://localhost:*"}
+		}
 	}
 	s.echo.Use(middleware.CORSWithConfig(middleware.CORSConfig{
 		AllowOrigins: corsOrigins,
-		AllowMethods: []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete},
-		AllowHeaders: []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAccept, echo.HeaderAuthorization},
+		AllowMethods: s.cfg.CORSAllowedMethods,
+		AllowHeaders: s.cfg.CORSAllowedHeaders,
+		MaxAge:       s.cfg.CORSMaxAge,
 	}))
 
 	// Request timeout

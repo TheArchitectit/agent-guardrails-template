@@ -112,6 +112,7 @@ make docker-down
 - `GET /health/live` - Liveness probe
 - `GET /health/ready` - Readiness probe (checks DB and Redis)
 - `GET /metrics` - Prometheus metrics endpoint
+- `GET /version` - Server version information
 
 ### MCP Protocol (Port 8080)
 
@@ -132,13 +133,13 @@ Server-Sent Events (SSE) endpoint for MCP clients.
 - `POST /api/rules` - Create rule
 - `PUT /api/rules/:id` - Update rule
 - `DELETE /api/rules/:id` - Delete rule
-- `POST /api/rules/:id/toggle` - Enable/disable rule
+- `PATCH /api/rules/:id` - Enable/disable rule (partial update)
 
 - `GET /api/projects` - List projects
-- `GET /api/projects/:slug` - Get project by slug
+- `GET /api/projects/:id` - Get project by ID
 - `POST /api/projects` - Create project
-- `PUT /api/projects/:slug` - Update project
-- `DELETE /api/projects/:slug` - Delete project
+- `PUT /api/projects/:id` - Update project
+- `DELETE /api/projects/:id` - Delete project
 
 - `GET /api/failures` - List failure registry entries
 - `GET /api/failures/:id` - Get failure by ID
@@ -183,6 +184,36 @@ Server-Sent Events (SSE) endpoint for MCP clients.
 - **Graceful Degradation** - Service continues operating when cache is unavailable
 - **Health Checks** - Liveness and readiness probes for orchestration
 - **Graceful Shutdown** - 30-second timeout for in-flight requests
+
+## MCP Protocol
+
+The MCP server implements the Model Context Protocol for AI assistant integration.
+
+### MCP Tools
+
+- `guardrail_init_session` - Initialize a validation session for a project
+- `guardrail_validate_bash` - Validate bash command against forbidden patterns
+- `guardrail_validate_file_edit` - Validate file edit operation
+- `guardrail_validate_git_operation` - Validate git command against guardrails
+- `guardrail_pre_work_check` - Run pre-work checklist from failure registry
+- `guardrail_get_context` - Get guardrail context for the session's project
+
+### MCP Resources
+
+- `guardrail://quick-reference` - Quick reference card for guardrails
+- `guardrail://rules/active` - Currently active prevention rules
+
+### Connecting to MCP Server
+
+```bash
+# SSE endpoint for MCP clients
+GET http://localhost:8080/mcp/v1/sse
+
+# Send JSON-RPC messages
+POST http://localhost:8080/mcp/v1/message?session_id=<session_id>
+```
+
+See [API.md](API.md) for complete API documentation.
 
 ## Development
 
