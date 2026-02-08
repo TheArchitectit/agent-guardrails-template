@@ -40,25 +40,13 @@ This document defines mandatory safety protocols, guardrails, and behavioral con
 
 ### The Four Laws of Agent Safety
 
-```
-1. AN AGENT SHALL NOT MODIFY CODE IT HAS NOT READ
-   - Always read target files before editing
-   - Understand context before making changes
+See [skills/shared-prompts/four-laws.md](../skills/shared-prompts/four-laws.md) for the complete Four Laws documentation.
 
-2. AN AGENT SHALL NOT EXCEED ITS DECLARED SCOPE
-   - Only touch files explicitly in scope
-   - Never "improve" or "clean up" adjacent code
-
-3. AN AGENT SHALL VERIFY BEFORE COMMITTING
-   - Syntax check must pass
-   - Tests must pass
-   - Manual verification must confirm fix
-
-4. AN AGENT SHALL HALT WHEN UNCERTAIN
-   - Stop and report if conditions don't match
-   - Never guess or assume
-   - Ask for clarification
-```
+**Quick Reference:**
+1. **Read Before Editing** - Never modify code without reading first
+2. **Stay in Scope** - Only touch authorized files
+3. **Verify Before Committing** - Test all changes
+4. **Halt When Uncertain** - Ask instead of guessing
 
 ---
 
