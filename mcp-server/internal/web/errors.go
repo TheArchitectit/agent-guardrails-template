@@ -22,14 +22,14 @@ func (e *APIError) Error() string {
 
 // Common error codes for consistent API responses
 const (
-	ErrCodeInvalidInput     = "INVALID_INPUT"
-	ErrCodeNotFound         = "NOT_FOUND"
-	ErrCodeInternalError    = "INTERNAL_ERROR"
-	ErrCodeUnauthorized     = "UNAUTHORIZED"
-	ErrCodeForbidden        = "FORBIDDEN"
-	ErrCodeRateLimited      = "RATE_LIMITED"
+	ErrCodeInvalidInput       = "INVALID_INPUT"
+	ErrCodeNotFound           = "NOT_FOUND"
+	ErrCodeInternalError      = "INTERNAL_ERROR"
+	ErrCodeUnauthorized       = "UNAUTHORIZED"
+	ErrCodeForbidden          = "FORBIDDEN"
+	ErrCodeRateLimited        = "RATE_LIMITED"
 	ErrCodeServiceUnavailable = "SERVICE_UNAVAILABLE"
-	ErrCodeConflict         = "CONFLICT"
+	ErrCodeConflict           = "CONFLICT"
 )
 
 // Common API errors that can be reused

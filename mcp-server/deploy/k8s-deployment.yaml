@@ -55,6 +55,10 @@ spec:
               value: "${SHUTDOWN_TIMEOUT:-30s}"
             - name: PPROF_ENABLED
               value: "${PPROF_ENABLED:-false}"
+            - name: PRODUCTION_MODE
+              value: "${PRODUCTION_MODE:-true}"
+            - name: CIRCUIT_BREAKER_ENABLED
+              value: "${CIRCUIT_BREAKER_ENABLED:-true}"
             - name: HEALTH_CHECK_TIMEOUT
               value: "${HEALTH_CHECK_TIMEOUT:-3s}"
             - name: DB_HOST

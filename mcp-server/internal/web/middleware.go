@@ -7,7 +7,6 @@ import (
 	"log/slog"
 	"net/http"
 	"strings"
-	"sync"
 
 	"github.com/labstack/echo/v4"
 	"github.com/thearchitectit/guardrail-mcp/internal/cache"
@@ -125,59 +124,9 @@ func RateLimitMiddleware(limiter *cache.DistributedRateLimiter, cfg *config.Conf
 }
 
 // hashAPIKey creates a hash of the API key for logging
-// Uses pre-allocated buffer to avoid heap allocation
 func hashAPIKey(key string) string {
 	// Use stack-allocated array for hashing
 	var h [32]byte
 	h = sha256.Sum256([]byte(key))
 	return hex.EncodeToString(h[:8])
-}
-
-// hashAPIKeyBuf is a pre-allocated buffer for hex encoding (thread-local would be better)
-// For now, we use the simple version above which escapes to heap due to hex.EncodeToString
-
-// hashKeyCache provides a simple LRU cache for key hashes to avoid recomputation
-// This is safe because API keys are immutable
-type hashKeyCache struct {
-	mu    sync.RWMutex
-	cache map[string]string
-}
-
-var keyHashCache = &hashKeyCache{
-	cache: make(map[string]string, 100),
-}
-
-// getCachedKeyHash returns a cached hash or computes and caches it
-func getCachedKeyHash(key string) string {
-	// Fast path: read lock
-	keyHashCache.mu.RLock()
-	if hash, ok := keyHashCache.cache[key]; ok {
-		keyHashCache.mu.RUnlock()
-		return hash
-	}
-	keyHashCache.mu.RUnlock()
-
-	// Slow path: compute and cache
-	hash := hashAPIKey(key)
-
-	keyHashCache.mu.Lock()
-	// Double-check after acquiring write lock
-	if existing, ok := keyHashCache.cache[key]; ok {
-		keyHashCache.mu.Unlock()
-		return existing
-	}
-	// Limit cache size to prevent unbounded growth
-	if len(keyHashCache.cache) >= 100 {
-		// Simple eviction: clear half the cache
-		for k := range keyHashCache.cache {
-			delete(keyHashCache.cache, k)
-			if len(keyHashCache.cache) <= 50 {
-				break
-			}
-		}
-	}
-	keyHashCache.cache[key] = hash
-	keyHashCache.mu.Unlock()
-
-	return hash
 }

@@ -383,7 +383,7 @@ func PrometheusMiddleware() echo.MiddlewareFunc {
 			req := c.Request()
 			res := c.Response()
 
-			 // Get content length if available
+			// Get content length if available
 			requestSize := req.ContentLength
 			if requestSize < 0 {
 				requestSize = 0
@@ -505,11 +505,11 @@ func RecordPanic(path string) {
 
 // RecordDBStats records database connection pool statistics
 func RecordDBStats(stats struct {
-	Open          int
-	InUse         int
-	Idle          int
-	WaitDuration  float64
-	WaitCount     int64
+	Open         int
+	InUse        int
+	Idle         int
+	WaitDuration float64
+	WaitCount    int64
 }) {
 	DBConnectionsActive.WithLabelValues("open").Set(float64(stats.Open))
 	DBConnectionsActive.WithLabelValues("in_use").Set(float64(stats.InUse))

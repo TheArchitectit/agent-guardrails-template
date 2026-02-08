@@ -22,6 +22,78 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [1.9.5] - 2026-02-08
+
+### Added
+
+- **Circuit Breaker Pattern** - Automatic failure detection for database and Redis
+  - Configurable failure thresholds and recovery timeouts
+  - Prevents cascade failures in distributed systems
+  - Implements CLOSED, OPEN, and HALF-OPEN states
+
+- **Hot-Reloadable Configuration** - Runtime config updates without restart
+  - Support for LOG_LEVEL, RATE_LIMIT_*, CACHE_TTL_*, and feature flags
+  - Signal-based reload (SIGHUP) or admin endpoint
+
+### Changed
+
+- **Rate Limiting Enhancements**
+  - Added burst factor for handling traffic spikes (RATE_LIMIT_BURST_FACTOR)
+  - Per-endpoint-type limits: MCP (1000/min), IDE (500/min), Session (100/min)
+  - Redis-backed distributed rate limiting
+
+---
+
+## [1.9.4] - 2026-02-08
+
+### Added
+
+- **Secrets Scanning** - Automatic detection in document content
+  - AWS Access Key ID detection
+  - GitHub token detection
+  - Private key detection (RSA, EC, DSA, OpenSSH)
+  - Slack token detection
+  - Blocks document updates containing potential secrets
+
+- **CORS Configuration** - Flexible cross-origin resource sharing
+  - Configurable allowed origins, methods, headers
+  - Production-safe defaults (restrictive when TLS enabled)
+
+### Fixed
+
+- **PostgreSQL Array Handling** - Fixed TEXT[] array scanning
+  - Migrated from `pq.StringArray` to `pgtype.Array[string]`
+  - Compatible with pgx v5 driver
+  - Proper handling of nullable arrays
+
+---
+
+## [1.9.3] - 2026-02-07
+
+### Added
+
+- **Structured Logging** - JSON-formatted logs with configurable levels
+  - Support for debug, info, warn, error levels
+  - Correlation ID propagation across requests
+  - Request ID generation for tracing
+
+- **Metrics Collection** - Prometheus-compatible metrics
+  - Request count and duration by endpoint
+  - Database connection pool metrics
+  - Cache hit/miss ratios
+  - Panic recovery tracking
+
+### Fixed
+
+- **SSE Stability Improvements** - Enhanced Server-Sent Events reliability
+  - Immediate `WriteHeader(http.StatusOK)` for non-interactive clients
+  - Added `X-Accel-Buffering: no` for proxy compatibility
+  - Added CORS headers for cross-origin SSE connections
+  - Initial ping event to prevent client timeouts
+  - Better error handling on write/flush operations
+
+---
+
 ## [1.9.2] - 2026-02-07
 
 ### Fixed
@@ -103,4 +175,5 @@ This MCP Server follows [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ---
 
-*Last Updated: 2026-02-07*
+*Last Updated: 2026-02-08*
+*Current Version: 1.9.5*
