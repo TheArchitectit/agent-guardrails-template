@@ -76,7 +76,7 @@ Browser-based guardrail management interface:
 
 - **PostgreSQL 16** - Persistent storage for rules and sessions
 - **Redis 7** - Caching layer for performance
-- **Production Deployment** - Running on <your-server-name> (<your-server-ip>)
+- **Production Deployment** - Deploy to your infrastructure (see deployment guide)
 
 ### Project Structure with MCP Server
 
@@ -254,7 +254,7 @@ gh repo create my-new-project \
 ### Prerequisites
 
 - Docker or Podman
-- Access to <your-server-name> server (<your-server-ip>) for deployment
+- Access to your deployment server for production use
 - Environment variables configured (see below)
 
 ### Environment Variables
@@ -294,9 +294,9 @@ docker build -t guardrail-mcp:latest -f deploy/Dockerfile .
 # Save image for transfer
 docker save -o guardrail-mcp.tar guardrail-mcp:latest
 
-# Deploy to <your-server-name> server
-scp guardrail-mcp.tar user@<your-server-ip>:/opt/guardrail-mcp/
-ssh user@<your-server-ip>
+# Deploy to your server
+scp guardrail-mcp.tar user@your-server:/opt/guardrail-mcp/
+ssh user@your-server
 cd /opt/guardrail-mcp
 
 # Load and start with podman-compose
@@ -312,7 +312,7 @@ sudo podman-compose ps
 **Test initialization:**
 
 ```bash
-curl -X POST http://<your-server-ip>:8092/mcp/v1/message \
+curl -X POST http://localhost:8092/mcp/v1/message \
   -H 'Content-Type: application/json' \
   -d '{
     "jsonrpc": "2.0",
@@ -352,7 +352,7 @@ curl -X POST http://<your-server-ip>:8092/mcp/v1/message \
 **Test guardrail validation:**
 
 ```bash
-curl -X POST http://<your-server-ip>:8092/mcp/v1/message \
+curl -X POST http://localhost:8092/mcp/v1/message \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer $MCP_API_KEY' \
   -d '{
@@ -374,7 +374,7 @@ curl -X POST http://<your-server-ip>:8092/mcp/v1/message \
 Once deployed, access the guardrail management interface:
 
 ```
-http://<your-server-ip>:8093
+http://localhost:8093
 ```
 
 Features available:
@@ -387,7 +387,7 @@ Features available:
 
 **Connection refused:**
 - Verify podman-compose services are running: `sudo podman-compose ps`
-- Check firewall rules on <your-server-name>
+- Check firewall rules on your server
 - Verify ports 8092 and 8093 are accessible
 
 **Authentication errors:**
