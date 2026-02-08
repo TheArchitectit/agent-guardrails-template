@@ -116,6 +116,12 @@ func main() {
 
 	// Start web server (bind to 0.0.0.0 for containerized deployment)
 	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				slog.Error("Web server goroutine panicked", "panic", r)
+				cancel()
+			}
+		}()
 		addr := fmt.Sprintf("0.0.0.0:%d", cfg.WebPort)
 		slog.Info("Starting web server", "addr", addr)
 		if err := webServer.Start(addr); err != nil && err != http.ErrServerClosed {
@@ -126,6 +132,12 @@ func main() {
 
 	// Start MCP server (bind to 0.0.0.0 for containerized deployment)
 	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				slog.Error("MCP server goroutine panicked", "panic", r)
+				cancel()
+			}
+		}()
 		addr := fmt.Sprintf("0.0.0.0:%d", cfg.MCPPort)
 		slog.Info("Starting MCP server", "addr", addr)
 		if err := mcpSrv.Start(addr); err != nil && err != http.ErrServerClosed {
