@@ -61,9 +61,10 @@ func APIKeyAuth(cfg *config.Config) echo.MiddlewareFunc {
 				return next(c)
 			}
 
-			// Skip read-only API endpoints for public browsing (GET requests only)
+			// Skip read-only API endpoints for public browsing (GET and OPTIONS requests)
+			// OPTIONS is needed for CORS preflight requests
 			method := c.Request().Method
-			if method == "GET" && (path == "/api/documents" || path == "/api/documents/search" ||
+			if (method == "GET" || method == "OPTIONS") && (path == "/api/documents" || path == "/api/documents/search" ||
 				strings.HasPrefix(path, "/api/documents/") ||
 				path == "/api/rules" || strings.HasPrefix(path, "/api/rules/") ||
 				path == "/api/stats" || strings.HasPrefix(path, "/api/stats/") ||
@@ -168,9 +169,10 @@ func RateLimitMiddleware(limiter *cache.DistributedRateLimiter, cfg *config.Conf
 				return next(c)
 			}
 
-			// Skip read-only API endpoints for public browsing (GET requests only)
+			// Skip read-only API endpoints for public browsing (GET and OPTIONS requests)
+			// OPTIONS is needed for CORS preflight requests
 			method := c.Request().Method
-			if method == "GET" && (path == "/api/documents" || path == "/api/documents/search" ||
+			if (method == "GET" || method == "OPTIONS") && (path == "/api/documents" || path == "/api/documents/search" ||
 				strings.HasPrefix(path, "/api/documents/") ||
 				path == "/api/rules" || strings.HasPrefix(path, "/api/rules/") ||
 				path == "/api/stats" || strings.HasPrefix(path, "/api/stats/") ||
