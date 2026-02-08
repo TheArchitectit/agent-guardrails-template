@@ -35,14 +35,14 @@ Authorization: Bearer <api_key>
 **401 Unauthorized**
 ```json
 {
-  "message": "Missing authorization header"
+  "error": "Missing authorization header"
 }
 ```
 
 **401 Unauthorized**
 ```json
 {
-  "message": "Invalid API key"
+  "error": "Invalid API key"
 }
 ```
 
@@ -59,7 +59,9 @@ Liveness probe - checks if the process is running.
 **Response**
 ```json
 {
-  "status": "alive"
+  "status": "alive",
+  "version": "1.0.0",
+  "timestamp": "2026-02-07T10:00:00Z"
 }
 ```
 
@@ -70,14 +72,17 @@ Readiness probe - checks database and Redis connectivity.
 **Response (200)**
 ```json
 {
-  "status": "ready"
+  "status": "ready",
+  "version": "1.0.0",
+  "timestamp": "2026-02-07T10:00:00Z"
 }
 ```
 
 **Response (503)**
 ```json
 {
-  "status": "not ready"
+  "status": "not ready",
+  "timestamp": "2026-02-07T10:00:00Z"
 }
 ```
 
@@ -90,6 +95,19 @@ Prometheus metrics endpoint.
 # HELP guardrail_validations_total Total number of validations performed
 # TYPE guardrail_validations_total counter
 guardrail_validations_total{tool="bash",result="allowed"} 42
+```
+
+### GET /version
+
+Server version information.
+
+**Response**
+```json
+{
+  "version": "1.0.0",
+  "service": "guardrail-mcp",
+  "timestamp": "2026-02-07T10:00:00Z"
+}
 ```
 
 ---
@@ -110,7 +128,7 @@ List all documents with pagination.
 **Response**
 ```json
 {
-  "documents": [
+  "data": [
     {
       "id": "550e8400-e29b-41d4-a716-446655440000",
       "slug": "agent-guardrails",
@@ -124,15 +142,17 @@ List all documents with pagination.
       "updated_at": "2026-02-07T15:30:00Z"
     }
   ],
-  "total": 25,
-  "limit": 20,
-  "offset": 0
+  "pagination": {
+    "total": 25,
+    "limit": 20,
+    "offset": 0
+  }
 }
 ```
 
 ### GET /api/documents/:id
 
-Get a specific document by ID.
+Get a specific document by ID (UUID).
 
 **Path Parameters**
 | Name | Type | Description |
@@ -213,17 +233,24 @@ Full-text search documents.
 **Response**
 ```json
 {
-  "results": [
+  "data": [
     {
       "id": "550e8400-e29b-41d4-a716-446655440000",
       "slug": "agent-guardrails",
       "title": "Agent Guardrails",
+      "content": "# Agent Guardrails...",
       "category": "standard",
-      "relevance": 0.95
+      "path": "docs/AGENT_GUARDRAILS.md",
+      "version": 1,
+      "metadata": {},
+      "created_at": "2026-01-14T10:00:00Z",
+      "updated_at": "2026-02-07T15:30:00Z"
     }
   ],
   "query": "guardrail safety",
-  "total": 5
+  "pagination": {
+    "limit": 20
+  }
 }
 ```
 
@@ -233,18 +260,20 @@ Full-text search documents.
 
 ### GET /api/rules
 
-List prevention rules.
+List prevention rules with pagination.
 
 **Query Parameters**
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
 | enabled | boolean | No | Filter by enabled status |
 | category | string | No | Filter by category |
+| limit | integer | No | Items per page (default: 20, max: 100) |
+| offset | integer | No | Offset for pagination (default: 0) |
 
 **Response**
 ```json
 {
-  "rules": [
+  "data": [
     {
       "id": "550e8400-e29b-41d4-a716-446655440001",
       "rule_id": "PREVENT-001",
@@ -259,13 +288,22 @@ List prevention rules.
       "updated_at": "2026-01-14T10:00:00Z"
     }
   ],
-  "total": 15
+  "pagination": {
+    "total": 15,
+    "limit": 20,
+    "offset": 0
+  }
 }
 ```
 
 ### GET /api/rules/:id
 
-Get a specific rule by ID.
+Get a specific rule by ID (UUID).
+
+**Path Parameters**
+| Name | Type | Description |
+|------|------|-------------|
+| id | UUID | Rule ID |
 
 **Response**
 ```json
@@ -317,6 +355,11 @@ Create a new prevention rule.
 
 Update a rule.
 
+**Path Parameters**
+| Name | Type | Description |
+|------|------|-------------|
+| id | UUID | Rule ID |
+
 **Request Body**
 ```json
 {
@@ -328,28 +371,65 @@ Update a rule.
 }
 ```
 
+**Response**
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440001",
+  "rule_id": "PREVENT-001",
+  "name": "Updated Rule Name",
+  "pattern": "updated pattern",
+  "message": "Updated message",
+  "severity": "warning",
+  "enabled": true,
+  "category": "git",
+  "updated_at": "2026-02-07T16:00:00Z"
+}
+```
+
 ### DELETE /api/rules/:id
 
 Delete a rule.
 
+**Path Parameters**
+| Name | Type | Description |
+|------|------|-------------|
+| id | UUID | Rule ID |
+
 **Response (204)**
 No content.
 
-### POST /api/rules/:id/toggle
+### PATCH /api/rules/:id
 
-Enable or disable a rule.
+Partially update a rule (e.g., enable/disable).
+
+**Path Parameters**
+| Name | Type | Description |
+|------|------|-------------|
+| id | UUID | Rule ID |
 
 **Request Body**
 ```json
 {
-  "enabled": false
+  "enabled": false,
+  "name": "Optional new name",
+  "message": "Optional new message",
+  "pattern": "Optional new pattern",
+  "severity": "warning"
 }
 ```
 
 **Response**
 ```json
 {
-  "status": "updated"
+  "id": "550e8400-e29b-41d4-a716-446655440001",
+  "rule_id": "PREVENT-001",
+  "name": "No Force Push",
+  "pattern": "git push --force",
+  "message": "Force push is not allowed",
+  "severity": "error",
+  "enabled": false,
+  "category": "git",
+  "updated_at": "2026-02-07T16:00:00Z"
 }
 ```
 
@@ -359,12 +439,18 @@ Enable or disable a rule.
 
 ### GET /api/projects
 
-List all projects.
+List all projects with pagination.
+
+**Query Parameters**
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| limit | integer | No | Items per page (default: 20, max: 100) |
+| offset | integer | No | Offset for pagination (default: 0) |
 
 **Response**
 ```json
 {
-  "projects": [
+  "data": [
     {
       "id": "550e8400-e29b-41d4-a716-446655440003",
       "name": "My Project",
@@ -375,13 +461,23 @@ List all projects.
       "created_at": "2026-01-14T10:00:00Z",
       "updated_at": "2026-01-14T10:00:00Z"
     }
-  ]
+  ],
+  "pagination": {
+    "total": 8,
+    "limit": 20,
+    "offset": 0
+  }
 }
 ```
 
-### GET /api/projects/:slug
+### GET /api/projects/:id
 
-Get a project by slug.
+Get a project by ID (UUID).
+
+**Path Parameters**
+| Name | Type | Description |
+|------|------|-------------|
+| id | UUID | Project ID |
 
 **Response**
 ```json
@@ -412,9 +508,28 @@ Create a new project.
 }
 ```
 
-### PUT /api/projects/:slug
+**Response (201)**
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440004",
+  "name": "New Project",
+  "slug": "new-project",
+  "guardrail_context": "# Context",
+  "active_rules": ["PREVENT-001"],
+  "metadata": {},
+  "created_at": "2026-02-07T16:00:00Z",
+  "updated_at": "2026-02-07T16:00:00Z"
+}
+```
+
+### PUT /api/projects/:id
 
 Update a project.
+
+**Path Parameters**
+| Name | Type | Description |
+|------|------|-------------|
+| id | UUID | Project ID |
 
 **Request Body**
 ```json
@@ -425,9 +540,27 @@ Update a project.
 }
 ```
 
-### DELETE /api/projects/:slug
+**Response**
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440003",
+  "name": "Updated Project Name",
+  "slug": "my-project",
+  "guardrail_context": "# Updated Context",
+  "active_rules": ["PREVENT-001", "PREVENT-003"],
+  "metadata": {},
+  "updated_at": "2026-02-07T16:00:00Z"
+}
+```
+
+### DELETE /api/projects/:id
 
 Delete a project.
+
+**Path Parameters**
+| Name | Type | Description |
+|------|------|-------------|
+| id | UUID | Project ID |
 
 **Response (204)**
 No content.
@@ -438,7 +571,7 @@ No content.
 
 ### GET /api/failures
 
-List failure registry entries.
+List failure registry entries with pagination.
 
 **Query Parameters**
 | Name | Type | Required | Description |
@@ -452,7 +585,7 @@ List failure registry entries.
 **Response**
 ```json
 {
-  "failures": [
+  "data": [
     {
       "id": "550e8400-e29b-41d4-a716-446655440004",
       "failure_id": "FAIL-001",
@@ -466,13 +599,38 @@ List failure registry entries.
       "created_at": "2026-01-14T10:00:00Z"
     }
   ],
-  "total": 42
+  "pagination": {
+    "total": 42,
+    "limit": 20,
+    "offset": 0
+  }
 }
 ```
 
 ### GET /api/failures/:id
 
 Get a specific failure entry.
+
+**Path Parameters**
+| Name | Type | Description |
+|------|------|-------------|
+| id | UUID | Failure ID |
+
+**Response**
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440004",
+  "failure_id": "FAIL-001",
+  "category": "deployment",
+  "severity": "high",
+  "error_message": "Production database overwritten",
+  "root_cause": "Missing environment check",
+  "affected_files": ["scripts/deploy.sh"],
+  "status": "active",
+  "project_slug": "my-project",
+  "created_at": "2026-01-14T10:00:00Z"
+}
+```
 
 ### POST /api/failures
 
@@ -487,9 +645,26 @@ Create a new failure entry.
   "error_message": "Secret leaked in commit",
   "root_cause": "Pre-commit hook not installed",
   "affected_files": ["config/production.yml"],
-  "regression_pattern": "password:\s*['\"][^'\"]+['\"]",
+  "regression_pattern": "password:\\s*['\"][^'\"]+['\"]",
   "status": "active",
   "project_slug": "my-project"
+}
+```
+
+**Response (201)**
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440005",
+  "failure_id": "FAIL-002",
+  "category": "security",
+  "severity": "critical",
+  "error_message": "Secret leaked in commit",
+  "root_cause": "Pre-commit hook not installed",
+  "affected_files": ["config/production.yml"],
+  "regression_pattern": "password:\\s*['\"][^'\"]+['\"]",
+  "status": "active",
+  "project_slug": "my-project",
+  "created_at": "2026-02-07T16:00:00Z"
 }
 ```
 
@@ -497,11 +672,32 @@ Create a new failure entry.
 
 Update a failure entry (e.g., mark as resolved).
 
+**Path Parameters**
+| Name | Type | Description |
+|------|------|-------------|
+| id | UUID | Failure ID |
+
 **Request Body**
 ```json
 {
+  "status": "resolved"
+}
+```
+
+**Response**
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440004",
+  "failure_id": "FAIL-001",
+  "category": "deployment",
+  "severity": "high",
+  "error_message": "Production database overwritten",
+  "root_cause": "Missing environment check",
+  "affected_files": ["scripts/deploy.sh"],
   "status": "resolved",
-  "resolution_notes": "Fixed in commit abc123"
+  "project_slug": "my-project",
+  "created_at": "2026-01-14T10:00:00Z",
+  "updated_at": "2026-02-07T16:00:00Z"
 }
 ```
 
@@ -567,6 +763,22 @@ Validate a code selection (for real-time validation).
 }
 ```
 
+**Response**
+```json
+{
+  "valid": false,
+  "violations": [
+    {
+      "rule_id": "PREVENT-002",
+      "rule_name": "No rm -rf /",
+      "severity": "error",
+      "message": "Dangerous command detected",
+      "suggestion": "Use specific paths instead"
+    }
+  ]
+}
+```
+
 ### GET /ide/rules
 
 Get active rules for a project.
@@ -579,13 +791,15 @@ Get active rules for a project.
 **Response**
 ```json
 {
-  "rules": [
+  "data": [
     {
+      "id": "550e8400-e29b-41d4-a716-446655440001",
       "rule_id": "PREVENT-001",
       "name": "No Force Push",
       "pattern": "git push --force",
       "severity": "error",
-      "message": "Force push is not allowed"
+      "message": "Force push is not allowed",
+      "category": "git"
     }
   ]
 }
@@ -598,7 +812,9 @@ Get quick reference documentation.
 **Response**
 ```json
 {
-  "reference": "# Quick Reference\n\n## Forbidden Commands\n- rm -rf /\n- git push --force\n\n## Required Checks\n- Pre-work check\n- Validate file edits"
+  "data": {
+    "reference": "# Quick Reference\n\n## Forbidden Commands\n- rm -rf /\n- git push --force\n\n## Required Checks\n- Pre-work check\n- Validate file edits"
+  }
 }
 ```
 
@@ -637,6 +853,8 @@ Trigger document ingestion from filesystem.
 
 ### Standard Error Format
 
+All error responses use the following format:
+
 ```json
 {
   "error": "Human-readable error message"
@@ -662,7 +880,7 @@ Trigger document ingestion from filesystem.
 
 ```json
 {
-  "message": "Rate limit exceeded"
+  "error": "Rate limit exceeded"
 }
 ```
 
@@ -707,4 +925,37 @@ Trigger document ingestion from filesystem.
 
 ---
 
-*Last Updated: 2026-02-07*
+## Pagination Standards
+
+All list endpoints use consistent pagination:
+
+### Request Parameters
+
+| Parameter | Type | Default | Max | Description |
+|-----------|------|---------|-----|-------------|
+| limit | integer | 20 | 100 | Items per page |
+| offset | integer | 0 | - | Number of items to skip |
+
+### Response Format
+
+```json
+{
+  "data": [...],
+  "pagination": {
+    "total": 100,
+    "limit": 20,
+    "offset": 0
+  }
+}
+```
+
+### Calculating Next Page
+
+```
+next_offset = current_offset + limit
+has_more = (offset + limit) < total
+```
+
+---
+
+*Last Updated: 2026-02-08*
