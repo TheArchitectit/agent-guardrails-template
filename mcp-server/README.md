@@ -5,21 +5,23 @@ A Model Context Protocol (MCP) server for enforcing guardrails across AI coding 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────┐
-│           Guardrail MCP Server Container            │
-│  ┌─────────────┐  ┌─────────────┐                  │
-│  │   MCP SSE   │  │   Web UI    │                  │
-│  │   :8080     │  │   :8081     │                  │
-│  └──────┬──────┘  └──────┬──────┘                  │
-│         │                │                          │
-│  ┌──────┴────────────────┴─────────────────┐        │
-│  │              Redis Cache                │        │
-│  └─────────────────────────────────────────┘        │
-│         │                                           │
-│  ┌──────┴────────────────┴─────────────────┐        │
-│  │              PostgreSQL                 │        │
-│  └─────────────────────────────────────────┘        │
-└─────────────────────────────────────────────────────┘
+AI01 host (or local VM)
+|
+|-- guardrail-mcp-server (app container)
+|   |-- :8080 MCP SSE + JSON-RPC message endpoint
+|   |-- :8081 Web UI + REST API + health + metrics
+|   |-- attached networks: frontend, backend
+|   |-- host bindings: 127.0.0.1:${MCP_PORT}->8080, 127.0.0.1:${WEB_PORT}->8081
+|
+|-- guardrail-postgres (state container)
+|   |-- :5432 backend network only
+|   |-- attached networks: backend
+|   |-- volume: pg_data
+|
+|-- guardrail-redis (cache/rate-limiting container)
+|   |-- :6379 backend network only
+|   |-- attached networks: backend
+|   |-- volume: redis_data
 ```
 
 ## Quick Start
@@ -28,8 +30,8 @@ A Model Context Protocol (MCP) server for enforcing guardrails across AI coding 
 
 - Go 1.23+
 - Podman or Docker
-- PostgreSQL 16 (or use podman-compose)
-- Redis 7 (or use podman-compose)
+- PostgreSQL 16 (if running without compose)
+- Redis 7 (if running without compose)
 
 ### Configuration
 
@@ -103,6 +105,22 @@ make docker-logs
 
 # Stop services
 make docker-down
+```
+
+Docker-only equivalent (without Podman tooling):
+
+```bash
+# Build image
+docker build -t guardrail-mcp:latest -f deploy/Dockerfile .
+
+# Start all services from compose file
+docker compose -f deploy/podman-compose.yml up -d --build
+
+# View logs
+docker compose -f deploy/podman-compose.yml logs -f
+
+# Stop services
+docker compose -f deploy/podman-compose.yml down
 ```
 
 ## API Endpoints
@@ -214,10 +232,13 @@ curl -sN http://localhost:8080/mcp/v1/sse
 # event: endpoint
 # data: http://localhost:8080/mcp/v1/message?session_id=<session_id>
 
-# 2) Send JSON-RPC message to the session-specific URL
-curl -X POST "http://localhost:8080/mcp/v1/message?session_id=<session_id>" \
+# 2) In another terminal, send JSON-RPC message to session-specific URL
+curl -i -X POST "http://localhost:8080/mcp/v1/message?session_id=<session_id>" \
   -H "Content-Type: application/json" \
   -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test-client","version":"1.0"}}}'
+
+# Expected HTTP status: 202 Accepted
+# JSON-RPC response arrives on the SSE stream as: event: message
 ```
 
 See [API.md](API.md) for complete API documentation.
@@ -312,6 +333,7 @@ psql -U guardrails -d guardrails -c "CREATE SCHEMA IF NOT EXISTS public;"
 ```bash
 # Check logs
 make docker-logs
+# or: docker compose -f deploy/podman-compose.yml logs -f
 
 # Verify all required environment variables are set
 cat .env | grep -E "(API_KEY|PASSWORD|SECRET)"

@@ -83,11 +83,14 @@ Browser-based guardrail management interface:
 ```
 agent-guardrails-template/
 ├── mcp-server/            ← MCP Server implementation
-│   ├── src/               # Server source code
-│   ├── deploy/            # Docker and deployment configs
-│   │   └── Dockerfile
-│   ├── podman-compose.yml # Container orchestration
-│   └── requirements.txt   # Python dependencies
+│   ├── cmd/server/        # Go application entry point
+│   ├── internal/          # MCP, web API, DB, cache, security modules
+│   ├── deploy/            # Deployment manifests and container config
+│   │   ├── Dockerfile
+│   │   ├── podman-compose.yml
+│   │   └── k8s-deployment.yaml
+│   ├── API.md             # REST/API contract
+│   └── README.md          # MCP server docs
 ├── ...
 ```
 
@@ -280,6 +283,8 @@ export REDIS_PORT="6379"
 export REDIS_PASSWORD="your-redis-password"
 
 # Service Ports
+# AI01 convention: 8092/8093
+# Defaults in compose: 8080/8081
 export MCP_PORT="8092"
 export WEB_PORT="8093"
 ```
@@ -307,6 +312,18 @@ sudo podman-compose up -d
 sudo podman-compose ps
 ```
 
+**Docker-only alternative (no Podman):**
+
+```bash
+cd mcp-server
+
+# Build and start directly with Docker Compose
+docker compose -f deploy/podman-compose.yml up -d --build
+
+# Verify deployment
+docker compose -f deploy/podman-compose.yml ps
+```
+
 ### Testing the MCP Endpoint
 
 **Get session endpoint and initialize:**
@@ -317,8 +334,8 @@ curl -sN http://localhost:8092/mcp/v1/sse
 # event: endpoint
 # data: http://localhost:8092/mcp/v1/message?session_id=<session_id>
 
-# 2) Send initialize to the session endpoint
-curl -X POST "http://localhost:8092/mcp/v1/message?session_id=<session_id>" \
+# 2) In another terminal, send initialize to the session endpoint
+curl -i -X POST "http://localhost:8092/mcp/v1/message?session_id=<session_id>" \
   -H 'Content-Type: application/json' \
   -d '{
     "jsonrpc": "2.0",
@@ -335,7 +352,12 @@ curl -X POST "http://localhost:8092/mcp/v1/message?session_id=<session_id>" \
   }'
 ```
 
-**Expected response:**
+**Expected behavior:**
+
+- The POST returns `202 Accepted`
+- The JSON-RPC initialize result is delivered on the SSE stream as `event: message`
+
+Example SSE message payload:
 
 ```json
 {
@@ -392,6 +414,7 @@ Features available:
 
 **Connection refused:**
 - Verify podman-compose services are running: `sudo podman-compose ps`
+- Docker-only equivalent: `docker compose -f deploy/podman-compose.yml ps`
 - Check firewall rules on your server
 - Verify ports 8092 and 8093 are accessible
 
@@ -401,6 +424,7 @@ Features available:
 
 **Database connection issues:**
 - Check PostgreSQL is running: `sudo podman ps | grep postgres`
+- Docker-only equivalent: `docker ps | grep postgres`
 - Verify DB_HOST and DB_PORT environment variables
 - Check network connectivity between containers
 
@@ -417,9 +441,10 @@ agent-guardrails-template/
 ├── CLAUDE.md               ← Claude Code CLI guidelines
 ├── CHANGELOG.md           ← Release notes archive
 ├── mcp-server/            ← MCP Server implementation (v1.9.6)
-│   ├── src/               # Server source code
+│   ├── cmd/server/        # Go entry point
+│   ├── internal/          # Core server modules
 │   ├── deploy/            # Docker deployment configs
-│   └── requirements.txt   # Python dependencies
+│   └── README.md          # MCP server docs
 ├── docs/                   ← Documentation
 │   ├── AGENT_GUARDRAILS.md       # Core guardrails (MANDATORY)
 │   ├── HOW_TO_APPLY.md             # How to apply template

@@ -1,68 +1,282 @@
-# MCP Server v1.9.5 - Testers Release
+# MCP Server Tester Guide (AI01)
 
-> **Release for Testers:** This release is ready for testing by external testers.
+> This guide is for external testers validating the Guardrail MCP server stack running on AI01.
 
-**Release Date:** 2026-02-08
-**Branch:** `mcpserver`
-**Tag:** `v1.9.5-testers`
-**Status:** Production Ready - Testing Phase
+**Release Target:** v1.9.6  
+**Branch:** `mcpserver`  
+**Status:** Testing in progress
 
 ---
 
-## Quick Start for Testers
+## 1) AI01 Container Architecture (Current)
 
-### Prerequisites
+The AI01 deployment is a **3-container stack** with strict network separation:
 
-- Docker or Podman
-- Go 1.23+ (for building from source)
-- curl (for testing endpoints)
+```text
+AI01 host
+|
+|-- guardrail-mcp-server (app)
+|   |-- container port 8080: MCP SSE + JSON-RPC message endpoint
+|   |-- container port 8081: Web UI + REST API + health + metrics
+|   |-- attached networks: frontend, backend
+|
+|-- guardrail-postgres (state)
+|   |-- container port 5432 (backend network only)
+|   |-- attached networks: backend
+|   |-- persistent volume: pg_data
+|
+|-- guardrail-redis (cache/rate limiting)
+|   |-- container port 6379 (backend network only)
+|   |-- attached networks: backend
+|   |-- persistent volume: redis_data
+```
 
-### Build and Run
+### Host exposure model
+
+- MCP and Web ports are bound to **loopback only** via compose: `127.0.0.1:${MCP_PORT}:8080` and `127.0.0.1:${WEB_PORT}:8081`
+- Postgres and Redis are **not** host-exposed
+- Default host ports are `8080` and `8081`
+- AI01 commonly uses `8092` and `8093` by setting env vars
+
+### Security and runtime constraints
+
+- App container runs as non-root `65532:65532`
+- Root filesystem is read-only with `/tmp` mounted as tmpfs
+- Linux capabilities dropped (`ALL`)
+- `no-new-privileges:true` enabled
+- `postgres` and `redis` health checks gate app startup
+
+---
+
+## 2) Pre-Flight Checks (Before Testing)
+
+Run these from `mcp-server/`.
 
 ```bash
-# Clone the repository
-git clone https://github.com/TheArchitectit/agent-guardrails-template.git
-cd agent-guardrails-template
+podman --version
+podman-compose --version
+```
 
-# Checkout the MCP branch
-git checkout mcpserver
+If you are Docker-only (no Podman), use:
 
-# Build the server
+```bash
+docker --version
+docker compose version
+```
+
+Verify no local port conflict on your target host ports:
+
+```bash
+ss -ltnp | grep -E ":(8080|8081|8092|8093)"
+```
+
+If testing from your laptop against AI01, create an SSH tunnel first:
+
+```bash
+ssh -L 8092:127.0.0.1:8092 -L 8093:127.0.0.1:8093 <user>@AI01
+```
+
+Then use `http://localhost:8092` and `http://localhost:8093` locally.
+
+---
+
+## 3) Environment Setup
+
+```bash
 cd mcp-server
-make build
+cp .env.example .env
+```
 
-# Run with Docker Compose
+Set at minimum:
+
+- `MCP_API_KEY` (32+ chars, mixed case + digits)
+- `IDE_API_KEY` (32+ chars, mixed case + digits)
+- `JWT_SECRET` (32+ chars minimum; 64+ recommended)
+- `DB_PASSWORD`
+- `REDIS_PASSWORD`
+- `MCP_PORT` / `WEB_PORT` (use `8092` / `8093` on AI01 if required)
+
+Example secure generation:
+
+```bash
+openssl rand -hex 32   # MCP_API_KEY
+openssl rand -hex 32   # IDE_API_KEY
+openssl rand -hex 64   # JWT_SECRET
+openssl rand -base64 32 # DB/Redis passwords
+```
+
+---
+
+## 4) Start the Stack
+
+### Option A: Build and run on AI01
+
+```bash
+cd mcp-server
 make docker-up
 ```
 
-### Environment Setup
-
-Copy and configure the environment:
+### Option B: Explicit compose command
 
 ```bash
-cp .env.example .env
-# Edit .env and set secure values for:
-# - MCP_API_KEY
-# - IDE_API_KEY
-# - JWT_SECRET
-# - DB_PASSWORD
-# - REDIS_PASSWORD
+cd mcp-server
+podman-compose -f deploy/podman-compose.yml up -d --build
+```
+
+### Option C: Docker only (no Podman)
+
+The Makefile targets use Podman tools. If you are Docker-only, run compose commands directly:
+
+```bash
+cd mcp-server
+docker compose -f deploy/podman-compose.yml up -d --build
+```
+
+Check status:
+
+```bash
+podman-compose -f deploy/podman-compose.yml ps
+podman ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+```
+
+Docker equivalent:
+
+```bash
+docker compose -f deploy/podman-compose.yml ps
+docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+```
+
+Expected containers:
+
+- `guardrail-postgres` (healthy)
+- `guardrail-redis` (healthy)
+- `guardrail-mcp-server` (running)
+
+---
+
+## 5) Run Database Migrations (Required)
+
+If migrations are skipped, many API operations fail even when containers look healthy.
+
+Use this compose-safe method (works even when Postgres is not host-exposed):
+
+```bash
+cd mcp-server
+set -a
+source .env
+set +a
+
+for f in internal/database/migrations/*_up.sql; do
+  echo "Applying $f"
+  podman exec -i guardrail-postgres psql -U "$DB_USER" -d "$DB_NAME" < "$f"
+done
+```
+
+Docker equivalent:
+
+```bash
+cd mcp-server
+set -a
+source .env
+set +a
+
+for f in internal/database/migrations/*_up.sql; do
+  echo "Applying $f"
+  docker exec -i guardrail-postgres psql -U "$DB_USER" -d "$DB_NAME" < "$f"
+done
+```
+
+Optional (only if DB is directly reachable from host):
+
+```bash
+make migrate-up DATABASE_URL="postgresql://${DB_USER}:${DB_PASSWORD}@127.0.0.1:${DB_PORT}/${DB_NAME}?sslmode=disable"
 ```
 
 ---
 
-## What to Test
+## 6) Smoke Test Checklist
 
-### 1. MCP Protocol Testing
+Define base URLs from your `.env`:
 
-**SSE Endpoint Connection:**
 ```bash
-curl -N http://localhost:8080/mcp/v1/sse
+set -a
+source .env
+set +a
+export MCP_BASE="http://localhost:${MCP_PORT}"
+export WEB_BASE="http://localhost:${WEB_PORT}"
 ```
 
-**Initialize Session:**
+### 6.1 Web health and metrics
+
 ```bash
-curl -X POST http://localhost:8080/mcp/v1/message \
+curl -s "$WEB_BASE/health/live"
+curl -s "$WEB_BASE/health/ready"
+curl -s "$WEB_BASE/version"
+curl -s "$WEB_BASE/metrics" | head -n 5
+```
+
+Expected:
+
+- `/health/live` -> `200`, `status: alive`
+- `/health/ready` -> `200`, `status: ready`
+- `/version` -> service/version JSON
+- `/metrics` -> Prometheus text output
+
+### 6.2 Public vs protected Web API behavior
+
+Public (no API key expected):
+
+```bash
+curl -i "$WEB_BASE/api/documents"
+curl -i "$WEB_BASE/api/rules"
+```
+
+Protected (no API key should fail):
+
+```bash
+curl -i -X POST "$WEB_BASE/api/rules" \
+  -H "Content-Type: application/json" \
+  -d '{"rule_id":"TEST-001","name":"x","pattern":"x","message":"x","severity":"warning","category":"test","enabled":true}'
+```
+
+Expected: `401 Unauthorized` without `Authorization: Bearer <MCP_API_KEY>`.
+
+---
+
+## 7) MCP Protocol Test Flow (Important)
+
+This is where most tester confusion happens.
+
+### Key behavior
+
+- `GET /mcp/v1/sse` creates a session and sends an `endpoint` event
+- The event data includes the required `session_id` in message URL
+- `POST /mcp/v1/message?session_id=...` usually returns `202 Accepted` (no JSON body)
+- The actual JSON-RPC response is delivered on the SSE stream as `event: message`
+
+### Step-by-step (2 terminals)
+
+Terminal A - keep SSE open:
+
+```bash
+curl -N "$MCP_BASE/mcp/v1/sse"
+```
+
+You should see something like:
+
+```text
+event: endpoint
+data: http://localhost:<MCP_PORT>/mcp/v1/message?session_id=sess_abc123...
+
+: ping
+```
+
+Copy the full `message?session_id=...` URL.
+
+Terminal B - send initialize request to that URL:
+
+```bash
+curl -i -X POST "$MCP_BASE/mcp/v1/message?session_id=<session_id>" \
   -H "Content-Type: application/json" \
   -d '{
     "jsonrpc": "2.0",
@@ -79,176 +293,180 @@ curl -X POST http://localhost:8080/mcp/v1/message \
   }'
 ```
 
-**Expected:** JSON-RPC 2.0 response with server capabilities
+Expected:
 
-### 2. Guardrail Validation Testing
+- HTTP status from POST: `202 Accepted`
+- Terminal A receives `event: message` with JSON-RPC result payload
 
-**Test Bash Command Validation:**
+### Tool call example
+
 ```bash
-curl -X POST http://localhost:8080/mcp/v1/message \
+curl -i -X POST "$MCP_BASE/mcp/v1/message?session_id=<session_id>" \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer $MCP_API_KEY" \
   -d '{
     "jsonrpc": "2.0",
     "id": 2,
     "method": "tools/call",
     "params": {
-      "name": "guardrail_validate_bash",
+      "name": "guardrail_validate_git_operation",
       "arguments": {
-        "command": "rm -rf /",
-        "context": "test-session"
+        "command": "push",
+        "is_force": true
       }
     }
   }'
 ```
 
-**Expected:** Validation failure with reason (dangerous command detected)
-
-### 3. Web UI Testing
-
-Access the Web UI at: `http://localhost:8081`
-
-**Test Items:**
-- Document browsing and search
-- Prevention rule management (CRUD)
-- Project configuration
-- Failure registry viewing
-- Statistics dashboard
-
-### 4. Health Check Testing
-
-```bash
-# Liveness probe
-curl http://localhost:8081/health/live
-
-# Readiness probe (checks DB and Redis)
-curl http://localhost:8081/health/ready
-
-# Metrics endpoint
-curl http://localhost:8081/metrics
-```
-
-### 5. API Security Testing
-
-**Test Authentication:**
-```bash
-# Without API key (should fail)
-curl http://localhost:8080/mcp/v1/sse
-# Expected: 401 Unauthorized
-
-# With valid API key
-curl -H "Authorization: Bearer $MCP_API_KEY" \
-  http://localhost:8080/mcp/v1/sse
-# Expected: 200 OK with SSE stream
-```
-
-**Test Rate Limiting:**
-```bash
-# Send 1000+ requests rapidly
-for i in {1..1100}; do
-  curl -s -o /dev/null -w "%{http_code}\n" \
-    -H "Authorization: Bearer $MCP_API_KEY" \
-    http://localhost:8081/api/documents
-done
-# Expected: First 1000 succeed, then 429 Too Many Requests
-```
-
-### 6. Database Operations Testing
-
-**Test Document CRUD:**
-```bash
-# List documents
-curl http://localhost:8081/api/documents
-
-# Search documents
-curl "http://localhost:8081/api/documents/search?q=guardrail"
-
-# Get specific document
-curl http://localhost:8081/api/documents/1
-```
-
-### 7. Resilience Testing
-
-**Circuit Breaker Test:**
-```bash
-# Stop PostgreSQL container
-podman stop guardrail-postgres
-
-# Requests should fail fast with circuit breaker open
-# Wait 30 seconds for recovery attempt
-
-# Start PostgreSQL
-podman start guardrail-postgres
-
-# Service should recover automatically
-```
-
-### 8. Container Security Testing
-
-```bash
-# Verify non-root user
-podman exec guardrail-mcp-server id
-# Expected: uid=65532 gid=65532
-
-# Verify read-only filesystem
-docker exec guardrail-mcp-server touch /test 2>&1
-# Expected: Read-only file system error
-
-# Check dropped capabilities
-podman inspect guardrail-mcp-server | grep -A 10 CapDrop
-# Expected: ALL
-```
+Expected `event: message` payload includes a violation for force push.
 
 ---
 
-## Bug Report Template
+## 8) Container Security Verification
 
-If you find issues, please report with:
+```bash
+podman inspect guardrail-mcp-server --format '{{.Config.User}}'
+podman inspect guardrail-mcp-server --format '{{.HostConfig.ReadonlyRootfs}}'
+podman inspect guardrail-mcp-server --format '{{json .HostConfig.CapDrop}}'
+podman inspect guardrail-mcp-server --format '{{json .HostConfig.SecurityOpt}}'
+podman inspect guardrail-mcp-server --format '{{json .HostConfig.Tmpfs}}'
+```
+
+Docker equivalent:
+
+```bash
+docker inspect guardrail-mcp-server --format '{{.Config.User}}'
+docker inspect guardrail-mcp-server --format '{{.HostConfig.ReadonlyRootfs}}'
+docker inspect guardrail-mcp-server --format '{{json .HostConfig.CapDrop}}'
+docker inspect guardrail-mcp-server --format '{{json .HostConfig.SecurityOpt}}'
+docker inspect guardrail-mcp-server --format '{{json .HostConfig.Tmpfs}}'
+```
+
+Expected:
+
+- User is `65532:65532`
+- `ReadonlyRootfs` is `true`
+- Capabilities show `ALL` dropped
+- Security options include `no-new-privileges:true`
+- `/tmp` tmpfs mount is present
+
+---
+
+## 9) Common Failure Modes and Fixes
+
+### Symptom: `Missing session_id parameter`
+
+- Cause: posting to `/mcp/v1/message` without query string
+- Fix: always post to URL emitted in SSE `endpoint` event
+
+### Symptom: POST returns `202` but no JSON body
+
+- Cause: expected behavior in session/SSE mode
+- Fix: read JSON-RPC response from Terminal A SSE stream (`event: message`)
+
+### Symptom: `/health/ready` returns `503`
+
+- Cause: DB or Redis unhealthy/unreachable
+- Fix:
+  - `podman logs guardrail-postgres`
+  - `podman logs guardrail-redis`
+  - confirm `.env` credentials match compose env
+
+### Symptom: cannot access from outside AI01
+
+- Cause: ports are bound to `127.0.0.1` only
+- Fix: use SSH tunnel or put Nginx/Traefik in front
+
+### Symptom: Web UI loads blank/missing assets
+
+- Cause: stale container image before static asset packaging updates
+- Fix:
+  - `podman-compose -f deploy/podman-compose.yml down`
+  - `podman-compose -f deploy/podman-compose.yml up -d --build`
+
+---
+
+## 10) Bug Report Template
+
+Use this exact format in issues:
 
 ```markdown
-**Test Case:** [Which test above]
-**Severity:** [Critical/High/Medium/Low]
+**Test Area:** [Architecture | MCP Protocol | Web API | Security | Resilience]
+**Severity:** [Critical | High | Medium | Low]
 **Expected:** [What should happen]
-**Actual:** [What actually happened]
-**Steps to Reproduce:**
-1. Step one
-2. Step two
+**Actual:** [What happened]
+
+**Repro Steps:**
+1. ...
+2. ...
 3. ...
 
-**Logs:**
-```
-[Relevant log output]
-```
+**Artifacts:**
+- `podman-compose ps` output
+- `podman logs guardrail-mcp-server --tail 200`
+- Full curl command used (redact secrets)
+- Response status/body or SSE event snippet
 
 **Environment:**
-- OS: [e.g., Ubuntu 22.04]
-- Docker/Podman version: [e.g., Podman 4.9]
-- Go version: [e.g., 1.23.2]
+- Host: AI01
+- OS:
+- Podman version:
+- podman-compose version:
+- Tested commit/tag:
 ```
 
 ---
 
-## Known Issues
+## 11) Quick Command Block
 
-None at this time.
+```bash
+# Start stack
+cd mcp-server && make docker-up
+
+# Check service state
+podman-compose -f deploy/podman-compose.yml ps
+
+# Follow app logs
+podman logs -f guardrail-mcp-server
+
+# Load port values
+set -a && source .env && set +a
+
+# Health check
+curl -s "http://localhost:${WEB_PORT}/health/ready"
+
+# Open SSE
+curl -N "http://localhost:${MCP_PORT}/mcp/v1/sse"
+```
+
+Docker-only quick block:
+
+```bash
+# Start stack
+cd mcp-server
+docker compose -f deploy/podman-compose.yml up -d --build
+
+# Check service state
+docker compose -f deploy/podman-compose.yml ps
+
+# Follow app logs
+docker logs -f guardrail-mcp-server
+
+# Load port values
+set -a && source .env && set +a
+
+# Health check
+curl -s "http://localhost:${WEB_PORT}/health/ready"
+
+# Open SSE
+curl -N "http://localhost:${MCP_PORT}/mcp/v1/sse"
+```
 
 ---
 
-## Feedback
+## Feedback Channel
 
-Please submit feedback via:
 - GitHub Issues: https://github.com/TheArchitectit/agent-guardrails-template/issues
-- Email: [maintainer contact]
 
 ---
 
-## Security Notes
-
-- All API keys should be generated with: `openssl rand -hex 32`
-- JWT secret should be at least 48 characters
-- Database passwords should be strong and unique
-- Never commit .env files with real credentials
-
----
-
-**Co-Authored-By:** Claude Opus 4.5 <noreply@anthropic.com>
+**Last Updated:** 2026-02-08
