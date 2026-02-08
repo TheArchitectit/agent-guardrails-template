@@ -36,7 +36,7 @@ It ensures that any AI system (Claude, GPT, Gemini, LLaMA, etc.) follows strict 
 
 ---
 
-## MCP Server (New in v1.9.5)
+## MCP Server (Updated in v1.9.6)
 
 The **Model Context Protocol (MCP) Server** provides real-time guardrail enforcement via a standardized protocol for AI agents and IDEs.
 
@@ -63,7 +63,7 @@ The **Model Context Protocol (MCP) Server** provides real-time guardrail enforce
 **Endpoints:**
 
 - **SSE Stream:** `GET /mcp/v1/sse` - Real-time event streaming
-- **Message Handler:** `POST /mcp/v1/message` - JSON-RPC 2.0 protocol
+- **Message Handler:** `POST /mcp/v1/message?session_id=<session_id>` - JSON-RPC 2.0 protocol
 
 **Web UI (Port 8093):**
 
@@ -309,10 +309,16 @@ sudo podman-compose ps
 
 ### Testing the MCP Endpoint
 
-**Test initialization:**
+**Get session endpoint and initialize:**
 
 ```bash
-curl -X POST http://localhost:8092/mcp/v1/message \
+# 1) Open SSE stream and capture endpoint event
+curl -sN http://localhost:8092/mcp/v1/sse
+# event: endpoint
+# data: http://localhost:8092/mcp/v1/message?session_id=<session_id>
+
+# 2) Send initialize to the session endpoint
+curl -X POST "http://localhost:8092/mcp/v1/message?session_id=<session_id>" \
   -H 'Content-Type: application/json' \
   -d '{
     "jsonrpc": "2.0",
@@ -338,12 +344,11 @@ curl -X POST http://localhost:8092/mcp/v1/message \
   "result": {
     "protocolVersion": "2024-11-05",
     "capabilities": {
-      "tools": {},
       "resources": {}
     },
     "serverInfo": {
-      "name": "guardrail-mcp-server",
-      "version": "1.9.5"
+      "name": "guardrail-mcp",
+      "version": "1.9.6"
     }
   }
 }
@@ -352,7 +357,7 @@ curl -X POST http://localhost:8092/mcp/v1/message \
 **Test guardrail validation:**
 
 ```bash
-curl -X POST http://localhost:8092/mcp/v1/message \
+curl -X POST "http://localhost:8092/mcp/v1/message?session_id=<session_id>" \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer $MCP_API_KEY' \
   -d '{
@@ -411,7 +416,7 @@ agent-guardrails-template/
 ├── HEADER_MAP.md          ← Section-level lookup
 ├── CLAUDE.md               ← Claude Code CLI guidelines
 ├── CHANGELOG.md           ← Release notes archive
-├── mcp-server/            ← MCP Server implementation (v1.9.5)
+├── mcp-server/            ← MCP Server implementation (v1.9.6)
 │   ├── src/               # Server source code
 │   ├── deploy/            # Docker deployment configs
 │   └── requirements.txt   # Python dependencies
@@ -522,7 +527,7 @@ agent-guardrails-template/
 
 See [CHANGELOG.md](CHANGELOG.md) for complete release history.
 
-**Current Version:** v1.9.5 (2026-02-08)
+**Current Version:** v1.9.6 (2026-02-08)
 
 ---
 
@@ -556,5 +561,5 @@ in subscription credit when they subscribe!
 
 ---
 
-**Last Updated:** 2026-02-07
-**Status:** v1.9.5 - Production Ready
+**Last Updated:** 2026-02-08
+**Status:** v1.9.6 - Production Ready
