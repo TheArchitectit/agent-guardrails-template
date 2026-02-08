@@ -215,6 +215,96 @@ func (s *MCPServer) registerTools() {
 						},
 					},
 				},
+			{
+				Name:        "guardrail_validate_scope",
+				Description: "Check if a file path is within authorized scope",
+				InputSchema: mcp.ToolInputSchema{
+					Type: "object",
+					Properties: mcp.ToolInputSchemaProperties{
+						"file_path": map[string]interface{}{
+							"type":        "string",
+							"description": "The file path to validate",
+						},
+						"authorized_scope": map[string]interface{}{
+							"type":        "string",
+							"description": "The authorized scope prefix (e.g., /app/src)",
+						},
+					},
+					Required: []string{"file_path", "authorized_scope"},
+				},
+			},
+			{
+				Name:        "guardrail_validate_commit",
+				Description: "Validate commit message format compliance (conventional commits)",
+				InputSchema: mcp.ToolInputSchema{
+					Type: "object",
+					Properties: mcp.ToolInputSchemaProperties{
+						"message": map[string]interface{}{
+							"type":        "string",
+							"description": "The commit message to validate",
+						},
+					},
+					Required: []string{"message"},
+				},
+			},
+			{
+				Name:        "guardrail_prevent_regression",
+				Description: "Check failure registry for matching patterns to prevent regressions",
+				InputSchema: mcp.ToolInputSchema{
+					Type: "object",
+					Properties: mcp.ToolInputSchemaProperties{
+						"file_paths": map[string]interface{}{
+							"type":        "array",
+							"description": "Array of file paths that will be modified",
+						},
+						"code_content": map[string]interface{}{
+							"type":        "string",
+							"description": "Code content to check against regression patterns",
+						},
+					},
+					Required: []string{"file_paths"},
+				},
+			},
+			{
+				Name:        "guardrail_check_test_prod_separation",
+				Description: "Verify test/production environment isolation",
+				InputSchema: mcp.ToolInputSchema{
+					Type: "object",
+					Properties: mcp.ToolInputSchemaProperties{
+						"file_path": map[string]interface{}{
+							"type":        "string",
+							"description": "The file path to check",
+						},
+						"environment": map[string]interface{}{
+							"type":        "string",
+							"description": "Environment type: test or prod",
+							"enum":        []string{"test", "prod"},
+						},
+					},
+					Required: []string{"file_path", "environment"},
+				},
+			},
+			{
+				Name:        "guardrail_validate_push",
+				Description: "Validate git push safety conditions",
+				InputSchema: mcp.ToolInputSchema{
+					Type: "object",
+					Properties: mcp.ToolInputSchemaProperties{
+						"branch": map[string]interface{}{
+							"type":        "string",
+							"description": "The branch being pushed to",
+						},
+						"is_force": map[string]interface{}{
+							"type":        "boolean",
+							"description": "Whether this is a force push",
+						},
+						"has_unpushed_commits": map[string]interface{}{
+							"type":        "boolean",
+							"description": "Whether there are unpushed commits",
+						},
+					},
+					Required: []string{"branch"},
+				},
 			},
 		}, nil
 	})
@@ -237,6 +327,42 @@ func (s *MCPServer) registerTools() {
 					Name:        "Active Prevention Rules",
 					Description: "Currently active prevention rules",
 					MimeType:    "application/json",
+				},
+				{
+					Uri:         "guardrail://docs/agent-guardrails",
+					Name:        "Agent Guardrails",
+					Description: "Core safety protocols and guardrails",
+					MimeType:    "text/markdown",
+				},
+				{
+					Uri:         "guardrail://docs/four-laws",
+					Name:        "Four Laws of Agent Safety",
+					Description: "The Four Laws of Agent Safety (canonical)",
+					MimeType:    "text/markdown",
+				},
+				{
+					Uri:         "guardrail://docs/halt-conditions",
+					Name:        "Halt Conditions",
+					Description: "When to stop and ask for help",
+					MimeType:    "text/markdown",
+				},
+				{
+					Uri:         "guardrail://docs/workflows",
+					Name:        "Workflow Documentation",
+					Description: "All workflow documentation index",
+					MimeType:    "text/markdown",
+				},
+				{
+					Uri:         "guardrail://docs/standards",
+					Name:        "Standards Documentation",
+					Description: "All standards documentation index",
+					MimeType:    "text/markdown",
+				},
+				{
+					Uri:         "guardrail://docs/pre-work-checklist",
+					Name:        "Pre-Work Checklist",
+					Description: "Mandatory pre-work regression checklist",
+					MimeType:    "text/markdown",
 				},
 			},
 		}, nil
@@ -261,6 +387,16 @@ func (s *MCPServer) handleToolCall(ctx context.Context, name string, arguments m
 		return s.handlePreWorkCheck(ctx, arguments)
 	case "guardrail_get_context":
 		return s.handleGetContext(ctx, arguments)
+	case "guardrail_validate_scope":
+		return s.handleValidateScope(ctx, arguments)
+	case "guardrail_validate_commit":
+		return s.handleValidateCommit(ctx, arguments)
+	case "guardrail_prevent_regression":
+		return s.handlePreventRegression(ctx, arguments)
+	case "guardrail_check_test_prod_separation":
+		return s.handleCheckTestProdSeparation(ctx, arguments)
+	case "guardrail_validate_push":
+		return s.handleValidatePush(ctx, arguments)
 	default:
 		return &mcp.CallToolResult{
 			Content: []interface{}{
@@ -308,6 +444,24 @@ func (s *MCPServer) handleReadResource(ctx context.Context, uri string) (*mcp.Re
 				},
 			},
 		}, nil
+
+	case "guardrail://docs/agent-guardrails":
+		return s.readAgentGuardrailsResource(ctx, uri)
+
+	case "guardrail://docs/workflows":
+		return s.readWorkflowsResource(ctx, uri)
+
+	case "guardrail://docs/standards":
+		return s.readStandardsResource(ctx, uri)
+
+	case "guardrail://principles/four-laws", "guardrail://docs/four-laws":
+		return s.readFourLawsResource(ctx, uri)
+
+	case "guardrail://halt-conditions", "guardrail://docs/halt-conditions":
+		return s.readHaltConditionsResource(ctx, uri)
+
+	case "guardrail://checklist/pre-work", "guardrail://docs/pre-work-checklist":
+		return s.readPreWorkChecklistResource(ctx, uri)
 
 	default:
 		return nil, fmt.Errorf("unknown resource: %s", uri)

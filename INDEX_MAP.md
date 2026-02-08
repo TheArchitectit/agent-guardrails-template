@@ -64,8 +64,14 @@
 | regression-check | regression_check.py | scripts/ | Pre-commit regression pattern scanner |
 | prevention-rules | pattern-rules.json | .guardrails/prevention-rules/ | Regex patterns to prevent regressions |
 | semantic-rules | semantic-rules.json | .guardrails/prevention-rules/ | AST-based prevention rules |
+| extracted-rules | extracted-rules.json | .guardrails/prevention-rules/ | Rules extracted from AGENT_GUARDRAILS.md |
 | bug-fix | REGRESSION_PREVENTION.md | docs/workflows/ | Requirements for bug fixes (regression tests) |
 | known-bugs | failure-registry.jsonl | .guardrails/ | Active/resolved/deprecated bug history |
+| four-laws | four-laws.md | skills/shared-prompts/ | Canonical Four Laws of Agent Safety |
+| halt-conditions | halt-conditions.md | skills/shared-prompts/ | When to stop and ask for help |
+| sprint-001 | SPRINT_001_MCP_GAP_IMPLEMENTATION.md | docs/sprints/ | Sprint: MCP Gap Implementation |
+| sprint-002 | SPRINT_002_WEB_UI_IMPLEMENTATION.md | docs/sprints/ | Sprint: Web UI Implementation |
+| sprint-003 | SPRINT_003_DOCUMENTATION_PARITY.md | docs/sprints/ | Sprint: Documentation Parity (this sprint) |
 
 ---
 
@@ -273,6 +279,34 @@ agent-guardrails-template/
 
 **Authored by:** TheArchitectit
 **Document Owner:** Project Maintainers
-**Last Updated:** 2026-02-07
-**Document Count:** 40 (excluding INDEX files)
+**Last Updated:** 2026-02-08
+**Document Count:** 70 (excluding INDEX files)
 **Line Count:** ~255
+
+---
+
+## Canonical Sources
+
+To avoid duplication, always reference these canonical sources:
+
+| Content | Canonical Location | Reference In |
+|---------|-------------------|--------------|
+| Four Laws | skills/shared-prompts/four-laws.md | docs/AGENT_GUARDRAILS.md |
+| Halt Conditions | skills/shared-prompts/halt-conditions.md | Workflows, integration docs |
+
+---
+
+## Oversized Documents
+
+The following files exceed the 500-line limit and should be split per MODULAR_DOCUMENTATION.md:
+
+| File | Lines | Action Needed |
+|------|-------|---------------|
+| docs/plans/MCP_SERVER_PLAN.md | 2093 | Split into multiple files |
+| docs/sprints/SPRINT_002_WEB_UI_IMPLEMENTATION.md | 768 | Split or archive |
+| docs/sprints/SPRINT_003_DOCUMENTATION_PARITY.md | 754 | Split or archive after completion |
+| HEADER_MAP.md | 822 | Navigation file - exempt |
+| docs/standards/OPERATIONAL_PATTERNS.md | 667 | Split |
+| docs/workflows/AGENT_REVIEW_PROTOCOL.md | 638 | Split |
+| docs/security/SECURITY_AUDIT_CONFIG.md | 597 | Split |
+| README.md | 565 | Landing page - exempt |
