@@ -40,8 +40,8 @@ USER 65532:65532
 # Copy binary
 COPY --from=builder --chown=65532:65532 /app/server /server
 
-# Copy static files for Web UI
-COPY --from=builder --chown=65532:65532 /app/static /app/static
+# Copy Web UI files
+COPY --from=builder --chown=65532:65532 /app/web /app/web
 
 # Expose ports
 # 8080 - MCP server
