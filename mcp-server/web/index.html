@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Guardrail MCP Server - Management Interface">
+  <title>Guardrail</title>
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="/web/css/variables.css">
+  <link rel="stylesheet" href="/web/css/components.css">
+  <link rel="stylesheet" href="/web/css/layout.css">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='15' fill='%233b82f6'/><text x='50' y='70' font-size='50' text-anchor='middle' fill='white' font-family='sans-serif' font-weight='bold'>G</text></svg>">
+
+  <style>
+    /* Critical inline styles for initial load */
+    html, body {
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+      background-color: #0f172a;
+    }
+
+    #initial-loader {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background-color: #0f172a;
+      z-index: 9999;
+    }
+
+    #initial-loader.hidden {
+      display: none;
+    }
+
+    .loader-spinner {
+      width: 50px;
+      height: 50px;
+      border: 3px solid #334155;
+      border-top-color: #3b82f6;
+      border-radius: 50%;
+      animation: loader-spin 1s linear infinite;
+    }
+
+    .loader-text {
+      margin-top: 1rem;
+      color: #94a3b8;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 0.875rem;
+    }
+
+    @keyframes loader-spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <!-- Initial loader shown before JS loads -->
+  <div id="initial-loader">
+    <div class="loader-spinner"></div>
+    <p class="loader-text">Loading Guardrail...</p>
+  </div>
+
+  <!-- Application will be mounted here by app.js -->
+
+  <!-- Scripts loaded in order of dependency -->
+  <script src="/web/js/api.js"></script>
+  <script src="/web/js/components/Navigation.js"></script>
+  <script src="/web/js/components/Forms.js"></script>
+  <script src="/web/js/components/Modal.js"></script>
+  <script src="/web/js/components/Toast.js"></script>
+  <script src="/web/js/components/DataTable.js"></script>
+  <script src="/web/js/pages/Dashboard.js"></script>
+  <script src="/web/js/pages/Documents.js"></script>
+  <script src="/web/js/pages/Rules.js"></script>
+  <script src="/web/js/pages/Projects.js"></script>
+  <script src="/web/js/pages/Failures.js"></script>
+  <script src="/web/js/pages/IDETools.js"></script>
+  <script src="/web/js/router.js"></script>
+  <script src="/web/js/app.js"></script>
+
+  <script>
+    // Hide initial loader once app initializes
+    document.addEventListener('DOMContentLoaded', () => {
+      const loader = document.getElementById('initial-loader');
+      if (loader) {
+        // Give a small delay for smoother transition
+        setTimeout(() => {
+          loader.classList.add('hidden');
+        }, 300);
+      }
+    });
+  </script>
+</body>
+</html>
