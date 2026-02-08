@@ -187,14 +187,14 @@ func Test_isValidSlugChar(t *testing.T) {
 	}
 }
 
-func TestProject_Validate_Benchmark(t *testing.T) {
+func BenchmarkProject_Validate(b *testing.B) {
 	project := Project{
 		Name: "Benchmark Test Project",
 		Slug: "benchmark-test-project",
 	}
 
-	t.ResetTimer()
-	for i := 0; i < t.N; i++ {
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
 		_ = project.Validate()
 	}
 }
