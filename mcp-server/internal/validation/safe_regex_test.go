@@ -95,25 +95,27 @@ func TestSafeRegex(t *testing.T) {
 }
 
 func TestSafeRegex_ReDoSProtection(t *testing.T) {
-	// Test that ReDoS patterns timeout instead of hanging
-	// This pattern has catastrophic backtracking
-	redoPattern := `(a+)+$`
-	// Input that triggers exponential backtracking
+	// Test that SafeRegex returns results without hanging
+	// Note: Go's regex engine (RE2) doesn't use backtracking, so it doesn't
+	// suffer from catastrophic backtracking like PCRE. This test verifies
+	// that the function completes without error and within reasonable time.
+	pattern := `(a+)+$`
 	input := strings.Repeat("a", 30) + "b"
 
 	start := time.Now()
-	_, err := SafeRegex(redoPattern, input, 50*time.Millisecond)
+	matched, err := SafeRegex(pattern, input, 100*time.Millisecond)
 	duration := time.Since(start)
 
-	// Should timeout quickly, not hang
-	if err == nil {
-		t.Error("SafeRegex() should have timed out on ReDoS pattern")
+	// Should complete quickly (Go's RE2 engine is linear time)
+	if err != nil {
+		t.Errorf("SafeRegex() returned error = %v, want nil (Go RE2 doesn't backtrack)", err)
 	}
-	if duration > 200*time.Millisecond {
-		t.Errorf("SafeRegex() took too long (%v), should have timed out faster", duration)
+	if duration > 500*time.Millisecond {
+		t.Errorf("SafeRegex() took too long (%v), expected faster completion", duration)
 	}
-	if !strings.Contains(err.Error(), "timeout") {
-		t.Errorf("SafeRegex() error = %v, should contain 'timeout'", err)
+	// Pattern should not match (input ends with 'b', pattern expects $ after a+)
+	if matched {
+		t.Error("SafeRegex() matched = true, want false")
 	}
 }
 
@@ -147,16 +149,16 @@ func TestValidatePattern(t *testing.T) {
 			errMsg:  "pattern too long",
 		},
 		{
-			name:    "dangerous nested quantifiers - star plus",
+			name:    "invalid nested quantifiers - star plus (rejected by Go RE2)",
 			pattern: `a*+`,
 			wantErr: true,
-			errMsg:  "potentially dangerous nested quantifiers",
+			errMsg:  "invalid regex pattern",
 		},
 		{
-			name:    "dangerous nested quantifiers - plus star",
+			name:    "invalid nested quantifiers - plus star (rejected by Go RE2)",
 			pattern: `a+*`,
 			wantErr: true,
-			errMsg:  "potentially dangerous nested quantifiers",
+			errMsg:  "invalid regex pattern",
 		},
 		{
 			name:    "dangerous nested quantifiers - double question",
@@ -165,10 +167,10 @@ func TestValidatePattern(t *testing.T) {
 			errMsg:  "potentially dangerous nested quantifiers",
 		},
 		{
-			name:    "dangerous nested quantifiers - repeated braces",
+			name:    "invalid nested quantifiers - repeated braces (rejected by Go RE2)",
 			pattern: `a{1,2}{3,4}`,
 			wantErr: true,
-			errMsg:  "potentially dangerous nested quantifiers",
+			errMsg:  "invalid regex pattern",
 		},
 		{
 			name:    "safe quantifiers - single star",
