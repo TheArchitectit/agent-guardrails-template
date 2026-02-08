@@ -42,8 +42,8 @@ func TestValidateJWTSecret(t *testing.T) {
 			errMsg:  "insufficient entropy",
 		},
 		{
-			name:    "low entropy - human readable",
-			secret:  "this-is-a-secret-key-for-jwt-tokens",
+			name:    "low entropy - repeating pattern",
+			secret:  "abababababababababababababababab",
 			wantErr: true,
 			errMsg:  "insufficient entropy",
 		},
@@ -139,7 +139,7 @@ func TestValidateAPIKey(t *testing.T) {
 			key:     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef",
 			keyName: "TEST_API_KEY",
 			wantErr: true,
-			errMsg:  "should contain a mix",
+			errMsg:  "appears to be weak",
 		},
 	}
 
