@@ -12,6 +12,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Changed
 
+---
+
+## [1.9.6] - 2026-02-08
+
+### Fixed
+
+- **MCP SSE Compatibility** - Restored compatibility with Crush and Go SDK clients
+  - SSE keepalive now uses comments (`: ping`) instead of custom event payloads
+  - Server now streams JSON-RPC responses as `event: message` over SSE
+  - Session-bound queueing prevents response loss on concurrent requests
+
+### Changed
+
+- **Container Build** - Runtime image now includes Web UI static assets (`/app/static`)
+- **Web API Access** - Read-only routes for documents/rules/version are publicly browsable
+
+### Documentation
+
+- Updated root README and MCP server README for session_id-based MCP message flow
+- Added release notes document: `docs/RELEASE_v1.9.6.md`
+
 ## [1.9.5] - 2026-02-08
 
 ### Final Production Polish
