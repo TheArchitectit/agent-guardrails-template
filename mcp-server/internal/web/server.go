@@ -16,41 +16,49 @@ import (
 	"github.com/thearchitectit/guardrail-mcp/internal/cache"
 	"github.com/thearchitectit/guardrail-mcp/internal/config"
 	"github.com/thearchitectit/guardrail-mcp/internal/database"
+	"github.com/thearchitectit/guardrail-mcp/internal/ingest"
 	metricsMiddleware "github.com/thearchitectit/guardrail-mcp/internal/metrics"
 	loggingMiddleware "github.com/thearchitectit/guardrail-mcp/internal/middleware"
+	"github.com/thearchitectit/guardrail-mcp/internal/updates"
 )
 
 // Server wraps the Echo server with guardrail dependencies
 type Server struct {
-	echo        *echo.Echo
-	cfg         *config.Config
-	db          *database.DB
-	cache       *cache.Client
-	auditLogger *audit.Logger
-	docStore    *database.DocumentStore
-	ruleStore   *database.RuleStore
-	projStore   *database.ProjectStore
-	failStore   *database.FailureStore
-	version     string
+	echo          *echo.Echo
+	cfg           *config.Config
+	db            *database.DB
+	cache         *cache.Client
+	auditLogger   *audit.Logger
+	docStore      *database.DocumentStore
+	ruleStore     *database.RuleStore
+	projStore     *database.ProjectStore
+	failStore     *database.FailureStore
+	ingestSvc     *ingest.Service
+	updateChecker *updates.Checker
+	version       string
 }
 
 // NewServer creates a new web server
-func NewServer(cfg *config.Config, db *database.DB, cache *cache.Client, auditLogger *audit.Logger, version string) *Server {
+func NewServer(cfg *config.Config, db *database.DB, cacheClient *cache.Client, auditLogger *audit.Logger, version string) *Server {
 	e := echo.New()
 	e.HideBanner = true
 	e.HidePort = true
 
+	docStore := database.NewDocumentStore(db)
+
 	s := &Server{
-		echo:        e,
-		cfg:         cfg,
-		db:          db,
-		cache:       cache,
-		auditLogger: auditLogger,
-		docStore:    database.NewDocumentStore(db),
-		ruleStore:   database.NewRuleStore(db),
-		projStore:   database.NewProjectStore(db),
-		failStore:   database.NewFailureStore(db),
-		version:     version,
+		echo:          e,
+		cfg:           cfg,
+		db:            db,
+		cache:         cacheClient,
+		auditLogger:   auditLogger,
+		docStore:      docStore,
+		ruleStore:     database.NewRuleStore(db),
+		projStore:     database.NewProjectStore(db),
+		failStore:     database.NewFailureStore(db),
+		ingestSvc:     ingest.NewService(docStore, []string{"/app/docs"}),
+		updateChecker: updates.NewChecker(db, version, os.Getenv("GIT_COMMIT")),
+		version:       version,
 	}
 
 	s.setupMiddleware()
@@ -157,6 +165,17 @@ func (s *Server) setupRoutes() {
 	// System routes
 	api.GET("/stats", s.getStats)
 	api.POST("/ingest", s.triggerIngest)
+
+	// Update routes
+	api.GET("/updates/status", s.getUpdateStatus)
+	api.POST("/updates/check", s.checkForUpdates)
+
+	// Ingest routes
+	api.POST("/ingest/upload", s.uploadFiles)
+	api.POST("/ingest/sync", s.syncRepo)
+	api.GET("/ingest/status", s.getIngestStatus)
+	api.GET("/ingest/orphans", s.listOrphans)
+	api.DELETE("/ingest/orphans/:id", s.deleteOrphan)
 
 	// IDE API endpoints
 	ide := s.echo.Group("/ide")

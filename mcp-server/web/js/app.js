@@ -9,6 +9,7 @@ class App {
     this.navigation = null;
     this.main = null;
     this.apiKeyModal = null;
+    this.updateNotifier = null;
   }
 
   init() {
@@ -109,6 +110,9 @@ class App {
 
     // Setup global error handler
     this.setupErrorHandler();
+
+    // Initialize update notifier (checks for updates on load)
+    this.updateNotifier = new UpdateNotifier();
 
     // Initial route
     window.router.handleRoute();
