@@ -185,12 +185,11 @@ func (s *Server) setupRoutes() {
 	ide.GET("/rules", s.getIDERules)
 	ide.GET("/quick-reference", s.getQuickReference)
 
-	// Static files (Web UI) - must be registered BEFORE SPA fallback
+	// Static files (Web UI) - ORDER MATTERS: specific routes first
 	if s.cfg.WebEnabled {
-		s.echo.Static("/", "/app/web")
-		s.echo.Static("/web", "/app/web")
 		// SPA fallback: serve index.html for non-file routes (client-side routing)
 		// This handles /web, /web/dashboard, /web/rules etc but NOT /web/js/app.js
+		// MUST be registered BEFORE the Static("/", ...) route
 		s.echo.GET("/web/*", func(c echo.Context) error {
 			// Check if this is a request for an actual file
 			requestPath := c.Request().URL.Path
@@ -206,6 +205,11 @@ func (s *Server) setupRoutes() {
 			// For routes without file extension (client-side routes), serve index.html
 			return c.File("/app/web/index.html")
 		})
+
+		// Static file serving - register AFTER specific routes
+		// This serves files at root paths like /index.html, /js/app.js, etc.
+		s.echo.Static("/web", "/app/web")
+		s.echo.Static("/", "/app/web")
 	}
 }
 
