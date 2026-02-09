@@ -17,6 +17,12 @@ import (
 func APIKeyAuth(cfg *config.Config) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
+			// Allow OPTIONS requests (CORS preflight) without authentication
+			// This must be checked first, before any path checks
+			if c.Request().Method == http.MethodOptions {
+				return next(c)
+			}
+
 			// Use the actual request URL path, not the route pattern
 			// This is critical because c.Path() returns route pattern which may be /*
 			requestPath := c.Request().URL.Path
