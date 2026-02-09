@@ -87,14 +87,8 @@ func (s *Server) setupMiddleware() {
 	// Security headers
 	s.echo.Use(securityHeadersMiddleware())
 
-	// API Key Authentication (required for all routes except health/metrics)
-	s.echo.Use(APIKeyAuth(s.cfg))
-
-	// Rate Limiting
-	limiter := s.cache.NewDistributedLimiter()
-	s.echo.Use(RateLimitMiddleware(limiter, s.cfg))
-
-	// CORS - restrict in production
+	// CORS - MUST run before auth middleware to handle OPTIONS preflight requests
+	// CORS preflight (OPTIONS) requests should return 200 before auth check
 	corsOrigins := s.cfg.CORSAllowedOrigins
 	if len(corsOrigins) == 0 || (len(corsOrigins) == 1 && corsOrigins[0] == "*") {
 		// Default to restrictive localhost origins if not configured
@@ -110,6 +104,13 @@ func (s *Server) setupMiddleware() {
 		AllowHeaders: s.cfg.CORSAllowedHeaders,
 		MaxAge:       s.cfg.CORSMaxAge,
 	}))
+
+	// API Key Authentication (required for all routes except health/metrics)
+	s.echo.Use(APIKeyAuth(s.cfg))
+
+	// Rate Limiting
+	limiter := s.cache.NewDistributedLimiter()
+	s.echo.Use(RateLimitMiddleware(limiter, s.cfg))
 
 	// Request timeout
 	s.echo.Use(middleware.TimeoutWithConfig(middleware.TimeoutConfig{
