@@ -84,9 +84,9 @@
 **AI01 (100.96.49.42):**
 - MCP Port: 8094
 - Web UI Port: 8095
-- Version: v1.11.0
+- Version: v1.11.1
 - Status: ✅ Running
-- Features: Ingest system, update notifications, file upload
+- Features: Ingest system, update notifications, file upload, auth fixes
 
 **Web UI Access:**
 - URL: http://100.96.49.42:8095/web/
