@@ -20,6 +20,29 @@ class GuardrailAPI {
   }
 
   /**
+   * Validate the current API key by making a test request
+   * @returns {Promise<{valid: boolean, error?: string}>}
+   */
+  async validateApiKey() {
+    if (!this.apiKey) {
+      return { valid: false, error: 'No API key configured' };
+    }
+    try {
+      // Use a lightweight endpoint to validate the key
+      await this.getStats();
+      return { valid: true };
+    } catch (error) {
+      if (error.message.includes('401') || error.message.includes('Unauthorized')) {
+        return { valid: false, error: 'Invalid API key' };
+      }
+      if (error.message.includes('Network error')) {
+        return { valid: false, error: 'Unable to connect to server. Please check your network.' };
+      }
+      return { valid: false, error: error.message };
+    }
+  }
+
+  /**
    * Base request method with error handling
    */
   async request(endpoint, options = {}) {

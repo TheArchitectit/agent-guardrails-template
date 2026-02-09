@@ -28,7 +28,19 @@ class UpdateNotifier {
    */
   init() {
     this.createStyles();
-    this.shouldCheckOnLoad() && this.checkForUpdates();
+
+    // Defer the initial check to avoid race conditions during app initialization
+    // Ensures window.api and other dependencies are fully ready
+    if (this.shouldCheckOnLoad()) {
+      setTimeout(() => {
+        // Double-check API availability before making the call
+        if (window.api && typeof window.api.getUpdateStatus === 'function') {
+          this.checkForUpdates();
+        } else {
+          console.warn('UpdateNotifier: API not available, skipping update check');
+        }
+      }, 100);
+    }
   }
 
   /**
