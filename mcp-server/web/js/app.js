@@ -12,16 +12,28 @@ class App {
     this.updateNotifier = null;
   }
 
-  init() {
+  async init() {
+    console.log('App.init() called');
     // Check if API key is configured
     if (!window.api.apiKey) {
+      console.log('No API key found, showing prompt');
       this.showApiKeyPrompt();
     } else {
-      this.initializeApp();
+      console.log('API key found, validating before initializing');
+      // Validate existing API key before initializing
+      const result = await window.api.validateApiKey();
+      if (result.valid) {
+        console.log('API key validated, initializing app');
+        this.initializeApp();
+      } else {
+        console.log('API key validation failed:', result.error);
+        window.api.clearApiKey();
+        this.showApiKeyPrompt(result.error);
+      }
     }
   }
 
-  showApiKeyPrompt() {
+  showApiKeyPrompt(errorMessage = null) {
     document.body.innerHTML = '';
     document.body.className = '';
 
@@ -34,6 +46,7 @@ class App {
         <p class="api-key-description">
           Enter your API key to access the guardrail management interface.
         </p>
+        ${errorMessage ? `<div class="alert alert-error" style="margin-bottom: var(--space-4); text-align: center;">${errorMessage}</div>` : ''}
         <form id="api-key-form">
           <div class="form-group">
             <input
@@ -46,7 +59,7 @@ class App {
               style="text-align: center;"
             >
           </div>
-          <button type="submit" class="btn btn-primary" style="width: 100%;">
+          <button type="submit" class="btn btn-primary" style="width: 100%;" id="api-key-submit">
             Continue
           </button>
         </form>
@@ -60,21 +73,41 @@ class App {
 
     // Handle form submission
     const form = prompt.querySelector('#api-key-form');
-    form.addEventListener('submit', (e) => {
+    const submitBtn = prompt.querySelector('#api-key-submit');
+    const input = prompt.querySelector('#api-key-input');
+
+    form.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const key = prompt.querySelector('#api-key-input').value.trim();
-      if (key) {
-        window.api.setApiKey(key);
+      const key = input.value.trim();
+      if (!key) return;
+
+      // Disable form during validation
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Validating...';
+      input.disabled = true;
+
+      // Set the API key and validate it
+      window.api.setApiKey(key);
+      const result = await window.api.validateApiKey();
+
+      if (result.valid) {
+        console.log('API key validated, initializing app');
         this.initializeApp();
+      } else {
+        console.log('API key validation failed:', result.error);
+        // Clear invalid key
+        window.api.clearApiKey();
+        // Show error and re-prompt
+        this.showApiKeyPrompt(result.error);
       }
     });
 
-    // Add enter key handler
-    const input = prompt.querySelector('#api-key-input');
+    // Focus input
     input.focus();
   }
 
   initializeApp() {
+    console.log('App.initializeApp() started');
     // Clear body
     document.body.innerHTML = '';
 
@@ -116,6 +149,10 @@ class App {
 
     // Initial route
     window.router.handleRoute();
+
+    // Hide loader now that app is initialized
+    console.log('App.initializeApp() complete, hiding loader');
+    window.hideLoader && window.hideLoader();
   }
 
   setupApiKeyHandler() {
