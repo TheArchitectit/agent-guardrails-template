@@ -116,6 +116,7 @@
 
   /* Layout */
   --sidebar-width: 260px;
+  --sidebar-width-mobile: 280px;
   --sidebar-collapsed-width: 64px;
   --header-height: 64px;
   --container-max-width: 1440px;

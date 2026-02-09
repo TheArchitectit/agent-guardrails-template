@@ -202,6 +202,13 @@ class GuardrailAPI {
     });
   }
 
+  async createFailure(data) {
+    return this.request('/api/failures', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  }
+
   // ==================== IDE TOOLS ENDPOINTS ====================
 
   async getIDEHealth() {
