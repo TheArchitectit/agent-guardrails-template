@@ -131,7 +131,18 @@ class App {
     // Initialize navigation
     this.navigation = new Navigation(navContainer, {
       currentPath: window.location.hash.slice(1) || '/',
-      version: '1.0.0'
+      version: 'loading...'
+    });
+
+    // Fetch and update version
+    window.api.getVersion().then(v => {
+      this.navigation.options.version = v.version || 'unknown';
+      const versionEl = document.querySelector('.sidebar-version');
+      if (versionEl) {
+        versionEl.textContent = 'v' + this.navigation.options.version;
+      }
+    }).catch(() => {
+      this.navigation.options.version = 'unknown';
     });
 
     // Initialize router with references
