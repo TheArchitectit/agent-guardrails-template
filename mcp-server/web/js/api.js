@@ -246,6 +246,52 @@ class GuardrailAPI {
       method: 'POST'
     });
   }
+
+  // ==================== UPDATE ENDPOINTS ====================
+
+  async getUpdateStatus() {
+    return this.request('/api/updates/status');
+  }
+
+  async syncGuardrails() {
+    return this.request('/api/ingest/sync', {
+      method: 'POST'
+    });
+  }
+
+  // ==================== FILE UPLOAD ENDPOINTS ====================
+
+  async uploadFiles(files, onProgress = null) {
+    const formData = new FormData();
+    for (const file of files) {
+      formData.append('files', file);
+    }
+
+    const url = `${this.baseURL}/api/ingest/upload`;
+    const headers = {
+      ...(this.apiKey && { 'Authorization': `Bearer ${this.apiKey}` })
+    };
+
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers,
+        body: formData
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: `HTTP ${response.status}: ${response.statusText}` }));
+        throw new Error(errorData.error || `HTTP ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      if (error.message.includes('Failed to fetch')) {
+        throw new Error('Network error: Unable to connect to server');
+      }
+      throw error;
+    }
+  }
 }
 
 // Create global API instance
