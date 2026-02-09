@@ -70,7 +70,18 @@ func APIKeyAuth(cfg *config.Config) echo.MiddlewareFunc {
 				path == "/api/stats" || strings.HasPrefix(path, "/api/stats/") ||
 				path == "/api/projects" || strings.HasPrefix(path, "/api/projects/") ||
 				path == "/api/failures" || strings.HasPrefix(path, "/api/failures/") ||
+				path == "/api/ingest/status" ||
+				path == "/api/ingest/orphans" ||
+				path == "/api/updates/status" ||
 				path == "/version") {
+				return next(c)
+			}
+
+			// Skip safe write operations for public browsing when no API key is configured
+			// These are safe operations that don't expose sensitive data
+			if method == "POST" && (path == "/api/ingest" ||
+				path == "/api/ingest/sync" ||
+				path == "/api/updates/check") {
 				return next(c)
 			}
 
@@ -178,7 +189,17 @@ func RateLimitMiddleware(limiter *cache.DistributedRateLimiter, cfg *config.Conf
 				path == "/api/stats" || strings.HasPrefix(path, "/api/stats/") ||
 				path == "/api/projects" || strings.HasPrefix(path, "/api/projects/") ||
 				path == "/api/failures" || strings.HasPrefix(path, "/api/failures/") ||
+				path == "/api/ingest/status" ||
+				path == "/api/ingest/orphans" ||
+				path == "/api/updates/status" ||
 				path == "/version") {
+				return next(c)
+			}
+
+			// Skip safe write operations for public browsing
+			if method == "POST" && (path == "/api/ingest" ||
+				path == "/api/ingest/sync" ||
+				path == "/api/updates/check") {
 				return next(c)
 			}
 
