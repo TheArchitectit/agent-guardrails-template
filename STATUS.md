@@ -8,6 +8,30 @@
 
 ## Completed Sprints
 
+### Sprint 004: Document Ingestion System - COMPLETED
+- **Status:** ✅ COMPLETE
+- **Date Completed:** 2026-02-09
+- **Team:** 4 parallel agents
+
+**Implemented:**
+- Database migrations for ingest tracking
+- Markdown parser with YAML frontmatter support
+- Ingest service (repo sync + file upload)
+- Update checker (Docker + Guardrail versions)
+- Web UI file upload with drag-and-drop
+- Update notifier with daily checks
+
+**API Endpoints:**
+- POST /api/ingest/upload - File upload
+- POST /api/ingest/sync - Repo sync
+- GET /api/ingest/status - Sync status
+- GET /api/ingest/orphans - Orphaned docs
+- DELETE /api/ingest/orphans/:id - Delete orphan
+- GET /api/updates/status - Check updates
+- POST /api/updates/check - Trigger check
+
+---
+
 ### Sprint 001: MCP Gap Implementation - COMPLETED
 - **Status:** ✅ COMPLETE
 - **Date Completed:** 2026-02-08
