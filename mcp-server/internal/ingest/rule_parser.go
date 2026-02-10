@@ -3,7 +3,9 @@ package ingest
 import (
 	"context"
 	"crypto/sha256"
+	"encoding/json"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -29,7 +31,7 @@ type RuleParser struct {
 func NewRuleParser() *RuleParser {
 	return &RuleParser{
 		ruleHeaderRegex: regexp.MustCompile(`(?m)^##\s+(PREVENT-\d+)\s*:\s*(.+)$`),
-		metadataRegex:   regexp.MustCompile(`(?m)^\*\*(\w+)\*\*\s*:\s*(.+?)$`),
+		metadataRegex:   regexp.MustCompile(`(?m)^\*\*(\w+):\*\*\s*(.+?)$`),
 		backtickRegex:   regexp.MustCompile("`([^`]+)`"),
 	}
 }
@@ -47,23 +49,39 @@ type ParsedRule struct {
 
 // ParseRuleFile parses a single markdown file and extracts rules
 func (p *RuleParser) ParseRuleFile(path string) ([]ParsedRule, error) {
+	slog.Info("Parsing rule file", "file", path)
+
 	content, err := os.ReadFile(path)
 	if err != nil {
+		slog.Error("Failed to read rule file", "file", path, "error", err)
+		slog.Error("Failed to read rule file", "file", path, "error", err)
 		return nil, fmt.Errorf("failed to read file %s: %w", path, err)
 	}
 
-	return p.ParseRuleContent(string(content), path)
+	rules, err := p.ParseRuleContent(string(content), path)
+	if err != nil {
+		slog.Error("Failed to parse rule content", "file", path, "error", err)
+		return nil, err
+	}
+
+	slog.Info("Successfully parsed rule file", "file", path, "rules_found", len(rules))
+	return rules, nil
 }
 
 // ParseRuleContent parses markdown content and extracts rules
 func (p *RuleParser) ParseRuleContent(content, source string) ([]ParsedRule, error) {
+	slog.Debug("Parsing rule content", "source", source, "content_length", len(content))
+
 	var rules []ParsedRule
 
 	// Find all rule sections
 	matches := p.ruleHeaderRegex.FindAllStringIndex(content, -1)
 	if matches == nil {
+		slog.Debug("No rule sections found in content", "source", source)
 		return rules, nil
 	}
+
+	slog.Debug("Found rule sections in content", "source", source, "section_count", len(matches))
 
 	for i, match := range matches {
 		start := match[0]
@@ -85,6 +103,8 @@ func (p *RuleParser) ParseRuleContent(content, source string) ([]ParsedRule, err
 			rules = append(rules, *rule)
 		}
 	}
+
+	slog.Debug("Completed parsing rule content", "source", source, "rules_extracted", len(rules))
 
 	return rules, nil
 }
@@ -249,6 +269,84 @@ type RuleSyncResult struct {
 	Errors    []string
 }
 
+// JSONRuleFile represents the structure of JSON rule files
+type JSONRuleFile struct {
+	Schema      string     `json:"$schema"`
+	Description string     `json:"description"`
+	Version     string     `json:"version"`
+	Rules       []JSONRule `json:"rules"`
+}
+
+// JSONRule represents a single rule in JSON format
+type JSONRule struct {
+	RuleID           string   `json:"rule_id"`
+	FailureID        *string  `json:"failure_id"`
+	Name             string   `json:"name"`
+	Enabled          bool     `json:"enabled"`
+	Pattern          string   `json:"pattern"`
+	ForbiddenContext *string  `json:"forbidden_context"`
+	Message          string   `json:"message"`
+	Severity         string   `json:"severity"`
+	FileGlob         []string `json:"file_glob"`
+	Suggestion       string   `json:"suggestion"`
+	Category         string   `json:"category"`
+}
+
+// ParseJSONRuleFile parses a JSON rule file and extracts rules
+func (p *RuleParser) ParseJSONRuleFile(path string) ([]ParsedRule, error) {
+	slog.Info("Parsing JSON rule file", "file", path)
+
+	content, err := os.ReadFile(path)
+	if err != nil {
+		slog.Error("Failed to read JSON rule file", "file", path, "error", err)
+		return nil, fmt.Errorf("failed to read file %s: %w", path, err)
+	}
+
+	var jsonFile JSONRuleFile
+	if err := json.Unmarshal(content, &jsonFile); err != nil {
+		slog.Error("Failed to unmarshal JSON rule file", "file", path, "error", err)
+		return nil, fmt.Errorf("failed to parse JSON file %s: %w", path, err)
+	}
+
+	var rules []ParsedRule
+	for _, jsonRule := range jsonFile.Rules {
+		// Skip disabled rules
+		if !jsonRule.Enabled {
+			slog.Debug("Skipping disabled rule", "rule_id", jsonRule.RuleID)
+			continue
+		}
+
+		rule := ParsedRule{
+			RuleID:   jsonRule.RuleID,
+			Name:     jsonRule.Name,
+			Pattern:  jsonRule.Pattern,
+			Message:  jsonRule.Message,
+			Severity: jsonRule.Severity,
+			Category: jsonRule.Category,
+		}
+
+		// Default category if not set
+		if rule.Category == "" {
+			rule.Category = "general"
+		}
+
+		// Compute hash
+		hash := sha256.Sum256([]byte(jsonRule.Pattern + jsonRule.Message))
+		rule.PatternHash = fmt.Sprintf("%x", hash[:8])
+
+		// Validate
+		if err := p.validateRule(&rule); err != nil {
+			slog.Error("Invalid JSON rule", "rule_id", jsonRule.RuleID, "error", err)
+			continue
+		}
+
+		rules = append(rules, rule)
+	}
+
+	slog.Info("Successfully parsed JSON rule file", "file", path, "rules_found", len(rules))
+	return rules, nil
+}
+
 // RuleSyncService handles syncing parsed rules to the database
 type RuleSyncService struct {
 	ruleStore *database.RuleStore
@@ -263,9 +361,11 @@ func NewRuleSyncService(ruleStore *database.RuleStore) *RuleSyncService {
 	}
 }
 
-// SyncRulesFromDirectory syncs all rules from markdown files in a directory
+// SyncRulesFromDirectory syncs all rules from markdown and JSON files in a directory
 func (s *RuleSyncService) SyncRulesFromDirectory(ctx context.Context, dir string) (*RuleSyncResult, error) {
+	slog.Info("Syncing rules from directory", "dir", dir)
 	result := &RuleSyncResult{}
+	fileCount := 0
 	processedRuleIDs := make(map[string]bool)
 
 	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
@@ -277,13 +377,25 @@ func (s *RuleSyncService) SyncRulesFromDirectory(ctx context.Context, dir string
 			return nil
 		}
 
-		if !IsMarkdownFile(path) {
-			return nil
+		var rules []ParsedRule
+		var parseErr error
+
+		// Handle markdown files
+		if IsMarkdownFile(path) {
+			fileCount++
+			slog.Debug("Processing markdown file", "file", path)
+			rules, parseErr = s.parser.ParseRuleFile(path)
+		} else if strings.HasSuffix(strings.ToLower(path), ".json") {
+			// Handle JSON rule files
+			fileCount++
+			slog.Debug("Processing JSON rule file", "file", path)
+			rules, parseErr = s.parser.ParseJSONRuleFile(path)
+		} else {
+			return nil // Skip other files
 		}
 
-		rules, err := s.parser.ParseRuleFile(path)
-		if err != nil {
-			result.Errors = append(result.Errors, fmt.Sprintf("failed to parse %s: %v", path, err))
+		if parseErr != nil {
+			result.Errors = append(result.Errors, fmt.Sprintf("failed to parse %s: %v", path, parseErr))
 			return nil
 		}
 
