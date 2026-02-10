@@ -56,7 +56,7 @@ func NewServer(cfg *config.Config, db *database.DB, cacheClient *cache.Client, a
 		ruleStore:     database.NewRuleStore(db),
 		projStore:     database.NewProjectStore(db),
 		failStore:     database.NewFailureStore(db),
-		ingestSvc:     ingest.NewService(docStore, database.NewRuleStore(db), []string{"/app/docs"}, "/app/rules"),
+		ingestSvc:     ingest.NewService(docStore, database.NewRuleStore(db), []string{"/app/docs"}, "/app/docs"),
 		updateChecker: updates.NewChecker(db, version, os.Getenv("GIT_COMMIT")),
 		version:       version,
 	}
