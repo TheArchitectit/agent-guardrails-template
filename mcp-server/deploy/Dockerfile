@@ -43,6 +43,9 @@ COPY --from=builder --chown=65532:65532 /app/server /server
 # Copy Web UI files
 COPY --from=builder --chown=65532:65532 /app/web /app/web
 
+# Copy prevention rules for syncing
+COPY --from=builder --chown=65532:65532 /app/.guardrails/prevention-rules /app/docs
+
 # Expose ports
 # 8080 - MCP server
 # 8081 - Web UI
