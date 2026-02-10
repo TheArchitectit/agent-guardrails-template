@@ -56,7 +56,7 @@ func NewServer(cfg *config.Config, db *database.DB, cacheClient *cache.Client, a
 		ruleStore:     database.NewRuleStore(db),
 		projStore:     database.NewProjectStore(db),
 		failStore:     database.NewFailureStore(db),
-		ingestSvc:     ingest.NewService(docStore, []string{"/app/docs"}),
+		ingestSvc:     ingest.NewService(docStore, database.NewRuleStore(db), []string{"/app/docs"}, "/app/rules"),
 		updateChecker: updates.NewChecker(db, version, os.Getenv("GIT_COMMIT")),
 		version:       version,
 	}
@@ -149,6 +149,11 @@ func (s *Server) setupRoutes() {
 	api.PUT("/rules/:id", s.updateRule)
 	api.DELETE("/rules/:id", s.deleteRule)
 	api.PATCH("/rules/:id", s.patchRule)
+
+	// Rule sync routes
+	api.POST("/rules/sync", s.syncRules)
+	api.GET("/rules/sync/status", s.getRuleSyncStatus)
+	api.POST("/rules/sync/upload", s.triggerRuleSyncFromUpload)
 
 	// Project routes
 	api.GET("/projects", s.listProjects)
