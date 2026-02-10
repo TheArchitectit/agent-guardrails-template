@@ -363,6 +363,7 @@ func (s *Server) patchRule(c echo.Context) error {
 
 // syncRules triggers a rule sync from repository directories
 func (s *Server) syncRules(c echo.Context) error {
+	slog.Info("Received rule sync request")
 	ctx := c.Request().Context()
 
 	// Parse optional request body for sync options
@@ -373,6 +374,7 @@ func (s *Server) syncRules(c echo.Context) error {
 
 	// Create a new sync job
 	jobID := uuid.New()
+	slog.Info("Starting rule sync job", "job_id", jobID)
 
 	// Trigger sync in background to not block the response
 	go func() {
@@ -408,7 +410,9 @@ func (s *Server) syncRules(c echo.Context) error {
 		lastRuleSyncStatusLock.Unlock()
 
 		if err != nil {
-			slog.Error("Failed to sync rules from repo", "job_id", jobID, "error", err)
+			slog.Error("Rule sync background job failed", "job_id", jobID, "error", err)
+		} else {
+			slog.Info("Rule sync background job completed", "job_id", jobID, "added", result.Added, "updated", result.Updated, "disabled", result.Disabled)
 		}
 	}()
 
@@ -463,6 +467,7 @@ func (s *Server) triggerRuleSyncFromUpload(c echo.Context) error {
 
 	// Create a new ingest job
 	jobID := uuid.New()
+	slog.Info("Starting rule sync job", "job_id", jobID)
 	fileContents := make(map[string][]byte)
 
 	// Process each uploaded file
@@ -805,6 +810,7 @@ func (s *Server) uploadFiles(c echo.Context) error {
 
 	// Create a new ingest job
 	jobID := uuid.New()
+	slog.Info("Starting rule sync job", "job_id", jobID)
 	fileContents := make(map[string][]byte)
 
 	// Process each uploaded file
@@ -868,6 +874,7 @@ func (s *Server) syncRepo(c echo.Context) error {
 
 	// Create a new ingest job
 	jobID := uuid.New()
+	slog.Info("Starting rule sync job", "job_id", jobID)
 
 	// Trigger sync in background to not block the response
 	go func() {

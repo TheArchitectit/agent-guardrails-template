@@ -3,6 +3,7 @@ package ingest
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"io"
 	"os"
 	"path/filepath"
@@ -292,16 +293,27 @@ func (s *Service) CleanOrphanedDocuments(ctx context.Context) (int, error) {
 
 // SyncRulesFromRepo syncs prevention rules from markdown files in watched directories
 func (s *Service) SyncRulesFromRepo(ctx context.Context) (*RuleSyncResult, error) {
+	slog.Info("Starting rule sync from repository", "rules_dir", s.rulesDir)
+	slog.Debug("Checking rules directory configuration")
 	if s.rulesDir == "" {
+		slog.Error("Rules directory not configured")
 		return nil, fmt.Errorf("rules directory not configured")
 	}
 
 	// Check if rules directory exists
+	slog.Debug("Checking if rules directory exists", "dir", s.rulesDir)
 	if _, err := os.Stat(s.rulesDir); os.IsNotExist(err) {
+		slog.Info("Rules directory does not exist, skipping sync", "dir", s.rulesDir)
 		return &RuleSyncResult{}, nil // No rules directory, nothing to sync
 	}
 
-	return s.ruleSyncSvc.SyncRulesFromDirectory(ctx, s.rulesDir)
+	result, err := s.ruleSyncSvc.SyncRulesFromDirectory(ctx, s.rulesDir)
+	if err != nil {
+		slog.Error("Rule sync failed", "dir", s.rulesDir, "error", err)
+		return result, err
+	}
+	slog.Info("Rule sync completed", "dir", s.rulesDir, "added", result.Added, "updated", result.Updated, "disabled", result.Disabled, "errors", len(result.Errors))
+	return result, nil
 }
 
 // SyncRulesFromUpload syncs prevention rules from uploaded markdown content
