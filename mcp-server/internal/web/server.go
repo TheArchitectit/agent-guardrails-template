@@ -119,6 +119,9 @@ func (s *Server) setupMiddleware() {
 
 	// Body limit
 	s.echo.Use(middleware.BodyLimit("10M"))
+
+	// Cache control - prevent caching of API responses
+	s.echo.Use(cacheControlMiddleware())
 }
 
 // setupRoutes configures all routes
@@ -314,6 +317,26 @@ func securityHeadersMiddleware() echo.MiddlewareFunc {
 			c.Response().Header().Set("Permissions-Policy", "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()")
 
 			return next(c)
+		}
+	}
+}
+
+// cacheControlMiddleware adds cache-control headers to prevent caching of API responses
+func cacheControlMiddleware() echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			// Execute handler first
+			err := next(c)
+
+			// Then set cache headers on the response
+			path := c.Request().URL.Path
+			if strings.HasPrefix(path, "/api/") || strings.HasPrefix(path, "/ide/") {
+				c.Response().Header().Set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate")
+				c.Response().Header().Set("Pragma", "no-cache")
+				c.Response().Header().Set("Expires", "0")
+			}
+
+			return err
 		}
 	}
 }

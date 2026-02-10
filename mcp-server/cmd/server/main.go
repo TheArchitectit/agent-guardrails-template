@@ -18,6 +18,7 @@ import (
 	"github.com/thearchitectit/guardrail-mcp/internal/config"
 	"github.com/thearchitectit/guardrail-mcp/internal/database"
 	mcpServer "github.com/thearchitectit/guardrail-mcp/internal/mcp"
+	"github.com/thearchitectit/guardrail-mcp/internal/validation"
 	"github.com/thearchitectit/guardrail-mcp/internal/web"
 )
 
@@ -107,8 +108,12 @@ func main() {
 	// Create web server
 	webServer := web.NewServer(cfg, db, redisClient, auditLogger, version)
 
+	// Create validation engine
+	ruleStore := database.NewRuleStore(db)
+	validationEngine := validation.NewValidationEngine(ruleStore, redisClient)
+
 	// Create MCP server
-	mcpSrv := mcpServer.NewMCPServer(cfg, db, redisClient, auditLogger)
+	mcpSrv := mcpServer.NewMCPServer(cfg, db, redisClient, auditLogger, validationEngine)
 
 	// Start servers
 	ctx, cancel := context.WithCancel(context.Background())
