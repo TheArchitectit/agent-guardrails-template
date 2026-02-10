@@ -72,6 +72,7 @@
 | sprint-001 | SPRINT_001_MCP_GAP_IMPLEMENTATION.md | docs/sprints/ | Sprint: MCP Gap Implementation |
 | sprint-002 | SPRINT_002_WEB_UI_IMPLEMENTATION.md | docs/sprints/ | Sprint: Web UI Implementation |
 | sprint-003 | SPRINT_003_DOCUMENTATION_PARITY.md | docs/sprints/ | Sprint: Documentation Parity (this sprint) |
+| rules-from-md | RULES_FROM_MD.md | docs/ | Extracting prevention rules from markdown |
 
 ---
 
@@ -81,6 +82,7 @@
 |----------|-------------------|-------------|
 | **TOC.md** | Complete template contents and file listing | When exploring full template |
 | **AGENT_GUARDRAILS.md** | Core safety protocols (mandatory) | Before ANY code changes |
+| **RULES_FROM_MD.md** | Extracting prevention rules from markdown | When working with MCP rules |
 | **TEST_PRODUCTION_SEPARATION.md** | Test/production isolation standards (MANDATORY) | Before ANY deployment |
 | **AGENT_EXECUTION.md** | Execution protocol and rollback procedures | During task execution |
 | **AGENT_ESCALATION.md** | Audit requirements and escalation procedures | When uncertain or errors occur |
@@ -139,6 +141,7 @@
 - `AGENT_REVIEW_PROTOCOL.md` - Post-work agent/LLM review
 - `ADVERSARIAL_TESTING.md` - Breaker agent and fuzz testing
 - `AGENTS_AND_SKILLS_SETUP.md` - Setup guide for Claude Code/OpenCode
+- `RULES_FROM_MD.md` - Extracting prevention rules from markdown
 
 ### Logging & Monitoring
 - `LOGGING_PATTERNS.md` - Structured log format
@@ -274,14 +277,15 @@ agent-guardrails-template/
 | OpenCode integration | OPCODE_INTEGRATION.md |
 | Cursor integration | CURSOR_INTEGRATION.md |
 | Generic LLM integration | GENERIC_LLM_INTEGRATION.md |
+| MCP rule extraction | RULES_FROM_MD.md |
 
 ---
 
 **Authored by:** TheArchitectit
 **Document Owner:** Project Maintainers
 **Last Updated:** 2026-02-08
-**Document Count:** 70 (excluding INDEX files)
-**Line Count:** ~255
+**Document Count:** 71 (excluding INDEX files)
+**Line Count:** ~260
 
 ---
 

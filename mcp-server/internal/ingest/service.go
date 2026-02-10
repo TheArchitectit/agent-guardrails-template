@@ -15,17 +15,28 @@ import (
 
 // Service handles document ingestion operations
 type Service struct {
-	docStore   *database.DocumentStore
-	parser     *Parser
-	watchedDirs []string
+	docStore      *database.DocumentStore
+	ruleStore     *database.RuleStore
+	parser        *Parser
+	ruleParser    *RuleParser
+	ruleSyncSvc   *RuleSyncService
+	watchedDirs   []string
+	rulesDir      string
 }
 
 // NewService creates a new ingest service
-func NewService(docStore *database.DocumentStore, watchedDirs []string) *Service {
+func NewService(docStore *database.DocumentStore, ruleStore *database.RuleStore, watchedDirs []string, rulesDir string) *Service {
+	ruleParser := NewRuleParser()
+	ruleSyncSvc := NewRuleSyncService(ruleStore)
+
 	return &Service{
 		docStore:    docStore,
+		ruleStore:   ruleStore,
 		parser:      NewParser(),
+		ruleParser:  ruleParser,
+		ruleSyncSvc: ruleSyncSvc,
 		watchedDirs: watchedDirs,
+		rulesDir:    rulesDir,
 	}
 }
 
@@ -277,4 +288,23 @@ func (s *Service) CleanOrphanedDocuments(ctx context.Context) (int, error) {
 	// In a real implementation, this would delete documents where orphaned=true
 	// For now, return 0
 	return 0, nil
+}
+
+// SyncRulesFromRepo syncs prevention rules from markdown files in watched directories
+func (s *Service) SyncRulesFromRepo(ctx context.Context) (*RuleSyncResult, error) {
+	if s.rulesDir == "" {
+		return nil, fmt.Errorf("rules directory not configured")
+	}
+
+	// Check if rules directory exists
+	if _, err := os.Stat(s.rulesDir); os.IsNotExist(err) {
+		return &RuleSyncResult{}, nil // No rules directory, nothing to sync
+	}
+
+	return s.ruleSyncSvc.SyncRulesFromDirectory(ctx, s.rulesDir)
+}
+
+// SyncRulesFromUpload syncs prevention rules from uploaded markdown content
+func (s *Service) SyncRulesFromUpload(ctx context.Context, content []byte, filename string) (*RuleSyncResult, error) {
+	return s.ruleSyncSvc.SyncRulesFromContent(ctx, string(content), filename)
 }
