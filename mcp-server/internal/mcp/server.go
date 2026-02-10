@@ -23,6 +23,7 @@ import (
 	"github.com/thearchitectit/guardrail-mcp/internal/database"
 	"github.com/thearchitectit/guardrail-mcp/internal/metrics"
 	"github.com/thearchitectit/guardrail-mcp/internal/models"
+	"github.com/thearchitectit/guardrail-mcp/internal/validation"
 )
 
 // contextKey is a type-safe context key to avoid string allocation
@@ -50,14 +51,15 @@ var jsonBufferPool = sync.Pool{
 
 // MCPServer wraps the MCP server with guardrail dependencies
 type MCPServer struct {
-	echo        *echo.Echo
-	cfg         *config.Config
-	db          *database.DB
-	cache       *cache.Client
-	auditLogger *audit.Logger
-	mcpServer   server.MCPServer
-	sessions    map[string]*Session
-	sessionsMu  sync.RWMutex
+	echo             *echo.Echo
+	cfg              *config.Config
+	db               *database.DB
+	cache            *cache.Client
+	auditLogger      *audit.Logger
+	validationEngine *validation.ValidationEngine
+	mcpServer        server.MCPServer
+	sessions         map[string]*Session
+	sessionsMu       sync.RWMutex
 }
 
 // Session represents an MCP client session
@@ -73,13 +75,14 @@ type Session struct {
 }
 
 // NewMCPServer creates a new MCP server
-func NewMCPServer(cfg *config.Config, db *database.DB, cacheClient *cache.Client, auditLogger *audit.Logger) *MCPServer {
+func NewMCPServer(cfg *config.Config, db *database.DB, cacheClient *cache.Client, auditLogger *audit.Logger, validationEngine *validation.ValidationEngine) *MCPServer {
 	s := &MCPServer{
-		cfg:         cfg,
-		db:          db,
-		cache:       cacheClient,
-		auditLogger: auditLogger,
-		sessions:    make(map[string]*Session),
+		cfg:              cfg,
+		db:               db,
+		cache:            cacheClient,
+		auditLogger:      auditLogger,
+		validationEngine: validationEngine,
+		sessions:         make(map[string]*Session),
 	}
 
 	// Create MCP server using the default server
@@ -930,16 +933,64 @@ func hexChar(n byte) byte {
 	return 'a' + n - 10
 }
 
+// jsonEscapeString escapes a string for safe inclusion in JSON
+func jsonEscapeString(s string) string {
+	var sb strings.Builder
+	jsonEscape(&sb, s)
+	return sb.String()
+}
+
 func (s *MCPServer) handleValidateBash(ctx context.Context, args map[string]interface{}) (*mcp.CallToolResult, error) {
 	command, _ := args["command"].(string)
 
-	// TODO: Implement actual validation against prevention rules
-	// Use strings.Builder for efficient JSON construction
+	if command == "" {
+		return &mcp.CallToolResult{
+			Content: []interface{}{mcp.TextContent{Type: "text", Text: `{"valid":false,"violations":[{"rule_id":"VALIDATION-001","severity":"error","message":"Command is required"}],"meta":{"checked_at":"` + time.Now().Format(time.RFC3339) + `","rules_evaluated":0}}`}},
+			IsError: true,
+		}, nil
+	}
+
+	// Validate against prevention rules for bash commands
+	violations, err := s.validationEngine.ValidateInput(ctx, command, []string{"bash", "command"})
+	if err != nil {
+		slog.Error("Bash validation failed", "error", err, "command", command)
+		return &mcp.CallToolResult{
+			Content: []interface{}{mcp.TextContent{Type: "text", Text: fmt.Sprintf(`{"valid":false,"violations":[{"rule_id":"VALIDATION-ERROR","severity":"error","message":"Validation engine error: %s"}],"meta":{"checked_at":"%s","rules_evaluated":0}}`, jsonEscapeString(err.Error()), time.Now().Format(time.RFC3339))}},
+			IsError: true,
+		}, nil
+	}
+
+	// Build response using strings.Builder for efficiency
 	var sb strings.Builder
-	sb.Grow(256)
-	sb.WriteString(`{"valid":true,"violations":[],"meta":{"checked_at":"`)
+	sb.Grow(512)
+
+	valid := len(violations) == 0
+	if valid {
+		sb.WriteString(`{"valid":true,"violations":[],`)
+	} else {
+		sb.WriteString(`{"valid":false,"violations":[`)
+		for i, v := range violations {
+			if i > 0 {
+				sb.WriteString(",")
+			}
+			sb.WriteString(`{"rule_id":"`)
+			jsonEscape(&sb, v.RuleID)
+			sb.WriteString(`","name":"`)
+			jsonEscape(&sb, v.RuleName)
+			sb.WriteString(`","severity":"`)
+			jsonEscape(&sb, string(v.Severity))
+			sb.WriteString(`","message":"`)
+			jsonEscape(&sb, v.Message)
+			sb.WriteString(`"}`)
+		}
+		sb.WriteString(`],`)
+	}
+
+	sb.WriteString(`"meta":{"checked_at":"`)
 	sb.WriteString(time.Now().Format(time.RFC3339))
-	sb.WriteString(`","rules_evaluated":0,"duration_ms":0,"command_analyzed":"`)
+	sb.WriteString(`","rules_evaluated":`)
+	sb.WriteString(strconv.Itoa(s.validationEngine.GetCachedRulesCount()))
+	sb.WriteString(`,"command_analyzed":"`)
 	jsonEscape(&sb, command)
 	sb.WriteString(`"}}`)
 
@@ -952,13 +1003,61 @@ func (s *MCPServer) handleValidateFileEdit(ctx context.Context, args map[string]
 	filePath, _ := args["file_path"].(string)
 	newString, _ := args["new_string"].(string)
 
-	// TODO: Implement actual validation
-	// Use strings.Builder for efficient JSON construction
+	if filePath == "" {
+		return &mcp.CallToolResult{
+			Content: []interface{}{mcp.TextContent{Type: "text", Text: `{"valid":false,"violations":[{"rule_id":"VALIDATION-001","severity":"error","message":"File path is required"}],"meta":{"checked_at":"` + time.Now().Format(time.RFC3339) + `","rules_evaluated":0}}`}},
+			IsError: true,
+		}, nil
+	}
+
+	// Validate the new content against prevention rules (including security rules for secrets)
+	violations, err := s.validationEngine.ValidateInput(ctx, newString, []string{"file_edit", "content", "edit", "security"})
+	if err != nil {
+		slog.Error("File edit validation failed", "error", err, "file_path", filePath)
+		return &mcp.CallToolResult{
+			Content: []interface{}{mcp.TextContent{Type: "text", Text: fmt.Sprintf(`{"valid":false,"violations":[{"rule_id":"VALIDATION-ERROR","severity":"error","message":"Validation engine error: %s"}],"meta":{"checked_at":"%s","rules_evaluated":0}}`, jsonEscapeString(err.Error()), time.Now().Format(time.RFC3339))}},
+			IsError: true,
+		}, nil
+	}
+
+	// Also validate the file path for path traversal or sensitive locations
+	pathViolations, err := s.validationEngine.ValidateInput(ctx, filePath, []string{"file_path", "path"})
+	if err != nil {
+		slog.Error("File path validation failed", "error", err, "file_path", filePath)
+	}
+	violations = append(violations, pathViolations...)
+
+	// Build response using strings.Builder for efficiency
 	var sb strings.Builder
-	sb.Grow(256)
-	sb.WriteString(`{"valid":true,"violations":[],"meta":{"checked_at":"`)
+	sb.Grow(512)
+
+	valid := len(violations) == 0
+	if valid {
+		sb.WriteString(`{"valid":true,"violations":[],`)
+	} else {
+		sb.WriteString(`{"valid":false,"violations":[`)
+		for i, v := range violations {
+			if i > 0 {
+				sb.WriteString(",")
+			}
+			sb.WriteString(`{"rule_id":"`)
+			jsonEscape(&sb, v.RuleID)
+			sb.WriteString(`","name":"`)
+			jsonEscape(&sb, v.RuleName)
+			sb.WriteString(`","severity":"`)
+			jsonEscape(&sb, string(v.Severity))
+			sb.WriteString(`","message":"`)
+			jsonEscape(&sb, v.Message)
+			sb.WriteString(`"}`)
+		}
+		sb.WriteString(`],`)
+	}
+
+	sb.WriteString(`"meta":{"checked_at":"`)
 	sb.WriteString(time.Now().Format(time.RFC3339))
-	sb.WriteString(`","rules_evaluated":0,"file":"`)
+	sb.WriteString(`","rules_evaluated":`)
+	sb.WriteString(strconv.Itoa(s.validationEngine.GetCachedRulesCount()))
+	sb.WriteString(`,"file":"`)
 	jsonEscape(&sb, filePath)
 	sb.WriteString(`","changes_size":`)
 	sb.WriteString(strconv.Itoa(len(newString)))
@@ -973,23 +1072,78 @@ func (s *MCPServer) handleValidateGit(ctx context.Context, args map[string]inter
 	command, _ := args["command"].(string)
 	isForce, _ := args["is_force"].(bool)
 
-	// Check for force push
-	if command == "push" && isForce {
-		// Use pre-computed JSON for common error response
+	if command == "" {
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{
-				Type: "text",
-				Text: `{"valid":false,"violations":[{"rule_id":"PREVENT-001","rule_name":"No Force Push","severity":"error","message":"git push --force violates guardrail: NO FORCE PUSH","category":"git_operation","action":"halt","suggested_alternative":"Use git push --force-with-lease instead"}]}`,
-			}},
+			Content: []interface{}{mcp.TextContent{Type: "text", Text: `{"valid":false,"violations":[{"rule_id":"VALIDATION-001","severity":"error","message":"Command is required"}],"meta":{"checked_at":"` + time.Now().Format(time.RFC3339) + `","rules_evaluated":0}}`}},
+			IsError: true,
 		}, nil
 	}
 
-	// Use pre-computed JSON for success response
+	var allViolations []validation.Violation
+
+	// Validate the git command against prevention rules
+	violations, err := s.validationEngine.ValidateInput(ctx, command, []string{"git", "git_operation"})
+	if err != nil {
+		slog.Error("Git validation failed", "error", err, "command", command)
+		return &mcp.CallToolResult{
+			Content: []interface{}{mcp.TextContent{Type: "text", Text: fmt.Sprintf(`{"valid":false,"violations":[{"rule_id":"VALIDATION-ERROR","severity":"error","message":"Validation engine error: %s"}],"meta":{"checked_at":"%s","rules_evaluated":0}}`, jsonEscapeString(err.Error()), time.Now().Format(time.RFC3339))}},
+			IsError: true,
+		}, nil
+	}
+	allViolations = append(allViolations, violations...)
+
+	// Check for force push separately if is_force flag is set
+	if isForce {
+		allViolations = append(allViolations, validation.Violation{
+			RuleID:   "PREVENT-FORCE-001",
+			RuleName: "No Force Operation",
+			Severity: models.SeverityError,
+			Message:  "Force operations are not allowed. Use --force-with-lease or standard push instead.",
+		})
+	}
+
+	// Build response using strings.Builder for efficiency
+	var sb strings.Builder
+	sb.Grow(512)
+
+	valid := len(allViolations) == 0
+	if valid {
+		sb.WriteString(`{"valid":true,"violations":[],`)
+	} else {
+		sb.WriteString(`{"valid":false,"violations":[`)
+		for i, v := range allViolations {
+			if i > 0 {
+				sb.WriteString(",")
+			}
+			sb.WriteString(`{"rule_id":"`)
+			jsonEscape(&sb, v.RuleID)
+			sb.WriteString(`","name":"`)
+			jsonEscape(&sb, v.RuleName)
+			sb.WriteString(`","severity":"`)
+			jsonEscape(&sb, string(v.Severity))
+			sb.WriteString(`","message":"`)
+			jsonEscape(&sb, v.Message)
+			sb.WriteString(`"}`)
+		}
+		sb.WriteString(`],`)
+	}
+
+	sb.WriteString(`"meta":{"checked_at":"`)
+	sb.WriteString(time.Now().Format(time.RFC3339))
+	sb.WriteString(`","rules_evaluated":`)
+	sb.WriteString(strconv.Itoa(s.validationEngine.GetCachedRulesCount()))
+	sb.WriteString(`,"command":"`)
+	jsonEscape(&sb, command)
+	sb.WriteString(`","is_force":`)
+	if isForce {
+		sb.WriteString("true")
+	} else {
+		sb.WriteString("false")
+	}
+	sb.WriteString(`}}`)
+
 	return &mcp.CallToolResult{
-		Content: []interface{}{mcp.TextContent{
-			Type: "text",
-			Text: `{"valid":true,"violations":[]}`,
-		}},
+		Content: []interface{}{mcp.TextContent{Type: "text", Text: sb.String()}},
 	}, nil
 }
 
