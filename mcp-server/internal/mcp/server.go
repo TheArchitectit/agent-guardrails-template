@@ -488,6 +488,36 @@ func (s *MCPServer) registerTools() {
 				},
 			},
 		},
+		{
+			Name:        "guardrail_detect_feature_creep",
+			Description: "Detect feature creep in git diff by analyzing code changes for new features, refactoring, and improvements",
+			InputSchema: mcp.ToolInputSchema{
+				Type: "object",
+				Properties: mcp.ToolInputSchemaProperties{
+					"session_token": map[string]interface{}{
+						"type":        "string",
+						"description": "Session token from init_session",
+					},
+					"file_path": map[string]interface{}{
+						"type":        "string",
+						"description": "File path being analyzed",
+					},
+					"git_diff": map[string]interface{}{
+						"type":        "string",
+						"description": "Git diff output to analyze for feature creep patterns",
+					},
+					"change_description": map[string]interface{}{
+						"type":        "string",
+						"description": "Optional description of what the change is supposed to do",
+					},
+					"is_new_file": map[string]interface{}{
+						"type":        "boolean",
+						"description": "Whether this is a newly created file",
+					},
+				},
+				Required: []string{"session_token", "file_path", "git_diff"},
+			},
+		},
 		},
 	}, nil
 	})
@@ -596,6 +626,8 @@ func (s *MCPServer) handleToolCall(ctx context.Context, name string, arguments m
 		return s.handleAcknowledgeHalt(ctx, arguments)
 	case "guardrail_validate_production_first":
 		return s.handleValidateProductionFirst(ctx, arguments)
+	case "guardrail_detect_feature_creep":
+		return s.handleDetectFeatureCreep(ctx, arguments)
 	default:
 		return &mcp.CallToolResult{
 			Content: []interface{}{
