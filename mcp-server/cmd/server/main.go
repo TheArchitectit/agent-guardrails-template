@@ -110,7 +110,10 @@ func main() {
 
 	// Create validation engine
 	ruleStore := database.NewRuleStore(db)
-	validationEngine := validation.NewValidationEngine(ruleStore, redisClient)
+	fileReadStore := database.NewFileReadStore(db)
+	validationEngine := validation.NewValidationEngine(ruleStore, redisClient,
+		validation.WithFileReadStore(fileReadStore),
+	)
 
 	// Create MCP server
 	mcpSrv := mcpServer.NewMCPServer(cfg, db, redisClient, auditLogger, validationEngine)

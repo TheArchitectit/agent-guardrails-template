@@ -304,6 +304,23 @@ func (s *MCPServer) registerTools() {
 					},
 				},
 			},
+		{
+			Name:        "guardrail_record_file_read",
+			Description: "Record that a file was read via MCP Read tool",
+			InputSchema: mcp.ToolInputSchema{
+				Type: "object",
+				Properties: mcp.ToolInputSchemaProperties{
+					"session_token": map[string]interface{}{
+						"type":        "string",
+						"description": "Session token from init_session",
+					},
+					"file_path": map[string]interface{}{
+						"type":        "string",
+						"description": "Absolute path of the file that was read",
+					},
+				},
+			},
+		},
 		},
 	}, nil
 	})
@@ -396,6 +413,8 @@ func (s *MCPServer) handleToolCall(ctx context.Context, name string, arguments m
 		return s.handleCheckTestProdSeparation(ctx, arguments)
 	case "guardrail_validate_push":
 		return s.handleValidatePush(ctx, arguments)
+	case "guardrail_record_file_read":
+		return s.handleRecordFileRead(ctx, arguments)
 	default:
 		return &mcp.CallToolResult{
 			Content: []interface{}{
