@@ -49,14 +49,15 @@ type FileReadVerification struct {
 
 // ValidationEngine performs guardrail validation against prevention rules
 type ValidationEngine struct {
-	ruleStore      *database.RuleStore
-	fileReadStore  *database.FileReadStore
-	cacheClient    *cache.Client
-	rulesCache     []compiledRule
-	cacheMu        sync.RWMutex
-	cacheExpiry    time.Time
-	cacheTTL       time.Duration
-	maxInputSize   int
+	ruleStore        *database.RuleStore
+	fileReadStore    *database.FileReadStore
+	taskAttemptStore *database.TaskAttemptStore
+	cacheClient      *cache.Client
+	rulesCache       []compiledRule
+	cacheMu          sync.RWMutex
+	cacheExpiry      time.Time
+	cacheTTL         time.Duration
+	maxInputSize     int
 }
 
 // ValidationOption configures the validation engine
@@ -80,6 +81,13 @@ func WithMaxInputSize(size int) ValidationOption {
 func WithFileReadStore(store *database.FileReadStore) ValidationOption {
 	return func(e *ValidationEngine) {
 		e.fileReadStore = store
+	}
+}
+
+// WithTaskAttemptStore sets the task attempt store for validation
+func WithTaskAttemptStore(store *database.TaskAttemptStore) ValidationOption {
+	return func(e *ValidationEngine) {
+		e.taskAttemptStore = store
 	}
 }
 
