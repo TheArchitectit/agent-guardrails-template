@@ -59,6 +59,7 @@ type MCPServer struct {
 	validationEngine *validation.ValidationEngine
 	fileReadStore    *database.FileReadStore
 	taskAttemptStore *database.TaskAttemptStore
+	haltEventStore   *database.HaltEventStore
 	mcpServer        server.MCPServer
 	sessions         map[string]*Session
 	sessionsMu       sync.RWMutex
@@ -77,7 +78,7 @@ type Session struct {
 }
 
 // NewMCPServer creates a new MCP server
-func NewMCPServer(cfg *config.Config, db *database.DB, cacheClient *cache.Client, auditLogger *audit.Logger, validationEngine *validation.ValidationEngine, fileReadStore *database.FileReadStore, taskAttemptStore *database.TaskAttemptStore) *MCPServer {
+func NewMCPServer(cfg *config.Config, db *database.DB, cacheClient *cache.Client, auditLogger *audit.Logger, validationEngine *validation.ValidationEngine, fileReadStore *database.FileReadStore, taskAttemptStore *database.TaskAttemptStore, haltEventStore *database.HaltEventStore) *MCPServer {
 	s := &MCPServer{
 		cfg:              cfg,
 		db:               db,
@@ -86,6 +87,7 @@ func NewMCPServer(cfg *config.Config, db *database.DB, cacheClient *cache.Client
 		validationEngine: validationEngine,
 		fileReadStore:    fileReadStore,
 		taskAttemptStore: taskAttemptStore,
+		haltEventStore:   haltEventStore,
 		sessions:         make(map[string]*Session),
 	}
 
@@ -385,6 +387,76 @@ func (s *MCPServer) registerTools() {
 				},
 			},
 		},
+		{
+			Name:        "guardrail_check_halt_conditions",
+			Description: "Check various halt conditions including three strikes and unresolved critical events",
+			InputSchema: mcp.ToolInputSchema{
+				Type: "object",
+				Properties: mcp.ToolInputSchemaProperties{
+					"session_token": map[string]interface{}{
+						"type":        "string",
+						"description": "Session token from init_session",
+					},
+					"context": map[string]interface{}{
+						"type":        "object",
+						"description": "Optional context map for additional halt indicators",
+					},
+				},
+			},
+		},
+		{
+			Name:        "guardrail_record_halt",
+			Description: "Record a halt event for tracking and escalation",
+			InputSchema: mcp.ToolInputSchema{
+				Type: "object",
+				Properties: mcp.ToolInputSchemaProperties{
+					"session_token": map[string]interface{}{
+						"type":        "string",
+						"description": "Session token from init_session",
+					},
+					"halt_type": map[string]interface{}{
+						"type":        "string",
+						"description": "Type of halt condition",
+						"enum":        []string{"code_safety", "scope", "environment", "execution", "security", "uncertainty"},
+					},
+					"description": map[string]interface{}{
+						"type":        "string",
+						"description": "Description of the halt condition",
+					},
+					"severity": map[string]interface{}{
+						"type":        "string",
+						"description": "Severity level",
+						"enum":        []string{"low", "medium", "high", "critical"},
+					},
+					"context": map[string]interface{}{
+						"type":        "object",
+						"description": "Optional context data",
+					},
+				},
+			},
+		},
+		{
+			Name:        "guardrail_acknowledge_halt",
+			Description: "Acknowledge and resolve a halt event",
+			InputSchema: mcp.ToolInputSchema{
+				Type: "object",
+				Properties: mcp.ToolInputSchemaProperties{
+					"session_token": map[string]interface{}{
+						"type":        "string",
+						"description": "Session token from init_session",
+					},
+					"halt_id": map[string]interface{}{
+						"type":        "string",
+						"description": "UUID of the halt event to acknowledge",
+					},
+					"resolution": map[string]interface{}{
+						"type":        "string",
+						"description": "Resolution status",
+						"enum":        []string{"resolved", "escalated", "dismissed"},
+					},
+				},
+			},
+		},
 		},
 	}, nil
 	})
@@ -485,6 +557,12 @@ func (s *MCPServer) handleToolCall(ctx context.Context, name string, arguments m
 		return s.handleValidateThreeStrikes(ctx, arguments)
 	case "guardrail_reset_attempts":
 		return s.handleResetAttempts(ctx, arguments)
+	case "guardrail_check_halt_conditions":
+		return s.handleCheckHaltConditions(ctx, arguments)
+	case "guardrail_record_halt":
+		return s.handleRecordHalt(ctx, arguments)
+	case "guardrail_acknowledge_halt":
+		return s.handleAcknowledgeHalt(ctx, arguments)
 	default:
 		return &mcp.CallToolResult{
 			Content: []interface{}{

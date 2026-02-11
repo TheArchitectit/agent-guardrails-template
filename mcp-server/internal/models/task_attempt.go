@@ -32,16 +32,6 @@ const (
 	ErrorCategoryOther     ErrorCategory = "other"
 )
 
-// ResolutionStatus represents the resolution status of a task attempt
-type ResolutionStatus string
-
-const (
-	ResolutionPending    ResolutionStatus = "pending"
-	ResolutionResolved   ResolutionStatus = "resolved"
-	ResolutionEscalated  ResolutionStatus = "escalated"
-	ResolutionAbandoned  ResolutionStatus = "abandoned"
-)
-
 // ValidErrorCategories contains all valid error categories
 var ValidErrorCategories = []string{
 	string(ErrorCategorySyntax),
@@ -51,28 +41,10 @@ var ValidErrorCategories = []string{
 	string(ErrorCategoryOther),
 }
 
-// ValidResolutionStatuses contains all valid resolution statuses
-var ValidResolutionStatuses = []string{
-	string(ResolutionPending),
-	string(ResolutionResolved),
-	string(ResolutionEscalated),
-	string(ResolutionAbandoned),
-}
-
 // IsValidErrorCategory checks if an error category is valid
 func IsValidErrorCategory(category string) bool {
 	for _, c := range ValidErrorCategories {
 		if c == category {
-			return true
-		}
-	}
-	return false
-}
-
-// IsValidResolutionStatus checks if a resolution status is valid
-func IsValidResolutionStatus(status string) bool {
-	for _, s := range ValidResolutionStatuses {
-		if s == status {
 			return true
 		}
 	}
