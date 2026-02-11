@@ -360,6 +360,27 @@ func (s *MCPServer) registerTools() {
 			},
 		},
 		{
+			Name:        "guardrail_verify_file_read",
+			Description: "Verify if a file has been read in the current session",
+			InputSchema: mcp.ToolInputSchema{
+				Type: "object",
+				Properties: mcp.ToolInputSchemaProperties{
+					"session_token": map[string]interface{}{
+						"type":        "string",
+						"description": "Session token from init_session",
+					},
+					"file_path": map[string]interface{}{
+						"type":        "string",
+						"description": "Absolute path of the file to verify",
+					},
+					"expected_content": map[string]interface{}{
+						"type":        "string",
+						"description": "Optional expected content hash for validation",
+					},
+				},
+			},
+		},
+		{
 			Name:        "guardrail_validate_three_strikes",
 			Description: "Check three strikes status and determine if should halt",
 			InputSchema: mcp.ToolInputSchema{
@@ -694,6 +715,8 @@ func (s *MCPServer) handleToolCall(ctx context.Context, name string, arguments m
 		return s.handleValidatePush(ctx, arguments)
 	case "guardrail_record_file_read":
 		return s.handleRecordFileRead(ctx, arguments)
+	case "guardrail_verify_file_read":
+		return s.handleVerifyFileRead(ctx, arguments)
 	case "guardrail_record_attempt":
 		return s.handleRecordAttempt(ctx, arguments)
 	case "guardrail_validate_three_strikes":
