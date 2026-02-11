@@ -40,15 +40,23 @@ type compiledRule struct {
 	Pattern string
 }
 
+// FileReadVerification represents the result of verifying if a file was read
+type FileReadVerification struct {
+	WasRead       bool           `json:"was_read"`
+	ReadAt        *time.Time     `json:"read_at,omitempty"`
+	TimeSinceRead time.Duration  `json:"time_since_read,omitempty"`
+}
+
 // ValidationEngine performs guardrail validation against prevention rules
 type ValidationEngine struct {
-	ruleStore    *database.RuleStore
-	cacheClient  *cache.Client
-	rulesCache   []compiledRule
-	cacheMu      sync.RWMutex
-	cacheExpiry  time.Time
-	cacheTTL     time.Duration
-	maxInputSize int
+	ruleStore      *database.RuleStore
+	fileReadStore  *database.FileReadStore
+	cacheClient    *cache.Client
+	rulesCache     []compiledRule
+	cacheMu        sync.RWMutex
+	cacheExpiry    time.Time
+	cacheTTL       time.Duration
+	maxInputSize   int
 }
 
 // ValidationOption configures the validation engine
@@ -65,6 +73,13 @@ func WithCacheTTL(ttl time.Duration) ValidationOption {
 func WithMaxInputSize(size int) ValidationOption {
 	return func(e *ValidationEngine) {
 		e.maxInputSize = size
+	}
+}
+
+// WithFileReadStore sets the file read store for validation
+func WithFileReadStore(store *database.FileReadStore) ValidationOption {
+	return func(e *ValidationEngine) {
+		e.fileReadStore = store
 	}
 }
 
@@ -170,7 +185,8 @@ func (e *ValidationEngine) ValidateGit(ctx context.Context, command string) ([]V
 }
 
 // ValidateFileEdit validates a file edit against prevention rules
-func (e *ValidationEngine) ValidateFileEdit(ctx context.Context, filePath string, content string) ([]Violation, error) {
+// sessionID is optional - if provided, checks if file was read before editing
+func (e *ValidationEngine) ValidateFileEdit(ctx context.Context, filePath string, content string, sessionID string) ([]Violation, error) {
 	if err := e.validateInput(content); err != nil {
 		return nil, err
 	}
@@ -181,6 +197,24 @@ func (e *ValidationEngine) ValidateFileEdit(ctx context.Context, filePath string
 	}
 
 	var violations []Violation
+
+	// Check if file was read before editing (if sessionID is provided and fileReadStore is configured)
+	if sessionID != "" && e.fileReadStore != nil {
+		verification, err := e.VerifyFileRead(ctx, sessionID, filePath)
+		if err != nil {
+			slog.Warn("Failed to verify file read", "session_id", sessionID, "file_path", filePath, "error", err)
+		} else if !verification.WasRead {
+			violations = append(violations, Violation{
+				RuleID:         "FILE-READ-001",
+				RuleName:       "File Not Read Before Edit",
+				Severity:       models.SeverityCritical,
+				Message:        fmt.Sprintf("File '%s' must be read before editing. Read the file first to understand its contents.", filePath),
+				Category:       string(CategoryFileEdit),
+				MatchedPattern: "file_not_read",
+				MatchedInput:   truncateString(filePath, 200),
+			})
+		}
+	}
 
 	// Check both file path and content
 	inputs := []string{filePath, content}
@@ -227,6 +261,33 @@ func (e *ValidationEngine) ValidateFileEdit(ctx context.Context, filePath string
 	}
 
 	return violations, nil
+}
+
+// VerifyFileRead checks if a file was read in a session and returns verification details
+func (e *ValidationEngine) VerifyFileRead(ctx context.Context, sessionID, filePath string) (*FileReadVerification, error) {
+	if e.fileReadStore == nil {
+		return nil, fmt.Errorf("file read store not configured")
+	}
+
+	record, err := e.fileReadStore.GetBySessionAndPath(ctx, sessionID, filePath)
+	if err != nil {
+		// Check if it's a "not found" error
+		if err.Error() == fmt.Sprintf("file read record not found for session %s and path %s", sessionID, filePath) {
+			return &FileReadVerification{
+				WasRead: false,
+			}, nil
+		}
+		return nil, fmt.Errorf("failed to query file read: %w", err)
+	}
+
+	now := time.Now()
+	timeSince := now.Sub(record.ReadAt)
+
+	return &FileReadVerification{
+		WasRead:       true,
+		ReadAt:        &record.ReadAt,
+		TimeSinceRead: timeSince,
+	}, nil
 }
 
 // loadRulesFromDB loads active rules from database with caching

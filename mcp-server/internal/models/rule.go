@@ -27,15 +27,16 @@ type PreventionRule struct {
 type Severity string
 
 const (
-	SeverityError   Severity = "error"
-	SeverityWarning Severity = "warning"
-	SeverityInfo    Severity = "info"
+	SeverityCritical Severity = "critical"
+	SeverityError    Severity = "error"
+	SeverityWarning  Severity = "warning"
+	SeverityInfo     Severity = "info"
 )
 
 // IsValidSeverity checks if a severity level is valid
 func IsValidSeverity(sev string) bool {
 	switch Severity(sev) {
-	case SeverityError, SeverityWarning, SeverityInfo:
+	case SeverityCritical, SeverityError, SeverityWarning, SeverityInfo:
 		return true
 	}
 	return false
