@@ -76,6 +76,16 @@ type PushValidationResult struct {
 	IsForce  bool     `json:"is_force"`
 }
 
+// FileReadVerificationResult represents the result of verifying if a file was read
+type FileReadVerificationResult struct {
+	Valid     bool   `json:"valid"`
+	WasRead   bool   `json:"was_read"`
+	ReadAt    string `json:"read_at,omitempty"`
+	Message   string `json:"message,omitempty"`
+	SessionID string `json:"session_id"`
+	FilePath  string `json:"file_path"`
+}
+
 // MetaInfo contains metadata about the validation (used by some handlers)
 type MetaInfo struct {
 	CheckedAt      time.Time `json:"checked_at"`
