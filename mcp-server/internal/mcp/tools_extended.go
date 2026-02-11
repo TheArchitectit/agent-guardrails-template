@@ -940,3 +940,121 @@ func (s *MCPServer) handleAcknowledgeHalt(ctx context.Context, args map[string]i
 		Content: []interface{}{mcp.TextContent{Type: "text", Text: response,}},
 	}, nil
 }
+
+// handleValidateProductionFirst validates production-first guardrail rules
+func (s *MCPServer) handleValidateProductionFirst(ctx context.Context, args map[string]interface{}) (*mcp.CallToolResult, error) {
+	sessionToken, _ := args["session_token"].(string)
+	filePath, _ := args["file_path"].(string)
+	codeTypeStr, _ := args["code_type"].(string)
+
+	// Validate required parameters
+	if sessionToken == "" {
+		result := models.ProductionCodeValidationResult{
+			Valid:   false,
+			Message: "session_token is required",
+		}
+		return buildToolResult(result, true)
+	}
+
+	if filePath == "" {
+		result := models.ProductionCodeValidationResult{
+			Valid:   false,
+			Message: "file_path is required",
+		}
+		return buildToolResult(result, true)
+	}
+
+	if codeTypeStr == "" {
+		result := models.ProductionCodeValidationResult{
+			Valid:   false,
+			Message: "code_type is required",
+		}
+		return buildToolResult(result, true)
+	}
+
+	// Validate code_type value
+	if !models.IsValidCodeType(codeTypeStr) {
+		result := models.ProductionCodeValidationResult{
+			Valid:   false,
+			Message: fmt.Sprintf("Invalid code_type '%s'. Must be one of: production, test, infrastructure", codeTypeStr),
+		}
+		return buildToolResult(result, true)
+	}
+
+	codeType := models.CodeType(codeTypeStr)
+
+	// Validate session exists
+	s.sessionsMu.RLock()
+	_, exists := s.sessions[sessionToken]
+	s.sessionsMu.RUnlock()
+
+	if !exists {
+		result := models.ProductionCodeValidationResult{
+			Valid:   false,
+			Message: "Invalid session token",
+		}
+		return buildToolResult(result, true)
+	}
+
+	// Record the code being created (regardless of type)
+	productionCode := &models.ProductionCode{
+		SessionID: sessionToken,
+		FilePath:  filePath,
+		CodeType:  codeType,
+	}
+
+	if err := s.productionCodeStore.CreateOrUpdate(ctx, productionCode); err != nil {
+		slog.Error("Failed to record production code", "error", err, "session_token", sessionToken, "file_path", filePath)
+		result := models.ProductionCodeValidationResult{
+			Valid:   false,
+			Message: fmt.Sprintf("Failed to record code: %s", err.Error()),
+		}
+		return buildToolResult(result, true)
+	}
+
+	// If code_type is production, mark as verified
+	if codeType == models.CodeTypeProduction {
+		if err := s.productionCodeStore.MarkAsVerified(ctx, sessionToken, filePath); err != nil {
+			slog.Warn("Failed to mark production code as verified", "error", err, "file_path", filePath)
+		}
+	}
+
+	// Check if this is test or infrastructure code
+	if codeType == models.CodeTypeTest || codeType == models.CodeTypeInfrastructure {
+		// Check if production code exists in the session
+		hasProductionCode, err := s.productionCodeStore.HasProductionCode(ctx, sessionToken)
+		if err != nil {
+			slog.Error("Failed to check production code existence", "error", err, "session_token", sessionToken)
+			result := models.ProductionCodeValidationResult{
+				Valid:   false,
+				Message: "Failed to check production code existence",
+			}
+			return buildToolResult(result, true)
+		}
+
+		if !hasProductionCode {
+			result := models.ProductionCodeValidationResult{
+				Valid:                false,
+				Message:              "Production code must be created first",
+				ProductionCodeExists: false,
+			}
+			return buildToolResult(result, true)
+		}
+
+		// Production code exists, validation passes
+		result := models.ProductionCodeValidationResult{
+			Valid:                true,
+			Message:              fmt.Sprintf("%s code creation validated successfully", codeType),
+			ProductionCodeExists: true,
+		}
+		return buildToolResult(result, false)
+	}
+
+	// For production code, always pass
+	result := models.ProductionCodeValidationResult{
+		Valid:                true,
+		Message:              "Production code can always be created",
+		ProductionCodeExists: true,
+	}
+	return buildToolResult(result, false)
+}
