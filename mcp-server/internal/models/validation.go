@@ -95,3 +95,22 @@ type MetaInfo struct {
 	File           string    `json:"file,omitempty"`
 	ChangesSize    int       `json:"changes_size,omitempty"`
 }
+
+// FeatureCreepViolation represents a single feature creep violation
+type FeatureCreepViolation struct {
+	Type     string `json:"type"`
+	Severity string `json:"severity"`
+	Message  string `json:"message"`
+}
+
+// FeatureCreepDetectionResult represents the result of feature creep detection
+type FeatureCreepDetectionResult struct {
+	CreepDetected bool                    `json:"creep_detected"`
+	Violations    []FeatureCreepViolation `json:"violations,omitempty"`
+	DiffSummary   string                  `json:"diff_summary"`
+	TotalChanges  struct {
+		Additions int `json:"additions"`
+		Deletions int `json:"deletions"`
+	} `json:"total_changes"`
+	Recommendation string `json:"recommendation"`
+}
