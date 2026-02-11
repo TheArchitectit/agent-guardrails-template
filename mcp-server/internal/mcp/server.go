@@ -62,6 +62,7 @@ type MCPServer struct {
 	haltEventStore      *database.HaltEventStore
 	productionCodeStore *database.ProductionCodeStore
 	fixVerificationStore *database.FixVerificationStore
+	uncertaintyStore    *database.UncertaintyStore
 	mcpServer           server.MCPServer
 	sessions            map[string]*Session
 	sessionsMu          sync.RWMutex
@@ -92,6 +93,7 @@ func NewMCPServer(cfg *config.Config, db *database.DB, cacheClient *cache.Client
 		haltEventStore:      haltEventStore,
 		productionCodeStore: database.NewProductionCodeStore(db),
 		fixVerificationStore: database.NewFixVerificationStore(db),
+		uncertaintyStore:    database.NewUncertaintyStore(db.DB),
 		sessions:            make(map[string]*Session),
 	}
 
@@ -421,6 +423,31 @@ func (s *MCPServer) registerTools() {
 			},
 		},
 		{
+			Name:        "guardrail_check_uncertainty",
+			Description: "Check uncertainty level and provide guidance based on self-assessment and context",
+			InputSchema: mcp.ToolInputSchema{
+				Type: "object",
+				Properties: mcp.ToolInputSchemaProperties{
+					"session_token": map[string]interface{}{
+						"type":        "string",
+						"description": "Session token from init_session",
+					},
+					"current_task": map[string]interface{}{
+						"type":        "string",
+						"description": "Description of the current task being performed",
+					},
+					"self_assessment": map[string]interface{}{
+						"type":        "string",
+						"description": "Your self-assessment of current uncertainty state",
+					},
+					"context_data": map[string]interface{}{
+						"type":        "object",
+						"description": "Optional context data including error counts, duration, etc.",
+					},
+				},
+			},
+		},
+		{
 			Name:        "guardrail_check_halt_conditions",
 			Description: "Check various halt conditions including three strikes and unresolved critical events",
 			InputSchema: mcp.ToolInputSchema{
@@ -675,6 +702,8 @@ func (s *MCPServer) handleToolCall(ctx context.Context, name string, arguments m
 		return s.handleValidateExactReplacement(ctx, arguments)
 	case "guardrail_reset_attempts":
 		return s.handleResetAttempts(ctx, arguments)
+	case "guardrail_check_uncertainty":
+		return s.handleCheckUncertainty(ctx, arguments)
 	case "guardrail_check_halt_conditions":
 		return s.handleCheckHaltConditions(ctx, arguments)
 	case "guardrail_record_halt":
