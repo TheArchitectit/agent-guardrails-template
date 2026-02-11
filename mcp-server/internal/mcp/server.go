@@ -60,6 +60,7 @@ type MCPServer struct {
 	fileReadStore    *database.FileReadStore
 	taskAttemptStore *database.TaskAttemptStore
 	haltEventStore   *database.HaltEventStore
+	productionCodeStore *database.ProductionCodeStore
 	mcpServer        server.MCPServer
 	sessions         map[string]*Session
 	sessionsMu       sync.RWMutex
@@ -88,6 +89,7 @@ func NewMCPServer(cfg *config.Config, db *database.DB, cacheClient *cache.Client
 		fileReadStore:    fileReadStore,
 		taskAttemptStore: taskAttemptStore,
 		haltEventStore:   haltEventStore,
+		productionCodeStore: database.NewProductionCodeStore(db),
 		sessions:         make(map[string]*Session),
 	}
 
@@ -457,6 +459,35 @@ func (s *MCPServer) registerTools() {
 				},
 			},
 		},
+		{
+			Name:        "guardrail_validate_production_first",
+			Description: "Validate that production code is created before test or infrastructure code",
+			InputSchema: mcp.ToolInputSchema{
+				Type: "object",
+				Properties: mcp.ToolInputSchemaProperties{
+					"session_token": map[string]interface{}{
+						"type":        "string",
+						"description": "Session token from init_session",
+					},
+					"file_path": map[string]interface{}{
+						"type":        "string",
+						"description": "File being edited/created",
+					},
+					"code_type": map[string]interface{}{
+						"type":        "string",
+						"description": "Code type: production, test, infrastructure",
+						"enum":        []string{"production", "test", "infrastructure"},
+					},
+					"dependencies": map[string]interface{}{
+						"type":        "array",
+						"description": "Array of file paths this file depends on",
+						"items": map[string]interface{}{
+							"type": "string",
+						},
+					},
+				},
+			},
+		},
 		},
 	}, nil
 	})
@@ -563,6 +594,8 @@ func (s *MCPServer) handleToolCall(ctx context.Context, name string, arguments m
 		return s.handleRecordHalt(ctx, arguments)
 	case "guardrail_acknowledge_halt":
 		return s.handleAcknowledgeHalt(ctx, arguments)
+	case "guardrail_validate_production_first":
+		return s.handleValidateProductionFirst(ctx, arguments)
 	default:
 		return &mcp.CallToolResult{
 			Content: []interface{}{
