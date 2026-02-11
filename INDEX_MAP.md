@@ -73,6 +73,9 @@
 | sprint-002 | SPRINT_002_WEB_UI_IMPLEMENTATION.md | docs/sprints/ | Sprint: Web UI Implementation |
 | sprint-003 | SPRINT_003_DOCUMENTATION_PARITY.md | docs/sprints/ | Sprint: Documentation Parity (this sprint) |
 | rules-from-md | RULES_FROM_MD.md | docs/ | Extracting prevention rules from markdown |
+| rules-index | RULES_INDEX_MAP.md | docs/ | Master index of all prevention rules |
+| mcp-tools | MCP_TOOLS_REFERENCE.md | docs/ | MCP validation tools documentation |
+| rule-patterns | RULE_PATTERNS_GUIDE.md | docs/ | Pattern authoring guide |
 
 ---
 
@@ -83,6 +86,9 @@
 | **TOC.md** | Complete template contents and file listing | When exploring full template |
 | **AGENT_GUARDRAILS.md** | Core safety protocols (mandatory) | Before ANY code changes |
 | **RULES_FROM_MD.md** | Extracting prevention rules from markdown | When working with MCP rules |
+| **RULES_INDEX_MAP.md** | Master index of all prevention rules | When searching for specific prevention rules |
+| **MCP_TOOLS_REFERENCE.md** | MCP validation tools documentation | When using MCP validation tools |
+| **RULE_PATTERNS_GUIDE.md** | Pattern authoring guide | When writing new prevention rules |
 | **TEST_PRODUCTION_SEPARATION.md** | Test/production isolation standards (MANDATORY) | Before ANY deployment |
 | **AGENT_EXECUTION.md** | Execution protocol and rollback procedures | During task execution |
 | **AGENT_ESCALATION.md** | Audit requirements and escalation procedures | When uncertain or errors occur |
@@ -142,6 +148,9 @@
 - `ADVERSARIAL_TESTING.md` - Breaker agent and fuzz testing
 - `AGENTS_AND_SKILLS_SETUP.md` - Setup guide for Claude Code/OpenCode
 - `RULES_FROM_MD.md` - Extracting prevention rules from markdown
+- `RULES_INDEX_MAP.md` - Master index of all prevention rules
+- `MCP_TOOLS_REFERENCE.md` - MCP validation tools documentation
+- `RULE_PATTERNS_GUIDE.md` - Pattern authoring guide
 
 ### Logging & Monitoring
 - `LOGGING_PATTERNS.md` - Structured log format
@@ -278,13 +287,16 @@ agent-guardrails-template/
 | Cursor integration | CURSOR_INTEGRATION.md |
 | Generic LLM integration | GENERIC_LLM_INTEGRATION.md |
 | MCP rule extraction | RULES_FROM_MD.md |
+| Prevention rules index | RULES_INDEX_MAP.md |
+| MCP tools reference | MCP_TOOLS_REFERENCE.md |
+| Pattern authoring | RULE_PATTERNS_GUIDE.md |
 
 ---
 
 **Authored by:** TheArchitectit
 **Document Owner:** Project Maintainers
-**Last Updated:** 2026-02-08
-**Document Count:** 71 (excluding INDEX files)
+**Last Updated:** 2026-02-11
+**Document Count:** 74 (excluding INDEX files)
 **Line Count:** ~260
 
 ---
