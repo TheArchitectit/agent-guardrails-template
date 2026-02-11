@@ -51,19 +51,20 @@ var jsonBufferPool = sync.Pool{
 
 // MCPServer wraps the MCP server with guardrail dependencies
 type MCPServer struct {
-	echo             *echo.Echo
-	cfg              *config.Config
-	db               *database.DB
-	cache            *cache.Client
-	auditLogger      *audit.Logger
-	validationEngine *validation.ValidationEngine
-	fileReadStore    *database.FileReadStore
-	taskAttemptStore *database.TaskAttemptStore
-	haltEventStore   *database.HaltEventStore
+	echo                *echo.Echo
+	cfg                 *config.Config
+	db                  *database.DB
+	cache               *cache.Client
+	auditLogger         *audit.Logger
+	validationEngine    *validation.ValidationEngine
+	fileReadStore       *database.FileReadStore
+	taskAttemptStore    *database.TaskAttemptStore
+	haltEventStore      *database.HaltEventStore
 	productionCodeStore *database.ProductionCodeStore
-	mcpServer        server.MCPServer
-	sessions         map[string]*Session
-	sessionsMu       sync.RWMutex
+	fixVerificationStore *database.FixVerificationStore
+	mcpServer           server.MCPServer
+	sessions            map[string]*Session
+	sessionsMu          sync.RWMutex
 }
 
 // Session represents an MCP client session
@@ -81,16 +82,17 @@ type Session struct {
 // NewMCPServer creates a new MCP server
 func NewMCPServer(cfg *config.Config, db *database.DB, cacheClient *cache.Client, auditLogger *audit.Logger, validationEngine *validation.ValidationEngine, fileReadStore *database.FileReadStore, taskAttemptStore *database.TaskAttemptStore, haltEventStore *database.HaltEventStore) *MCPServer {
 	s := &MCPServer{
-		cfg:              cfg,
-		db:               db,
-		cache:            cacheClient,
-		auditLogger:      auditLogger,
-		validationEngine: validationEngine,
-		fileReadStore:    fileReadStore,
-		taskAttemptStore: taskAttemptStore,
-		haltEventStore:   haltEventStore,
+		cfg:                 cfg,
+		db:                  db,
+		cache:               cacheClient,
+		auditLogger:         auditLogger,
+		validationEngine:    validationEngine,
+		fileReadStore:       fileReadStore,
+		taskAttemptStore:    taskAttemptStore,
+		haltEventStore:      haltEventStore,
 		productionCodeStore: database.NewProductionCodeStore(db),
-		sessions:         make(map[string]*Session),
+		fixVerificationStore: database.NewFixVerificationStore(db),
+		sessions:            make(map[string]*Session),
 	}
 
 	// Create MCP server using the default server
@@ -517,6 +519,31 @@ func (s *MCPServer) registerTools() {
 				},
 			},
 		},
+		{
+			Name:        "guardrail_verify_fixes_intact",
+			Description: "Verify that previously applied fixes are still intact after code changes",
+			InputSchema: mcp.ToolInputSchema{
+				Type: "object",
+				Properties: mcp.ToolInputSchemaProperties{
+					"session_token": map[string]interface{}{
+						"type":        "string",
+						"description": "Session token from init_session",
+					},
+					"file_path": map[string]interface{}{
+						"type":        "string",
+						"description": "The file path to check for intact fixes",
+					},
+					"modified_content": map[string]interface{}{
+						"type":        "string",
+						"description": "New content of file after changes (optional) - if not provided, will read from file",
+					},
+					"original_content": map[string]interface{}{
+						"type":        "string",
+						"description": "Original content before changes (optional) - used as fallback",
+					},
+				},
+			},
+		},
 		},
 	}, nil
 	})
@@ -627,6 +654,8 @@ func (s *MCPServer) handleToolCall(ctx context.Context, name string, arguments m
 		return s.handleValidateProductionFirst(ctx, arguments)
 	case "guardrail_detect_feature_creep":
 		return s.handleDetectFeatureCreep(ctx, arguments)
+	case "guardrail_verify_fixes_intact":
+		return s.handleVerifyFixesIntact(ctx, arguments)
 	default:
 		return &mcp.CallToolResult{
 			Content: []interface{}{

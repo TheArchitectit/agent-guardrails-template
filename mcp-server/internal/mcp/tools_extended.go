@@ -863,7 +863,7 @@ func (s *MCPServer) handleRecordHalt(ctx context.Context, args map[string]interf
 
 	// Return success confirmation
 	response := fmt.Sprintf(`{"success":true,"halt_id":"%s","recorded_at":"%s","status":""}`,
-		recordID,
+		recordID.ID,
 		time.Now().Format(time.RFC3339),
 	)
 
@@ -1321,4 +1321,179 @@ func detectFeatureCreep(gitDiff string, changeDescription string, isNewFile bool
 		},
 		Recommendation: recommendation,
 	}
+}
+
+// handleVerifyFixesIntact verifies if previously applied fixes are still intact
+func (s *MCPServer) handleVerifyFixesIntact(ctx context.Context, args map[string]interface{}) (*mcp.CallToolResult, error) {
+	sessionToken, _ := args["session_token"].(string)
+	filePath, _ := args["file_path"].(string)
+	modifiedContent, _ := args["modified_content"].(string)
+	originalContent, _ := args["original_content"].(string)
+
+	// Validate required parameters
+	if sessionToken == "" {
+		result := models.FixVerificationResult{
+			AllFixesIntact: false,
+			VerifySummary:  "Session token is required",
+			Fixes:          []models.IndividualFixResult{},
+			Recommendation: "Invalid input - session_token required",
+		}
+		return buildToolResult(result, true)
+	}
+
+	if filePath == "" {
+		result := models.FixVerificationResult{
+			AllFixesIntact: false,
+			VerifySummary:  "File path is required",
+			Fixes:          []models.IndividualFixResult{},
+			Recommendation: "Invalid input - file_path required",
+		}
+		return buildToolResult(result, true)
+	}
+
+	// Validate session exists
+	s.sessionsMu.RLock()
+	_, exists := s.sessions[sessionToken]
+	s.sessionsMu.RUnlock()
+
+	if !exists {
+		result := models.FixVerificationResult{
+			AllFixesIntact: false,
+			VerifySummary:  "Session not found or expired",
+			Fixes:          []models.IndividualFixResult{},
+			Recommendation: "Create a new session",
+		}
+		return buildToolResult(result, true)
+	}
+
+	// Get failure registry store to query active failures for the file
+	failStore := database.NewFailureStore(s.db)
+	failures, err := failStore.GetActiveByFiles(ctx, []string{filePath})
+	if err != nil {
+		return &mcp.CallToolResult{
+			Content: []interface{}{mcp.TextContent{Type: "text", Text: fmt.Sprintf("Failed to check failures: %v", err)}},
+			IsError: true,
+		}, nil
+	}
+
+	// Get current content for verification (use modified_content if provided, otherwise read from file)
+	currentContent := modifiedContent
+	if currentContent == "" {
+		if currentContent, err = s.readFileContent(filePath); err != nil {
+			currentContent = originalContent
+		}
+	}
+
+	// Process each failure as a potential fix to verify
+	fixVerificationStore := s.fixVerificationStore
+	results := []models.IndividualFixResult{}
+	intactCount := 0
+
+	if len(failures) == 0 {
+		// No failures found for this file, check if we have any fix tracking records
+		if verifications, err := fixVerificationStore.GetBySessionAndFile(ctx, sessionToken, filePath); err == nil && len(verifications) > 0 {
+			for _, v := range verifications {
+				// Verify against current content
+				status, message := fixVerificationStore.VerifyFixContent(ctx, currentContent, &v)
+				results = append(results, models.IndividualFixResult{
+					FailureID:           v.FailureID,
+					Status:              status,
+					FixType:             v.FixType,
+					AffectedFile:        v.FilePath,
+					VerificationMessage: message,
+				})
+				if status == models.StatusConfirmed {
+					intactCount++
+				}
+			}
+		}
+	} else {
+		// Verify each failure/fix against current content
+		for _, failure := range failures {
+			// Try to get or create a fix verification record
+			fixContent := failure.RootCause
+			var fixType models.FixType
+
+			// Determine fix type based on failure data
+			if failure.RegressionPattern != "" {
+				fixType = models.FixTypeRegex
+				// Use regression pattern as fix content for regex fixes
+				fixContent = failure.RegressionPattern
+			} else if failure.RootCause != "" {
+				// This is a bit of a guess - using error message as fix content for code changes
+				fixContent = failure.ErrorMessage
+				fixType = models.FixTypeCodeChange
+			} else {
+				fixType = models.FixTypeConfig
+				fixContent = failure.ErrorMessage
+			}
+
+			verification, err := fixVerificationStore.GetOrCreate(ctx, sessionToken, failure.FailureID, filePath, fixContent, fixType)
+			if err != nil {
+				slog.Warn("Failed to get or create fix verification", "error", err, "failure_id", failure.FailureID)
+				continue
+			}
+
+			// Verify if fix is intact
+			status, message := fixVerificationStore.VerifyFixContent(ctx, currentContent, verification)
+
+			// Update verification status
+			if err := fixVerificationStore.UpdateVerificationStatus(ctx, sessionToken, failure.FailureID, status); err != nil {
+				slog.Warn("Failed to update verification status", "error", err, "failure_id", failure.FailureID)
+			}
+
+			results = append(results, models.IndividualFixResult{
+				FailureID:           failure.FailureID,
+				Status:              status,
+				FixType:             fixType,
+				AffectedFile:        filePath,
+				VerificationMessage: message,
+			})
+
+			if status == models.StatusConfirmed {
+				intactCount++
+			}
+		}
+	}
+
+	// Build summary and recommendation
+	totalFixes := len(results)
+	var summary, recommendation string
+	allIntact := true
+
+	if totalFixes == 0 {
+		summary = "No fixes to verify for this file"
+		recommendation = "Proceed - no fixes found"
+		allIntact = true
+	} else {
+		summary = fmt.Sprintf("%d/%d fixes verified intact", intactCount, totalFixes)
+		if intactCount == totalFixes {
+			recommendation = "Continue - all fixes intact"
+			allIntact = true
+		} else if intactCount > 0 {
+			recommendation = "Review - some fixes modified"
+			allIntact = false
+		} else {
+			recommendation = "Halt - fix verification failed"
+			allIntact = false
+		}
+	}
+
+	result := models.FixVerificationResult{
+		AllFixesIntact:   allIntact,
+		VerifySummary:    summary,
+		Fixes:            results,
+		Recommendation:   recommendation,
+	}
+
+	return buildToolResult(result, !allIntact)
+}
+
+// Helper function to read file content
+func (s *MCPServer) readFileContent(filePath string) (string, error) {
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		return "", fmt.Errorf("failed to read file: %w", err)
+	}
+	return string(data), nil
 }
