@@ -188,11 +188,11 @@ func TestIsValidSeverity(t *testing.T) {
 		sev  string
 		want bool
 	}{
+		{"critical severity", "critical", true},
 		{"error severity", "error", true},
 		{"warning severity", "warning", true},
 		{"info severity", "info", true},
 		{"empty string", "", false},
-		{"invalid severity", "critical", false},
 		{"uppercase error", "ERROR", false},
 		{"mixed case", "Error", false},
 		{"similar but invalid", "errors", false},
