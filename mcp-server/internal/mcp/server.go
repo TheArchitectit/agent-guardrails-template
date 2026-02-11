@@ -515,7 +515,6 @@ func (s *MCPServer) registerTools() {
 						"description": "Whether this is a newly created file",
 					},
 				},
-				Required: []string{"session_token", "file_path", "git_diff"},
 			},
 		},
 		},
