@@ -57,6 +57,8 @@ type MCPServer struct {
 	cache            *cache.Client
 	auditLogger      *audit.Logger
 	validationEngine *validation.ValidationEngine
+	fileReadStore    *database.FileReadStore
+	taskAttemptStore *database.TaskAttemptStore
 	mcpServer        server.MCPServer
 	sessions         map[string]*Session
 	sessionsMu       sync.RWMutex
@@ -75,13 +77,15 @@ type Session struct {
 }
 
 // NewMCPServer creates a new MCP server
-func NewMCPServer(cfg *config.Config, db *database.DB, cacheClient *cache.Client, auditLogger *audit.Logger, validationEngine *validation.ValidationEngine) *MCPServer {
+func NewMCPServer(cfg *config.Config, db *database.DB, cacheClient *cache.Client, auditLogger *audit.Logger, validationEngine *validation.ValidationEngine, fileReadStore *database.FileReadStore, taskAttemptStore *database.TaskAttemptStore) *MCPServer {
 	s := &MCPServer{
 		cfg:              cfg,
 		db:               db,
 		cache:            cacheClient,
 		auditLogger:      auditLogger,
 		validationEngine: validationEngine,
+		fileReadStore:    fileReadStore,
+		taskAttemptStore: taskAttemptStore,
 		sessions:         make(map[string]*Session),
 	}
 
@@ -321,6 +325,66 @@ func (s *MCPServer) registerTools() {
 				},
 			},
 		},
+		{
+			Name:        "guardrail_record_attempt",
+			Description: "Record a failed task attempt for three strikes tracking",
+			InputSchema: mcp.ToolInputSchema{
+				Type: "object",
+				Properties: mcp.ToolInputSchemaProperties{
+					"session_token": map[string]interface{}{
+						"type":        "string",
+						"description": "Session token from init_session",
+					},
+					"task_id": map[string]interface{}{
+						"type":        "string",
+						"description": "Optional task identifier for task-specific tracking",
+					},
+					"error_message": map[string]interface{}{
+						"type":        "string",
+						"description": "Error message from the failed attempt",
+					},
+					"error_category": map[string]interface{}{
+						"type":        "string",
+						"description": "Category of error: syntax, runtime, logic, timeout, other",
+						"enum":        []string{"syntax", "runtime", "logic", "timeout", "other"},
+					},
+				},
+			},
+		},
+		{
+			Name:        "guardrail_validate_three_strikes",
+			Description: "Check three strikes status and determine if should halt",
+			InputSchema: mcp.ToolInputSchema{
+				Type: "object",
+				Properties: mcp.ToolInputSchemaProperties{
+					"session_token": map[string]interface{}{
+						"type":        "string",
+						"description": "Session token from init_session",
+					},
+					"task_id": map[string]interface{}{
+						"type":        "string",
+						"description": "Optional task identifier for task-specific tracking",
+					},
+				},
+			},
+		},
+		{
+			Name:        "guardrail_reset_attempts",
+			Description: "Reset attempt counter for a task (on successful completion)",
+			InputSchema: mcp.ToolInputSchema{
+				Type: "object",
+				Properties: mcp.ToolInputSchemaProperties{
+					"session_token": map[string]interface{}{
+						"type":        "string",
+						"description": "Session token from init_session",
+					},
+					"task_id": map[string]interface{}{
+						"type":        "string",
+						"description": "Optional task identifier for task-specific tracking",
+					},
+				},
+			},
+		},
 		},
 	}, nil
 	})
@@ -415,6 +479,12 @@ func (s *MCPServer) handleToolCall(ctx context.Context, name string, arguments m
 		return s.handleValidatePush(ctx, arguments)
 	case "guardrail_record_file_read":
 		return s.handleRecordFileRead(ctx, arguments)
+	case "guardrail_record_attempt":
+		return s.handleRecordAttempt(ctx, arguments)
+	case "guardrail_validate_three_strikes":
+		return s.handleValidateThreeStrikes(ctx, arguments)
+	case "guardrail_reset_attempts":
+		return s.handleResetAttempts(ctx, arguments)
 	default:
 		return &mcp.CallToolResult{
 			Content: []interface{}{
