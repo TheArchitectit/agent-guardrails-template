@@ -507,3 +507,179 @@ func (s *MCPServer) handleRecordFileRead(ctx context.Context, args map[string]in
 		Content: []interface{}{mcp.TextContent{Type: "text", Text: fmt.Sprintf(`{"success":true,"session_token":"%s","file_path":"%s","recorded_at":"%s"}`, jsonEscapeString(sessionToken), jsonEscapeString(filePath), time.Now().Format(time.RFC3339))}},
 	}, nil
 }
+
+// handleRecordAttempt records a failed task attempt for three strikes tracking
+func (s *MCPServer) handleRecordAttempt(ctx context.Context, args map[string]interface{}) (*mcp.CallToolResult, error) {
+	sessionToken, _ := args["session_token"].(string)
+	taskID, _ := args["task_id"].(string)
+	errorMsg, _ := args["error_message"].(string)
+	errorCategory, _ := args["error_category"].(string)
+
+	// Validate required parameters
+	if sessionToken == "" {
+		return &mcp.CallToolResult{
+			Content: []interface{}{mcp.TextContent{Type: "text", Text: `{"valid":false,"error":"session_token is required"}`}},
+			IsError: true,
+		}, nil
+	}
+
+	if errorMsg == "" {
+		errorMsg = "Unknown error"
+	}
+
+	if errorCategory == "" {
+		errorCategory = string(models.ErrorCategoryOther)
+	}
+
+	// Validate session exists
+	s.sessionsMu.RLock()
+	_, exists := s.sessions[sessionToken]
+	s.sessionsMu.RUnlock()
+
+	if !exists {
+		return &mcp.CallToolResult{
+			Content: []interface{}{mcp.TextContent{Type: "text", Text: `{"valid":false,"error":"Invalid session token"}`}},
+			IsError: true,
+		}, nil
+	}
+
+	// Record the attempt
+	attempt, err := s.taskAttemptStore.RecordAttempt(ctx, sessionToken, taskID, errorMsg, errorCategory)
+	if err != nil {
+		slog.Error("Failed to record attempt", "error", err, "session_token", sessionToken)
+		return &mcp.CallToolResult{
+			Content: []interface{}{mcp.TextContent{Type: "text", Text: fmt.Sprintf(`{"valid":false,"error":"Failed to record attempt: %s"}`, jsonEscapeString(err.Error()))}},
+			IsError: true,
+		}, nil
+	}
+
+	// Get three strikes status
+	status, err := s.taskAttemptStore.GetThreeStrikesStatus(ctx, sessionToken, taskID)
+	if err != nil {
+		slog.Error("Failed to get three strikes status", "error", err)
+	}
+
+	// Build response
+	response := fmt.Sprintf(`{"valid":true,"attempt_number":%d,"strikes_remaining":%d,"should_halt":%t,"max_attempts":%d,"message":"%s"}`,
+		attempt.AttemptNumber,
+		status.RemainingStrikes,
+		status.ShouldHalt,
+		status.MaxAttempts,
+		jsonEscapeString(fmt.Sprintf("Attempt %d recorded. %d strikes remaining.", attempt.AttemptNumber, status.RemainingStrikes)),
+	)
+
+	return &mcp.CallToolResult{
+		Content: []interface{}{mcp.TextContent{Type: "text", Text: response}},
+	}, nil
+}
+
+// handleValidateThreeStrikes checks three strikes status and determines if should halt
+func (s *MCPServer) handleValidateThreeStrikes(ctx context.Context, args map[string]interface{}) (*mcp.CallToolResult, error) {
+	sessionToken, _ := args["session_token"].(string)
+	taskID, _ := args["task_id"].(string)
+
+	// Validate required parameters
+	if sessionToken == "" {
+		return &mcp.CallToolResult{
+			Content: []interface{}{mcp.TextContent{Type: "text", Text: `{"valid":false,"error":"session_token is required"}`}},
+			IsError: true,
+		}, nil
+	}
+
+	// Validate session exists
+	s.sessionsMu.RLock()
+	_, exists := s.sessions[sessionToken]
+	s.sessionsMu.RUnlock()
+
+	if !exists {
+		return &mcp.CallToolResult{
+			Content: []interface{}{mcp.TextContent{Type: "text", Text: `{"valid":false,"error":"Invalid session token"}`}},
+			IsError: true,
+		}, nil
+	}
+
+	// Get three strikes status
+	status, err := s.taskAttemptStore.GetThreeStrikesStatus(ctx, sessionToken, taskID)
+	if err != nil {
+		slog.Error("Failed to get three strikes status", "error", err, "session_token", sessionToken)
+		return &mcp.CallToolResult{
+			Content: []interface{}{mcp.TextContent{Type: "text", Text: fmt.Sprintf(`{"valid":false,"error":"Failed to check status: %s"}`, jsonEscapeString(err.Error()))}},
+			IsError: true,
+		}, nil
+	}
+
+	// Determine message based on status
+	var message string
+	if status.ShouldHalt {
+		message = "Three strikes reached. Escalate to user or halt."
+	} else if status.AttemptsCount == 0 {
+		message = "No failed attempts. Clear to proceed."
+	} else {
+		message = fmt.Sprintf("%d of %d attempts used. Escalate after next failure.", status.AttemptsCount, status.MaxAttempts)
+	}
+
+	// Build response
+	response := fmt.Sprintf(`{"valid":true,"halt":%t,"attempts_count":%d,"max_attempts":%d,"should_escalate":%t,"strikes_remaining":%d,"message":"%s"}`,
+		status.ShouldHalt,
+		status.AttemptsCount,
+		status.MaxAttempts,
+		status.ShouldEscalate,
+		status.RemainingStrikes,
+		jsonEscapeString(message),
+	)
+
+	return &mcp.CallToolResult{
+		Content: []interface{}{mcp.TextContent{Type: "text", Text: response}},
+	}, nil
+}
+
+// handleResetAttempts resets attempt counter for a task (on successful completion)
+func (s *MCPServer) handleResetAttempts(ctx context.Context, args map[string]interface{}) (*mcp.CallToolResult, error) {
+	sessionToken, _ := args["session_token"].(string)
+	taskID, _ := args["task_id"].(string)
+
+	// Validate required parameters
+	if sessionToken == "" {
+		return &mcp.CallToolResult{
+			Content: []interface{}{mcp.TextContent{Type: "text", Text: `{"valid":false,"error":"session_token is required"}`}},
+			IsError: true,
+		}, nil
+	}
+
+	// Validate session exists
+	s.sessionsMu.RLock()
+	_, exists := s.sessions[sessionToken]
+	s.sessionsMu.RUnlock()
+
+	if !exists {
+		return &mcp.CallToolResult{
+			Content: []interface{}{mcp.TextContent{Type: "text", Text: `{"valid":false,"error":"Invalid session token"}`}},
+			IsError: true,
+		}, nil
+	}
+
+	// Get current count before resolving
+	status, _ := s.taskAttemptStore.GetThreeStrikesStatus(ctx, sessionToken, taskID)
+	attemptsCleared := status.AttemptsCount
+
+	// Resolve attempts
+	err := s.taskAttemptStore.ResolveAttempts(ctx, sessionToken, taskID)
+	if err != nil {
+		slog.Error("Failed to reset attempts", "error", err, "session_token", sessionToken)
+		return &mcp.CallToolResult{
+			Content: []interface{}{mcp.TextContent{Type: "text", Text: fmt.Sprintf(`{"valid":false,"error":"Failed to reset attempts: %s"}`, jsonEscapeString(err.Error()))}},
+			IsError: true,
+		}, nil
+	}
+
+	// Build response
+	message := fmt.Sprintf("Attempts reset successfully. %d pending attempts cleared.", attemptsCleared)
+	response := fmt.Sprintf(`{"valid":true,"reset":true,"attempts_cleared":%d,"message":"%s"}`,
+		attemptsCleared,
+		jsonEscapeString(message),
+	)
+
+	return &mcp.CallToolResult{
+		Content: []interface{}{mcp.TextContent{Type: "text", Text: response}},
+	}, nil
+}
