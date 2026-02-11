@@ -115,12 +115,11 @@ func main() {
 	validationEngine := validation.NewValidationEngine(ruleStore, redisClient,
 		validation.WithFileReadStore(fileReadStore),
 		validation.WithTaskAttemptStore(taskAttemptStore),
-	haltEventStore := database.NewHaltEventStore(db)
 	)
 
 	// Create MCP server
-	mcpSrv := mcpServer.NewMCPServer(cfg, db, redisClient, auditLogger, validationEngine, fileReadStore, ), taskAttemptStore, haltEventStore
-	haltEventStore := database.NewHaltEventStore($db)
+	haltEventStore := database.NewHaltEventStore(db)
+	mcpSrv := mcpServer.NewMCPServer(cfg, db, redisClient, auditLogger, validationEngine, fileReadStore, taskAttemptStore, haltEventStore)
 
 	// Start servers
 	ctx, cancel := context.WithCancel(context.Background())
