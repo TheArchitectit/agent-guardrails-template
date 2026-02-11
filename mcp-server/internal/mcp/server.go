@@ -375,6 +375,35 @@ func (s *MCPServer) registerTools() {
 			},
 		},
 		{
+			Name:        "guardrail_validate_exact_replacement",
+			Description: "Validate that code replacement matches exact specification",
+			InputSchema: mcp.ToolInputSchema{
+				Type: "object",
+				Properties: mcp.ToolInputSchemaProperties{
+					"session_token": map[string]interface{}{
+						"type":        "string",
+						"description": "Session token from init_session",
+					},
+					"file_path": map[string]interface{}{
+						"type":        "string",
+						"description": "File that was modified",
+					},
+					"original_content": map[string]interface{}{
+						"type":        "string",
+						"description": "What the content should be (original expectation)",
+					},
+					"modified_content": map[string]interface{}{
+						"type":        "string",
+						"description": "What the content actually is after modification",
+					},
+					"replacement_type": map[string]interface{}{
+						"type":        "string",
+						"description": "Type of replacement: provided_code, pattern, exact",
+					},
+				},
+			},
+		},
+		{
 			Name:        "guardrail_reset_attempts",
 			Description: "Reset attempt counter for a task (on successful completion)",
 			InputSchema: mcp.ToolInputSchema{
@@ -642,6 +671,8 @@ func (s *MCPServer) handleToolCall(ctx context.Context, name string, arguments m
 		return s.handleRecordAttempt(ctx, arguments)
 	case "guardrail_validate_three_strikes":
 		return s.handleValidateThreeStrikes(ctx, arguments)
+	case "guardrail_validate_exact_replacement":
+		return s.handleValidateExactReplacement(ctx, arguments)
 	case "guardrail_reset_attempts":
 		return s.handleResetAttempts(ctx, arguments)
 	case "guardrail_check_halt_conditions":
