@@ -36,6 +36,81 @@ It ensures that any AI system (Claude, GPT, Gemini, LLaMA, etc.) follows strict 
 
 ---
 
+## MCP Server (Updated in v1.10.0)
+
+The **Model Context Protocol (MCP) Server** provides real-time guardrail enforcement via a standardized protocol for AI agents and IDEs.
+
+### Features
+
+**11 MCP Tools:**
+
+| Tool | Purpose |
+|------|---------|
+| `guardrail_init_session` | Initialize validation session for a task |
+| `guardrail_validate_bash` | Validate bash commands before execution |
+| `guardrail_validate_file_edit` | Validate file edits against rules |
+| `guardrail_validate_git_operation` | Validate git commands for safety |
+| `guardrail_pre_work_check` | Run pre-work checklist validation |
+| `guardrail_get_context` | Get project context and guardrail rules |
+| `guardrail_validate_scope` | Check if file path is within authorized scope |
+| `guardrail_validate_commit` | Validate conventional commit format |
+| `guardrail_prevent_regression` | Check failure registry for pattern matches |
+| `guardrail_check_test_prod_separation` | Verify test/production isolation |
+| `guardrail_validate_push` | Validate git push safety conditions |
+
+**8 MCP Resources:**
+
+| Resource | Description |
+|----------|-------------|
+| `guardrail://quick-reference` | Quick reference card for agents |
+| `guardrail://rules/active` | Active prevention rules for current session |
+| `guardrail://docs/agent-guardrails` | Core safety protocols documentation |
+| `guardrail://docs/four-laws` | Four Laws of Agent Safety (canonical) |
+| `guardrail://docs/halt-conditions` | When to stop and ask for help |
+| `guardrail://docs/workflows` | Workflow documentation index |
+| `guardrail://docs/standards` | Standards documentation index |
+| `guardrail://docs/pre-work-checklist` | Pre-work regression checklist |
+
+**Endpoints:**
+
+- **SSE Stream:** `GET /mcp/v1/sse` - Real-time event streaming
+- **Message Handler:** `POST /mcp/v1/message?session_id=<session_id>` - JSON-RPC 2.0 protocol
+- **Web UI:** `GET /web` - Complete management interface
+
+**Web UI (Port 8080/8081):**
+
+Browser-based guardrail management interface:
+- Dashboard with system stats
+- Document browser with search
+- Rules management (CRUD + toggle)
+- Projects management
+- Failure registry viewer
+- IDE Tools validation interface
+
+**Infrastructure:**
+
+- **PostgreSQL 16** - Persistent storage for rules and sessions
+- **Redis 7** - Caching layer for performance
+- **Production Deployment** - Deploy to your infrastructure (see deployment guide)
+
+### Project Structure with MCP Server
+
+```
+agent-guardrails-template/
+├── mcp-server/            ← MCP Server implementation
+│   ├── cmd/server/        # Go application entry point
+│   ├── internal/          # MCP, web API, DB, cache, security modules
+│   ├── deploy/            # Deployment manifests and container config
+│   │   ├── Dockerfile
+│   │   ├── podman-compose.yml
+│   │   └── k8s-deployment.yaml
+│   ├── API.md             # REST/API contract
+│   └── README.md          # MCP server docs
+├── ...
+```
+
+---
+
 ## Why Use This Template?
 
 ### For Human Developers
@@ -148,7 +223,7 @@ Clear list of actions agents must never perform:
 - **Create new repo** → [Option C](docs/HOW_TO_APPLY.md#option-c-create-a-new-repository-with-standards)
 - **Migrate existing docs** → [Option D](docs/HOW_TO_APPLY.md#option-d-migrate-existing-documentation-to-guardrails-structure)
 
-### Setup with AI Tools (New in v1.7.0)
+### Setup with AI Tools (v1.7.0+)
 
 **For Claude Code or OpenCode users, run the setup script:**
 
@@ -192,6 +267,232 @@ gh repo create my-new-project \
 
 ---
 
+## Installation and Testing (MCP Server)
+
+### Prerequisites
+
+- Docker or Podman
+- Access to your deployment server for production use
+- Environment variables configured (see below)
+
+### Port Mapping
+
+The MCP server uses two ports. When deploying with Docker/Podman, you map **external ports** to the container's **internal ports**:
+
+| Service | Internal Port | External Port | Purpose |
+|---------|--------------|---------------|---------|
+| MCP Protocol | 8080 | 8094 (configurable) | SSE + JSON-RPC endpoint for AI agents |
+| Web UI/API | 8081 | 8095 (configurable) | Web interface + REST API + health checks |
+
+**In your configuration files:**
+- Use **external ports** (8094/8095) when connecting from outside the container
+- Use **internal ports** (8080/8081) only inside the container or when using host networking
+
+### Environment Variables
+
+Required environment variables for MCP server operation:
+
+```bash
+# API Keys
+export MCP_API_KEY="your-mcp-api-key"
+export IDE_API_KEY="your-ide-api-key"
+export JWT_SECRET="your-jwt-secret"
+
+# Database (PostgreSQL 16)
+export DB_HOST="localhost"
+export DB_PORT="5432"
+export DB_NAME="guardrail_mcp"
+export DB_USER="guardrail_user"
+export DB_PASSWORD="your-db-password"
+
+# Cache (Redis 7)
+export REDIS_HOST="localhost"
+export REDIS_PORT="6379"
+export REDIS_PASSWORD="your-redis-password"
+
+# Service Ports
+# Example deployment convention: 8092/8093
+# Defaults in compose: 8080/8081
+export MCP_PORT="8092"
+export WEB_PORT="8093"
+```
+
+### Build and Deploy
+
+```bash
+# Build Docker image
+cd mcp-server
+docker build -t guardrail-mcp:latest -f deploy/Dockerfile .
+
+# Save image for transfer
+docker save -o guardrail-mcp.tar guardrail-mcp:latest
+
+# Deploy to your server
+scp guardrail-mcp.tar user@your-server:/opt/guardrail-mcp/
+ssh user@your-server
+cd /opt/guardrail-mcp
+
+# Load and start with podman-compose
+sudo podman load -i guardrail-mcp.tar
+sudo podman-compose up -d
+
+# Verify deployment
+sudo podman-compose ps
+```
+
+**Docker-only alternative (no Podman):**
+
+```bash
+cd mcp-server
+
+# Build and start directly with Docker Compose
+docker compose -f deploy/podman-compose.yml up -d --build
+
+# Verify deployment
+docker compose -f deploy/podman-compose.yml ps
+```
+
+If you need the tester-validated Docker variant:
+
+```bash
+cd mcp-server
+docker compose -f deploy/docker-compose.example.yml up -d --build
+docker compose -f deploy/docker-compose.example.yml ps
+```
+
+### Testing the MCP Endpoint
+
+**Get session endpoint and initialize:**
+
+```bash
+# 1) Open SSE stream and capture endpoint event
+curl -sN http://localhost:8092/mcp/v1/sse
+# event: endpoint
+# data: http://localhost:8092/mcp/v1/message?session_id=<session_id>
+
+# 2) In another terminal, send initialize to the session endpoint
+curl -i -X POST "http://localhost:8092/mcp/v1/message?session_id=<session_id>" \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "initialize",
+    "params": {
+      "protocolVersion": "2024-11-05",
+      "capabilities": {},
+      "clientInfo": {
+        "name": "test-client",
+        "version": "1.0"
+      }
+    }
+  }'
+```
+
+**Expected behavior:**
+
+- The POST returns `202 Accepted`
+- The JSON-RPC initialize result is delivered on the SSE stream as `event: message`
+
+Example SSE message payload:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "protocolVersion": "2024-11-05",
+    "capabilities": {
+      "resources": {}
+    },
+    "serverInfo": {
+      "name": "guardrail-mcp",
+      "version": "1.9.6"
+    }
+  }
+}
+```
+
+**Test guardrail validation:**
+
+```bash
+curl -X POST "http://localhost:8092/mcp/v1/message?session_id=<session_id>" \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer $MCP_API_KEY' \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 2,
+    "method": "tools/call",
+    "params": {
+      "name": "guardrail_validate_bash",
+      "arguments": {
+        "command": "rm -rf /",
+        "context": "test-session-001"
+      }
+    }
+  }'
+```
+
+### OpenCode MCP Configuration
+
+To connect OpenCode to the remote MCP server, add this to your `.opencode/oh-my-opencode.jsonc`:
+
+```jsonc
+{
+  "mcpServers": {
+    "guardrails": {
+      "type": "remote",
+      "url": "http://100.96.49.42:8094/mcp/v1/sse",
+      "headers": {
+        "Authorization": "Bearer YOUR_MCP_API_KEY_HERE"
+      }
+    }
+  }
+}
+```
+
+**Important:**
+- Replace `100.96.49.42:8094` with your actual server IP and external MCP port
+- Replace `YOUR_MCP_API_KEY_HERE` with the value from your `.env` file (MCP_API_KEY)
+- Use the **external port** (8094), not the internal container port (8080)
+- The `Authorization` header must use `Bearer` format (not `X-API-Key`)
+
+### Accessing the Web UI
+
+Once deployed, access the guardrail management interface:
+
+```
+http://localhost:8093
+```
+
+Features available:
+- View and manage active guardrail rules
+- Monitor validation sessions
+- Configure rule sets
+- View validation logs
+
+### Troubleshooting
+
+**Connection refused:**
+- Verify podman-compose services are running: `sudo podman-compose ps`
+- Docker-only equivalent: `docker compose -f deploy/podman-compose.yml ps`
+- Check firewall rules on your server
+- Verify ports 8092 and 8093 are accessible
+- **Port confusion:** Remember external ports (8094/8095) vs internal ports (8080/8081). Use external ports from outside the container.
+
+**Authentication errors:**
+- Ensure `MCP_API_KEY` is set correctly
+- Verify JWT_SECRET matches between client and server
+- Use `Authorization: Bearer <key>` format (not `X-API-Key` header)
+- Check you're connecting to the MCP port (8094), not the Web UI port (8095)
+
+**Database connection issues:**
+- Check PostgreSQL is running: `sudo podman ps | grep postgres`
+- Docker-only equivalent: `docker ps | grep postgres`
+- Verify DB_HOST and DB_PORT environment variables
+- Check network connectivity between containers
+
+---
+
 ## Project Structure
 
 ```
@@ -202,6 +503,11 @@ agent-guardrails-template/
 ├── HEADER_MAP.md          ← Section-level lookup
 ├── CLAUDE.md               ← Claude Code CLI guidelines
 ├── CHANGELOG.md           ← Release notes archive
+├── mcp-server/            ← MCP Server implementation (v1.9.6)
+│   ├── cmd/server/        # Go entry point
+│   ├── internal/          # Core server modules
+│   ├── deploy/            # Docker deployment configs
+│   └── README.md          # MCP server docs
 ├── docs/                   ← Documentation
 │   ├── AGENT_GUARDRAILS.md       # Core guardrails (MANDATORY)
 │   ├── HOW_TO_APPLY.md             # How to apply template
@@ -300,6 +606,8 @@ agent-guardrails-template/
 | **Supported AI Models** | 30+ LLM families |
 | **Programming Languages** | Go, Java, Python, Ruby, Rust, TypeScript |
 | **AI Tool Integrations** | Claude Code, OpenCode |
+| **MCP Server** | 6 tools, 2 resources, SSE + HTTP endpoints |
+| **Infrastructure** | PostgreSQL 16, Redis 7, Docker/Podman |
 
 ---
 
@@ -307,7 +615,7 @@ agent-guardrails-template/
 
 See [CHANGELOG.md](CHANGELOG.md) for complete release history.
 
-**Current Version:** v1.7.0 (2026-02-01)
+**Current Version:** v1.9.6 (2026-02-08)
 
 ---
 
@@ -341,5 +649,5 @@ in subscription credit when they subscribe!
 
 ---
 
-**Last Updated:** 2026-02-01
-**Status:** v1.7.0 - Production Ready
+**Last Updated:** 2026-02-08
+**Status:** v1.9.6 - Production Ready
