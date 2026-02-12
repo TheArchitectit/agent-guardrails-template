@@ -10,6 +10,308 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
+### Changed
+
+---
+
+## [1.12.0] - 2026-02-12
+
+### Added
+
+- **OpenCode MCP Remote Configuration** - Complete setup documentation for remote MCP server connections
+  - Added port mapping clarification (internal vs external ports)
+  - Documented OpenCode `.opencode/oh-my-opencode.jsonc` MCP server configuration
+  - Added troubleshooting section for port confusion and authentication errors
+  - Provided working example with correct `Authorization: Bearer` header format
+
+### Changed
+
+- **README.md MCP Section** - Enhanced clarity for Docker/Podman deployment
+  - Added explicit port mapping table showing internal (8080/8081) vs external (8094/8095) ports
+  - Clarified which ports to use in different contexts
+  - Updated troubleshooting to include port confusion guidance
+
+- **OPENCODE_INTEGRATION.md** - Added comprehensive MCP server configuration section
+  - Documented `mcpServers` JSONC configuration format
+  - Clarified `type: "remote"` vs local MCP servers
+  - Added verification commands for testing MCP connectivity
+
+---
+
+## [1.10.0] - 2026-02-08
+
+### Added
+
+- **MCP Gap Implementation** - 5 new MCP tools for agent safety
+  - `guardrail_validate_scope` - Check if file path is within authorized scope
+  - `guardrail_validate_commit` - Validate conventional commit format
+  - `guardrail_prevent_regression` - Check failure registry for pattern matches
+  - `guardrail_check_test_prod_separation` - Verify test/production isolation
+  - `guardrail_validate_push` - Validate git push safety conditions
+
+- **MCP Documentation Resources** - 6 new MCP resources for documentation access
+  - `guardrail://docs/agent-guardrails` - Core safety protocols
+  - `guardrail://docs/four-laws` - Four Laws of Agent Safety
+  - `guardrail://docs/halt-conditions` - When to stop and ask
+  - `guardrail://docs/workflows` - Workflow documentation index
+  - `guardrail://docs/standards` - Standards documentation index
+  - `guardrail://docs/pre-work-checklist` - Pre-work regression checklist
+
+- **Web UI Management Interface** - Complete SPA for guardrail management
+  - Dashboard with system stats and health status
+  - Documents browser (CRUD + full-text search)
+  - Rules management (CRUD + toggle switches)
+  - Projects management with context editing
+  - Failure registry viewer with status updates
+  - IDE Tools validation interface
+  - 26 API endpoints implemented in JavaScript client
+
+- **Documentation Parity** - Organized 73 markdown files
+  - Consolidated "Four Laws" to canonical source
+  - Extracted 10 actionable prevention rules to JSON
+  - Created document ingestion script for full-text search
+  - Added MCP resource handlers for all critical docs
+
+### Changed
+
+- **INDEX_MAP.md** - Updated with new sprint documents and canonical sources
+- **docs/AGENT_GUARDRAILS.md** - Now references canonical Four Laws
+
+### Fixed
+
+- **MCP Server Build** - Fixed syntax errors in server.go
+  - Removed unsupported Required fields from ToolInputSchema
+  - Fixed missing closing brace for ListToolsResult struct
+
+---
+
+## [1.9.6] - 2026-02-08
+
+### Fixed
+
+- **MCP SSE Compatibility** - Restored compatibility with Crush and Go SDK clients
+  - SSE keepalive now uses comments (`: ping`) instead of custom event payloads
+  - Server now streams JSON-RPC responses as `event: message` over SSE
+  - Session-bound queueing prevents response loss on concurrent requests
+
+### Changed
+
+- **Container Build** - Runtime image now includes Web UI static assets (`/app/static`)
+- **Web API Access** - Read-only routes for documents/rules/version are publicly browsable
+
+### Documentation
+
+- Updated root README and MCP server README for session_id-based MCP message flow
+- Added release notes document: `docs/RELEASE_v1.9.6.md`
+
+## [1.9.5] - 2026-02-08
+
+### Final Production Polish
+
+- **Code Consistency** - Standardized patterns across all packages
+- **Edge Case Handling** - Added boundary condition checks
+- **Technical Debt** - Cleaned up TODOs and FIXMEs
+- **Final Security Review** - Verified all security measures
+
+### Production Readiness
+
+- **Configuration** - Verified all defaults are production-appropriate
+- **Graceful Shutdown** - Improved shutdown sequence
+- **Health Checks** - Accurate readiness/liveness probes
+- **Resource Limits** - CPU/memory quotas configured
+
+### Integration Testing
+
+- **Build Verification** - Clean build with no errors
+- **Test Coverage** - Added document model tests
+- **Error Scenarios** - Verified error handling paths
+- **Shutdown Behavior** - Tested graceful termination
+
+### Documentation
+
+- **API.md** - Updated to match implementation
+- **README** - Verified accuracy
+- **Deployment Guides** - Reviewed and corrected
+- **Release Notes** - Complete for all versions
+
+### Code Quality
+
+- **Formatting** - All files formatted with gofmt
+- **Imports** - Optimized and organized
+- **Linting** - All lint checks pass
+- **Unused Code** - Removed dead code
+
+## [1.9.4] - 2026-02-07
+
+### Performance
+
+- **SSE Optimizations** - strings.Builder, pre-allocated buffers, reduced allocations
+- **JSON Encoding** - Buffer pool for JSON marshaling
+- **Database Queries** - Optimized document/rule/project queries
+
+### Error Handling
+
+- **Fixed Silent Failures** - GetByID, Count errors now properly handled
+- **Error Wrapping** - All errors wrapped with context using %w
+- **HTTP Status Codes** - 404 for not found, 500 for server errors
+- **Panic Recovery** - Added recovery middleware with metrics
+
+### Configuration
+
+- **Fixed Env Var Naming** - RATE_LIMIT_MCP, RATE_LIMIT_IDE (was MCP_RATE_LIMIT, IDE_RATE_LIMIT)
+- **Feature Flags** - Added ENABLE_METRICS, ENABLE_AUDIT_LOGGING, ENABLE_CACHE
+- **CORS Config** - Added CORS_ALLOWED_ORIGINS, CORS_MAX_AGE
+
+### Observability
+
+- **Panic Metrics** - Track recovered panics by path
+- **Database Metrics** - Connection pool stats, query duration
+- **SLO Metrics** - Compliance, error budget burn rate, SLI values
+- **Correlation ID** - Request tracing middleware
+
+### API Consistency
+
+- **Route Ordering** - Fixed search routes before parameterized routes
+- **Response Formats** - Standardized across all endpoints
+
+## [1.9.3] - 2026-02-07
+
+### Security
+
+- **CORS Origin Validation** - Replaced wildcard CORS with configurable origin validation
+- **Secure Session ID Generation** - Uses crypto/rand instead of timestamp-based IDs
+- **Security Headers** - Added X-Content-Type-Options, X-Frame-Options, X-XSS-Protection, Referrer-Policy
+- **Request Size Limits** - Added 1MB body size limit to prevent DoS
+- **Path Traversal Protection** - Added slug validation to prevent path traversal attacks
+
+### Fixed
+
+- **SQL Injection Vulnerabilities** - Fixed dynamic query building in List methods
+- **Redis Blocking Commands** - Replaced KEYS command with non-blocking SCAN
+- **Context Timeouts** - Added 5-second timeouts to cache operations
+- **Session Memory Leaks** - Added cleanup goroutine for inactive sessions
+- **MCP Protocol Compliance** - SSE endpoint now sends full URLs, proper JSON-RPC ping format
+- **JSON-RPC Validation** - Added session_id and JSON-RPC version validation
+
+### Added
+
+- **Transaction Support** - All Create/Update/Delete operations now use transactions
+- **Model Validation** - Validate() methods for all models (Document, Rule, Project, Failure)
+- **Database Migrations** - Migration system with schema versioning
+- **Connection Pool Monitoring** - Pool health monitoring with capacity warnings
+- **Graceful Shutdown** - Configurable shutdown timeout with SIGQUIT support
+- **Kubernetes Deployment** - Complete K8s manifests with HPA and PDB
+- **API Documentation** - Comprehensive API.md with all REST endpoints
+- **MCP Server CHANGELOG** - Separate changelog for MCP server
+
+### Infrastructure
+
+- **Dockerfile Improvements** - Version injection, CA certificates
+- **Health Checks** - Liveness, readiness, and startup probes
+- **Observability** - /version endpoint, Prometheus metrics, optional pprof
+- **Resource Limits** - CPU/memory limits for all services
+
+### Changed
+
+- **MCP Server Documentation** - Enhanced README with security features and troubleshooting
+- **Environment Configuration** - Fixed defaults in .env.example to match deployment
+
+- **MCP Server README.md**
+  - Added complete project structure including `internal/mcp/`
+  - Expanded API endpoints documentation with all routes
+  - Added database migration section
+  - Added comprehensive security features documentation
+  - Added development commands (fmt, lint, vuln)
+  - Added troubleshooting section
+
+- **MCP Server .env.example**
+  - Reorganized with better section headers
+  - Added profiling configuration options
+  - Added health check timeout configuration
+  - Added build information variables
+  - Improved documentation for each setting
+
+---
+
+### Added
+
+## [1.9.2] - 2026-02-07
+
+### Fixed
+
+- **Web UI Authentication** - Removed API key requirement for Web UI routes
+  - Web UI (port 8093) is now publicly accessible without authentication
+  - Added skip logic for `/`, `/index.html`, and `/static/*` routes
+  - API endpoints still require valid API key
+  - Health checks and metrics remain unauthenticated
+
+## [1.9.1] - 2026-02-07
+
+### Fixed
+
+- **SSE Compatibility** - Fixed EOF errors with non-interactive clients
+  - Added `WriteHeader(http.StatusOK)` for immediate header commit
+  - Added `X-Accel-Buffering: no` for proxy compatibility
+  - Added `Access-Control-Allow-Origin: *` for CORS
+  - Send immediate ping event after endpoint to prevent client timeout
+  - Better error handling on write/flush operations
+
+- **PostgreSQL Array Scanning** - Fixed TEXT[] array scanning bug
+  - Changed `AffectedFiles` from `pq.StringArray` to `pgtype.Array[string]`
+  - Added `ToStringSlice()` and `ToTextArray()` helper functions
+  - Compatible with pgx v5 driver
+
+### Documentation
+
+- **README.md** - Complete rewrite with MCP Server documentation
+  - Installation and testing instructions
+  - Environment variable reference
+  - curl test examples
+  - Deployment guide for production servers
+
+## [1.9.0] - 2026-02-07
+
+### Added
+
+- **MCP Server** - Full Model Context Protocol implementation
+  - `mcp-server/` - Complete Go-based MCP server
+  - `mark3labs/mcp-go` v0.4.0 for protocol implementation
+  - SSE transport for real-time client communication
+  - Tools: `guardrail_init_session`, `guardrail_validate_bash`,
+    `guardrail_validate_file_edit`, `guardrail_validate_git_operation`,
+    `guardrail_pre_work_check`, `guardrail_get_context`
+  - Resources: `guardrail://quick-reference`, `guardrail://rules/active`
+
+- **Web UI** - Browser-based guardrail management
+  - Document CRUD operations
+  - Prevention rule management
+  - Failure registry viewer
+  - Project configuration
+
+- **Production Deployment** - RHEL + Podman environment
+  - PostgreSQL 16 for data persistence
+  - Redis 7 for caching and rate limiting
+  - Multi-stage Docker build with distroless image
+  - Security hardening: non-root user (65532), read-only filesystem,
+    dropped capabilities, SELinux labels
+
+### Changed
+
+- **Server Binding** - Changed from `127.0.0.1` to `0.0.0.0` for containerized deployment
+- **Go Version** - Upgraded to Go 1.23.2 for mcp-go compatibility
+
+### Infrastructure
+
+- Example endpoints:
+  - MCP: `http://localhost:8092`
+  - Web UI: `http://localhost:8093`
+
+## [1.8.0] - 2026-02-05
+
+### Added
+
+- Placeholder for v1.8.0 changes
+
 ## [1.7.0] - 2026-02-01
 
 ### Added
