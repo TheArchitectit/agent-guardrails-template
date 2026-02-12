@@ -8,6 +8,59 @@ OpenCode uses a multi-agent architecture with:
 - **Configuration** - JSONC file (`.opencode/oh-my-opencode.jsonc`)
 - **Agents** - Specialized workers for different tasks
 - **Skills** - Markdown files with YAML frontmatter
+- **MCP Servers** - Remote Model Context Protocol servers for guardrail enforcement
+
+## MCP Server Configuration
+
+### Remote MCP Server Setup
+
+If you have a deployed Guardrail MCP server (see [README.md](../README.md) MCP Server section), configure OpenCode to connect to it:
+
+```jsonc
+{
+  "$schema": "https://raw.githubusercontent.com/code-yeongyu/oh-my-opencode/master/assets/oh-my-opencode.schema.json",
+  
+  "mcpServers": {
+    "guardrails": {
+      "type": "remote",
+      "url": "http://your-server-ip:8094/mcp/v1/sse",
+      "headers": {
+        "Authorization": "Bearer YOUR_MCP_API_KEY"
+      }
+    }
+  }
+}
+```
+
+**Configuration Details:**
+
+| Field | Description | Example |
+|-------|-------------|---------|
+| `type` | Must be `"remote"` for external MCP servers | `"remote"` |
+| `url` | SSE endpoint URL with external port | `http://100.96.49.42:8094/mcp/v1/sse` |
+| `headers.Authorization` | Bearer token with MCP_API_KEY | `Bearer JGtwbxsS2Nvy...` |
+
+**Important Notes:**
+- Use the **external port** (e.g., 8094), not the internal container port (8080)
+- The `Authorization` header must use `Bearer` format
+- Do NOT use `X-API-Key` header - it won't work
+- Get the API key from your server's `.env` file (MCP_API_KEY variable)
+
+### Verifying MCP Connection
+
+Test that OpenCode can connect to the MCP server:
+
+```bash
+# Check MCP server health
+curl http://your-server:8095/health/ready
+
+# Should return: {"status":"ready",...}
+
+# Check version
+curl http://your-server:8095/version
+
+# Should return: {"version":"v1.11.7",...}
+```
 
 ## Setup
 

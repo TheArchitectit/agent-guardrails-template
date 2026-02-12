@@ -14,6 +14,30 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [1.12.0] - 2026-02-12
+
+### Added
+
+- **OpenCode MCP Remote Configuration** - Complete setup documentation for remote MCP server connections
+  - Added port mapping clarification (internal vs external ports)
+  - Documented OpenCode `.opencode/oh-my-opencode.jsonc` MCP server configuration
+  - Added troubleshooting section for port confusion and authentication errors
+  - Provided working example with correct `Authorization: Bearer` header format
+
+### Changed
+
+- **README.md MCP Section** - Enhanced clarity for Docker/Podman deployment
+  - Added explicit port mapping table showing internal (8080/8081) vs external (8094/8095) ports
+  - Clarified which ports to use in different contexts
+  - Updated troubleshooting to include port confusion guidance
+
+- **OPENCODE_INTEGRATION.md** - Added comprehensive MCP server configuration section
+  - Documented `mcpServers` JSONC configuration format
+  - Clarified `type: "remote"` vs local MCP servers
+  - Added verification commands for testing MCP connectivity
+
+---
+
 ## [1.10.0] - 2026-02-08
 
 ### Added

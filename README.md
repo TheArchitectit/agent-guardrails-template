@@ -275,6 +275,19 @@ gh repo create my-new-project \
 - Access to your deployment server for production use
 - Environment variables configured (see below)
 
+### Port Mapping
+
+The MCP server uses two ports. When deploying with Docker/Podman, you map **external ports** to the container's **internal ports**:
+
+| Service | Internal Port | External Port | Purpose |
+|---------|--------------|---------------|---------|
+| MCP Protocol | 8080 | 8094 (configurable) | SSE + JSON-RPC endpoint for AI agents |
+| Web UI/API | 8081 | 8095 (configurable) | Web interface + REST API + health checks |
+
+**In your configuration files:**
+- Use **external ports** (8094/8095) when connecting from outside the container
+- Use **internal ports** (8080/8081) only inside the container or when using host networking
+
 ### Environment Variables
 
 Required environment variables for MCP server operation:
@@ -419,6 +432,30 @@ curl -X POST "http://localhost:8092/mcp/v1/message?session_id=<session_id>" \
   }'
 ```
 
+### OpenCode MCP Configuration
+
+To connect OpenCode to the remote MCP server, add this to your `.opencode/oh-my-opencode.jsonc`:
+
+```jsonc
+{
+  "mcpServers": {
+    "guardrails": {
+      "type": "remote",
+      "url": "http://100.96.49.42:8094/mcp/v1/sse",
+      "headers": {
+        "Authorization": "Bearer YOUR_MCP_API_KEY_HERE"
+      }
+    }
+  }
+}
+```
+
+**Important:**
+- Replace `100.96.49.42:8094` with your actual server IP and external MCP port
+- Replace `YOUR_MCP_API_KEY_HERE` with the value from your `.env` file (MCP_API_KEY)
+- Use the **external port** (8094), not the internal container port (8080)
+- The `Authorization` header must use `Bearer` format (not `X-API-Key`)
+
 ### Accessing the Web UI
 
 Once deployed, access the guardrail management interface:
@@ -440,10 +477,13 @@ Features available:
 - Docker-only equivalent: `docker compose -f deploy/podman-compose.yml ps`
 - Check firewall rules on your server
 - Verify ports 8092 and 8093 are accessible
+- **Port confusion:** Remember external ports (8094/8095) vs internal ports (8080/8081). Use external ports from outside the container.
 
 **Authentication errors:**
 - Ensure `MCP_API_KEY` is set correctly
 - Verify JWT_SECRET matches between client and server
+- Use `Authorization: Bearer <key>` format (not `X-API-Key` header)
+- Check you're connecting to the MCP port (8094), not the Web UI port (8095)
 
 **Database connection issues:**
 - Check PostgreSQL is running: `sudo podman ps | grep postgres`
