@@ -1,8 +1,8 @@
 # Project Status - Guardrail MCP Server
 
-**Last Updated:** 2026-02-08
-**Branch:** mcpserver
-**Current Version:** v1.10.9 (deployed on AI01)
+**Last Updated:** 2026-02-12
+**Branch:** main
+**Current Version:** v1.12.0 (deployed on AI01)
 
 ---
 
@@ -84,9 +84,9 @@
 **AI01 (100.96.49.42):**
 - MCP Port: 8094
 - Web UI Port: 8095
-- Version: v1.11.1
+- Version: v1.11.7
 - Status: ✅ Running
-- Features: Ingest system, update notifications, file upload, auth fixes
+- Features: Ingest system, update notifications, file upload, auth fixes, comprehensive documentation
 
 **Web UI Access:**
 - URL: http://100.96.49.42:8095/web/
