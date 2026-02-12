@@ -19,7 +19,7 @@ This directory contains IDE extensions that provide real-time guardrail validati
 | VS Code | 🚧 Complete | TBD | P0 | TypeScript |
 | JetBrains | 🚧 Complete | TBD | P1 | Kotlin |
 | Neovim | 🚧 Complete | TBD | P2 | Lua |
-| Vim | 📋 Planned | TBD | P3 | VimScript |
+| Vim | 🚧 Complete | TBD | P3 | VimScript |
 
 Legend:
 - ✅ Released
@@ -68,6 +68,17 @@ cd ide/jetbrains-plugin
 }
 ```
 
+### Vim
+
+```bash
+# Clone
+git clone https://github.com/TheArchitectit/guardrail.vim.git ~/.vim/pack/plugins/start/guardrail.vim
+
+# Or using vim-plug
+" Add to .vimrc:
+Plug 'TheArchitectit/guardrail.vim'
+```
+
 ## Directory Structure
 
 ```
@@ -110,6 +121,13 @@ ide/
         ├── diagnostics.lua
         ├── commands.lua
         └── statusline.lua
+└── vim-plugin/                # Vim plugin (P3)
+    ├── plugin/
+    │   └── guardrail.vim
+    ├── autoload/
+    │   └── guardrail.vim
+    └── doc/
+        └── guardrail.txt
 ```
 
 ## Features
@@ -143,6 +161,11 @@ IDE Extensions
 │   ├── Diagnostic API
 │   ├── Status Line Component
 │   └── Commands (5 commands)
+├── Vim (VimScript)
+│   ├── curl → MCP Server
+│   ├── Signs (inline indicators)
+│   ├── Location List
+│   └── Commands (5 commands)
 └── MCP Server (Port 8095)
     ├── /ide/validate/file
     ├── /ide/validate/selection
@@ -168,7 +191,7 @@ See [TESTING_GUIDE.md](./TESTING_GUIDE.md) for comprehensive testing documentati
 | VS Code | ✅ `Ctrl+Shift+G` | ✅ Command Palette | ✅ Command Palette |
 | JetBrains | ✅ `Ctrl+Shift+G` | ✅ Code Menu | ✅ Tools Menu |
 | Neovim | ✅ `:GuardrailValidate` | ✅ `:GuardrailValidateSelection` | ✅ `:GuardrailTestConnection` |
-
+| Vim | ✅ `:GuardrailValidate` | ✅ `:GuardrailValidateSelection` | ✅ `:GuardrailTestConnection` |
 ## Configuration
 
 ### Standard Config Format
@@ -209,6 +232,19 @@ require('guardrail').setup({
   validate_on_save = true,
   severity_threshold = 'warning',
 })
+```
+
+### Vim Configuration
+
+```vim
+let g:guardrail_server_url = 'http://localhost:8095'
+let g:guardrail_api_key = 'your-api-key'
+let g:guardrail_project_slug = 'my-project'
+let g:guardrail_enabled = 1
+let g:guardrail_validate_on_save = 1
+let g:guardrail_severity_threshold = 'warning'
+
+set statusline+=%{guardrail#Statusline()}
 ```
 
 ## Contributing
