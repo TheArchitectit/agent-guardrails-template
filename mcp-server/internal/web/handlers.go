@@ -7,6 +7,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -436,13 +437,13 @@ func (s *Server) getRuleSyncStatus(c echo.Context) error {
 	// If never synced, return appropriate message
 	if status.Status == "" {
 		return c.JSON(http.StatusOK, map[string]interface{}{
-			"status":     "never_run",
-			"last_sync":  nil,
-			"message":    "No rule sync has been performed yet. Use POST /api/rules/sync to trigger a sync.",
-			"rules_added": 0,
+			"status":        "never_run",
+			"last_sync":     nil,
+			"message":       "No rule sync has been performed yet. Use POST /api/rules/sync to trigger a sync.",
+			"rules_added":   0,
 			"rules_updated": 0,
 			"rules_deleted": 0,
-			"errors":     []string{},
+			"errors":        []string{},
 		})
 	}
 
@@ -786,8 +787,51 @@ func (s *Server) getStats(c echo.Context) error {
 }
 
 func (s *Server) triggerIngest(c echo.Context) error {
-	// TODO: Implement ingest trigger
-	return c.JSON(http.StatusOK, map[string]string{"status": "ingest started"})
+	ctx := c.Request().Context()
+
+	// Parse optional request body for ingest options
+	var req struct {
+		RepoPath    string   `json:"repo_path,omitempty"`
+		Force       bool     `json:"force,omitempty"`
+		ProjectSlug string   `json:"project_slug,omitempty"`
+		Categories  []string `json:"categories,omitempty"`
+	}
+	_ = c.Bind(&req) // Optional, ignore error
+
+	// Create a new ingest job
+	jobID := uuid.New()
+	slog.Info("Starting document ingest job", "job_id", jobID, "repo_path", req.RepoPath, "project_slug", req.ProjectSlug)
+
+	// Trigger ingest in background to not block the response
+	go func() {
+		bgCtx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+		defer cancel()
+
+		if req.RepoPath != "" {
+			// Custom repo path provided, would need custom implementation
+			slog.Info("Custom repo path ingest requested", "job_id", jobID, "path", req.RepoPath)
+			// For now, fall through to default sync
+		}
+
+		// Trigger the ingest from watched directories
+		if err := s.ingestSvc.SyncFromRepo(bgCtx, jobID); err != nil {
+			slog.Error("Failed to ingest documents", "job_id", jobID, "error", err)
+		} else {
+			slog.Info("Document ingest completed", "job_id", jobID)
+		}
+	}()
+
+	// Audit log
+	keyHash := getAPIKeyHash(c)
+	s.auditLogger.LogDocChange(ctx, keyHash, fmt.Sprintf("ingest:%s", jobID), "ingest")
+
+	return c.JSON(http.StatusAccepted, map[string]interface{}{
+		"job_id":       jobID,
+		"status":       "running",
+		"message":      "Document ingestion started",
+		"repo_path":    req.RepoPath,
+		"project_slug": req.ProjectSlug,
+	})
 }
 
 // Ingest handlers
@@ -1029,18 +1073,124 @@ func (s *Server) ideHealth(c echo.Context) error {
 }
 
 func (s *Server) validateFile(c echo.Context) error {
-	// TODO: Implement file validation using guardrails
+	ctx := c.Request().Context()
+
+	// Parse request body
+	var req struct {
+		FilePath    string `json:"file_path"`
+		Content     string `json:"content"`
+		ProjectSlug string `json:"project_slug,omitempty"`
+		Language    string `json:"language,omitempty"`
+	}
+
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid request body"})
+	}
+
+	if req.FilePath == "" {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "file_path is required"})
+	}
+
+	// Get active rules for the project
+	var rules []models.PreventionRule
+	var err error
+
+	if req.ProjectSlug != "" {
+		proj, err := s.projStore.GetBySlug(ctx, req.ProjectSlug)
+		if err == nil && len(proj.ActiveRules) > 0 {
+			rules, err = s.ruleStore.GetByRuleIDs(ctx, proj.ActiveRules)
+			if err != nil {
+				slog.Warn("Failed to get project rules, falling back to all active", "error", err)
+			}
+		}
+	}
+
+	// If no project-specific rules, get all active rules
+	if len(rules) == 0 {
+		rules, err = s.ruleStore.GetActiveRules(ctx)
+		if err != nil {
+			slog.Error("Failed to get active rules", "error", err)
+			return c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to retrieve rules"})
+		}
+	}
+
+	// Validate content against rules
+	violations := validateContentAgainstRules(req.FilePath, req.Content, req.Language, rules)
+
+	// Audit log
+	keyHash := getAPIKeyHash(c)
+	s.auditLogger.LogValidation(ctx, keyHash, "validate_file", len(violations) == 0, len(violations))
+
 	return c.JSON(http.StatusOK, map[string]interface{}{
-		"valid":      true,
-		"violations": []interface{}{},
+		"valid":         len(violations) == 0,
+		"violations":    violations,
+		"file_path":     req.FilePath,
+		"rules_checked": len(rules),
 	})
 }
 
 func (s *Server) validateSelection(c echo.Context) error {
-	// TODO: Implement selection validation
+	ctx := c.Request().Context()
+
+	var req struct {
+		Selection   string `json:"selection"`
+		FilePath    string `json:"file_path"`
+		ProjectSlug string `json:"project_slug,omitempty"`
+		Language    string `json:"language,omitempty"`
+		StartLine   int    `json:"start_line"`
+		EndLine     int    `json:"end_line"`
+	}
+
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid request body"})
+	}
+
+	if req.Selection == "" {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "selection is required"})
+	}
+
+	// Get active rules for the project
+	var rules []models.PreventionRule
+	var err error
+
+	if req.ProjectSlug != "" {
+		proj, err := s.projStore.GetBySlug(ctx, req.ProjectSlug)
+		if err == nil && len(proj.ActiveRules) > 0 {
+			rules, err = s.ruleStore.GetByRuleIDs(ctx, proj.ActiveRules)
+			if err != nil {
+				slog.Warn("Failed to get project rules, falling back to all active", "error", err)
+			}
+		}
+	}
+
+	// If no project-specific rules, get all active rules
+	if len(rules) == 0 {
+		rules, err = s.ruleStore.GetActiveRules(ctx)
+		if err != nil {
+			slog.Error("Failed to get active rules", "error", err)
+			return c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to retrieve rules"})
+		}
+	}
+
+	// Validate selection against rules
+	violations := validateContentAgainstRules(req.FilePath, req.Selection, req.Language, rules)
+
+	// Adjust line numbers to be relative to the file, not the selection
+	for i := range violations {
+		violations[i].Line = req.StartLine + violations[i].Line - 1
+	}
+
+	// Audit log
+	keyHash := getAPIKeyHash(c)
+	s.auditLogger.LogValidation(ctx, keyHash, "validate_selection", len(violations) == 0, len(violations))
+
 	return c.JSON(http.StatusOK, map[string]interface{}{
-		"valid":      true,
-		"violations": []interface{}{},
+		"valid":         len(violations) == 0,
+		"violations":    violations,
+		"file_path":     req.FilePath,
+		"start_line":    req.StartLine,
+		"end_line":      req.EndLine,
+		"rules_checked": len(rules),
 	})
 }
 
@@ -1102,10 +1252,95 @@ func (s *Server) getIDERules(c echo.Context) error {
 }
 
 func (s *Server) getQuickReference(c echo.Context) error {
-	// TODO: Implement quick reference - get from documents
-	return c.JSON(http.StatusOK, map[string]string{
-		"reference": "Quick reference documentation - TODO: Load from docs",
+	ctx := c.Request().Context()
+
+	// Try to find quick-reference document
+	doc, err := s.docStore.GetBySlug(ctx, "quick-reference")
+	if err != nil {
+		// Try alternative slugs
+		doc, err = s.docStore.GetBySlug(ctx, "quick-reference-card")
+		if err != nil {
+			// Search for any document with "quick reference" in title
+			docs, searchErr := s.docStore.Search(ctx, "quick reference", 5)
+			if searchErr != nil || len(docs) == 0 {
+				return c.JSON(http.StatusOK, map[string]string{
+					"reference": "Quick reference documentation not found. Please ensure documents are ingested.",
+				})
+			}
+			doc = &docs[0]
+		}
+	}
+
+	// Audit log
+	keyHash := getAPIKeyHash(c)
+	s.auditLogger.LogDocChange(ctx, keyHash, doc.Slug, "quick-reference-access")
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"reference": doc.Content,
+		"title":     doc.Title,
+		"slug":      doc.Slug,
+		"category":  doc.Category,
 	})
+}
+
+// validateContentAgainstRules checks content against prevention rules and returns violations
+type ValidationViolation struct {
+	RuleID   string `json:"rule_id"`
+	RuleName string `json:"rule_name"`
+	Severity string `json:"severity"`
+	Message  string `json:"message"`
+	Line     int    `json:"line"`
+	Column   int    `json:"column"`
+	Match    string `json:"match"`
+}
+
+func validateContentAgainstRules(filePath, content, language string, rules []models.PreventionRule) []ValidationViolation {
+	var violations []ValidationViolation
+	lines := strings.Split(content, "\n")
+
+	for _, rule := range rules {
+		if !rule.Enabled || rule.Pattern == "" {
+			continue
+		}
+
+		// Skip language-specific rules if language doesn't match
+		if rule.Category != "" && language != "" && rule.Category != language {
+			continue
+		}
+
+		// Compile regex pattern
+		re, err := regexp.Compile(rule.Pattern)
+		if err != nil {
+			slog.Warn("Invalid rule pattern", "rule_id", rule.RuleID, "error", err)
+			continue
+		}
+
+		// Check each line
+		for lineNum, line := range lines {
+			matches := re.FindAllStringIndex(line, -1)
+			for _, match := range matches {
+				violations = append(violations, ValidationViolation{
+					RuleID:   rule.RuleID,
+					RuleName: rule.Name,
+					Severity: string(rule.Severity),
+					Message:  rule.Message,
+					Line:     lineNum + 1,
+					Column:   match[0] + 1,
+					Match:    truncateMatch(line[match[0]:match[1]]),
+				})
+			}
+		}
+	}
+
+	return violations
+}
+
+// truncateMatch limits the match length for display
+func truncateMatch(match string) string {
+	if len(match) > 50 {
+		return match[:50] + "..."
+	}
+	return match
 }
 
 // getAPIKeyHash safely extracts the API key hash from the context
