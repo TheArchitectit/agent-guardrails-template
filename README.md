@@ -198,72 +198,461 @@ Clear list of actions agents must never perform:
 - Skills: guardrails-enforcer, commit-validator, env-separator
 - Agents: guardrails-auditor, doc-indexer
 
-**Script-Based Workflows:**
-- Large code review automation
-- Batch execution with guardrails compliance
-- CI/CD integration patterns
-
 ---
 
-## Quick Start
+## How to Use This Platform
 
-### For AI Agents: Apply This Template
+### For Different User Types
 
-**If you're an AI agent (Claude, GPT, Gemini, etc.), see [docs/HOW_TO_APPLY.md](docs/HOW_TO_APPLY.md) for:**
+#### 1. AI Agent Developers (Using Claude Code/OpenCode)
 
-- Detailed step-by-step instructions
-- 5 ready-to-use prompts (copy-paste)
-- How to add to existing repository
-- Migration examples
-- Verification checklists
-
-**Quick Options:**
-- **Add to existing repo** → [Option A](docs/HOW_TO_APPLY.md#option-a-apply-to-an-existing-repository)
-- **Use example prompts** → [Option B](docs/HOW_TO_APPLY.md#option-b-example-ai-agent-prompts)
-- **Create new repo** → [Option C](docs/HOW_TO_APPLY.md#option-c-create-a-new-repository-with-standards)
-- **Migrate existing docs** → [Option D](docs/HOW_TO_APPLY.md#option-d-migrate-existing-documentation-to-guardrails-structure)
-
-### Setup with AI Tools (v1.7.0+)
-
-**For Claude Code or OpenCode users, run the setup script:**
+**Quick Start:**
 
 ```bash
-# Full setup (all skills, agents, and hooks)
-python scripts/setup_agents.py --claude --opencode --full
+# 1. Set up MCP server connection
+# Add to your .opencode/oh-my-opencode.jsonc or Claude Code config:
+{
+  "mcpServers": {
+    "guardrails": {
+      "type": "remote",
+      "url": "http://your-server:8094/mcp/v1/sse",
+      "headers": {
+        "Authorization": "Bearer YOUR_MCP_API_KEY"
+      }
+    }
+  }
+}
 
-# Or minimal setup (guardrails-enforcer only)
-python scripts/setup_agents.py --claude --minimal
-python scripts/setup_agents.py --opencode --minimal
+# 2. The MCP tools are now available to validate your actions
 ```
 
-**What gets created:**
-- `.claude/skills/` - Claude Code skills (JSON)
-- `.claude/hooks/` - Pre/post execution hooks (shell)
-- `.opencode/` - OpenCode configuration and skills
-- `skills/shared-prompts/` - Reusable prompt components
+**What Happens Automatically:**
+- Every bash command is validated before execution
+- File edits are checked against scope boundaries
+- Git operations are validated for safety
+- Pre-work checklist runs before starting tasks
+- Prevents common mistakes like editing unread files or mixing environments
 
-**Documentation:**
-- [AGENTS_AND_SKILLS_SETUP.md](docs/AGENTS_AND_SKILLS_SETUP.md) - Complete setup guide
-- [CLCODE_INTEGRATION.md](docs/CLCODE_INTEGRATION.md) - Claude Code details
-- [OPENCODE_INTEGRATION.md](docs/OPENCODE_INTEGRATION.md) - OpenCode details
+**Example Workflow:**
 
-### For Humans: Use This Template via GitHub
+```
+User: "Add a new feature to the auth system"
 
-**Create new repository from template:**
+↓ AI Agent uses guardrail_init_session
+↓ Session created with project context
 
-1. Click the green **"Use this template"** button above
-2. Select **"Create a new repository"**
-3. Name your repository and set visibility
-4. Click **"Create repository"**
+↓ AI Agent attempts to edit src/auth/login.js
+↓ guardrail_validate_file_edit checks:
+   ✓ File was read first (Read Before Edit)
+   ✓ File is within authorized scope
+   ✓ No forbidden patterns detected
 
-**Or use CLI:**
+↓ AI Agent runs tests
+↓ guardrail_check_test_prod_separation verifies:
+   ✓ Test database used, not production
+
+↓ AI Agent commits changes
+↓ guardrail_validate_commit checks:
+   ✓ Conventional commit format
+   ✓ No secrets in commit message
+
+↓ Changes pushed with guardrail_validate_push
+↓ guardrail_prevent_regression checks:
+   ✓ No patterns matching past failures
+```
+
+#### 2. DevOps/SRE Teams (Deploying MCP Server)
+
+**Production Deployment:**
 
 ```bash
-gh repo create my-new-project \
-  --template TheArchitectit/agent-guardrails-template \
-  --private \
-  --clone
+# 1. Clone and build
+git clone https://github.com/TheArchitectit/agent-guardrails-template.git
+cd agent-guardrails-template/mcp-server
+
+# 2. Configure environment
+cp .env.example .env
+# Edit .env with your production values:
+# - Generate secure API keys
+# - Set database credentials
+# - Configure Redis
+
+# 3. Deploy with Docker/Podman
+docker compose -f deploy/podman-compose.yml up -d
+
+# 4. Verify deployment
+curl http://your-server:8095/health/ready
 ```
+
+**Monitoring:**
+
+```bash
+# Check health
+curl http://your-server:8095/health/ready
+
+# View metrics
+curl http://your-server:8095/metrics
+
+# Check version
+curl http://your-server:8095/version
+```
+
+**Access the Web UI:**
+
+Open `http://your-server:8095` in your browser to:
+- View active guardrail rules
+- Monitor validation sessions
+- Manage projects
+- View failure registry
+- Configure rule sets
+
+#### 3. Development Teams (Using Web UI)
+
+**Dashboard Overview:**
+
+1. **Home/Dashboard** - System stats and health
+2. **Documents** - Browse and search guardrail documentation
+3. **Rules** - View and manage prevention rules
+   - Toggle rules on/off
+   - Create custom rules
+   - Import/export rule sets
+4. **Projects** - Manage project-specific configurations
+5. **Failures** - View and update failure registry
+   - Log new failures
+   - Mark failures as resolved
+   - See prevention rules created from failures
+
+**Managing Prevention Rules:**
+
+```javascript
+// Example: Create a rule via Web UI API
+fetch('http://your-server:8095/api/rules', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer YOUR_MCP_API_KEY',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    name: 'No Console Logs in Production',
+    pattern: 'console\\.(log|debug)',
+    language: 'javascript',
+    severity: 'warning',
+    description: 'Prevent console.log in production code'
+  })
+})
+```
+
+### MCP Tools in Detail
+
+#### 1. guardrail_init_session
+
+**Purpose:** Initialize a validation session before starting work
+
+**When to use:** At the beginning of every task
+
+**Example:**
+```json
+{
+  "method": "tools/call",
+  "params": {
+    "name": "guardrail_init_session",
+    "arguments": {
+      "project_slug": "my-project",
+      "agent_type": "claude-code",
+      "client_version": "1.0.0"
+    }
+  }
+}
+```
+
+**Returns:** Session token for subsequent validations
+
+#### 2. guardrail_validate_bash
+
+**Purpose:** Validate bash commands before execution
+
+**When to use:** Before running any bash command
+
+**Example:**
+```json
+{
+  "method": "tools/call",
+  "params": {
+    "name": "guardrail_validate_bash",
+    "arguments": {
+      "command": "rm -rf /important/data",
+      "session_token": "sess_abc123"
+    }
+  }
+}
+```
+
+**Blocks:** Dangerous commands like `rm -rf /`, `dd if=/dev/zero`, etc.
+
+#### 3. guardrail_validate_file_edit
+
+**Purpose:** Validate file edits before applying them
+
+**When to use:** Before modifying any file
+
+**Example:**
+```json
+{
+  "method": "tools/call",
+  "params": {
+    "name": "guardrail_validate_file_edit",
+    "arguments": {
+      "file_path": "src/config/production.js",
+      "old_string": "const debug = true",
+      "new_string": "const debug = false",
+      "session_token": "sess_abc123"
+    }
+  }
+}
+```
+
+**Validates:**
+- File was read before editing
+- File is within authorized scope
+- No forbidden patterns in changes
+- Secrets not being added
+
+#### 4. guardrail_prevent_regression
+
+**Purpose:** Check code against failure registry patterns
+
+**When to use:** Before committing, after completing work
+
+**Example:**
+```json
+{
+  "method": "tools/call",
+  "params": {
+    "name": "guardrail_prevent_regression",
+    "arguments": {
+      "file_paths": ["src/auth.js", "src/login.js"],
+      "code_content": "// ...code to check...",
+      "session_token": "sess_abc123"
+    }
+  }
+}
+```
+
+**Prevents:** Repeating past failures by pattern matching
+
+### Common Use Cases
+
+#### Use Case 1: Preventing Production Accidents
+
+**Problem:** AI agent accidentally deletes production database
+
+**Solution:**
+```bash
+# MCP server validates all bash commands
+# This would be blocked:
+$ psql -c "DROP DATABASE production"
+# Error: Dangerous command detected
+```
+
+**Prevention Rule:**
+```json
+{
+  "name": "No DROP DATABASE",
+  "pattern": "DROP\\s+DATABASE",
+  "severity": "critical",
+  "action": "block"
+}
+```
+
+#### Use Case 2: Ensuring Code Review
+
+**Problem:** AI agent commits directly to main without review
+
+**Solution:**
+```bash
+# MCP validates git operations
+$ git push origin main
+# Error: Direct push to main requires approval
+```
+
+**Prevention Rule:**
+```json
+{
+  "name": "Require PR for main",
+  "pattern": "push.*main",
+  "severity": "critical",
+  "action": "block"
+}
+```
+
+#### Use Case 3: Test/Production Separation
+
+**Problem:** Tests accidentally use production database
+
+**Solution:**
+```javascript
+// MCP validates test code
+const db = process.env.NODE_ENV === 'test' 
+  ? testDb 
+  : productionDb; // This would be flagged!
+
+// Correct:
+const db = testDb; // MCP validates test-only code
+```
+
+### Web UI Walkthrough
+
+#### Dashboard
+
+The dashboard shows:
+- **System Health** - Database, Redis, and MCP server status
+- **Validation Statistics** - Total validations, blocked actions, failures prevented
+- **Active Sessions** - Current AI agent sessions
+- **Recent Activity** - Latest validations and rule triggers
+
+#### Documents Browser
+
+Search and view all guardrail documentation:
+```
+Search: "git push"
+Results:
+- docs/workflows/GIT_PUSH_PROCEDURES.md
+- docs/AGENT_GUARDRAILS.md (section on push safety)
+```
+
+#### Rules Management
+
+**Active Rules View:**
+```
+┌─────────────────────────────────────────┐
+│ Prevention Rules                        │
+├─────────────────────────────────────────┤
+│ ☑ No Force Push                         │
+│ ☑ Read Before Edit                      │
+│ ☑ No Secrets in Code                    │
+│ ☐ Custom Rule (disabled)                │
+└─────────────────────────────────────────┘
+```
+
+**Creating a Rule:**
+1. Click "New Rule"
+2. Enter pattern (regex or literal)
+3. Select language (optional)
+4. Set severity (info/warning/critical)
+5. Save and activate
+
+#### Failure Registry
+
+Track and prevent recurring issues:
+```
+┌─────────────────────────────────────────┐
+│ Recent Failures                         │
+├─────────────────────────────────────────┤
+│ 🔴 Database connection leak            │
+│    Status: Active | Created: 2026-02-10│
+│    Prevention: Added connection check  │
+├─────────────────────────────────────────┤
+│ 🟢 Missing await in async function     │
+│    Status: Resolved | Fixed: 2026-02-09│
+│    Prevention: ESLint rule added      │
+└─────────────────────────────────────────┘
+```
+
+### Integration Examples
+
+#### GitHub Actions Integration
+
+```yaml
+# .github/workflows/guardrails.yml
+name: Guardrails Validation
+
+on: [push, pull_request]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Validate with MCP
+        run: |
+          curl -X POST http://your-mcp-server:8095/api/ingest \
+            -H "Authorization: Bearer ${{ secrets.MCP_API_KEY }}" \
+            -d "{\"repo_path\": \".\", \"project_slug\": \"${{ github.repository }}\"}"
+```
+
+#### IDE Integration (VS Code)
+
+Configure VS Code to use MCP validation:
+```json
+// .vscode/settings.json
+{
+  "guardrails.mcpServerUrl": "http://your-server:8094",
+  "guardrails.apiKey": "${env:MCP_API_KEY}"
+}
+```
+
+#### Custom Client Integration
+
+```python
+# Python client example
+import requests
+
+class GuardrailClient:
+    def __init__(self, server_url, api_key):
+        self.url = server_url
+        self.headers = {"Authorization": f"Bearer {api_key}"}
+    
+    def validate_bash(self, command):
+        response = requests.post(
+            f"{self.url}/mcp/v1/message",
+            headers=self.headers,
+            json={
+                "method": "tools/call",
+                "params": {
+                    "name": "guardrail_validate_bash",
+                    "arguments": {"command": command}
+                }
+            }
+        )
+        return response.json()
+
+# Usage
+client = GuardrailClient("http://server:8094", "api-key")
+result = client.validate_bash("rm -rf /")
+# Returns: {allowed: false, reason: "Dangerous command"}
+```
+
+### Troubleshooting
+
+**Connection refused:**
+- Verify podman-compose services are running: `sudo podman-compose ps`
+- Docker-only equivalent: `docker compose -f deploy/podman-compose.yml ps`
+- Check firewall rules on your server
+- Verify ports 8092 and 8093 are accessible
+- **Port confusion:** Remember external ports (8094/8095) vs internal ports (8080/8081). Use external ports from outside the container.
+
+**Authentication errors:**
+- Ensure `MCP_API_KEY` is set correctly
+- Verify JWT_SECRET matches between client and server
+- Use `Authorization: Bearer <key>` format (not `X-API-Key` header)
+- Check you're connecting to the MCP port (8094), not the Web UI port (8095)
+
+**Database connection issues:**
+- Check PostgreSQL is running: `sudo podman ps | grep postgres`
+- Docker-only equivalent: `docker ps | grep postgres`
+- Verify DB_HOST and DB_PORT environment variables
+- Check network connectivity between containers
+
+**MCP tools not responding:**
+- Check SSE connection: `curl -sN http://server:8094/mcp/v1/sse`
+- Verify session ID is being used correctly
+- Check MCP server logs: `docker logs guardrail-mcp-server`
+
+**Web UI not loading:**
+- Check Web UI port (8095) is accessible
+- Verify CORS settings if accessing from different origin
+- Check browser console for JavaScript errors
 
 ---
 
