@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/google/uuid"
+	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/thearchitectit/guardrail-mcp/internal/database"
 	"github.com/thearchitectit/guardrail-mcp/internal/models"
 )
@@ -693,7 +693,7 @@ func (s *MCPServer) handleCheckHaltConditions(ctx context.Context, args map[stri
 	// Validate required parameters
 	if sessionToken == "" {
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: `{"halt":false,"error":"session_token is required"}`,}},
+			Content: []interface{}{mcp.TextContent{Type: "text", Text: `{"halt":false,"error":"session_token is required"}`}},
 			IsError: true,
 		}, nil
 	}
@@ -705,7 +705,7 @@ func (s *MCPServer) handleCheckHaltConditions(ctx context.Context, args map[stri
 
 	if !exists {
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: `{"halt":false,"error":"Invalid session token"}`,}},
+			Content: []interface{}{mcp.TextContent{Type: "text", Text: `{"halt":false,"error":"Invalid session token"}`}},
 			IsError: true,
 		}, nil
 	}
@@ -764,7 +764,7 @@ func (s *MCPServer) handleCheckHaltConditions(ctx context.Context, args map[stri
 	if len(haltReasons) == 0 {
 		response := `{"halt":false,"reasons":[],"severity":"none","action":"Continue","message":"No halt conditions detected"}`
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: response,}},
+			Content: []interface{}{mcp.TextContent{Type: "text", Text: response}},
 		}, nil
 	}
 
@@ -784,7 +784,7 @@ func (s *MCPServer) handleCheckHaltConditions(ctx context.Context, args map[stri
 	)
 
 	return &mcp.CallToolResult{
-		Content: []interface{}{mcp.TextContent{Type: "text", Text: response,}},
+		Content: []interface{}{mcp.TextContent{Type: "text", Text: response}},
 	}, nil
 }
 
@@ -868,7 +868,7 @@ func (s *MCPServer) handleRecordHalt(ctx context.Context, args map[string]interf
 	)
 
 	return &mcp.CallToolResult{
-		Content: []interface{}{mcp.TextContent{Type: "text", Text: response,}},
+		Content: []interface{}{mcp.TextContent{Type: "text", Text: response}},
 	}, nil
 }
 
@@ -937,7 +937,7 @@ func (s *MCPServer) handleAcknowledgeHalt(ctx context.Context, args map[string]i
 	)
 
 	return &mcp.CallToolResult{
-		Content: []interface{}{mcp.TextContent{Type: "text", Text: response,}},
+		Content: []interface{}{mcp.TextContent{Type: "text", Text: response}},
 	}, nil
 }
 
@@ -1070,7 +1070,7 @@ func (s *MCPServer) handleDetectFeatureCreep(ctx context.Context, args map[strin
 	// Validate required parameters
 	if sessionToken == "" {
 		result := models.FeatureCreepDetectionResult{
-			CreepDetected: false,
+			CreepDetected:  false,
 			Recommendation: "session_token is required",
 		}
 		return buildToolResult(result, true)
@@ -1078,7 +1078,7 @@ func (s *MCPServer) handleDetectFeatureCreep(ctx context.Context, args map[strin
 
 	if filePath == "" {
 		result := models.FeatureCreepDetectionResult{
-			CreepDetected: false,
+			CreepDetected:  false,
 			Recommendation: "file_path is required",
 		}
 		return buildToolResult(result, true)
@@ -1086,7 +1086,7 @@ func (s *MCPServer) handleDetectFeatureCreep(ctx context.Context, args map[strin
 
 	if gitDiff == "" {
 		result := models.FeatureCreepDetectionResult{
-			CreepDetected: false,
+			CreepDetected:  false,
 			Recommendation: "git_diff is required",
 		}
 		return buildToolResult(result, true)
@@ -1366,6 +1366,26 @@ func (s *MCPServer) handleVerifyFixesIntact(ctx context.Context, args map[string
 		return buildToolResult(result, true)
 	}
 
+	if s.db == nil {
+		result := models.FixVerificationResult{
+			AllFixesIntact: false,
+			VerifySummary:  "Database connection is not configured",
+			Fixes:          []models.IndividualFixResult{},
+			Recommendation: "Configure database and retry",
+		}
+		return buildToolResult(result, true)
+	}
+
+	if s.fixVerificationStore == nil {
+		result := models.FixVerificationResult{
+			AllFixesIntact: false,
+			VerifySummary:  "Fix verification store is not configured",
+			Fixes:          []models.IndividualFixResult{},
+			Recommendation: "Configure fix verification store and retry",
+		}
+		return buildToolResult(result, true)
+	}
+
 	// Get failure registry store to query active failures for the file
 	failStore := database.NewFailureStore(s.db)
 	failures, err := failStore.GetActiveByFiles(ctx, []string{filePath})
@@ -1480,10 +1500,10 @@ func (s *MCPServer) handleVerifyFixesIntact(ctx context.Context, args map[string
 	}
 
 	result := models.FixVerificationResult{
-		AllFixesIntact:   allIntact,
-		VerifySummary:    summary,
-		Fixes:            results,
-		Recommendation:   recommendation,
+		AllFixesIntact: allIntact,
+		VerifySummary:  summary,
+		Fixes:          results,
+		Recommendation: recommendation,
 	}
 
 	return buildToolResult(result, !allIntact)
@@ -1509,8 +1529,8 @@ func (s *MCPServer) handleValidateExactReplacement(ctx context.Context, args map
 	// Validate required parameters
 	if sessionToken == "" {
 		result := models.ExactReplacementValidationResult{
-			ExactMatch:   false,
-			Violations:   []models.ExactReplacementViolation{{Type: "validation_error", Severity: "error", Message: "session_token is required"}},
+			ExactMatch:     false,
+			Violations:     []models.ExactReplacementViolation{{Type: "validation_error", Severity: "error", Message: "session_token is required"}},
 			Recommendation: "Invalid input - session_token required",
 		}
 		return buildToolResult(result, true)
@@ -1518,8 +1538,8 @@ func (s *MCPServer) handleValidateExactReplacement(ctx context.Context, args map
 
 	if filePath == "" {
 		result := models.ExactReplacementValidationResult{
-			ExactMatch:   false,
-			Violations:   []models.ExactReplacementViolation{{Type: "validation_error", Severity: "error", Message: "file_path is required"}},
+			ExactMatch:     false,
+			Violations:     []models.ExactReplacementViolation{{Type: "validation_error", Severity: "error", Message: "file_path is required"}},
 			Recommendation: "Invalid input - file_path required",
 		}
 		return buildToolResult(result, true)
@@ -1530,18 +1550,18 @@ func (s *MCPServer) handleValidateExactReplacement(ctx context.Context, args map
 	if originalContent == "" {
 		if modifiedContent == "" {
 			result := models.ExactReplacementValidationResult{
-				ExactMatch:   true,
-				Violations:   []models.ExactReplacementViolation{},
-				DiffStats:    models.DiffStats{Additions: 0, Deletions: 0},
+				ExactMatch:     true,
+				Violations:     []models.ExactReplacementViolation{},
+				DiffStats:      models.DiffStats{Additions: 0, Deletions: 0},
 				Recommendation: "No content to validate - acceptable for file creation",
 			}
 			return buildToolResult(result, false)
 		}
 		// Original content is empty but modified content exists - this is file creation
 		result := models.ExactReplacementValidationResult{
-			ExactMatch:   true,
-			Violations:   []models.ExactReplacementViolation{},
-			DiffStats:    models.DiffStats{Additions: len(strings.Split(modifiedContent, "\n")), Deletions: 0},
+			ExactMatch:     true,
+			Violations:     []models.ExactReplacementViolation{},
+			DiffStats:      models.DiffStats{Additions: len(strings.Split(modifiedContent, "\n")), Deletions: 0},
 			Recommendation: "File creation - no exact match validation needed",
 		}
 		return buildToolResult(result, false)
@@ -1562,8 +1582,8 @@ func (s *MCPServer) handleValidateExactReplacement(ctx context.Context, args map
 
 	if !exists {
 		result := models.ExactReplacementValidationResult{
-			ExactMatch:   false,
-			Violations:   []models.ExactReplacementViolation{{Type: "session_error", Severity: "error", Message: "Session not found or expired"}},
+			ExactMatch:     false,
+			Violations:     []models.ExactReplacementViolation{{Type: "session_error", Severity: "error", Message: "Session not found or expired"}},
 			Recommendation: "Create a new session",
 		}
 		return buildToolResult(result, true)
@@ -1583,9 +1603,9 @@ func detectExactReplacementViolations(originalContent, actualContent, replacemen
 	// If content matches exactly, return early
 	if originalContent == actualContent {
 		return models.ExactReplacementValidationResult{
-			ExactMatch:   true,
-			Violations:   []models.ExactReplacementViolation{},
-			DiffStats:    models.DiffStats{Additions: 0, Deletions: 0},
+			ExactMatch:     true,
+			Violations:     []models.ExactReplacementViolation{},
+			DiffStats:      models.DiffStats{Additions: 0, Deletions: 0},
 			Recommendation: "Accept changes - exact match confirmed",
 		}
 	}
@@ -1637,9 +1657,9 @@ func detectExactReplacementViolations(originalContent, actualContent, replacemen
 	// If no content changes detected, return exact match
 	if !contentChanged && additions == 0 && deletions == 0 {
 		return models.ExactReplacementValidationResult{
-			ExactMatch:   true,
-			Violations:   []models.ExactReplacementViolation{},
-			DiffStats:    models.DiffStats{Additions: 0, Deletions: 0},
+			ExactMatch:     true,
+			Violations:     []models.ExactReplacementViolation{},
+			DiffStats:      models.DiffStats{Additions: 0, Deletions: 0},
 			Recommendation: "Accept changes - exact match confirmed",
 		}
 	}
@@ -1791,9 +1811,9 @@ func detectExactReplacementViolations(originalContent, actualContent, replacemen
 	}
 
 	return models.ExactReplacementValidationResult{
-		ExactMatch:   exactMatch,
-		Violations:   violations,
-		DiffStats:    models.DiffStats{Additions: additions, Deletions: deletions},
+		ExactMatch:     exactMatch,
+		Violations:     violations,
+		DiffStats:      models.DiffStats{Additions: additions, Deletions: deletions},
 		Recommendation: recommendation,
 	}
 }
