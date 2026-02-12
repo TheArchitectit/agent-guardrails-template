@@ -24,6 +24,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   - Added troubleshooting section for port confusion and authentication errors
   - Provided working example with correct `Authorization: Bearer` header format
 
+- **Comprehensive README Documentation** - Added complete "How to Use This Platform" section
+  - Quick start guides for AI Agent Developers, DevOps teams, and Development Teams
+  - Detailed MCP tools documentation with practical examples
+  - Common use cases with real-world scenarios (preventing production accidents, code review, test/prod separation)
+  - Web UI walkthrough covering Dashboard, Documents, Rules, and Failure Registry
+  - Integration examples for GitHub Actions, VS Code, and custom Python client
+  - Enhanced troubleshooting section with MCP-specific issues
+
 ### Changed
 
 - **README.md MCP Section** - Enhanced clarity for Docker/Podman deployment
