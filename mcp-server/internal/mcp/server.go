@@ -51,21 +51,21 @@ var jsonBufferPool = sync.Pool{
 
 // MCPServer wraps the MCP server with guardrail dependencies
 type MCPServer struct {
-	echo                *echo.Echo
-	cfg                 *config.Config
-	db                  *database.DB
-	cache               *cache.Client
-	auditLogger         *audit.Logger
-	validationEngine    *validation.ValidationEngine
-	fileReadStore       *database.FileReadStore
-	taskAttemptStore    *database.TaskAttemptStore
-	haltEventStore      *database.HaltEventStore
-	productionCodeStore *database.ProductionCodeStore
+	echo                 *echo.Echo
+	cfg                  *config.Config
+	db                   *database.DB
+	cache                *cache.Client
+	auditLogger          *audit.Logger
+	validationEngine     *validation.ValidationEngine
+	fileReadStore        *database.FileReadStore
+	taskAttemptStore     *database.TaskAttemptStore
+	haltEventStore       *database.HaltEventStore
+	productionCodeStore  *database.ProductionCodeStore
 	fixVerificationStore *database.FixVerificationStore
-	uncertaintyStore    *database.UncertaintyStore
-	mcpServer           server.MCPServer
-	sessions            map[string]*Session
-	sessionsMu          sync.RWMutex
+	uncertaintyStore     *database.UncertaintyStore
+	mcpServer            server.MCPServer
+	sessions             map[string]*Session
+	sessionsMu           sync.RWMutex
 }
 
 // Session represents an MCP client session
@@ -83,18 +83,18 @@ type Session struct {
 // NewMCPServer creates a new MCP server
 func NewMCPServer(cfg *config.Config, db *database.DB, cacheClient *cache.Client, auditLogger *audit.Logger, validationEngine *validation.ValidationEngine, fileReadStore *database.FileReadStore, taskAttemptStore *database.TaskAttemptStore, haltEventStore *database.HaltEventStore) *MCPServer {
 	s := &MCPServer{
-		cfg:                 cfg,
-		db:                  db,
-		cache:               cacheClient,
-		auditLogger:         auditLogger,
-		validationEngine:    validationEngine,
-		fileReadStore:       fileReadStore,
-		taskAttemptStore:    taskAttemptStore,
-		haltEventStore:      haltEventStore,
-		productionCodeStore: database.NewProductionCodeStore(db),
+		cfg:                  cfg,
+		db:                   db,
+		cache:                cacheClient,
+		auditLogger:          auditLogger,
+		validationEngine:     validationEngine,
+		fileReadStore:        fileReadStore,
+		taskAttemptStore:     taskAttemptStore,
+		haltEventStore:       haltEventStore,
+		productionCodeStore:  database.NewProductionCodeStore(db),
 		fixVerificationStore: database.NewFixVerificationStore(db),
-		uncertaintyStore:    database.NewUncertaintyStore(db.DB),
-		sessions:            make(map[string]*Session),
+		uncertaintyStore:     database.NewUncertaintyStore(db.DB),
+		sessions:             make(map[string]*Session),
 	}
 
 	// Create MCP server using the default server
@@ -213,6 +213,9 @@ func (s *MCPServer) registerTools() {
 							"affected_files": map[string]interface{}{
 								"type":        "array",
 								"description": "Files that will be modified",
+								"items": map[string]interface{}{
+									"type": "string",
+								},
 							},
 						},
 					},
@@ -230,399 +233,399 @@ func (s *MCPServer) registerTools() {
 						},
 					},
 				},
-			{
-				Name:        "guardrail_validate_scope",
-				Description: "Check if a file path is within authorized scope",
-				InputSchema: mcp.ToolInputSchema{
-					Type: "object",
-					Properties: mcp.ToolInputSchemaProperties{
-						"file_path": map[string]interface{}{
-							"type":        "string",
-							"description": "The file path to validate",
-						},
-						"authorized_scope": map[string]interface{}{
-							"type":        "string",
-							"description": "The authorized scope prefix (e.g., /app/src)",
-						},
-					},
-				},
-			},
-			{
-				Name:        "guardrail_validate_commit",
-				Description: "Validate commit message format compliance (conventional commits)",
-				InputSchema: mcp.ToolInputSchema{
-					Type: "object",
-					Properties: mcp.ToolInputSchemaProperties{
-						"message": map[string]interface{}{
-							"type":        "string",
-							"description": "The commit message to validate",
+				{
+					Name:        "guardrail_validate_scope",
+					Description: "Check if a file path is within authorized scope",
+					InputSchema: mcp.ToolInputSchema{
+						Type: "object",
+						Properties: mcp.ToolInputSchemaProperties{
+							"file_path": map[string]interface{}{
+								"type":        "string",
+								"description": "The file path to validate",
+							},
+							"authorized_scope": map[string]interface{}{
+								"type":        "string",
+								"description": "The authorized scope prefix (e.g., /app/src)",
+							},
 						},
 					},
 				},
-			},
-			{
-				Name:        "guardrail_prevent_regression",
-				Description: "Check failure registry for matching patterns to prevent regressions",
-				InputSchema: mcp.ToolInputSchema{
-					Type: "object",
-					Properties: mcp.ToolInputSchemaProperties{
-						"file_paths": map[string]interface{}{
-							"type":        "array",
-							"description": "Array of file paths that will be modified",
-						},
-						"code_content": map[string]interface{}{
-							"type":        "string",
-							"description": "Code content to check against regression patterns",
+				{
+					Name:        "guardrail_validate_commit",
+					Description: "Validate commit message format compliance (conventional commits)",
+					InputSchema: mcp.ToolInputSchema{
+						Type: "object",
+						Properties: mcp.ToolInputSchemaProperties{
+							"message": map[string]interface{}{
+								"type":        "string",
+								"description": "The commit message to validate",
+							},
 						},
 					},
 				},
-			},
-			{
-				Name:        "guardrail_check_test_prod_separation",
-				Description: "Verify test/production environment isolation",
-				InputSchema: mcp.ToolInputSchema{
-					Type: "object",
-					Properties: mcp.ToolInputSchemaProperties{
-						"file_path": map[string]interface{}{
-							"type":        "string",
-							"description": "The file path to check",
-						},
-						"environment": map[string]interface{}{
-							"type":        "string",
-							"description": "Environment type: test or prod",
-							"enum":        []string{"test", "prod"},
-						},
-					},
-				},
-			},
-			{
-				Name:        "guardrail_validate_push",
-				Description: "Validate git push safety conditions",
-				InputSchema: mcp.ToolInputSchema{
-					Type: "object",
-					Properties: mcp.ToolInputSchemaProperties{
-						"branch": map[string]interface{}{
-							"type":        "string",
-							"description": "The branch being pushed to",
-						},
-						"is_force": map[string]interface{}{
-							"type":        "boolean",
-							"description": "Whether this is a force push",
-						},
-						"has_unpushed_commits": map[string]interface{}{
-							"type":        "boolean",
-							"description": "Whether there are unpushed commits",
+				{
+					Name:        "guardrail_prevent_regression",
+					Description: "Check failure registry for matching patterns to prevent regressions",
+					InputSchema: mcp.ToolInputSchema{
+						Type: "object",
+						Properties: mcp.ToolInputSchemaProperties{
+							"file_paths": map[string]interface{}{
+								"type":        "array",
+								"description": "Array of file paths that will be modified",
+							},
+							"code_content": map[string]interface{}{
+								"type":        "string",
+								"description": "Code content to check against regression patterns",
+							},
 						},
 					},
 				},
-			},
-		{
-			Name:        "guardrail_record_file_read",
-			Description: "Record that a file was read via MCP Read tool",
-			InputSchema: mcp.ToolInputSchema{
-				Type: "object",
-				Properties: mcp.ToolInputSchemaProperties{
-					"session_token": map[string]interface{}{
-						"type":        "string",
-						"description": "Session token from init_session",
-					},
-					"file_path": map[string]interface{}{
-						"type":        "string",
-						"description": "Absolute path of the file that was read",
-					},
-				},
-			},
-		},
-		{
-			Name:        "guardrail_record_attempt",
-			Description: "Record a failed task attempt for three strikes tracking",
-			InputSchema: mcp.ToolInputSchema{
-				Type: "object",
-				Properties: mcp.ToolInputSchemaProperties{
-					"session_token": map[string]interface{}{
-						"type":        "string",
-						"description": "Session token from init_session",
-					},
-					"task_id": map[string]interface{}{
-						"type":        "string",
-						"description": "Optional task identifier for task-specific tracking",
-					},
-					"error_message": map[string]interface{}{
-						"type":        "string",
-						"description": "Error message from the failed attempt",
-					},
-					"error_category": map[string]interface{}{
-						"type":        "string",
-						"description": "Category of error: syntax, runtime, logic, timeout, other",
-						"enum":        []string{"syntax", "runtime", "logic", "timeout", "other"},
+				{
+					Name:        "guardrail_check_test_prod_separation",
+					Description: "Verify test/production environment isolation",
+					InputSchema: mcp.ToolInputSchema{
+						Type: "object",
+						Properties: mcp.ToolInputSchemaProperties{
+							"file_path": map[string]interface{}{
+								"type":        "string",
+								"description": "The file path to check",
+							},
+							"environment": map[string]interface{}{
+								"type":        "string",
+								"description": "Environment type: test or prod",
+								"enum":        []string{"test", "prod"},
+							},
+						},
 					},
 				},
-			},
-		},
-		{
-			Name:        "guardrail_verify_file_read",
-			Description: "Verify if a file has been read in the current session",
-			InputSchema: mcp.ToolInputSchema{
-				Type: "object",
-				Properties: mcp.ToolInputSchemaProperties{
-					"session_token": map[string]interface{}{
-						"type":        "string",
-						"description": "Session token from init_session",
-					},
-					"file_path": map[string]interface{}{
-						"type":        "string",
-						"description": "Absolute path of the file to verify",
-					},
-					"expected_content": map[string]interface{}{
-						"type":        "string",
-						"description": "Optional expected content hash for validation",
-					},
-				},
-			},
-		},
-		{
-			Name:        "guardrail_validate_three_strikes",
-			Description: "Check three strikes status and determine if should halt",
-			InputSchema: mcp.ToolInputSchema{
-				Type: "object",
-				Properties: mcp.ToolInputSchemaProperties{
-					"session_token": map[string]interface{}{
-						"type":        "string",
-						"description": "Session token from init_session",
-					},
-					"task_id": map[string]interface{}{
-						"type":        "string",
-						"description": "Optional task identifier for task-specific tracking",
+				{
+					Name:        "guardrail_validate_push",
+					Description: "Validate git push safety conditions",
+					InputSchema: mcp.ToolInputSchema{
+						Type: "object",
+						Properties: mcp.ToolInputSchemaProperties{
+							"branch": map[string]interface{}{
+								"type":        "string",
+								"description": "The branch being pushed to",
+							},
+							"is_force": map[string]interface{}{
+								"type":        "boolean",
+								"description": "Whether this is a force push",
+							},
+							"has_unpushed_commits": map[string]interface{}{
+								"type":        "boolean",
+								"description": "Whether there are unpushed commits",
+							},
+						},
 					},
 				},
-			},
-		},
-		{
-			Name:        "guardrail_validate_exact_replacement",
-			Description: "Validate that code replacement matches exact specification",
-			InputSchema: mcp.ToolInputSchema{
-				Type: "object",
-				Properties: mcp.ToolInputSchemaProperties{
-					"session_token": map[string]interface{}{
-						"type":        "string",
-						"description": "Session token from init_session",
-					},
-					"file_path": map[string]interface{}{
-						"type":        "string",
-						"description": "File that was modified",
-					},
-					"original_content": map[string]interface{}{
-						"type":        "string",
-						"description": "What the content should be (original expectation)",
-					},
-					"modified_content": map[string]interface{}{
-						"type":        "string",
-						"description": "What the content actually is after modification",
-					},
-					"replacement_type": map[string]interface{}{
-						"type":        "string",
-						"description": "Type of replacement: provided_code, pattern, exact",
+				{
+					Name:        "guardrail_record_file_read",
+					Description: "Record that a file was read via MCP Read tool",
+					InputSchema: mcp.ToolInputSchema{
+						Type: "object",
+						Properties: mcp.ToolInputSchemaProperties{
+							"session_token": map[string]interface{}{
+								"type":        "string",
+								"description": "Session token from init_session",
+							},
+							"file_path": map[string]interface{}{
+								"type":        "string",
+								"description": "Absolute path of the file that was read",
+							},
+						},
 					},
 				},
-			},
-		},
-		{
-			Name:        "guardrail_reset_attempts",
-			Description: "Reset attempt counter for a task (on successful completion)",
-			InputSchema: mcp.ToolInputSchema{
-				Type: "object",
-				Properties: mcp.ToolInputSchemaProperties{
-					"session_token": map[string]interface{}{
-						"type":        "string",
-						"description": "Session token from init_session",
-					},
-					"task_id": map[string]interface{}{
-						"type":        "string",
-						"description": "Optional task identifier for task-specific tracking",
-					},
-				},
-			},
-		},
-		{
-			Name:        "guardrail_check_uncertainty",
-			Description: "Check uncertainty level and provide guidance based on self-assessment and context",
-			InputSchema: mcp.ToolInputSchema{
-				Type: "object",
-				Properties: mcp.ToolInputSchemaProperties{
-					"session_token": map[string]interface{}{
-						"type":        "string",
-						"description": "Session token from init_session",
-					},
-					"current_task": map[string]interface{}{
-						"type":        "string",
-						"description": "Description of the current task being performed",
-					},
-					"self_assessment": map[string]interface{}{
-						"type":        "string",
-						"description": "Your self-assessment of current uncertainty state",
-					},
-					"context_data": map[string]interface{}{
-						"type":        "object",
-						"description": "Optional context data including error counts, duration, etc.",
+				{
+					Name:        "guardrail_record_attempt",
+					Description: "Record a failed task attempt for three strikes tracking",
+					InputSchema: mcp.ToolInputSchema{
+						Type: "object",
+						Properties: mcp.ToolInputSchemaProperties{
+							"session_token": map[string]interface{}{
+								"type":        "string",
+								"description": "Session token from init_session",
+							},
+							"task_id": map[string]interface{}{
+								"type":        "string",
+								"description": "Optional task identifier for task-specific tracking",
+							},
+							"error_message": map[string]interface{}{
+								"type":        "string",
+								"description": "Error message from the failed attempt",
+							},
+							"error_category": map[string]interface{}{
+								"type":        "string",
+								"description": "Category of error: syntax, runtime, logic, timeout, other",
+								"enum":        []string{"syntax", "runtime", "logic", "timeout", "other"},
+							},
+						},
 					},
 				},
-			},
-		},
-		{
-			Name:        "guardrail_check_halt_conditions",
-			Description: "Check various halt conditions including three strikes and unresolved critical events",
-			InputSchema: mcp.ToolInputSchema{
-				Type: "object",
-				Properties: mcp.ToolInputSchemaProperties{
-					"session_token": map[string]interface{}{
-						"type":        "string",
-						"description": "Session token from init_session",
-					},
-					"context": map[string]interface{}{
-						"type":        "object",
-						"description": "Optional context map for additional halt indicators",
-					},
-				},
-			},
-		},
-		{
-			Name:        "guardrail_record_halt",
-			Description: "Record a halt event for tracking and escalation",
-			InputSchema: mcp.ToolInputSchema{
-				Type: "object",
-				Properties: mcp.ToolInputSchemaProperties{
-					"session_token": map[string]interface{}{
-						"type":        "string",
-						"description": "Session token from init_session",
-					},
-					"halt_type": map[string]interface{}{
-						"type":        "string",
-						"description": "Type of halt condition",
-						"enum":        []string{"code_safety", "scope", "environment", "execution", "security", "uncertainty"},
-					},
-					"description": map[string]interface{}{
-						"type":        "string",
-						"description": "Description of the halt condition",
-					},
-					"severity": map[string]interface{}{
-						"type":        "string",
-						"description": "Severity level",
-						"enum":        []string{"low", "medium", "high", "critical"},
-					},
-					"context": map[string]interface{}{
-						"type":        "object",
-						"description": "Optional context data",
+				{
+					Name:        "guardrail_verify_file_read",
+					Description: "Verify if a file has been read in the current session",
+					InputSchema: mcp.ToolInputSchema{
+						Type: "object",
+						Properties: mcp.ToolInputSchemaProperties{
+							"session_token": map[string]interface{}{
+								"type":        "string",
+								"description": "Session token from init_session",
+							},
+							"file_path": map[string]interface{}{
+								"type":        "string",
+								"description": "Absolute path of the file to verify",
+							},
+							"expected_content": map[string]interface{}{
+								"type":        "string",
+								"description": "Optional expected content hash for validation",
+							},
+						},
 					},
 				},
-			},
-		},
-		{
-			Name:        "guardrail_acknowledge_halt",
-			Description: "Acknowledge and resolve a halt event",
-			InputSchema: mcp.ToolInputSchema{
-				Type: "object",
-				Properties: mcp.ToolInputSchemaProperties{
-					"session_token": map[string]interface{}{
-						"type":        "string",
-						"description": "Session token from init_session",
-					},
-					"halt_id": map[string]interface{}{
-						"type":        "string",
-						"description": "UUID of the halt event to acknowledge",
-					},
-					"resolution": map[string]interface{}{
-						"type":        "string",
-						"description": "Resolution status",
-						"enum":        []string{"resolved", "escalated", "dismissed"},
+				{
+					Name:        "guardrail_validate_three_strikes",
+					Description: "Check three strikes status and determine if should halt",
+					InputSchema: mcp.ToolInputSchema{
+						Type: "object",
+						Properties: mcp.ToolInputSchemaProperties{
+							"session_token": map[string]interface{}{
+								"type":        "string",
+								"description": "Session token from init_session",
+							},
+							"task_id": map[string]interface{}{
+								"type":        "string",
+								"description": "Optional task identifier for task-specific tracking",
+							},
+						},
 					},
 				},
-			},
-		},
-		{
-			Name:        "guardrail_validate_production_first",
-			Description: "Validate that production code is created before test or infrastructure code",
-			InputSchema: mcp.ToolInputSchema{
-				Type: "object",
-				Properties: mcp.ToolInputSchemaProperties{
-					"session_token": map[string]interface{}{
-						"type":        "string",
-						"description": "Session token from init_session",
+				{
+					Name:        "guardrail_validate_exact_replacement",
+					Description: "Validate that code replacement matches exact specification",
+					InputSchema: mcp.ToolInputSchema{
+						Type: "object",
+						Properties: mcp.ToolInputSchemaProperties{
+							"session_token": map[string]interface{}{
+								"type":        "string",
+								"description": "Session token from init_session",
+							},
+							"file_path": map[string]interface{}{
+								"type":        "string",
+								"description": "File that was modified",
+							},
+							"original_content": map[string]interface{}{
+								"type":        "string",
+								"description": "What the content should be (original expectation)",
+							},
+							"modified_content": map[string]interface{}{
+								"type":        "string",
+								"description": "What the content actually is after modification",
+							},
+							"replacement_type": map[string]interface{}{
+								"type":        "string",
+								"description": "Type of replacement: provided_code, pattern, exact",
+							},
+						},
 					},
-					"file_path": map[string]interface{}{
-						"type":        "string",
-						"description": "File being edited/created",
+				},
+				{
+					Name:        "guardrail_reset_attempts",
+					Description: "Reset attempt counter for a task (on successful completion)",
+					InputSchema: mcp.ToolInputSchema{
+						Type: "object",
+						Properties: mcp.ToolInputSchemaProperties{
+							"session_token": map[string]interface{}{
+								"type":        "string",
+								"description": "Session token from init_session",
+							},
+							"task_id": map[string]interface{}{
+								"type":        "string",
+								"description": "Optional task identifier for task-specific tracking",
+							},
+						},
 					},
-					"code_type": map[string]interface{}{
-						"type":        "string",
-						"description": "Code type: production, test, infrastructure",
-						"enum":        []string{"production", "test", "infrastructure"},
+				},
+				{
+					Name:        "guardrail_check_uncertainty",
+					Description: "Check uncertainty level and provide guidance based on self-assessment and context",
+					InputSchema: mcp.ToolInputSchema{
+						Type: "object",
+						Properties: mcp.ToolInputSchemaProperties{
+							"session_token": map[string]interface{}{
+								"type":        "string",
+								"description": "Session token from init_session",
+							},
+							"current_task": map[string]interface{}{
+								"type":        "string",
+								"description": "Description of the current task being performed",
+							},
+							"self_assessment": map[string]interface{}{
+								"type":        "string",
+								"description": "Your self-assessment of current uncertainty state",
+							},
+							"context_data": map[string]interface{}{
+								"type":        "object",
+								"description": "Optional context data including error counts, duration, etc.",
+							},
+						},
 					},
-					"dependencies": map[string]interface{}{
-						"type":        "array",
-						"description": "Array of file paths this file depends on",
-						"items": map[string]interface{}{
-							"type": "string",
+				},
+				{
+					Name:        "guardrail_check_halt_conditions",
+					Description: "Check various halt conditions including three strikes and unresolved critical events",
+					InputSchema: mcp.ToolInputSchema{
+						Type: "object",
+						Properties: mcp.ToolInputSchemaProperties{
+							"session_token": map[string]interface{}{
+								"type":        "string",
+								"description": "Session token from init_session",
+							},
+							"context": map[string]interface{}{
+								"type":        "object",
+								"description": "Optional context map for additional halt indicators",
+							},
+						},
+					},
+				},
+				{
+					Name:        "guardrail_record_halt",
+					Description: "Record a halt event for tracking and escalation",
+					InputSchema: mcp.ToolInputSchema{
+						Type: "object",
+						Properties: mcp.ToolInputSchemaProperties{
+							"session_token": map[string]interface{}{
+								"type":        "string",
+								"description": "Session token from init_session",
+							},
+							"halt_type": map[string]interface{}{
+								"type":        "string",
+								"description": "Type of halt condition",
+								"enum":        []string{"code_safety", "scope", "environment", "execution", "security", "uncertainty"},
+							},
+							"description": map[string]interface{}{
+								"type":        "string",
+								"description": "Description of the halt condition",
+							},
+							"severity": map[string]interface{}{
+								"type":        "string",
+								"description": "Severity level",
+								"enum":        []string{"low", "medium", "high", "critical"},
+							},
+							"context": map[string]interface{}{
+								"type":        "object",
+								"description": "Optional context data",
+							},
+						},
+					},
+				},
+				{
+					Name:        "guardrail_acknowledge_halt",
+					Description: "Acknowledge and resolve a halt event",
+					InputSchema: mcp.ToolInputSchema{
+						Type: "object",
+						Properties: mcp.ToolInputSchemaProperties{
+							"session_token": map[string]interface{}{
+								"type":        "string",
+								"description": "Session token from init_session",
+							},
+							"halt_id": map[string]interface{}{
+								"type":        "string",
+								"description": "UUID of the halt event to acknowledge",
+							},
+							"resolution": map[string]interface{}{
+								"type":        "string",
+								"description": "Resolution status",
+								"enum":        []string{"resolved", "escalated", "dismissed"},
+							},
+						},
+					},
+				},
+				{
+					Name:        "guardrail_validate_production_first",
+					Description: "Validate that production code is created before test or infrastructure code",
+					InputSchema: mcp.ToolInputSchema{
+						Type: "object",
+						Properties: mcp.ToolInputSchemaProperties{
+							"session_token": map[string]interface{}{
+								"type":        "string",
+								"description": "Session token from init_session",
+							},
+							"file_path": map[string]interface{}{
+								"type":        "string",
+								"description": "File being edited/created",
+							},
+							"code_type": map[string]interface{}{
+								"type":        "string",
+								"description": "Code type: production, test, infrastructure",
+								"enum":        []string{"production", "test", "infrastructure"},
+							},
+							"dependencies": map[string]interface{}{
+								"type":        "array",
+								"description": "Array of file paths this file depends on",
+								"items": map[string]interface{}{
+									"type": "string",
+								},
+							},
+						},
+					},
+				},
+				{
+					Name:        "guardrail_detect_feature_creep",
+					Description: "Detect feature creep in git diff by analyzing code changes for new features, refactoring, and improvements",
+					InputSchema: mcp.ToolInputSchema{
+						Type: "object",
+						Properties: mcp.ToolInputSchemaProperties{
+							"session_token": map[string]interface{}{
+								"type":        "string",
+								"description": "Session token from init_session",
+							},
+							"file_path": map[string]interface{}{
+								"type":        "string",
+								"description": "File path being analyzed",
+							},
+							"git_diff": map[string]interface{}{
+								"type":        "string",
+								"description": "Git diff output to analyze for feature creep patterns",
+							},
+							"change_description": map[string]interface{}{
+								"type":        "string",
+								"description": "Optional description of what the change is supposed to do",
+							},
+							"is_new_file": map[string]interface{}{
+								"type":        "boolean",
+								"description": "Whether this is a newly created file",
+							},
+						},
+					},
+				},
+				{
+					Name:        "guardrail_verify_fixes_intact",
+					Description: "Verify that previously applied fixes are still intact after code changes",
+					InputSchema: mcp.ToolInputSchema{
+						Type: "object",
+						Properties: mcp.ToolInputSchemaProperties{
+							"session_token": map[string]interface{}{
+								"type":        "string",
+								"description": "Session token from init_session",
+							},
+							"file_path": map[string]interface{}{
+								"type":        "string",
+								"description": "The file path to check for intact fixes",
+							},
+							"modified_content": map[string]interface{}{
+								"type":        "string",
+								"description": "New content of file after changes (optional) - if not provided, will read from file",
+							},
+							"original_content": map[string]interface{}{
+								"type":        "string",
+								"description": "Original content before changes (optional) - used as fallback",
+							},
 						},
 					},
 				},
 			},
-		},
-		{
-			Name:        "guardrail_detect_feature_creep",
-			Description: "Detect feature creep in git diff by analyzing code changes for new features, refactoring, and improvements",
-			InputSchema: mcp.ToolInputSchema{
-				Type: "object",
-				Properties: mcp.ToolInputSchemaProperties{
-					"session_token": map[string]interface{}{
-						"type":        "string",
-						"description": "Session token from init_session",
-					},
-					"file_path": map[string]interface{}{
-						"type":        "string",
-						"description": "File path being analyzed",
-					},
-					"git_diff": map[string]interface{}{
-						"type":        "string",
-						"description": "Git diff output to analyze for feature creep patterns",
-					},
-					"change_description": map[string]interface{}{
-						"type":        "string",
-						"description": "Optional description of what the change is supposed to do",
-					},
-					"is_new_file": map[string]interface{}{
-						"type":        "boolean",
-						"description": "Whether this is a newly created file",
-					},
-				},
-			},
-		},
-		{
-			Name:        "guardrail_verify_fixes_intact",
-			Description: "Verify that previously applied fixes are still intact after code changes",
-			InputSchema: mcp.ToolInputSchema{
-				Type: "object",
-				Properties: mcp.ToolInputSchemaProperties{
-					"session_token": map[string]interface{}{
-						"type":        "string",
-						"description": "Session token from init_session",
-					},
-					"file_path": map[string]interface{}{
-						"type":        "string",
-						"description": "The file path to check for intact fixes",
-					},
-					"modified_content": map[string]interface{}{
-						"type":        "string",
-						"description": "New content of file after changes (optional) - if not provided, will read from file",
-					},
-					"original_content": map[string]interface{}{
-						"type":        "string",
-						"description": "Original content before changes (optional) - used as fallback",
-					},
-				},
-			},
-		},
-		},
-	}, nil
+		}, nil
 	})
 
 	// Handle tool calls
