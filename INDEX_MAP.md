@@ -48,6 +48,10 @@
 | cursor | CURSOR_INTEGRATION.md | docs/ | Cursor rules and configuration |
 | copilot | CLCODE_INTEGRATION.md | docs/ | GitHub Copilot instructions (see Claude Code) |
 | cody | CLCODE_INTEGRATION.md | docs/ | Cody context configuration (see Claude Code) |
+| mcp-server | MCP_SERVER_PLAN.md | docs/plans/ | MCP server implementation plan |
+| mcp-api | API.md | mcp-server/ | MCP server REST API documentation |
+| mcp-changelog | CHANGELOG.md | mcp-server/ | MCP server version history |
+| guardrail-platform | MCP_SERVER_PLAN.md | docs/plans/ | Guardrail enforcement platform |
 | aider | CLCODE_INTEGRATION.md | docs/ | Aider YAML configuration (see Claude Code) |
 | continue | CLCODE_INTEGRATION.md | docs/ | Continue IDE configuration (see Claude Code) |
 | windsurf | CLCODE_INTEGRATION.md | docs/ | Windsurf rules configuration (see Claude Code) |
@@ -60,8 +64,18 @@
 | regression-check | regression_check.py | scripts/ | Pre-commit regression pattern scanner |
 | prevention-rules | pattern-rules.json | .guardrails/prevention-rules/ | Regex patterns to prevent regressions |
 | semantic-rules | semantic-rules.json | .guardrails/prevention-rules/ | AST-based prevention rules |
+| extracted-rules | extracted-rules.json | .guardrails/prevention-rules/ | Rules extracted from AGENT_GUARDRAILS.md |
 | bug-fix | REGRESSION_PREVENTION.md | docs/workflows/ | Requirements for bug fixes (regression tests) |
 | known-bugs | failure-registry.jsonl | .guardrails/ | Active/resolved/deprecated bug history |
+| four-laws | four-laws.md | skills/shared-prompts/ | Canonical Four Laws of Agent Safety |
+| halt-conditions | halt-conditions.md | skills/shared-prompts/ | When to stop and ask for help |
+| sprint-001 | SPRINT_001_MCP_GAP_IMPLEMENTATION.md | docs/sprints/ | Sprint: MCP Gap Implementation |
+| sprint-002 | SPRINT_002_WEB_UI_IMPLEMENTATION.md | docs/sprints/ | Sprint: Web UI Implementation |
+| sprint-003 | SPRINT_003_DOCUMENTATION_PARITY.md | docs/sprints/ | Sprint: Documentation Parity (this sprint) |
+| rules-from-md | RULES_FROM_MD.md | docs/ | Extracting prevention rules from markdown |
+| rules-index | RULES_INDEX_MAP.md | docs/ | Master index of all prevention rules |
+| mcp-tools | MCP_TOOLS_REFERENCE.md | docs/ | MCP validation tools documentation |
+| rule-patterns | RULE_PATTERNS_GUIDE.md | docs/ | Pattern authoring guide |
 
 ---
 
@@ -71,6 +85,10 @@
 |----------|-------------------|-------------|
 | **TOC.md** | Complete template contents and file listing | When exploring full template |
 | **AGENT_GUARDRAILS.md** | Core safety protocols (mandatory) | Before ANY code changes |
+| **RULES_FROM_MD.md** | Extracting prevention rules from markdown | When working with MCP rules |
+| **RULES_INDEX_MAP.md** | Master index of all prevention rules | When searching for specific prevention rules |
+| **MCP_TOOLS_REFERENCE.md** | MCP validation tools documentation | When using MCP validation tools |
+| **RULE_PATTERNS_GUIDE.md** | Pattern authoring guide | When writing new prevention rules |
 | **TEST_PRODUCTION_SEPARATION.md** | Test/production isolation standards (MANDATORY) | Before ANY deployment |
 | **AGENT_EXECUTION.md** | Execution protocol and rollback procedures | During task execution |
 | **AGENT_ESCALATION.md** | Audit requirements and escalation procedures | When uncertain or errors occur |
@@ -89,6 +107,8 @@
 | **SECRETS_MANAGEMENT.md** | GitHub Secrets setup and rotation | When handling credentials |
 | **examples/** | Multi-language guardrails implementation examples | When exploring code examples |
 | **regression-prevention/** | Bug tracking & regression prevention examples | When logging bugs or creating prevention rules |
+| **mcp-server/API.md** | Complete REST API reference for MCP server | When integrating with MCP server |
+| **mcp-server/CHANGELOG.md** | MCP server version history | When tracking MCP server updates |
 | **SPRINT_TEMPLATE.md** | Copy-paste template for new sprints | When creating tasks |
 | **SPRINT_GUIDE.md** | Best practices for writing sprints | When writing sprint docs |
 | **PROJECT_CONTEXT_TEMPLATE.md** | Project Bible - stack, style, forbidden patterns | When setting up new project |
@@ -127,6 +147,10 @@
 - `AGENT_REVIEW_PROTOCOL.md` - Post-work agent/LLM review
 - `ADVERSARIAL_TESTING.md` - Breaker agent and fuzz testing
 - `AGENTS_AND_SKILLS_SETUP.md` - Setup guide for Claude Code/OpenCode
+- `RULES_FROM_MD.md` - Extracting prevention rules from markdown
+- `RULES_INDEX_MAP.md` - Master index of all prevention rules
+- `MCP_TOOLS_REFERENCE.md` - MCP validation tools documentation
+- `RULE_PATTERNS_GUIDE.md` - Pattern authoring guide
 
 ### Logging & Monitoring
 - `LOGGING_PATTERNS.md` - Structured log format
@@ -262,11 +286,43 @@ agent-guardrails-template/
 | OpenCode integration | OPCODE_INTEGRATION.md |
 | Cursor integration | CURSOR_INTEGRATION.md |
 | Generic LLM integration | GENERIC_LLM_INTEGRATION.md |
+| MCP rule extraction | RULES_FROM_MD.md |
+| Prevention rules index | RULES_INDEX_MAP.md |
+| MCP tools reference | MCP_TOOLS_REFERENCE.md |
+| Pattern authoring | RULE_PATTERNS_GUIDE.md |
 
 ---
 
 **Authored by:** TheArchitectit
 **Document Owner:** Project Maintainers
-**Last Updated:** 2026-02-01
-**Document Count:** 38 (excluding INDEX files)
-**Line Count:** ~248
+**Last Updated:** 2026-02-11
+**Document Count:** 74 (excluding INDEX files)
+**Line Count:** ~260
+
+---
+
+## Canonical Sources
+
+To avoid duplication, always reference these canonical sources:
+
+| Content | Canonical Location | Reference In |
+|---------|-------------------|--------------|
+| Four Laws | skills/shared-prompts/four-laws.md | docs/AGENT_GUARDRAILS.md |
+| Halt Conditions | skills/shared-prompts/halt-conditions.md | Workflows, integration docs |
+
+---
+
+## Oversized Documents
+
+The following files exceed the 500-line limit and should be split per MODULAR_DOCUMENTATION.md:
+
+| File | Lines | Action Needed |
+|------|-------|---------------|
+| docs/plans/MCP_SERVER_PLAN.md | 2093 | Split into multiple files |
+| docs/sprints/SPRINT_002_WEB_UI_IMPLEMENTATION.md | 768 | Split or archive |
+| docs/sprints/SPRINT_003_DOCUMENTATION_PARITY.md | 754 | Split or archive after completion |
+| HEADER_MAP.md | 822 | Navigation file - exempt |
+| docs/standards/OPERATIONAL_PATTERNS.md | 667 | Split |
+| docs/workflows/AGENT_REVIEW_PROTOCOL.md | 638 | Split |
+| docs/security/SECURITY_AUDIT_CONFIG.md | 597 | Split |
+| README.md | 565 | Landing page - exempt |
