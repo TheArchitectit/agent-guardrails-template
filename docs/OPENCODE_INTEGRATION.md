@@ -59,7 +59,7 @@ curl http://your-server:8095/health/ready
 # Check version
 curl http://your-server:8095/version
 
-# Should return: {"version":"v1.11.7",...}
+# Should return: {"version":"v1.12.0",...}
 ```
 
 ## Setup
