@@ -10,7 +10,37 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
+- **QUICK_SETUP.md** - 5-minute setup guide for getting started quickly
+  - TL;DR 3-step quick start
+  - Detailed setup instructions for all AI tools
+  - What happens automatically explanation
+  - Daily usage patterns
+  - Troubleshooting section
+  - Configuration examples
+
+- **PROMPTING_GUIDE.md** - Master guide for writing effective prompts
+  - Golden rules for prompting
+  - 5 prompt templates (Feature, Bug Fix, Code Review, Refactoring, Documentation)
+  - 5 common patterns with examples
+  - 5 advanced techniques
+  - Examples by use case (API, Frontend, Database, DevOps)
+  - Anti-patterns to avoid
+  - Troubleshooting section
+
 ### Changed
+
+- **README.md** - Updated with new guides in Documentation section
+  - Added QUICK_SETUP.md and PROMPTING_GUIDE.md to Core Documents table
+  - Updated "Start Here" section with links to new guides
+  - Added star indicators (⭐) for most important documents
+
+- **INDEX_MAP.md** - Added entries for new documents
+  - quick-setup → QUICK_SETUP.md
+  - prompting → PROMPTING_GUIDE.md
+
+- **TOC.md** - Added new files to Root Files section
+  - QUICK_SETUP.md: 5-minute setup guide
+  - PROMPTING_GUIDE.md: Master prompting techniques
 
 ---
 

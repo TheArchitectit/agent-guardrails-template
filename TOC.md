@@ -18,6 +18,8 @@
 | File | Lines | Required? | Purpose |
 |------|-------|-----------|---------|
 | **README.md** | ~150 | YES | Project overview and quick start |
+| **QUICK_SETUP.md** | ~270 | **YES** | **5-minute setup guide** ⭐ |
+| **PROMPTING_GUIDE.md** | ~500 | **YES** | **Master prompting techniques** ⭐ |
 | **INDEX_MAP.md** | 170 | YES | Master navigation - find docs by keyword |
 | **HEADER_MAP.md** | 408 | YES | Section headers with line numbers |
 | **CLAUDE.md** | 29 | Recommended | Optimized context for Claude Code CLI |

@@ -9,6 +9,8 @@
 
 | Keyword | Document | Path | Purpose |
 |---------|----------|------|---------|
+| quick-setup | QUICK_SETUP.md | ./ | **5-minute setup guide** ⭐ |
+| prompting | PROMPTING_GUIDE.md | ./ | **Master prompting techniques** ⭐ |
 | toc | TOC.md | ./ | Complete template contents and file listing |
 | safety | AGENT_GUARDRAILS.md | docs/ | Mandatory safety protocols |
 | test-prod | TEST_PRODUCTION_SEPARATION.md | docs/standards/ | Test/production isolation (MANDATORY) |

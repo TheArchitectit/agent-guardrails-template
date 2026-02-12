@@ -1023,15 +1023,19 @@ agent-guardrails-template/
 ### Start Here
 
 1. **New to this project?** Read this README (what you're reading now)
-2. **Need the full list?** See [TOC.md](TOC.md) - complete file listing
-3. **Find a specific document?** Use [INDEX_MAP.md](INDEX_MAP.md) - keyword search
-4. **Jump to a section?** Use [HEADER_MAP.md](HEADER_MAP.md) - line-number lookup
-5. ** applying to your repo?** See [docs/HOW_TO_APPLY.md](docs/HOW_TO_APPLY.md) - detailed instructions
+2. **Want to get started fast?** See [QUICK_SETUP.md](QUICK_SETUP.md) - 5-minute setup guide
+3. **Want to write better prompts?** See [PROMPTING_GUIDE.md](PROMPTING_GUIDE.md) - Master prompting techniques
+4. **Need the full list?** See [TOC.md](TOC.md) - complete file listing
+5. **Find a specific document?** Use [INDEX_MAP.md](INDEX_MAP.md) - keyword search
+6. **Jump to a section?** Use [HEADER_MAP.md](HEADER_MAP.md) - line-number lookup
+7. **Applying to your repo?** See [docs/HOW_TO_APPLY.md](docs/HOW_TO_APPLY.md) - detailed instructions
 
 ### Core Documents
 
 | Document | Who Needs It | What It Covers |
 |----------|-------------|---------------|
+| [**QUICK_SETUP.md**](QUICK_SETUP.md) | **NEW USERS** | **5-minute setup guide** ⭐ |
+| [**PROMPTING_GUIDE.md**](PROMPTING_GUIDE.md) | **EVERYONE** | **Master prompting techniques** ⭐ |
 | [**AGENT_GUARDRAILS.md**](docs/AGENT_GUARDRAILS.md) | EVERYONE | Core safety protocols (MANDATORY) |
 | [**TEST_PRODUCTION_SEPARATION.md**](docs/standards/TEST_PRODUCTION_SEPARATION.md) | EVERYONE | Test/production isolation (MANDATORY) |
 | [**HOW_TO_APPLY.md**](docs/HOW_TO_APPLY.md) | Applying template | Step-by-step instructions with prompts |
