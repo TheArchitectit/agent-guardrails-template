@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/thearchitectit/guardrail-mcp/internal/database"
 )
 
 // bufferPool provides reusable buffers for JSON encoding
@@ -67,9 +68,15 @@ type Event struct {
 
 // Logger handles audit event recording
 type Logger struct {
-	backend chan Event
-	done    chan struct{}
-	wg      sync.WaitGroup
+	backend    chan Event
+	done       chan struct{}
+	wg         sync.WaitGroup
+	auditStore AuditStoreInterface
+}
+
+// AuditStoreInterface defines the interface for audit storage
+type AuditStoreInterface interface {
+	Insert(ctx context.Context, event *database.AuditEvent) error
 }
 
 // NewLogger creates an audit logger
@@ -81,6 +88,23 @@ func NewLogger(bufferSize int) *Logger {
 	l.wg.Add(1)
 	go l.process()
 	return l
+}
+
+// NewLoggerWithStore creates an audit logger with database persistence
+func NewLoggerWithStore(bufferSize int, store AuditStoreInterface) *Logger {
+	l := &Logger{
+		backend:    make(chan Event, bufferSize),
+		done:       make(chan struct{}),
+		auditStore: store,
+	}
+	l.wg.Add(1)
+	go l.process()
+	return l
+}
+
+// SetStore sets the audit store for database persistence
+func (l *Logger) SetStore(store AuditStoreInterface) {
+	l.auditStore = store
 }
 
 // Stop gracefully shuts down the audit logger
@@ -147,8 +171,30 @@ func (l *Logger) process() {
 			// Return buffer to pool
 			bufferPool.Put(buf)
 
-			// TODO: Write to database for long-term storage
-			// This enables querying audit history via Web UI
+			// Write to database for long-term storage if store is configured
+			if l.auditStore != nil {
+				dbEvent := &database.AuditEvent{
+					ID:        uuid.MustParse(event.ID),
+					EventID:   event.ID,
+					Timestamp: event.Timestamp,
+					EventType: string(event.Type),
+					Severity:  string(event.Severity),
+					Actor:     event.Actor,
+					Action:    event.Action,
+					Resource:  event.Resource,
+					Status:    event.Status,
+					Details:   event.Details,
+					ClientIP:  event.ClientIP,
+					RequestID: event.RequestID,
+					CreatedAt: event.Timestamp,
+				}
+
+				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+				if err := l.auditStore.Insert(ctx, dbEvent); err != nil {
+					slog.Error("Failed to persist audit event to database", "error", err, "event_id", event.ID)
+				}
+				cancel()
+			}
 		case <-l.done:
 			return
 		}
