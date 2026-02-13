@@ -81,7 +81,7 @@
 
 ## Deployment Status
 
-**AI01 (100.96.49.42):**
+**AI01 (0.0.0.0):**
 - MCP Port: 8094
 - Web UI Port: 8095
 - Version: v1.11.7
@@ -89,7 +89,7 @@
 - Features: Ingest system, update notifications, file upload, auth fixes, comprehensive documentation
 
 **Web UI Access:**
-- URL: http://100.96.49.42:8095/web/
+- URL: http://0.0.0.0:8095/web/
 - API Key: `QbSF9bV991PAhyjoyqMbqT5dUPuG4hEcVWLx6sLnqOG7iszbQI0o85Ly9eoNE`
 
 ---

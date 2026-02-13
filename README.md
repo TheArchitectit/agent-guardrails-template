@@ -899,7 +899,7 @@ To connect OpenCode to the remote MCP server, add this to your `.opencode/oh-my-
   "mcpServers": {
     "guardrails": {
       "type": "remote",
-      "url": "http://100.96.49.42:8094/mcp/v1/sse",
+      "url": "http://0.0.0.0:8094/mcp/v1/sse",
       "headers": {
         "Authorization": "Bearer YOUR_MCP_API_KEY_HERE"
       }
@@ -909,7 +909,7 @@ To connect OpenCode to the remote MCP server, add this to your `.opencode/oh-my-
 ```
 
 **Important:**
-- Replace `100.96.49.42:8094` with your actual server IP and external MCP port
+- Replace `0.0.0.0:8094` with your actual server IP and external MCP port
 - Replace `YOUR_MCP_API_KEY_HERE` with the value from your `.env` file (MCP_API_KEY)
 - Use the **external port** (8094), not the internal container port (8080)
 - The `Authorization` header must use `Bearer` format (not `X-API-Key`)
@@ -1128,4 +1128,4 @@ in subscription credit when they subscribe!
 
 **Last Updated:** 2026-02-13
 **Status:** v2.0.0 - Production Ready
-**Deployment:** ✅ MCP Server deployed to AI01 (100.96.49.42:8095/8096) with schema validation error fixed
+**Deployment:** ✅ MCP Server deployed to AI01 (0.0.0.0:8095/8096) with schema validation error fixed
