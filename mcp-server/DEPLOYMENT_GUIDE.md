@@ -32,8 +32,8 @@ This guide provides step-by-step instructions for deploying the Guardrail MCP Se
 
 ```bash
 # Update your-server IP in .env
-tailscale status | grep ai01
-sed -i 's/your-server=.*/your-server=192.0.2.20/' .env
+localhost status | grep localhost
+sed -i 's/your-server=.*/your-server=0.0.0.0/' .env
 ```
 
 ### 2. Build and Deploy
@@ -107,7 +107,7 @@ mkdir -p /home/deploy-user/mcp-server
 cd /home/deploy-user/mcp-server
 
 # Copy code from repository (if not already there)
-scp -r /path/to/agent-guardrails-template/mcp-server/* deploy-user@192.0.2.20:/home/deploy-user/mcp-server/
+scp -r /path/to/agent-guardrails-template/mcp-server/* deploy-user@0.0.0.0:/home/deploy-user/mcp-server/
 
 # Create .env file
 cat > .env << 'EOF'
@@ -738,7 +738,7 @@ sudo firewall-cmd --reload
 sudo firewall-cmd --list-ports
 
 # Test from remote machine
-curl -s http://192.0.2.20:8095/mcp
+curl -s http://0.0.0.0:8095/mcp
 ```
 
 ### Problem: YAML Syntax Errors in Compose File
@@ -774,7 +774,7 @@ After deployment, verify:
 - [ ] MCP endpoint responding: `curl -s http://localhost:8095/mcp`
 - [ ] Web UI responding: `curl -s http://localhost:8096/`
 - [ ] API key authentication working: `curl -H 'Authorization: Bearer YOUR_KEY' http://localhost:8095/mcp`
-- [ ] Ports accessible from network: `curl http://192.0.2.20:8095/mcp`
+- [ ] Ports accessible from network: `curl http://0.0.0.0:8095/mcp`
 
 ## Maintenance
 
@@ -890,7 +890,7 @@ Add to `.opencode/oh-my-opencode.jsonc`:
   "mcpServers": {
     "guardrails": {
       "type": "remote",
-      "url": "http://192.0.2.20:8095/mcp/v1/sse",
+      "url": "http://0.0.0.0:8095/mcp/v1/sse",
       "headers": {
         "Authorization": "Bearer your-api-key"
       }
@@ -905,7 +905,7 @@ Create `.env.opencode`:
 
 ```bash
 # MCP Server Connection
-export MCP_SERVER_URL=http://192.0.2.20:8095
+export MCP_SERVER_URL=http://0.0.0.0:8095
 export MCP_API_KEY=your-api-key
 export IDE_API_KEY=your-api-key
 
