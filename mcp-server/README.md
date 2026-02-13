@@ -2,6 +2,27 @@
 
 A Model Context Protocol (MCP) server for enforcing guardrails across AI coding assistants and IDE extensions.
 
+## 🚨 Critical Deployment Information
+
+**Deployment Status:** ✅ Successfully deployed to your-server (192.0.2.20:8095/8096)
+
+**Schema Validation Error Fixed:**
+- Changed server name from `guardrail-mcp` to `guardrail_mcp` (line 101 in `internal/mcp/server.go`)
+- This fixes the MCP framework's schema validation error that was blocking Claude Code from using the guardrail tools
+
+**Postgres Permission Issues Fixed:**
+- Added `user: "70:70"` to postgres service configuration
+- Removed security constraints to allow proper container initialization
+
+**Configuration Requirements:**
+- MCP_API_KEY and IDE_API_KEY must be 32+ characters with mixed case and digits
+- JWT_SECRET must be at least 32 bytes long
+- JWT_ROTATION_HOURS must include 'h' unit (e.g., `168h`)
+- Use localhost for container communication within pod
+
+**Complete Deployment Guide:**
+See [DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md) for step-by-step deployment instructions.
+
 ## Architecture
 
 ```
@@ -32,6 +53,17 @@ Deployment host (or local VM)
 - Podman or Docker
 - PostgreSQL 16 (if running without compose)
 - Redis 7 (if running without compose)
+
+### Important: Read Deployment Guide First
+
+**Before deploying, read [DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md)** - This contains critical fixes discovered during your-server deployment that are required for the MCP server to work correctly.
+
+Key fixes include:
+- Server name must use underscores, not dashes (schema validation fix)
+- Postgres must run as user 70:70 (permission fix)
+- API keys must be 32+ characters with mixed case and digits
+- JWT_SECRET must be at least 32 bytes
+- Use pod networking for container communication
 
 ### Configuration
 
@@ -92,6 +124,10 @@ make vuln
 ```
 
 ### Deployment
+
+For detailed deployment instructions (recommended for production), see [DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md).
+
+**Quick Start:**
 
 ```bash
 # Build container
@@ -322,6 +358,23 @@ See [API.md](API.md) for complete API documentation.
 - Check that MCP_API_KEY or IDE_API_KEY environment variables are set
 - For Web UI access and read-only browsing APIs, no API key is required
 
+### Schema Validation Error (Critical!)
+
+**Error:**
+```
+Invalid schema for function 'guardrails_guardrail_pre_work_check':
+In context=('properties', 'affected_files'), array schema missing items
+```
+
+**Cause:** Server name contains dashes/hyphens
+
+**Solution:** Change server name from "guardrail-mcp" to "guardrail_mcp" in `internal/mcp/server.go` line 101:
+```go
+s.mcpServer = server.NewDefaultServer("guardrail_mcp", "1.0.0")
+```
+
+See [DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md) for complete deployment instructions.
+
 ### Database Migration Failures
 
 **Problem:** `no schema has been selected to create in`
@@ -351,3 +404,63 @@ cat .env | grep -E "(API_KEY|PASSWORD|SECRET)"
 ## License
 
 MIT
+
+---
+
+## Deployment Status
+
+**Version:** v1.13.0
+**Deployment Date:** 2026-02-13
+**Deployed To:** your-server (192.0.2.20:8095/8096)
+**Status:** ✅ Successfully deployed and verified
+
+### What Was Fixed During Deployment
+
+1. **Schema Validation Error** ✅ FIXED
+   - Changed server name from `guardrail-mcp` to `guardrail_mcp` (line 101 in `internal/mcp/server.go`)
+   - This fixes the MCP framework's schema validation error that was blocking Claude Code from using the guardrail tools
+
+2. **Postgres Permission Issues** ✅ FIXED
+   - Added `user: "70:70"` to postgres service configuration
+   - Removed security constraints to allow proper container initialization
+
+3. **Configuration Requirements** ✅ UPDATED
+   - MCP_API_KEY and IDE_API_KEY must be 32+ characters with mixed case and digits
+   - JWT_SECRET must be at least 32 bytes long
+   - JWT_ROTATION_HOURS must include 'h' unit (e.g., `168h`)
+   - Use localhost for container communication within pod
+
+### Verification Checklist
+
+- ✅ Postgres running and healthy (localhost:5432)
+- ✅ Redis running and healthy (localhost:6379)
+- ✅ MCP server started successfully
+- ✅ Database connected
+- ✅ Redis connected
+- ✅ MCP endpoint responding (port 8095)
+- ✅ Web UI responding (port 8096)
+- ✅ Server name correctly set to `guardrail_mcp` (with underscore)
+
+### For Testers
+
+**your-server Connection Info:**
+- **MCP Endpoint:** http://192.0.2.20:8095/mcp/v1/sse
+- **Web UI:** http://192.0.2.20:8096
+- **API Key:** your-api-key (example - use your own)
+
+**OpenCode Configuration:**
+```jsonc
+{
+  "mcpServers": {
+    "guardrails": {
+      "type": "remote",
+      "url": "http://192.0.2.20:8095/mcp/v1/sse",
+      "headers": {
+        "Authorization": "Bearer your-api-key"
+      }
+    }
+  }
+}
+```
+
+See [DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md) for complete deployment instructions and troubleshooting.
