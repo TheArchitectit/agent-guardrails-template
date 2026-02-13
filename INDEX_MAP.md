@@ -44,6 +44,10 @@
 | operational | OPERATIONAL_PATTERNS.md | docs/standards/ | Health checks, circuit breakers, retry |
 | retry | AGENT_EXECUTION.md | docs/workflows/ | Three Strikes Rule, retry limits |
 | scope-freeze | SPRINT_TEMPLATE.md | docs/sprints/ | Scope Freeze Protocol |
+| deployment | DEPLOYMENT_GUIDE.md | mcp-server/ | MCP server deployment instructions (critical fixes) |
+| schema-error | DEPLOYMENT_GUIDE.md | mcp-server/ | Fix schema validation error (guardrail-mcp → guardrail_mcp) |
+| postgres-perm | DEPLOYMENT_GUIDE.md | mcp-server/ | Fix postgres permission errors (user 70:70) |
+| container-networking | DEPLOYMENT_GUIDE.md | mcp-server/ | Pod networking for container communication |
 | skills | AGENTS_AND_SKILLS_SETUP.md | docs/ | Setup agents and skills for all platforms |
 | claude-code | CLCODE_INTEGRATION.md | docs/ | Claude Code skills and hooks integration |
 | opencode | OPCODE_INTEGRATION.md | docs/ | OpenCode agents and skills integration |
