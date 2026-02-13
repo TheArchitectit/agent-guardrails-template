@@ -105,7 +105,7 @@ This isn't just a list of rules—it's a **real-time enforcement system**:
 
 ---
 
-## MCP Server (v1.12.0)
+## MCP Server (v2.0.0)
 
 The **Model Context Protocol (MCP) Server** provides real-time guardrail enforcement via a standardized protocol for AI agents and IDEs.
 
@@ -976,7 +976,7 @@ agent-guardrails-template/
 ├── HEADER_MAP.md          ← Section-level lookup
 ├── CLAUDE.md               ← Claude Code CLI guidelines
 ├── CHANGELOG.md           ← Release notes archive
-├── mcp-server/            ← MCP Server implementation (v1.12.0)
+├── mcp-server/            ← MCP Server implementation (v2.0.0)
 │   ├── cmd/server/        # Go entry point
 │   ├── internal/          # Core server modules
 │   ├── deploy/            # Docker deployment configs
@@ -1092,7 +1092,7 @@ agent-guardrails-template/
 
 See [CHANGELOG.md](CHANGELOG.md) for complete release history.
 
-**Current Version:** v1.12.0 (2026-02-12)
+**Current Version:** v2.0.0 (2026-02-12)
 
 ---
 
@@ -1127,5 +1127,5 @@ in subscription credit when they subscribe!
 ---
 
 **Last Updated:** 2026-02-13
-**Status:** v1.13.0 - Production Ready
+**Status:** v2.0.0 - Production Ready
 **Deployment:** ✅ MCP Server deployed to AI01 (100.96.49.42:8095/8096) with schema validation error fixed

@@ -409,7 +409,7 @@ MIT
 
 ## Deployment Status
 
-**Version:** v1.13.0
+**Version:** v2.0.0
 **Deployment Date:** 2026-02-13
 **Deployed To:** AI01 (100.96.49.42:8095/8096)
 **Status:** ✅ Successfully deployed and verified
