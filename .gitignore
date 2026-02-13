@@ -42,3 +42,6 @@ secrets.json
 # Ignore build artifacts and binaries
 mcp-server/server
 mcp-server/bin/guardrail-mcp
+
+# Ignore test artifacts
+mcp-server/internal/mcp/*_test.go
