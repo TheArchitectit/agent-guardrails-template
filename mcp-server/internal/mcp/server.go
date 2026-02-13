@@ -98,7 +98,7 @@ func NewMCPServer(cfg *config.Config, db *database.DB, cacheClient *cache.Client
 	}
 
 	// Create MCP server using the default server
-	s.mcpServer = server.NewDefaultServer("guardrail-mcp", "1.0.0")
+	s.mcpServer = server.NewDefaultServer("guardrail_mcp", "1.0.0")
 
 	// Register tool handlers
 	s.registerTools()
