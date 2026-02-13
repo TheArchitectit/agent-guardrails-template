@@ -949,6 +949,21 @@ Features available:
 - Verify DB_HOST and DB_PORT environment variables
 - Check network connectivity between containers
 
+**Schema Validation Error (Critical!):**
+```
+Invalid schema for function 'guardrails_guardrail_pre_work_check':
+In context=('properties', 'affected_files'), array schema missing items
+```
+
+**Cause:** Server name contains dashes/hyphens
+
+**Solution:** Change server name from "guardrail-mcp" to "guardrail_mcp" in `mcp-server/internal/mcp/server.go` line 101:
+```go
+s.mcpServer = server.NewDefaultServer("guardrail_mcp", "1.0.0")
+```
+
+See [DEPLOYMENT_GUIDE.md](./mcp-server/DEPLOYMENT_GUIDE.md) for complete deployment instructions and troubleshooting.
+
 ---
 
 ## Project Structure
@@ -1111,5 +1126,6 @@ in subscription credit when they subscribe!
 
 ---
 
-**Last Updated:** 2026-02-12
-**Status:** v1.12.0 - Production Ready
+**Last Updated:** 2026-02-13
+**Status:** v1.13.0 - Production Ready
+**Deployment:** ✅ MCP Server deployed to AI01 (100.96.49.42:8095/8096) with schema validation error fixed

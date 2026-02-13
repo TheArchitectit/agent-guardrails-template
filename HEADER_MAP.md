@@ -816,7 +816,59 @@
 
 ---
 
+---
+
+## mcp-server/DEPLOYMENT_GUIDE.md
+
+| Line | Header |
+|------|--------|
+| 1 | # Guardrail MCP Server Deployment Guide |
+| 7 | ## Overview |
+| 11 | ## Prerequisites |
+| 15 | ## Deployment Summary |
+| 19 | ## Quick Deploy |
+| 41 | ### 1. Update AI01 IP in .env |
+| 49 | ### 2. Build and Deploy |
+| 95 | ## Detailed Deployment Steps |
+| 99 | ### Step 1: Environment Setup |
+| 119 | ### Step 2: Apply Schema Fix |
+| 134 | ### Step 3: Build Docker Image |
+| 160 | ### Step 4: Create Pod and Start Containers |
+| 208 | ### Step 5: Verify Deployment |
+| 222 | ## Configuration Requirements |
+| 227 | ### Critical Settings |
+| 232 | ### Environment Variables Reference |
+| 298 | ## Docker Compose Configuration |
+| 302 | ### Working Configuration (AI01 Deployment) |
+| 370 | ### Common Pitfalls |
+| 416 | ## Testing the Deployment |
+| 420 | ### Test MCP Protocol |
+| 458 | ### Test Guardrail Tools |
+| 486 | ### Test Web UI |
+| 500 | ## Troubleshooting Guide |
+| 505 | ### Problem: Schema Validation Error |
+| 530 | ### Problem: Postgres Permission Errors |
+| 560 | ### Problem: Database Authentication Failed |
+| 590 | ### Problem: Redis Connection Refused |
+| 620 | ### Problem: Connection Timeout from Remote Machine |
+| 650 | ### Problem: Container Exits Immediately |
+| 680 | ### Problem: Ports Already in Use |
+| 710 | ### Problem: YAML Syntax Errors in Compose File |
+| 740 | ## Verification Checklist |
+| 760 | ## Maintenance |
+| 764 | ### Viewing Logs |
+| 780 | ### Restarting Services |
+| 800 | ### Updating Configuration |
+| 820 | ### Backup and Restore |
+| 840 | ## Production Hardening |
+| 844 | ### Security Recommendations |
+| 860 | ### Performance Tuning |
+| 890 | ## OpenCode Configuration |
+| 894 | ### MCP Server Configuration |
+| 910 | ### Environment Variables |
+| 930 | ## Troubleshooting |
+
 **Authored by:** TheArchitectit
 **Document Owner:** Project Maintainers
-**Last Updated:** 2026-02-01
+**Last Updated:** 2026-02-13
 **Status:** Complete - all documents and headers accurately mapped
