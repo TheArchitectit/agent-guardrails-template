@@ -4,7 +4,7 @@ A Model Context Protocol (MCP) server for enforcing guardrails across AI coding 
 
 ## 🚨 Critical Deployment Information
 
-**Deployment Status:** ✅ Successfully deployed to your-server (192.0.2.20:8095/8096)
+**Deployment Status:** ✅ Successfully deployed to your-server (0.0.0.0:8095/8096)
 
 **Schema Validation Error Fixed:**
 - Changed server name from `guardrail-mcp` to `guardrail_mcp` (line 101 in `internal/mcp/server.go`)
@@ -411,7 +411,7 @@ MIT
 
 **Version:** v2.0.0
 **Deployment Date:** 2026-02-13
-**Deployed To:** your-server (192.0.2.20:8095/8096)
+**Deployed To:** your-server (0.0.0.0:8095/8096)
 **Status:** ✅ Successfully deployed and verified
 
 ### What Was Fixed During Deployment
@@ -444,8 +444,8 @@ MIT
 ### For Testers
 
 **your-server Connection Info:**
-- **MCP Endpoint:** http://192.0.2.20:8095/mcp/v1/sse
-- **Web UI:** http://192.0.2.20:8096
+- **MCP Endpoint:** http://0.0.0.0:8095/mcp/v1/sse
+- **Web UI:** http://0.0.0.0:8096
 - **API Key:** your-api-key (example - use your own)
 
 **OpenCode Configuration:**
@@ -454,7 +454,7 @@ MIT
   "mcpServers": {
     "guardrails": {
       "type": "remote",
-      "url": "http://192.0.2.20:8095/mcp/v1/sse",
+      "url": "http://0.0.0.0:8095/mcp/v1/sse",
       "headers": {
         "Authorization": "Bearer your-api-key"
       }

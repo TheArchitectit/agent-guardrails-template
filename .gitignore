@@ -38,3 +38,7 @@ htmlcov/
 credentials.json
 secrets.json
 .aider*
+
+# Ignore build artifacts and binaries
+mcp-server/server
+mcp-server/bin/guardrail-mcp
