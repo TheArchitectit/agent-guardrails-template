@@ -409,7 +409,7 @@ MIT
 
 ## Deployment Status
 
-**Version:** v1.13.0
+**Version:** v2.0.0
 **Deployment Date:** 2026-02-13
 **Deployed To:** your-server (192.0.2.20:8095/8096)
 **Status:** ✅ Successfully deployed and verified
