@@ -283,7 +283,7 @@ func TestHandleTeamList_MissingProjectName(t *testing.T) {
 	}
 }
 
-// TestHandleTeamList_WithPhaseFilter tests handleTeamList with phase filter
+// TestHandleTeamList_WithPhaseFilter tests handleTeamList with phase filter (SEC-010)
 func TestHandleTeamList_WithPhaseFilter(t *testing.T) {
 	// Skip if Python is not available
 	if _, err := os.Stat("../../../scripts/team_manager.py"); os.IsNotExist(err) {
@@ -298,10 +298,10 @@ func TestHandleTeamList_WithPhaseFilter(t *testing.T) {
 	initArgs := map[string]interface{}{"project_name": projectName}
 	s.handleTeamInit(ctx, initArgs)
 
-	// List with phase filter
+	// List with phase filter - SEC-010: Now uses strict "Phase 1" format
 	args := map[string]interface{}{
 		"project_name": projectName,
-		"phase":        "Phase 1: Strategy, Governance & Planning",
+		"phase":        "Phase 1",
 	}
 
 	result, err := s.handleTeamList(ctx, args)
@@ -500,7 +500,7 @@ func TestHandleTeamStatus_Valid(t *testing.T) {
 	cleanupTestProject(t, projectName)
 }
 
-// TestHandleTeamStatus_WithPhase tests handleTeamStatus with phase filter
+// TestHandleTeamStatus_WithPhase tests handleTeamStatus with phase filter (SEC-010)
 func TestHandleTeamStatus_WithPhase(t *testing.T) {
 	// Skip if Python is not available
 	if _, err := os.Stat("../../../scripts/team_manager.py"); os.IsNotExist(err) {
@@ -515,10 +515,10 @@ func TestHandleTeamStatus_WithPhase(t *testing.T) {
 	initArgs := map[string]interface{}{"project_name": projectName}
 	s.handleTeamInit(ctx, initArgs)
 
-	// Get status with phase
+	// Get status with phase - SEC-010: Now uses strict "Phase 1" format
 	args := map[string]interface{}{
 		"project_name": projectName,
-		"phase":        "Phase 1: Strategy, Governance & Planning",
+		"phase":        "Phase 1",
 	}
 
 	result, err := s.handleTeamStatus(ctx, args)
@@ -1167,7 +1167,7 @@ func TestValidatePersonName(t *testing.T) {
 	}
 }
 
-// TestValidatePhase tests the phase validation (FUNC-004)
+// TestValidatePhase tests the phase validation (SEC-010: Phase injection hardening)
 func TestValidatePhase(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -1177,27 +1177,17 @@ func TestValidatePhase(t *testing.T) {
 	}{
 		{
 			name:    "valid Phase 1",
-			phase:   "Phase 1: Strategy, Governance & Planning",
+			phase:   "Phase 1",
 			wantErr: false,
 		},
 		{
 			name:    "valid Phase 2",
-			phase:   "Phase 2: Platform & Foundation",
+			phase:   "Phase 2",
 			wantErr: false,
 		},
 		{
 			name:    "valid Phase 3",
-			phase:   "Phase 3: The Build Squads",
-			wantErr: false,
-		},
-		{
-			name:    "valid Phase 4",
-			phase:   "Phase 4: Validation & Hardening",
-			wantErr: false,
-		},
-		{
-			name:    "valid Phase 5",
-			phase:   "Phase 5: Delivery & Sustainment",
+			phase:   "Phase 3",
 			wantErr: false,
 		},
 		{
@@ -1206,22 +1196,58 @@ func TestValidatePhase(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:    "invalid - short name only",
-			phase:   "Phase 1",
+			name:    "invalid - old full name Phase 1",
+			phase:   "Phase 1: Strategy, Governance & Planning",
 			wantErr: true,
-			errMsg:  "phase must be one of",
+			errMsg:  "invalid phase",
+		},
+		{
+			name:    "invalid - old full name Phase 2",
+			phase:   "Phase 2: Platform & Foundation",
+			wantErr: true,
+			errMsg:  "invalid phase",
+		},
+		{
+			name:    "invalid - Phase 4",
+			phase:   "Phase 4",
+			wantErr: true,
+			errMsg:  "invalid phase",
+		},
+		{
+			name:    "invalid - Phase 5",
+			phase:   "Phase 5",
+			wantErr: true,
+			errMsg:  "invalid phase",
 		},
 		{
 			name:    "invalid - arbitrary string",
-			phase:   "Phase 99: Unknown",
+			phase:   "Phase 99",
 			wantErr: true,
-			errMsg:  "phase must be one of",
+			errMsg:  "invalid phase",
 		},
 		{
 			name:    "invalid - command injection attempt",
 			phase:   "Phase 1; rm -rf /",
 			wantErr: true,
-			errMsg:  "phase must be one of",
+			errMsg:  "invalid phase",
+		},
+		{
+			name:    "invalid - path traversal attempt",
+			phase:   "Phase 1/../../../etc/passwd",
+			wantErr: true,
+			errMsg:  "invalid phase",
+		},
+		{
+			name:    "invalid - null byte injection",
+			phase:   "Phase 1\x00",
+			wantErr: true,
+			errMsg:  "invalid phase",
+		},
+		{
+			name:    "invalid - newline injection",
+			phase:   "Phase 1\ncommand",
+			wantErr: true,
+			errMsg:  "invalid phase",
 		},
 	}
 
@@ -1240,6 +1266,60 @@ func TestValidatePhase(t *testing.T) {
 				if err != nil {
 					t.Errorf("validatePhase(%q) unexpected error: %v", tt.phase, err)
 				}
+			}
+		})
+	}
+}
+
+// TestSanitizePhase tests the phase sanitization function (SEC-010)
+func TestSanitizePhase(t *testing.T) {
+	tests := []struct {
+		name     string
+		phase    string
+		expected string
+	}{
+		{
+			name:     "valid Phase 1",
+			phase:    "Phase 1",
+			expected: "Phase 1",
+		},
+		{
+			name:     "valid Phase 2",
+			phase:    "Phase 2",
+			expected: "Phase 2",
+		},
+		{
+			name:     "valid Phase 3",
+			phase:    "Phase 3",
+			expected: "Phase 3",
+		},
+		{
+			name:     "empty phase",
+			phase:    "",
+			expected: "",
+		},
+		{
+			name:     "invalid - returns empty",
+			phase:    "Phase 1; rm -rf /",
+			expected: "",
+		},
+		{
+			name:     "invalid Phase 4 returns empty",
+			phase:    "Phase 4",
+			expected: "",
+		},
+		{
+			name:     "path traversal returns empty",
+			phase:    "../../../etc/passwd",
+			expected: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := sanitizePhase(tt.phase)
+			if result != tt.expected {
+				t.Errorf("sanitizePhase(%q) = %q, want %q", tt.phase, result, tt.expected)
 			}
 		})
 	}
@@ -1334,27 +1414,53 @@ func TestHandleTeamAssign_InvalidPerson(t *testing.T) {
 	}
 }
 
-// TestHandleTeamList_InvalidPhase tests handleTeamList with invalid phase (FUNC-004)
+// TestHandleTeamList_InvalidPhase tests handleTeamList with invalid phase (SEC-010)
 func TestHandleTeamList_InvalidPhase(t *testing.T) {
 	s := mockMCPServer()
 	ctx := context.Background()
 
-	args := map[string]interface{}{
-		"project_name": "test-project",
-		"phase":        "Phase 99: Unknown Phase",
+	tests := []struct {
+		name      string
+		phase     string
+		wantError string
+	}{
+		{
+			name:      "invalid phase number",
+			phase:     "Phase 99",
+			wantError: "invalid phase",
+		},
+		{
+			name:      "command injection attempt",
+			phase:     "Phase 1; rm -rf /",
+			wantError: "invalid phase",
+		},
+		{
+			name:      "old format phase",
+			phase:     "Phase 1: Strategy, Governance & Planning",
+			wantError: "invalid phase",
+		},
 	}
 
-	result, err := s.handleTeamList(ctx, args)
-	if err != nil {
-		t.Fatalf("handleTeamList returned error: %v", err)
-	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			args := map[string]interface{}{
+				"project_name": "test-project",
+				"phase":        tt.phase,
+			}
 
-	if !result.IsError {
-		t.Error("handleTeamList should return error for invalid phase")
-	}
+			result, err := s.handleTeamList(ctx, args)
+			if err != nil {
+				t.Fatalf("handleTeamList returned error: %v", err)
+			}
 
-	text := getResultText(result)
-	if !strings.Contains(text, "phase must be one of") {
-		t.Errorf("Expected error about phase validation, got: %s", text)
+			if !result.IsError {
+				t.Errorf("handleTeamList should return error for invalid phase: %s", tt.phase)
+			}
+
+			text := getResultText(result)
+			if !strings.Contains(text, tt.wantError) {
+				t.Errorf("Expected error containing %q, got: %s", tt.wantError, text)
+			}
+		})
 	}
 }

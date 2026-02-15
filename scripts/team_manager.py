@@ -2934,6 +2934,12 @@ def main():
     delete_project_parser = subparsers.add_parser("delete-project", help="Delete the entire project")
     delete_project_parser.add_argument("--confirmed", action="store_true", help="Confirm deletion (required)")
 
+    # SEC-007: Encrypt-project command
+    encrypt_parser = subparsers.add_parser("encrypt-project", help="Encrypt project data at rest")
+
+    # SEC-007: Decrypt-project command
+    decrypt_parser = subparsers.add_parser("decrypt-project", help="Decrypt project data")
+
     # List-backups command (OPS-004)
     list_backups_parser = subparsers.add_parser("list-backups", help="List available backups")
 
@@ -3004,10 +3010,6 @@ def main():
 
     template_json_parser = subparsers.add_parser("template-json", help="Create JSON template for bulk assignments")
     template_json_parser.add_argument("--file", default="assignments_template.json", help="Output file path")
-
-    # SEC-007: Encryption commands
-    encrypt_parser = subparsers.add_parser("encrypt-project", help="Encrypt sensitive project data")
-    decrypt_parser = subparsers.add_parser("decrypt-project", help="Decrypt sensitive project data")
 
     args = parser.parse_args()
 

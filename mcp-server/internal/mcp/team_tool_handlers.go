@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os/exec"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -253,25 +254,38 @@ func validatePersonName(name string) error {
 	return nil
 }
 
-// validatePhase validates phase filter value
+// validatePhase validates phase filter value (SEC-010: Phase injection hardening)
+// Whitelist: Phase 1, Phase 2, Phase 3 (strict regex validation)
 func validatePhase(phase string) error {
 	if phase == "" {
 		return nil // Phase is optional
 	}
-	// FUNC-004: Validate against full phase names from TEAM_STRUCTURE.md
-	validPhases := []string{
-		"Phase 1: Strategy, Governance & Planning",
-		"Phase 2: Platform & Foundation",
-		"Phase 3: The Build Squads",
-		"Phase 4: Validation & Hardening",
-		"Phase 5: Delivery & Sustainment",
+	// SEC-010: Strict regex validation - only allow "Phase 1", "Phase 2", "Phase 3"
+	// This prevents injection attacks through the phase parameter
+	validPhaseRegex := regexp.MustCompile(`^Phase [1-3]$`)
+	if !validPhaseRegex.MatchString(phase) {
+		return fmt.Errorf("invalid phase: must be 'Phase 1', 'Phase 2', or 'Phase 3'")
 	}
-	for _, validPhase := range validPhases {
-		if phase == validPhase {
-			return nil
-		}
+	return nil
+}
+
+// sanitizePhase sanitizes phase string for safe command execution (SEC-010)
+// Returns empty string if phase is invalid, otherwise returns cleaned phase
+func sanitizePhase(phase string) string {
+	if phase == "" {
+		return ""
 	}
-	return fmt.Errorf("phase must be one of: Phase 1: Strategy, Governance & Planning, Phase 2: Platform & Foundation, Phase 3: The Build Squads, Phase 4: Validation & Hardening, Phase 5: Delivery & Sustainment")
+	// Whitelist only exact phase patterns
+	switch phase {
+	case "Phase 1":
+		return "Phase 1"
+	case "Phase 2":
+		return "Phase 2"
+	case "Phase 3":
+		return "Phase 3"
+	default:
+		return "" // Invalid phase - return empty for safety
+	}
 }
 
 // Team tool handler implementations for MCP server
@@ -359,7 +373,9 @@ func (s *MCPServer) handleTeamList(ctx context.Context, args map[string]interfac
 				IsError: true,
 			}, nil
 		}
-		cmdArgs = append(cmdArgs, "--phase", phase)
+		// SEC-010: Sanitize phase before command execution
+		sanitizedPhase := sanitizePhase(phase)
+		cmdArgs = append(cmdArgs, "--phase", sanitizedPhase)
 	}
 
 	cmd := exec.CommandContext(ctx, "python", cmdArgs...)
