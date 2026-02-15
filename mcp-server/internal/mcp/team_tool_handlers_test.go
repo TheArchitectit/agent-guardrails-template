@@ -12,7 +12,9 @@ import (
 
 // mockMCPServer creates a minimal MCPServer for testing
 func mockMCPServer() *MCPServer {
-	return &MCPServer{}
+	return &MCPServer{
+		sessions: make(map[string]*Session),
+	}
 }
 
 // TestValidateProjectName tests the project name validation function
