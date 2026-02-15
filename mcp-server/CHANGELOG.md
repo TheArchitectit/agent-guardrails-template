@@ -14,6 +14,34 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.0.1-patch] - 2026-02-15
+
+### Fixed
+
+- **Database Migration Schema Fixes** - Corrected PostgreSQL partitioning constraints and table definitions
+  - Fixed composite primary key requirements for partitioned tables (`failure_registry`, `audit_log`)
+  - Changed primary keys from single-column `(id)` to composite `(id, created_at)` and `(id, timestamp)` to satisfy PostgreSQL partitioning constraints
+  - Updated unique constraints on `failure_id` and `failure_registry` to include partitioning columns
+  - Changed `fix_verification_tracking.failure_id` from UUID to VARCHAR to accommodate composite primary key reference
+  - Fixed syntax error in `010_add_scope_tracking.up.sql` (removed trailing comma before closing parenthesis)
+
+- **Migration Idempotency Improvements** - Added safe type creation for custom enums
+  - Implemented `DO $$ ... EXCEPTION WHEN duplicate_object` pattern for all custom ENUM types
+  - Affected migrations: `009_add_production_code_tracking`, `010_add_scope_tracking`, `011_add_fix_registry`
+  - Prevents "type already exists" errors when re-running migrations
+
+- **Type Consistency in Uncertainty Tracking** - Aligned database schema with application code
+  - Changed `uncertainty_tracking.session_id` from UUID to VARCHAR(255) to match Go struct definition
+  - Changed `uncertainty_tracking.task_id` from UUID to VARCHAR(255) for consistency
+  - Removed invalid foreign key references to non-existent `session_metadata` and `tasks` tables
+  - Ensures compatibility with `UncertaintyRecord` model in `internal/models/uncertainty.go`
+
+- **Docker Compose Configuration** - Fixed Redis initialization error
+  - Added `mkdir -p /usr/local/etc/redis` to Redis container command to prevent "nonexistent directory" error
+  - Ensures custom Redis configuration file can be created on container startup
+
+---
+
 ## [1.9.6] - 2026-02-08
 
 ### Fixed

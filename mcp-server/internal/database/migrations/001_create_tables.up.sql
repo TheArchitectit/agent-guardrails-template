@@ -33,8 +33,8 @@ CREATE TABLE IF NOT EXISTS prevention_rules (
 
 -- Failure registry table (partitioned by time)
 CREATE TABLE IF NOT EXISTS failure_registry (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    failure_id VARCHAR(50) UNIQUE NOT NULL,
+    id UUID NOT NULL DEFAULT gen_random_uuid(),
+    failure_id VARCHAR(50) NOT NULL,
     category VARCHAR(50) NOT NULL,
     severity VARCHAR(10) NOT NULL CHECK (severity IN ('critical', 'high', 'medium', 'low')),
     error_message TEXT NOT NULL,
@@ -44,7 +44,9 @@ CREATE TABLE IF NOT EXISTS failure_registry (
     status VARCHAR(20) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'resolved', 'deprecated')),
     project_slug VARCHAR(100),
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (id, created_at),
+    UNIQUE (failure_id, created_at)
 ) PARTITION BY RANGE (created_at);
 
 -- Projects table
@@ -61,7 +63,7 @@ CREATE TABLE IF NOT EXISTS projects (
 
 -- Audit log table (partitioned by time)
 CREATE TABLE IF NOT EXISTS audit_log (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id UUID NOT NULL DEFAULT gen_random_uuid(),
     event_id VARCHAR(50) NOT NULL,
     timestamp TIMESTAMP NOT NULL DEFAULT NOW(),
     event_type VARCHAR(50) NOT NULL,
@@ -73,7 +75,8 @@ CREATE TABLE IF NOT EXISTS audit_log (
     details JSONB DEFAULT '{}',
     client_ip INET,
     request_id VARCHAR(50),
-    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (id, timestamp)
 ) PARTITION BY RANGE (timestamp);
 
 -- Create initial partition for current month

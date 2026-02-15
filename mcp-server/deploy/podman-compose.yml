@@ -8,6 +8,7 @@ services:
     # Use config file instead of command line for password security
     command: >
       sh -c "
+        mkdir -p /usr/local/etc/redis &&
         echo 'requirepass '$${REDIS_PASSWORD} > /usr/local/etc/redis/redis.conf &&
         echo 'maxmemory 256mb' >> /usr/local/etc/redis/redis.conf &&
         echo 'maxmemory-policy allkeys-lru' >> /usr/local/etc/redis/redis.conf &&

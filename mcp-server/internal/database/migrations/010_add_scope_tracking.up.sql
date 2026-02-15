@@ -1,8 +1,12 @@
 -- Migration to add scope boundary tracking tables
 -- These tables track what files are in scope and monitor file changes
 
--- Create enum type for file change types
-CREATE TYPE change_type_enum AS ENUM ('addition', 'modification', 'deletion');
+-- Create enum type for file change types (handle if already exists)
+DO $$ BEGIN
+    CREATE TYPE change_type_enum AS ENUM ('addition', 'modification', 'deletion');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
 
 -- Table 1: scope_definitions
 -- Tracks what files are in scope for a session/task
@@ -13,9 +17,7 @@ CREATE TABLE IF NOT EXISTS scope_definitions (
     scope_description TEXT,
     scope_boundaries TEXT,
     affected_files TEXT[],
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-
-    -- Indexes created separately below
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Table 2: file_changes
