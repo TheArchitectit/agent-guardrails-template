@@ -460,6 +460,43 @@ var (
 	)
 )
 
+// Performance operation metrics (OPS-008)
+var (
+	// PerformanceOperationDuration tracks operation latency
+	PerformanceOperationDuration = promauto.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Namespace: namespace,
+			Subsystem: "performance",
+			Name:      "operation_duration_seconds",
+			Help:      "Performance operation latency in seconds",
+			Buckets:   []float64{0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10},
+		},
+		[]string{"operation"},
+	)
+
+	// PerformanceOperationTotal tracks total operations
+	PerformanceOperationTotal = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Namespace: namespace,
+			Subsystem: "performance",
+			Name:      "operations_total",
+			Help:      "Total number of operations",
+		},
+		[]string{"operation", "result"},
+	)
+
+	// PerformanceOperationErrors tracks operation errors
+	PerformanceOperationErrors = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Namespace: namespace,
+			Subsystem: "performance",
+			Name:      "operation_errors_total",
+			Help:      "Total number of operation errors",
+		},
+		[]string{"operation", "error_type"},
+	)
+)
+
 // PrometheusMiddleware returns Echo middleware for Prometheus metrics
 func PrometheusMiddleware() echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
@@ -666,4 +703,19 @@ func DecrementTeamToolActive(tool string) {
 // RecordTeamToolPythonExec records Python script execution duration
 func RecordTeamToolPythonExec(command string, duration time.Duration) {
 	TeamToolPythonExecDuration.WithLabelValues(command).Observe(duration.Seconds())
+}
+
+// RecordPerformanceOperation records a performance operation metric (OPS-008)
+func RecordPerformanceOperation(operation string, duration time.Duration, success bool) {
+	result := "success"
+	if !success {
+		result = "error"
+	}
+	PerformanceOperationDuration.WithLabelValues(operation).Observe(duration.Seconds())
+	PerformanceOperationTotal.WithLabelValues(operation, result).Inc()
+}
+
+// RecordPerformanceOperationError records a performance operation error (OPS-008)
+func RecordPerformanceOperationError(operation string, errorType string) {
+	PerformanceOperationErrors.WithLabelValues(operation, errorType).Inc()
 }
