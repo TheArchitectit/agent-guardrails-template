@@ -620,6 +620,7 @@ class TestTeamManagerDelete(unittest.TestCase):
     def test_unassign_role_not_assigned(self):
         """Test unassigning a role that was never assigned."""
         result = self.manager.unassign_role(1, "Business Relationship Manager")
+        # Already unassigned returns False (no change needed)
         self.assertFalse(result)
 
     def test_unassign_role_invalid_team(self):

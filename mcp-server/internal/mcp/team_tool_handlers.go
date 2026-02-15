@@ -172,6 +172,67 @@ func (s *MCPServer) handleTeamAssign(ctx context.Context, args map[string]interf
 	}, nil
 }
 
+// handleTeamUnassign removes a person from a role in a team
+func (s *MCPServer) handleTeamUnassign(ctx context.Context, args map[string]interface{}) (*mcp.CallToolResult, error) {
+	projectName, ok := args["project_name"].(string)
+	if !ok || projectName == "" {
+		return &mcp.CallToolResult{
+			Content: []interface{}{mcp.TextContent{Type: "text", Text: "Error: project_name is required"}},
+			IsError: true,
+		}, nil
+	}
+
+	if err := validateProjectName(projectName); err != nil {
+		return &mcp.CallToolResult{
+			Content: []interface{}{mcp.TextContent{Type: "text", Text: err.Error()}},
+			IsError: true,
+		}, nil
+	}
+
+	teamID, ok := args["team_id"].(float64)
+	if !ok {
+		return &mcp.CallToolResult{
+			Content: []interface{}{mcp.TextContent{Type: "text", Text: "Error: team_id is required"}},
+			IsError: true,
+		}, nil
+	}
+
+	// Validate team_id range (1-12)
+	teamIDInt := int(teamID)
+	if teamIDInt < 1 || teamIDInt > 12 {
+		return &mcp.CallToolResult{
+			Content: []interface{}{mcp.TextContent{Type: "text", Text: "Error: team_id must be between 1 and 12"}},
+			IsError: true,
+		}, nil
+	}
+
+	roleName, ok := args["role_name"].(string)
+	if !ok || roleName == "" {
+		return &mcp.CallToolResult{
+			Content: []interface{}{mcp.TextContent{Type: "text", Text: "Error: role_name is required"}},
+			IsError: true,
+		}, nil
+	}
+
+	cmd := exec.CommandContext(ctx, "python", "scripts/team_manager.py", "--project", projectName, "unassign",
+		"--team", strconv.Itoa(teamIDInt),
+		"--role", roleName)
+	output, err := cmd.CombinedOutput()
+
+	resultText := string(output)
+	if err != nil {
+		resultText = fmt.Sprintf("Error unassigning role: %v\nOutput: %s", err, string(output))
+		return &mcp.CallToolResult{
+			Content: []interface{}{mcp.TextContent{Type: "text", Text: resultText}},
+			IsError: true,
+		}, nil
+	}
+
+	return &mcp.CallToolResult{
+		Content: []interface{}{mcp.TextContent{Type: "text", Text: resultText}},
+	}, nil
+}
+
 // handleTeamStatus gets phase or project status
 func (s *MCPServer) handleTeamStatus(ctx context.Context, args map[string]interface{}) (*mcp.CallToolResult, error) {
 	projectName, ok := args["project_name"].(string)
