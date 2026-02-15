@@ -3,16 +3,21 @@ package com.guardrail.plugin
 import com.intellij.lang.annotation.AnnotationHolder
 import com.intellij.lang.annotation.ExternalAnnotator
 import com.intellij.openapi.diagnostic.Logger
+import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiFile
 
 /**
  * External annotator that provides real-time guardrail validation.
  * This is registered in plugin.xml and called by the IDE's annotation pass.
+ *
+ * Note: doAnnotate() runs on a background thread by IntelliJ's annotation infrastructure.
+ * See: https://plugins.jetbrains.com/docs/intellij/annotator.html
  */
 class GuardrailAnnotator : ExternalAnnotator<GuardrailAnnotator.Info, List<Violation>>() {
     private val logger = Logger.getInstance(GuardrailAnnotator::class.java)
 
     data class Info(
+        val project: Project,
         val filePath: String,
         val content: String,
         val language: String
@@ -20,7 +25,9 @@ class GuardrailAnnotator : ExternalAnnotator<GuardrailAnnotator.Info, List<Viola
 
     override fun collectInformation(file: PsiFile): Info? {
         val virtualFile = file.virtualFile ?: return null
+        val project = file.project
         return Info(
+            project = project,
             filePath = virtualFile.path,
             content = file.text,
             language = file.language.id
@@ -30,7 +37,8 @@ class GuardrailAnnotator : ExternalAnnotator<GuardrailAnnotator.Info, List<Viola
     override fun doAnnotate(collectedInfo: Info?): List<Violation> {
         if (collectedInfo == null) return emptyList()
 
-        val service = GuardrailService.getInstance()
+        // Get service from project - ExternalAnnotator runs on background thread
+        val service = collectedInfo.project.getService(GuardrailService::class.java)
         if (!service.isEnabled()) return emptyList()
 
         return try {
@@ -118,10 +126,3 @@ class GuardrailQuickFix(
     }
 }
 
-/**
- * Extension function to get GuardrailService instance.
- */
-fun GuardrailService.Companion.getInstance(): GuardrailService {
-    // This would be replaced with actual service retrieval
-    return GuardrailService()
-}

@@ -51,8 +51,16 @@ class GuardrailConfigurable(private val project: Project) : Configurable {
     }
 
     override fun apply() {
+        val serverUrl = serverUrlField.text.trim()
+        // SECURITY: Validate server URL to prevent SSRF
+        if (!isValidServerUrl(serverUrl)) {
+            throw com.intellij.openapi.options.ConfigurationException(
+                "Invalid server URL. Must start with http:// or https://"
+            )
+        }
+
         val newSettings = GuardrailSettings(
-            serverUrl = serverUrlField.text,
+            serverUrl = serverUrl,
             apiKey = apiKeyField.text,
             projectSlug = projectSlugField.text,
             enabled = enabledCheckBox.isSelected,
@@ -60,6 +68,10 @@ class GuardrailConfigurable(private val project: Project) : Configurable {
             severityThreshold = severityComboBox.selectedItem as String
         )
         service.updateSettings(newSettings)
+    }
+
+    private fun isValidServerUrl(url: String): Boolean {
+        return url.startsWith("http://") || url.startsWith("https://")
     }
 
     override fun reset() {
