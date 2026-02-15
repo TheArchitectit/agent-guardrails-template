@@ -745,6 +745,19 @@ func (s *MCPServer) handleToolCall(ctx context.Context, name string, arguments m
 		return s.handleDetectFeatureCreep(ctx, arguments)
 	case "guardrail_verify_fixes_intact":
 		return s.handleVerifyFixesIntact(ctx, arguments)
+	// Team Layout Management Tools
+	case "guardrail_team_init":
+		return s.handleTeamInit(ctx, arguments)
+	case "guardrail_team_list":
+		return s.handleTeamList(ctx, arguments)
+	case "guardrail_team_assign":
+		return s.handleTeamAssign(ctx, arguments)
+	case "guardrail_team_status":
+		return s.handleTeamStatus(ctx, arguments)
+	case "guardrail_phase_gate_check":
+		return s.handlePhaseGateCheck(ctx, arguments)
+	case "guardrail_agent_team_map":
+		return s.handleAgentTeamMap(ctx, arguments)
 	default:
 		return &mcp.CallToolResult{
 			Content: []interface{}{
