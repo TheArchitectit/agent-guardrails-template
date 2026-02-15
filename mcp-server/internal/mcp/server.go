@@ -704,6 +704,31 @@ func (s *MCPServer) registerTools() {
 					},
 				},
 				{
+					Name:        "guardrail_team_start",
+					Description: "Start a team (mark as active). Optionally override phase gate checks with admin privileges.",
+					InputSchema: mcp.ToolInputSchema{
+						Type: "object",
+						Properties: mcp.ToolInputSchemaProperties{
+							"project_name": map[string]interface{}{
+								"type":        "string",
+								"description": "Name of the project",
+							},
+							"team_id": map[string]interface{}{
+								"type":        "number",
+								"description": "Team ID to start (1-12)",
+							},
+							"override": map[string]interface{}{
+								"type":        "boolean",
+								"description": "Optional: Override phase gate check (requires admin privileges)",
+							},
+							"reason": map[string]interface{}{
+								"type":        "string",
+								"description": "Required when override is true: Reason for bypassing phase gate",
+							},
+						},
+					},
+				},
+				{
 					Name:        "guardrail_team_status",
 					Description: "Get phase or project status",
 					InputSchema: mcp.ToolInputSchema{
@@ -949,6 +974,8 @@ func (s *MCPServer) handleToolCall(ctx context.Context, name string, arguments m
 		return s.handleTeamAssign(ctx, arguments)
 	case "guardrail_team_unassign":
 		return s.handleTeamUnassign(ctx, arguments)
+	case "guardrail_team_start":
+		return s.handleTeamStart(ctx, arguments)
 	case "guardrail_team_status":
 		return s.handleTeamStatus(ctx, arguments)
 	case "guardrail_phase_gate_check":
