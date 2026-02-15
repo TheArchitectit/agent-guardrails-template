@@ -59,7 +59,8 @@ class GuardrailService : PersistentStateComponent<GuardrailSettings> {
                 response.isSuccessful
             }
         } catch (e: IOException) {
-            logger.warn("Connection test failed", e)
+            // SECURITY: Log only error type, not message which may contain sensitive data
+            logger.warn("Connection test failed: ${e.javaClass.simpleName}")
             false
         }
     }
@@ -121,13 +122,19 @@ class GuardrailService : PersistentStateComponent<GuardrailSettings> {
                 } ?: ValidationResult(false, emptyList(), "Empty response body")
             }
         } catch (e: IOException) {
-            logger.error("Validation request failed", e)
-            ValidationResult(false, emptyList(), e.message)
+            // SECURITY: Log only error type, not message which may contain sensitive data
+            logger.error("Validation request failed: ${e.javaClass.simpleName}")
+            ValidationResult(false, emptyList(), "Network error: connection failed")
         }
     }
 
     private fun buildRequest(path: String, body: RequestBody? = null): Request {
-        val url = "${settings.serverUrl}$path"
+        // SECURITY: Validate server URL to prevent SSRF
+        val serverUrl = settings.serverUrl.trim().removeSuffix("/")
+        if (!serverUrl.startsWith("http://") && !serverUrl.startsWith("https://")) {
+            throw IllegalArgumentException("Invalid server URL: must start with http:// or https://")
+        }
+        val url = "$serverUrl$path"
         val builder = Request.Builder().url(url)
 
         if (settings.apiKey.isNotEmpty()) {
