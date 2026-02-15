@@ -627,6 +627,112 @@ func (s *MCPServer) registerTools() {
 						},
 					},
 				},
+				{
+					Name:        "guardrail_team_init",
+					Description: "Initialize team structure for a project",
+					InputSchema: mcp.ToolInputSchema{
+						Type: "object",
+						Properties: mcp.ToolInputSchemaProperties{
+							"project_name": map[string]interface{}{
+								"type":        "string",
+								"description": "Name of the project (alphanumeric, hyphens, underscores only)",
+							},
+						},
+					},
+				},
+				{
+					Name:        "guardrail_team_list",
+					Description: "List all teams and their status for a project",
+					InputSchema: mcp.ToolInputSchema{
+						Type: "object",
+						Properties: mcp.ToolInputSchemaProperties{
+							"project_name": map[string]interface{}{
+								"type":        "string",
+								"description": "Name of the project",
+							},
+							"phase": map[string]interface{}{
+								"type":        "string",
+								"description": "Optional: Filter by phase (Phase 1-5)",
+							},
+						},
+					},
+				},
+				{
+					Name:        "guardrail_team_assign",
+					Description: "Assign a person to a role in a team",
+					InputSchema: mcp.ToolInputSchema{
+						Type: "object",
+						Properties: mcp.ToolInputSchemaProperties{
+							"project_name": map[string]interface{}{
+								"type":        "string",
+								"description": "Name of the project",
+							},
+							"team_id": map[string]interface{}{
+								"type":        "number",
+								"description": "Team ID (1-12)",
+							},
+							"role_name": map[string]interface{}{
+								"type":        "string",
+								"description": "Name of the role to assign",
+							},
+							"person": map[string]interface{}{
+								"type":        "string",
+								"description": "Name of the person to assign",
+							},
+						},
+					},
+				},
+				{
+					Name:        "guardrail_team_status",
+					Description: "Get phase or project status",
+					InputSchema: mcp.ToolInputSchema{
+						Type: "object",
+						Properties: mcp.ToolInputSchemaProperties{
+							"project_name": map[string]interface{}{
+								"type":        "string",
+								"description": "Name of the project",
+							},
+							"phase": map[string]interface{}{
+								"type":        "string",
+								"description": "Optional: Specific phase to check (Phase 1-5)",
+							},
+						},
+					},
+				},
+				{
+					Name:        "guardrail_phase_gate_check",
+					Description: "Check if phase gate requirements are met",
+					InputSchema: mcp.ToolInputSchema{
+						Type: "object",
+						Properties: mcp.ToolInputSchemaProperties{
+							"project_name": map[string]interface{}{
+								"type":        "string",
+								"description": "Name of the project",
+							},
+							"from_phase": map[string]interface{}{
+								"type":        "number",
+								"description": "Source phase number (1-4)",
+							},
+							"to_phase": map[string]interface{}{
+								"type":        "number",
+								"description": "Target phase number (2-5)",
+							},
+						},
+					},
+				},
+				{
+					Name:        "guardrail_agent_team_map",
+					Description: "Get the team assignment for an agent type",
+					InputSchema: mcp.ToolInputSchema{
+						Type: "object",
+						Properties: mcp.ToolInputSchemaProperties{
+							"agent_type": map[string]interface{}{
+								"type":        "string",
+								"description": "Type of agent (planner, architect, infrastructure, platform, backend, frontend, security, qa, sre, ops)",
+							},
+						},
+					},
+				},
 			},
 		}, nil
 	})
