@@ -750,6 +750,44 @@ func (s *MCPServer) registerTools() {
 						},
 					},
 				},
+			{
+			},
+				Name:        "guardrail_team_delete",
+				Description: "Delete a specific team from a project. Requires confirmation.",
+				InputSchema: mcp.ToolInputSchema{
+					Type: "object",
+					Properties: mcp.ToolInputSchemaProperties{
+						"project_name": map[string]interface{}{
+							"type":        "string",
+							"description": "Name of the project",
+						},
+						"team_id": map[string]interface{}{
+							"type":        "number",
+							"description": "Team ID to delete (1-12)",
+						},
+						"confirmed": map[string]interface{}{
+							"type":        "boolean",
+							"description": "Set to true to confirm deletion. First call without this to see confirmation prompt.",
+						},
+					},
+				},
+			},
+			{
+				Name:        "guardrail_project_delete",
+				Description: "Delete an entire project and all its teams. Requires confirmation.",
+				InputSchema: mcp.ToolInputSchema{
+					Type: "object",
+					Properties: mcp.ToolInputSchemaProperties{
+						"project_name": map[string]interface{}{
+							"type":        "string",
+							"description": "Name of the project to delete",
+						},
+						"confirmed": map[string]interface{}{
+							"type":        "boolean",
+							"description": "Set to true to confirm deletion. First call without this to see confirmation prompt.",
+						},
+					},
+				},
 			},
 		}, nil
 	})
@@ -883,6 +921,10 @@ func (s *MCPServer) handleToolCall(ctx context.Context, name string, arguments m
 		return s.handleAgentTeamMap(ctx, arguments)
 	case "guardrail_team_size_validate":
 		return s.handleTeamSizeValidate(ctx, arguments)
+	case "guardrail_team_delete":
+		return s.handleTeamDelete(ctx, arguments)
+	case "guardrail_project_delete":
+		return s.handleProjectDelete(ctx, arguments)
 	default:
 		return &mcp.CallToolResult{
 			Content: []interface{}{
