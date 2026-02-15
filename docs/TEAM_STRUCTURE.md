@@ -11,6 +11,20 @@
 
 This document defines the standardized team structure across 5 phases of the software development lifecycle. Each team has specific responsibilities, required roles, and integration points.
 
+### Team Size Requirements
+
+All teams **MUST** have between **4 and 6 members** (inclusive).
+
+- **Minimum:** 4 members (ensures adequate coverage of all critical roles)
+- **Maximum:** 6 members (prevents team bloat and communication overhead)
+
+Teams with fewer than 4 members are understaffed and cannot effectively cover all required responsibilities. Teams with more than 6 members suffer from coordination overhead and should be split into sub-teams.
+
+This rule applies to:
+- Human teams
+- AI agent teams
+- Mixed human-agent teams
+
 ---
 
 ## Phase 1: Strategy, Governance & Planning
