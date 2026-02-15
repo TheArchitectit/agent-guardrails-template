@@ -2,6 +2,11 @@
 
 > Comprehensive safety protocol framework for AI agents, LLMs, and automated systems working with codebases.
 
+[![Go Implementation](https://img.shields.io/badge/Implementation-Go-blue.svg?style=flat&logo=go)](https://golang.org)
+[![Version](https://img.shields.io/badge/version-v2.6.0-blue.svg)](./CHANGELOG.md)
+
+> **Important:** All future development is in **Go**. The Python implementation is deprecated as of v2.6.0.
+
 ---
 
 ## What Is This?
@@ -105,9 +110,11 @@ This isn't just a list of rules—it's a **real-time enforcement system**:
 
 ---
 
-## MCP Server (v2.0.0)
+## MCP Server (v2.6.0)
 
 The **Model Context Protocol (MCP) Server** provides real-time guardrail enforcement via a standardized protocol for AI agents and IDEs.
+
+> **Implementation Note:** The MCP Server is written in **Go** (package: `mcp-server/internal/`). All future development is in Go. Python implementation is deprecated as of v2.6.0.
 
 ### Features
 
@@ -170,11 +177,19 @@ Browser-based guardrail management interface:
 
 ### Project Structure with MCP Server
 
+> **Go Implementation:** All MCP Server code is in Go. Package location: `mcp-server/internal/`
+
 ```
 agent-guardrails-template/
-├── mcp-server/            ← MCP Server implementation
+├── mcp-server/            ← MCP Server implementation (Go)
 │   ├── cmd/server/        # Go application entry point
-│   ├── internal/          # MCP, web API, DB, cache, security modules
+│   ├── internal/          # Core packages:
+│   │   ├── mcp/           # MCP protocol implementation
+│   │   ├── team/          # Team management logic
+│   │   ├── web/           # HTTP handlers and middleware
+│   │   ├── database/      # PostgreSQL operations
+│   │   ├── cache/         # Redis caching
+│   │   └── security/      # Secrets scanning & validation
 │   ├── deploy/            # Deployment manifests and container config
 │   │   ├── Dockerfile
 │   │   ├── podman-compose.yml
@@ -1121,7 +1136,8 @@ agent-guardrails-template/
 | **Examples** | 53 files (6 languages) |
 | **500-Line Compliance** | 30/31 (97%) |
 | **Supported AI Models** | 30+ LLM families |
-| **Programming Languages** | Go, Java, Python, Ruby, Rust, TypeScript |
+| **Primary Language** | Go 1.23+ (MCP Server) |
+| **Example Languages** | Java, Python, Ruby, Rust, TypeScript |
 | **AI Tool Integrations** | Claude Code, OpenCode |
 | **MCP Server** | 17 tools, 8 resources, SSE + HTTP endpoints |
 | **Infrastructure** | PostgreSQL 16, Redis 7, Docker/Podman |
@@ -1132,7 +1148,15 @@ agent-guardrails-template/
 
 See [CHANGELOG.md](CHANGELOG.md) for complete release history.
 
-**Current Version:** v2.0.0 (2026-02-12)
+**Current Version:** v2.6.0 (2026-02-15)
+
+### v2.6.0 Migration Notice
+
+**Go Migration Complete:** The team management and MCP server logic has been migrated from Python to Go:
+- **Go Package:** `mcp-server/internal/team/`
+- **Benefits:** Smaller container size, distroless compatibility, better security
+- **API Compatibility:** Unchanged from MCP perspective
+- **Python:** Deprecated as of v2.6.0 (see [docs/PYTHON_TO_GO_MIGRATION.md](docs/PYTHON_TO_GO_MIGRATION.md))
 
 ---
 
@@ -1166,6 +1190,7 @@ in subscription credit when they subscribe!
 
 ---
 
-**Last Updated:** 2026-02-13
-**Status:** v2.0.0 - Production Ready
-**Deployment:** ✅ MCP Server deployed to AI01 (0.0.0.0:8095/8096) with schema validation error fixed
+**Last Updated:** 2026-02-15
+**Status:** v2.6.0 - Production Ready (Go Implementation)
+**Deployment:** ✅ MCP Server deployed to AI01 (0.0.0.0:8095/8096)
+**Implementation:** Go (mcp-server/internal/)
