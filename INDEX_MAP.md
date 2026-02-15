@@ -60,6 +60,7 @@
 | guardrail-platform | MCP_SERVER_PLAN.md | docs/plans/ | Guardrail enforcement platform |
 | team-tools | TEAM_TOOLS.md | docs/ | Team layout management MCP tools reference |
 | team-structure | TEAM_STRUCTURE.md | docs/ | 12-team enterprise structure documentation |
+| team-cli | cmd/team-cli/README.md | cmd/team-cli/ | Team management CLI tool |
 | phase-gate | TEAM_TOOLS.md | docs/ | Phase transition requirements and deliverables |
 | aider | CLCODE_INTEGRATION.md | docs/ | Aider YAML configuration (see Claude Code) |
 | continue | CLCODE_INTEGRATION.md | docs/ | Continue IDE configuration (see Claude Code) |
