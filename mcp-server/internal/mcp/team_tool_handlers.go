@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"os/exec"
+	"path/filepath"
 	"regexp"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -13,6 +15,18 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/thearchitectit/guardrail-mcp/internal/metrics"
 )
+
+// getTeamManagerPath returns the absolute path to the team_manager.py script
+// This ensures the script can be found regardless of the working directory
+func getTeamManagerPath() string {
+	// Get the directory of this Go source file
+	_, filename, _, _ := runtime.Caller(0)
+	dir := filepath.Dir(filename)
+
+	// Navigate from mcp-server/internal/mcp/ to repo root, then to scripts/
+	// Path: mcp-server/internal/mcp/ -> ../../../scripts/
+	return filepath.Join(dir, "..", "..", "..", "scripts", "team_manager.py")
+}
 
 // SEC-005: Rate limiting configuration
 const (
@@ -316,7 +330,7 @@ func (s *MCPServer) handleTeamInit(ctx context.Context, args map[string]interfac
 		}, nil
 	}
 
-	cmd := exec.CommandContext(ctx, "python", "scripts/team_manager.py", "--project", projectName, "init")
+	cmd := exec.CommandContext(ctx, "python", getTeamManagerPath(), "--project", projectName, "init")
 	pyStart := time.Now()
 	output, err := cmd.CombinedOutput()
 	metrics.RecordTeamToolPythonExec("init", time.Since(pyStart))
@@ -364,7 +378,7 @@ func (s *MCPServer) handleTeamList(ctx context.Context, args map[string]interfac
 		}, nil
 	}
 
-	cmdArgs := []string{"scripts/team_manager.py", "--project", projectName, "list"}
+	cmdArgs := []string{getTeamManagerPath(), "--project", projectName, "list"}
 	if phase, ok := args["phase"].(string); ok && phase != "" {
 		if err := validatePhase(phase); err != nil {
 			metrics.RecordTeamToolError("team_list", "validation_error")
@@ -494,7 +508,7 @@ func (s *MCPServer) handleTeamAssign(ctx context.Context, args map[string]interf
 		}, nil
 	}
 
-	cmd := exec.CommandContext(ctx, "python", "scripts/team_manager.py", "--project", projectName, "assign",
+	cmd := exec.CommandContext(ctx, "python", getTeamManagerPath(), "--project", projectName, "assign",
 		"--team", strconv.Itoa(teamIDInt),
 		"--role", roleName,
 		"--person", person)
@@ -581,7 +595,7 @@ func (s *MCPServer) handleTeamUnassign(ctx context.Context, args map[string]inte
 		}, nil
 	}
 
-	cmd := exec.CommandContext(ctx, "python", "scripts/team_manager.py", "--project", projectName, "unassign",
+	cmd := exec.CommandContext(ctx, "python", getTeamManagerPath(), "--project", projectName, "unassign",
 		"--team", strconv.Itoa(teamIDInt),
 		"--role", roleName)
 	pyStart := time.Now()
@@ -652,7 +666,7 @@ func (s *MCPServer) handleTeamStart(ctx context.Context, args map[string]interfa
 	}
 
 	// Build command args
-	cmdArgs := []string{"scripts/team_manager.py", "--project", projectName, "start", "--team", strconv.Itoa(teamIDInt)}
+	cmdArgs := []string{getTeamManagerPath(), "--project", projectName, "start", "--team", strconv.Itoa(teamIDInt)}
 
 	// FUNC-010: Handle override option
 	override := false
@@ -723,7 +737,7 @@ func (s *MCPServer) handleTeamStatus(ctx context.Context, args map[string]interf
 		}, nil
 	}
 
-	cmdArgs := []string{"scripts/team_manager.py", "--project", projectName, "status"}
+	cmdArgs := []string{getTeamManagerPath(), "--project", projectName, "status"}
 	if phase, ok := args["phase"].(string); ok && phase != "" {
 		cmdArgs = append(cmdArgs, "--phase", phase)
 	}
@@ -931,7 +945,7 @@ func (s *MCPServer) handleTeamSizeValidate(ctx context.Context, args map[string]
 		}, nil
 	}
 
-	cmdArgs := []string{"scripts/team_manager.py", "--project", projectName, "validate-size"}
+	cmdArgs := []string{getTeamManagerPath(), "--project", projectName, "validate-size"}
 	if teamID, ok := args["team_id"].(float64); ok {
 		cmdArgs = append(cmdArgs, "--team", strconv.Itoa(int(teamID)))
 	}
@@ -1044,7 +1058,7 @@ func (s *MCPServer) handleTeamDelete(ctx context.Context, args map[string]interf
 		confirmed = conf
 	}
 
-	cmdArgs := []string{"scripts/team_manager.py", "--project", projectName, "delete-team", "--team", strconv.Itoa(teamIDInt)}
+	cmdArgs := []string{getTeamManagerPath(), "--project", projectName, "delete-team", "--team", strconv.Itoa(teamIDInt)}
 	if confirmed {
 		cmdArgs = append(cmdArgs, "--confirmed")
 	}
@@ -1109,7 +1123,7 @@ func (s *MCPServer) handleProjectDelete(ctx context.Context, args map[string]int
 		confirmed = conf
 	}
 
-	cmdArgs := []string{"scripts/team_manager.py", "--project", projectName, "delete-project"}
+	cmdArgs := []string{getTeamManagerPath(), "--project", projectName, "delete-project"}
 	if confirmed {
 		cmdArgs = append(cmdArgs, "--confirmed")
 	}
@@ -1163,7 +1177,7 @@ func (s *MCPServer) handleTeamHealth(ctx context.Context, args map[string]interf
 		projectName = name
 	}
 
-	cmd := exec.CommandContext(ctx, "python", "scripts/team_manager.py", "--project", projectName, "health")
+	cmd := exec.CommandContext(ctx, "python", getTeamManagerPath(), "--project", projectName, "health")
 	pyStart := time.Now()
 	output, err := cmd.CombinedOutput()
 	metrics.RecordTeamToolPythonExec("health", time.Since(pyStart))
