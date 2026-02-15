@@ -337,6 +337,45 @@ func (s *MCPServer) handleAgentTeamMap(ctx context.Context, args map[string]inte
 	}, nil
 }
 
+// handleTeamSizeValidate validates team sizes meet 4-6 member requirement
+func (s *MCPServer) handleTeamSizeValidate(ctx context.Context, args map[string]interface{}) (*mcp.CallToolResult, error) {
+	projectName, ok := args["project_name"].(string)
+	if !ok || projectName == "" {
+		return &mcp.CallToolResult{
+			Content: []interface{}{mcp.TextContent{Type: "text", Text: "Error: project_name is required"}},
+			IsError: true,
+		}, nil
+	}
+
+	if err := validateProjectName(projectName); err != nil {
+		return &mcp.CallToolResult{
+			Content: []interface{}{mcp.TextContent{Type: "text", Text: err.Error()}},
+			IsError: true,
+		}, nil
+	}
+
+	cmdArgs := []string{"scripts/team_manager.py", "--project", projectName, "validate-size"}
+	if teamID, ok := args["team_id"].(float64); ok {
+		cmdArgs = append(cmdArgs, "--team", strconv.Itoa(int(teamID)))
+	}
+
+	cmd := exec.CommandContext(ctx, "python", cmdArgs...)
+	output, err := cmd.CombinedOutput()
+
+	resultText := string(output)
+	if err != nil {
+		// Non-zero exit indicates validation failure
+		return &mcp.CallToolResult{
+			Content: []interface{}{mcp.TextContent{Type: "text", Text: resultText}},
+			IsError: true,
+		}, nil
+	}
+
+	return &mcp.CallToolResult{
+		Content: []interface{}{mcp.TextContent{Type: "text", Text: resultText}},
+	}, nil
+}
+
 // Helper types and functions
 
 type TeamLayoutRules struct {
