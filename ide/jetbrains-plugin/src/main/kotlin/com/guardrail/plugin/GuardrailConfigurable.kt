@@ -9,11 +9,12 @@ import javax.swing.JCheckBox
 import javax.swing.JComboBox
 import javax.swing.JComponent
 import javax.swing.JPanel
+import javax.swing.JPasswordField
 
 class GuardrailConfigurable(private val project: Project) : Configurable {
     private var panel: JPanel? = null
     private val serverUrlField = JBTextField()
-    private val apiKeyField = JBTextField()
+    private val apiKeyField = JPasswordField()
     private val projectSlugField = JBTextField()
     private val enabledCheckBox = JCheckBox("Enable Guardrail")
     private val validateOnSaveCheckBox = JCheckBox("Validate on save")
