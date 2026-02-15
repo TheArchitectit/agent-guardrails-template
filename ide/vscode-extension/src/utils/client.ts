@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { ValidationRequest, ValidationResponse, GuardrailConfig } from '../types';
 
 export class GuardrailClient {
-    private config: GuardrailConfig;
+    private config!: GuardrailConfig;
     private outputChannel: vscode.OutputChannel;
 
     constructor(outputChannel: vscode.OutputChannel) {

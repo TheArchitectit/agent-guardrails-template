@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import { GuardrailClient } from './client';
-import { Violation } from '../../types';
+import { GuardrailClient } from '../utils/client';
+import { Violation } from '../types';
 
 export class GuardrailDiagnostics {
     private client: GuardrailClient;
