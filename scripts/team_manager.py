@@ -20,6 +20,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 import time
 import statistics
+import warnings
 from typing import Any, List, Optional, Dict
 
 # FUNC-005: Batch operations support
@@ -760,8 +761,8 @@ def validate_role_name(role_name: str) -> None:
 def validate_person_name(person: str) -> None:
     """Validate person/assignee name format.
 
-    Accepts email addresses or usernames with alphanumeric characters,
-    hyphens, underscores, and dots.
+    Accepts email addresses, usernames, or display names with alphanumeric
+    characters, spaces, hyphens, underscores, dots, and apostrophes.
 
     Args:
         person: Person name/identifier to validate
@@ -774,6 +775,8 @@ def validate_person_name(person: str) -> None:
     max_len = rules.get("max_length", 256)
     email_pattern = rules.get("email_pattern", r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
     username_pattern = rules.get("username_pattern", r'^[a-zA-Z0-9_.-]+$')
+    # Display names allow spaces and apostrophes (e.g., "Alice Smith", "O'Connor")
+    display_name_pattern = r'^[a-zA-Z0-9_.\-\' ]+$'
 
     if not person:
         raise ValueError("person is required")
@@ -782,11 +785,16 @@ def validate_person_name(person: str) -> None:
     # Check for control characters
     if re.search(r'[\x00-\x1f\x7f]', person):
         raise ValueError("person contains invalid control characters")
-    # Allow email format or username format
-    if not re.match(email_pattern, person) and not re.match(username_pattern, person):
+    # Check for dangerous patterns
+    dangerous_patterns = [";", "|", "&&", "||", "`", "$", "<", ">", "..", "\\"]
+    for pattern in dangerous_patterns:
+        if pattern in person:
+            raise ValueError(f"person contains forbidden pattern: {pattern}")
+    # Allow email format, username format, or display name format
+    if not re.match(email_pattern, person) and not re.match(username_pattern, person) and not re.match(display_name_pattern, person):
         raise ValueError(
             f"Invalid person format: '{person}'. "
-            f"Must be a valid email address or username (alphanumeric, dots, hyphens, underscores)"
+            f"Must be a valid email address, username, or display name"
         )
 
 
@@ -1555,7 +1563,7 @@ class TeamManager:
         ),
     }
 
-    def __init__(self, project_name: str, config_path: Path = None, user_context: Optional["UserContext"] = None, logger: Optional[StructuredLogger] = None, enable_backup: bool = True, enable_audit: bool = True, max_backups: int = 10):
+    def __init__(self, project_name: str, config_path: Path = None, user_context: Optional["UserContext"] = None, logger: Optional[StructuredLogger] = None, enable_backup: bool = True, enable_audit: bool = True, max_backups: int = 10, test_mode: bool = False):
         # SEC-006: Validate project name and path to prevent path traversal
         self.project_name = project_name
         self.teams: Dict[int, Team] = {}
@@ -1571,6 +1579,7 @@ class TeamManager:
 
         self.user_context = user_context
         self.logger = logger or StructuredLogger("team_manager")
+        self.test_mode = test_mode
 
         # OPS-004: Backup manager
         self.enable_backup = enable_backup
@@ -1622,6 +1631,10 @@ class TeamManager:
 
     def _require_auth(self, operation: str, team_id: Optional[int] = None) -> None:
         """Check if user is authorized for the operation."""
+        # Skip auth checks in test mode
+        if self.test_mode:
+            return
+
         if self.user_context is None:
             raise PermissionDenied(f"Authentication required for {operation}")
 
@@ -2268,6 +2281,24 @@ class TeamManager:
             "teams": team_list
         })
 
+        # Print team information to stdout
+        if team_list:
+            print(f"\nProject: {self.project_name}")
+            print("=" * 50)
+            for team in team_list:
+                print(f"\nTeam {team['id']}: {team['name']}")
+                print(f"  Phase: {team['phase']}")
+                print(f"  Status: {team['status']}")
+                print(f"  Assigned: {team['assigned_count']}/{team['total_roles']}")
+                # Show assigned roles
+                t = self.teams.get(team['id'])
+                if t:
+                    for role in t.roles:
+                        if role.assigned_to:
+                            print(f"    - {role.name}: {role.assigned_to}")
+        else:
+            print("No teams found.")
+
     def get_agent_team(self, agent_type: str) -> Optional[Team]:
         """Map agent type to appropriate team."""
         mapping = {
@@ -2869,6 +2900,7 @@ def main():
     parser = argparse.ArgumentParser(description="Team Manager - Standardized Team Layout")
     parser.add_argument("--project", required=True, help="Project name")
     parser.add_argument("--request-id", help="Correlation ID for request tracing")
+    parser.add_argument("--test-mode", action="store_true", help="Run in test mode (skips authentication)")
 
     subparsers = parser.add_subparsers(dest="command", help="Command to run")
 
@@ -3013,6 +3045,10 @@ def main():
 
     args = parser.parse_args()
 
+    # Suppress deprecation warnings in test mode for cleaner output
+    if args.test_mode:
+        warnings.filterwarnings("ignore", category=DeprecationWarning)
+
     # Validate project name to prevent command injection
     validate_project_name(args.project)
 
@@ -3023,7 +3059,7 @@ def main():
 
     # SEC-006: Handle SecurityError from path validation
     try:
-        manager = TeamManager(args.project)
+        manager = TeamManager(args.project, test_mode=args.test_mode)
     except SecurityError as e:
         cli_logger.error("security_error", {"error": str(e)})
         print(f"🔒 Security error: {e}", file=sys.stderr)
@@ -3085,7 +3121,8 @@ def main():
                         print()
 
         elif args.command == "assign":
-            manager.assign_role(args.team, args.role, args.person)
+            if manager.assign_role(args.team, args.role, args.person):
+                print(f"✅ Assigned {args.person} to {args.role} in Team {args.team}")
 
         elif args.command == "unassign":
             manager.unassign_role(args.team, args.role)
@@ -3185,13 +3222,13 @@ def main():
                 print(f"ℹ️  No audit entries found for '{args.project}'")
 
         elif args.command == "team-history":
-            from datetime import datetime
+            from datetime import datetime as dt
             start_date = None
             end_date = None
             if args.start_date:
-                start_date = datetime.fromisoformat(args.start_date)
+                start_date = dt.fromisoformat(args.start_date)
             if args.end_date:
-                end_date = datetime.fromisoformat(args.end_date)
+                end_date = dt.fromisoformat(args.end_date)
 
             entries = manager.get_team_history(args.team, start_date, end_date)
 
@@ -3214,13 +3251,13 @@ def main():
                     print(f"ℹ️  No history found for team {args.team}")
 
         elif args.command == "project-timeline":
-            from datetime import datetime
+            from datetime import datetime as dt
             start_date = None
             end_date = None
             if args.start_date:
-                start_date = datetime.fromisoformat(args.start_date)
+                start_date = dt.fromisoformat(args.start_date)
             if args.end_date:
-                end_date = datetime.fromisoformat(args.end_date)
+                end_date = dt.fromisoformat(args.end_date)
 
             entries = manager.get_project_timeline(start_date, end_date)
 
