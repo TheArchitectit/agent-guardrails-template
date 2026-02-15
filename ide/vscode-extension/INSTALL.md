@@ -96,3 +96,9 @@ Customize in Keyboard Shortcuts settings.
 - Ensure `guardrail.enabled` is true
 - Check `guardrail.projectSlug` is set correctly
 - Verify file is within project scope
+
+## Security Notes
+
+> **API Key Storage:** VS Code extension uses the SecretStorage API to securely store your API key. The key is encrypted at rest and never stored in plain text settings.
+>
+> **HTTPS Recommended:** For production use, ensure your MCP server uses HTTPS.
