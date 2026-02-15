@@ -40,10 +40,10 @@ flowchart TB
         AgentTools["Agent Tools"]
     end
 
-    subgraph Backend["Backend Layer"]
-        TeamMgr["Team Manager<br/>scripts/team_manager.py"]
-        RuleEngine["Rule Engine<br/>.guardrails/rules.json"]
-        AuditLog["Audit Logger"]
+    subgraph Backend["Backend Layer (Go)"]
+        TeamMgr["Team Manager<br/>mcp-server/internal/team/"]
+        RuleEngine["Rule Engine<br/>mcp-server/internal/rules/"]
+        AuditLog["Audit Logger<br/>mcp-server/internal/audit/"]
     end
 
     subgraph Storage["Storage Layer"]
@@ -76,13 +76,15 @@ flowchart TB
 
 The Agent Guardrails Template follows a layered architecture with clear separation of concerns:
 
+> **Go Implementation:** All backend services are implemented in Go (v2.6.0+). See `mcp-server/internal/`.
+
 | Layer | Responsibility | Components |
 |-------|---------------|------------|
 | Client | Interface with users | CLI, IDE, CI/CD |
 | MCP | Protocol handling | Server, routing, validation |
 | Tools | Business logic | Team, guardrail, agent operations |
-| Backend | Core services | Team manager, rules engine |
-| Storage | Persistence | JSON configs, logs |
+| Backend | Core services (Go) | Team manager, rules engine, audit logger |
+| Storage | Persistence | PostgreSQL, Redis, JSON configs |
 
 ---
 
@@ -561,10 +563,23 @@ flowchart TB
 
 ## Configuration Architecture
 
+> **Go Implementation:** All backend logic is implemented in Go. See `mcp-server/internal/` for package structure.
+> **Migration:** `team_manager.py` has been migrated to Go (v2.6.0). See [PYTHON_MIGRATION.md](PYTHON_MIGRATION.md).
+
 ### File Organization
 
 ```
 /mnt/ollama/git/agent-guardrails-template/
+├── mcp-server/
+│   ├── internal/                    # Go implementation
+│   │   ├── team/                    # Team management logic
+│   │   ├── rules/                   # Rule engine
+│   │   ├── audit/                   # Audit logging
+│   │   ├── database/                # Database operations
+│   │   ├── cache/                   # Redis caching
+│   │   ├── mcp/                     # MCP protocol
+│   │   └── web/                     # HTTP handlers
+│   └── cmd/server/                  # Main entry point
 ├── .teams/
 │   ├── {project-name}.json          # Team configurations
 │   └── backups/
@@ -579,11 +594,11 @@ flowchart TB
 │   ├── audit.log                    # Security audit logs
 │   └── config.json                  # Server configuration
 └── scripts/
-    ├── team_manager.py              # Core team logic
-    └── setup_agents.py              # Agent setup
+    └── setup_agents.py              # Agent setup (Python - legacy)
 ```
 
 ---
 
 **Last Updated:** 2026-02-15
-**Version:** 1.0
+**Version:** 2.6.0
+**Implementation:** Go (mcp-server/internal/)

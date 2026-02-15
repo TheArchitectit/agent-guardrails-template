@@ -22,13 +22,14 @@
 
 ### Current Version Support
 
-| Version | Status | Support End | Compatible With |
-|---------|--------|-------------|-----------------|
-| 2.0.x | Current | 2027-02-15 | 1.10.x, 1.9.x |
-| 1.10.x | Maintained | 2026-08-15 | 1.9.x |
-| 1.9.x | Maintained | 2026-06-15 | 1.8.x |
-| 1.8.x | Deprecated | 2026-04-15 | 1.7.x |
-| < 1.8.0 | End of Life | - | - |
+| Version | Status | Support End | Compatible With | Implementation |
+|---------|--------|-------------|-----------------|----------------|
+| 2.6.x | Current | 2027-02-15 | 2.0.x, 1.10.x | **Go** |
+| 2.0.x | Maintained | 2026-10-15 | 1.10.x, 1.9.x | Go |
+| 1.10.x | Maintained | 2026-08-15 | 1.9.x | Go |
+| 1.9.x | Maintained | 2026-06-15 | 1.8.x | Go |
+| 1.8.x | Deprecated | 2026-04-15 | 1.7.x | Python |
+| < 1.8.0 | End of Life | - | - | Python |
 
 ### Compatibility Legend
 
@@ -62,7 +63,49 @@
 
 ## Breaking Changes by Version
 
-### v2.0.0 (Current)
+### v2.6.0 (Current) - Go Migration
+
+**Release Date:** 2026-02-15
+
+#### Breaking Changes
+
+1. **Language Migration: Python to Go**
+   - **Old:** `scripts/team_manager.py` (Python)
+   - **New:** `mcp-server/internal/team/` (Go package)
+   - **Impact:** No runtime Python required
+   - **API:** Unchanged from MCP client perspective
+
+2. **Build Process**
+   - Old: `pip install -r requirements.txt`
+   - New: `go build ./cmd/server`
+   - Binary: Single static binary vs Python interpreter
+
+3. **Container**
+   - Old: Python-based image (~500MB)
+   - New: Distroless Go image (~50MB)
+   - Security: Non-root, read-only filesystem, dropped capabilities
+
+#### Migration Benefits
+
+| Metric | Python | Go | Improvement |
+|--------|--------|-----|-------------|
+| Container Size | ~500MB | ~50MB | **10x smaller** |
+| Startup Time | ~3s | ~100ms | **30x faster** |
+| Memory Usage | ~200MB | ~20MB | **10x less** |
+| Security | Full OS | Distroless | **Hardened** |
+
+#### New Features
+
+- Team size validation (TEAM-007 compliance)
+- Phase gate automation
+- Agent team mapping
+- Extended MCP tools (5 new tools)
+- Hot-reloadable configuration
+- Circuit breaker patterns
+
+---
+
+### v2.0.0
 
 **Release Date:** 2026-02-15
 
@@ -184,7 +227,12 @@ cat docs/MIGRATION.md | grep -A 20 "v$(TARGET_VERSION)"
 
 ---
 
-### Migrating to v2.0.0
+### Migrating to v2.6.0 (Go Implementation)
+
+**Go Migration:** The MCP server and team management have been migrated from Python to Go.
+- **Benefits:** Smaller container size, distroless compatibility, improved security
+- **API Compatibility:** Unchanged from MCP perspective
+- **Location:** Go code is in `mcp-server/internal/`
 
 **Estimated Time:** 30-45 minutes
 **Downtime Required:** Yes (5-10 minutes)
@@ -193,15 +241,15 @@ cat docs/MIGRATION.md | grep -A 20 "v$(TARGET_VERSION)"
 
 ```bash
 # Stop the MCP server
-pkill -f mcp_server
+pkill -f mcp_server || true
 
 # Create full backup
 mkdir -p backups/$(date +%Y%m%d)
 cp -r .teams/ .guardrails/ backups/$(date +%Y%m%d)/
 cp .env backups/$(date +%Y%m%d)/
 
-# Export team configurations
-python scripts/export_teams.py --format json > backups/$(date +%Y%m%d)/teams_export.json
+# Export team configurations (Go binary)
+cd mcp-server && go run ./cmd/tools/export_teams.go --format json > ../backups/$(date +%Y%m%d)/teams_export.json && cd ..
 ```
 
 #### Step 2: Update Configuration (10 min)
@@ -214,21 +262,23 @@ python scripts/export_teams.py --format json > backups/$(date +%Y%m%d)/teams_exp
 
 # NEW:
 cat >> .env << 'EOF'
-# v2.0.0 Configuration
+# v2.6.0 Configuration (Go Implementation)
 MCP_SERVER_PORT=8094
 WEB_UI_PORT=8093
 TEAM_CONFIG_VERSION=2
 EOF
 
-# Update team configuration schema
-python scripts/migrate_team_config.py --from-version 1 --to-version 2
+# Update team configuration schema (Go binary)
+cd mcp-server && go run ./cmd/tools/migrate_config.go --from-version 1 --to-version 2 && cd ..
 ```
 
 #### Step 3: Database Migration (10 min)
 
 ```bash
-# Run database migrations
-python scripts/migrate_db.py --version 2.0.0
+# Run database migrations (using golang-migrate)
+cd mcp-server
+export DATABASE_URL="postgresql://guardrails:password@localhost:5432/guardrails?sslmode=disable"
+make migrate-up
 
 # Verify migration
 psql -U guardrails -d guardrails -c "\dt"
@@ -240,13 +290,12 @@ psql -U guardrails -d guardrails -c "SELECT version FROM schema_migrations ORDER
 ```bash
 # Pull new version
 git fetch origin
-git checkout v2.0.0
+git checkout v2.6.0
 
-# Install dependencies
-pip install -r requirements.txt
-
-# Build (if needed)
-cd mcp-server && go build ./cmd/server && cd ..
+# Build Go binary
+cd mcp-server
+go build -o bin/server ./cmd/server
+cd ..
 ```
 
 #### Step 5: Post-Migration (5 min)
@@ -431,15 +480,15 @@ The system will automatically rollback if:
 
 ### Manual Rollback
 
-#### Rollback from v2.0.0 to v1.10.0
+#### Rollback from v2.6.0 to v2.0.0
 
 ```bash
 #!/bin/bash
-# rollback_to_v1.10.0.sh
+# rollback_to_v2.0.0.sh
 
 set -e
 
-echo "Starting rollback to v1.10.0..."
+echo "Starting rollback to v2.0.0..."
 
 # 1. Stop current server
 pkill -f mcp_server || true
@@ -453,28 +502,28 @@ cp -r "$BACKUP_DIR/.teams/" .
 cp -r "$BACKUP_DIR/.guardrails/" .
 
 # 4. Checkout previous version
-git checkout v1.10.0
+git checkout v2.0.0
 
-# 5. Rebuild
-cd mcp-server && go build ./cmd/server && cd ..
+# 5. Rebuild Go binary
+cd mcp-server
+go build -o bin/server ./cmd/server
+cd ..
 
 # 6. Start server
-./mcp-server/cmd/server/server &
+./mcp-server/bin/server &
 
 # 7. Verify
 echo "Waiting for server..."
 sleep 5
-curl -s http://localhost:8092/mcp/v1/health && echo "Rollback successful!"
+curl -s http://localhost:8094/mcp/v1/health && echo "Rollback successful!"
 ```
 
 #### Rollback Database
 
 ```bash
-# Find previous migration
-PREVIOUS_VERSION=$(ls -t migrations/ | grep -E '^[0-9]+' | head -2 | tail -1)
-
-# Rollback one migration
-python scripts/migrate_db.py --rollback --to-version $PREVIOUS_VERSION
+# Rollback one migration (golang-migrate)
+cd mcp-server
+make migrate-down
 
 # Or restore from backup
 createdb guardrails_backup

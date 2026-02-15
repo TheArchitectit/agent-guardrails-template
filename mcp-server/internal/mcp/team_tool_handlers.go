@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"runtime"
@@ -1047,20 +1046,40 @@ func (s *MCPServer) handleTeamSizeValidate(ctx context.Context, args map[string]
 		}, nil
 	}
 
-	cmdArgs := []string{getTeamManagerPath(), "--project", projectName, "--test-mode", "validate-size"}
-	if teamID, ok := args["team_id"].(float64); ok {
-		cmdArgs = append(cmdArgs, "--team", strconv.Itoa(int(teamID)))
+	// Use Go implementation
+	mgr, err := team.NewManager(projectName)
+	if err != nil {
+		metrics.RecordTeamToolError("team_size_validate", "go_error")
+		metrics.RecordTeamToolCall("team_size_validate", false)
+		return &mcp.CallToolResult{
+			Content: []interface{}{mcp.TextContent{Type: "text", Text: fmt.Sprintf("Error creating manager: %v", err)}},
+			IsError: true,
+		}, nil
 	}
 
-	cmd := exec.CommandContext(ctx, "python", cmdArgs...)
-	cmd.Dir = getRepoRoot()
-	pyStart := time.Now()
-	output, err := cmd.CombinedOutput()
-	metrics.RecordTeamToolPythonExec("validate-size", time.Since(pyStart))
+	goStart := time.Now()
 
-	resultText := string(output)
-	if err != nil {
-		// Non-zero exit indicates validation failure
+	// Get all teams
+	teams := mgr.GetAllTeams()
+
+	// Validate team sizes
+	var violations []string
+	for _, t := range teams {
+		assignedCount := 0
+		for _, role := range t.Roles {
+			if role.AssignedTo != nil && *role.AssignedTo != "" {
+				assignedCount++
+			}
+		}
+		if assignedCount < 4 || assignedCount > 6 {
+			violations = append(violations, fmt.Sprintf("Team %d (%s): %d members (requires 4-6)", t.ID, t.Name, assignedCount))
+		}
+	}
+
+	metrics.RecordTeamToolDuration("team_size_validate", time.Since(goStart))
+
+	if len(violations) > 0 {
+		resultText := fmt.Sprintf("❌ Team size validation failed:\n%s", strings.Join(violations, "\n"))
 		metrics.RecordTeamToolCall("team_size_validate", false)
 		return &mcp.CallToolResult{
 			Content: []interface{}{mcp.TextContent{Type: "text", Text: resultText}},
@@ -1068,6 +1087,7 @@ func (s *MCPServer) handleTeamSizeValidate(ctx context.Context, args map[string]
 		}, nil
 	}
 
+	resultText := fmt.Sprintf("✅ All teams in project '%s' have valid sizes (4-6 members)", projectName)
 	metrics.RecordTeamToolCall("team_size_validate", true)
 	return &mcp.CallToolResult{
 		Content: []interface{}{mcp.TextContent{Type: "text", Text: resultText}},
