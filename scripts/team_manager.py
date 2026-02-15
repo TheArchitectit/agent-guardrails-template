@@ -1739,7 +1739,7 @@ def main():
         manager.initialize_project()
         print(f"\nTeams configuration saved to: {manager.config_path}")
 
-    elif args.command in ["list", "assign", "unassign", "start", "complete", "status", "validate-size", "delete-team", "delete-project", "list-backups", "restore", "audit"]:
+    elif args.command in ["list", "assign", "unassign", "start", "complete", "status", "validate-size", "delete-team", "delete-project", "list-backups", "restore", "audit", "import-csv", "export-csv", "import-json", "export-json"]:
         if args.command in ["delete-team", "delete-project"]:
             # For delete commands, project may not exist yet (delete-project)
             if args.command == "delete-team" and not manager.load():
@@ -1852,6 +1852,81 @@ def main():
                 print(f"\nTotal entries: {len(entries)}")
             else:
                 print(f"ℹ️  No audit entries found for '{args.project}'")
+
+        # FUNC-005: Batch operation handlers
+        elif args.command == "import-csv":
+            result = manager.import_csv_file(Path(args.file), dry_run=args.dry_run)
+            if result["dry_run"]:
+                print(f"🔍 Dry run results for {args.file}:")
+            else:
+                print(f"📥 Imported from {args.file}:")
+            print(f"   Success: {result['success']}")
+            print(f"   Imported: {result['imported']}")
+            print(f"   Skipped: {result['skipped']}")
+            if result["errors"]:
+                print(f"   Errors: {len(result['errors'])}")
+                for error in result["errors"][:5]:  # Show first 5 errors
+                    print(f"      Row {error.get('row', 'N/A')}: {error.get('error', 'Unknown error')}")
+                if len(result["errors"]) > 5:
+                    print(f"      ... and {len(result['errors']) - 5} more errors")
+            if not result["success"] and not result["dry_run"]:
+                sys.exit(1)
+
+        elif args.command == "export-csv":
+            result = manager.export_csv_file(Path(args.file))
+            if result["success"]:
+                print(f"✅ Exported {result['exported']} roles to {result['file_path']}")
+            else:
+                print(f"❌ Export failed: {result['errors']}")
+                sys.exit(1)
+
+        elif args.command == "import-json":
+            result = manager.import_json_file(Path(args.file), dry_run=args.dry_run)
+            if result["dry_run"]:
+                print(f"🔍 Dry run results for {args.file}:")
+            else:
+                print(f"📥 Imported from {args.file}:")
+            print(f"   Success: {result['success']}")
+            print(f"   Imported: {result['imported']}")
+            print(f"   Skipped: {result['skipped']}")
+            if result["errors"]:
+                print(f"   Errors: {len(result['errors'])}")
+                for error in result["errors"][:5]:
+                    idx = error.get('index', 'N/A')
+                    err_msg = error.get('error', 'Unknown error')
+                    print(f"      Entry {idx}: {err_msg}")
+                if len(result["errors"]) > 5:
+                    print(f"      ... and {len(result['errors']) - 5} more errors")
+            if not result["success"] and not result["dry_run"]:
+                sys.exit(1)
+
+        elif args.command == "export-json":
+            pretty = not args.compact
+            result = manager.export_json_file(Path(args.file), pretty=pretty)
+            if result["success"]:
+                print(f"✅ Exported {result['team_count']} teams to {result['file_path']}")
+            else:
+                print(f"❌ Export failed: {result['errors']}")
+                sys.exit(1)
+
+    elif args.command in ["template-csv", "template-json"]:
+        # Template commands don't require project to exist
+        if args.command == "template-csv":
+            result = create_csv_template(Path(args.file))
+            if result["success"]:
+                print(f"✅ Created CSV template: {result['file_path']}")
+                print("   Edit this file and run: team_manager.py --project <name> import-csv --file " + args.file)
+            else:
+                print(f"❌ Failed to create template: {result['errors']}")
+                sys.exit(1)
+        elif args.command == "template-json":
+            result = create_json_template(Path(args.file))
+            if result["success"]:
+                print(f"✅ Created JSON template: {result['file_path']}")
+                print("   Edit this file and run: team_manager.py --project <name> import-json --file " + args.file)
+            else:
+                print(f"❌ Failed to create template: {result['errors']}")
+                sys.exit(1)
 
     elif args.command == "health":
         # OPS-003: Health check - doesn't require project to exist
