@@ -51,6 +51,14 @@
       "check": "Active teams should have roles assigned",
       "command": "python scripts/team_manager.py --project {project_name} list",
       "message": "Assign people to team roles before starting work"
+    },
+    {
+      "id": "TEAM-007",
+      "name": "Team Size Compliance",
+      "severity": "error",
+      "check": "All teams must have 4-6 members",
+      "command": "python scripts/team_manager.py --project {project_name} validate-size",
+      "message": "Teams must have between 4 and 6 members (inclusive). Current team size outside valid range."
     }
   ],
   "phase_gates": {

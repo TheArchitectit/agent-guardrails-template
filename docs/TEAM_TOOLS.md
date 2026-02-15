@@ -298,6 +298,49 @@ Get the team assignment for an agent type.
 
 ---
 
+### guardrail_team_size_validate
+
+Validate team sizes meet the 4-6 member requirement.
+
+**Purpose:** Ensures all teams have between 4 and 6 members (inclusive) per TEAM-007 compliance rule.
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `project_name` | string | Yes | Name of the project |
+| `team_id` | number | No | Optional: Specific team ID to validate |
+
+**Example:**
+
+```json
+{
+  "method": "tools/call",
+  "params": {
+    "name": "guardrail_team_size_validate",
+    "arguments": {
+      "project_name": "my-project"
+    }
+  }
+}
+```
+
+**Response:**
+
+```
+✅ All 12 teams have valid size (4-6 members)
+```
+
+Or if violations found:
+
+```
+❌ Team size violations found:
+   Team 3 (GRC) has 3 members, minimum is 4
+   Team 7 (Core Feature Squad) has 8 members, maximum is 6
+```
+
+---
+
 ## Phase Gates
 
 Phase gates ensure proper completion and approval before progressing to the next phase of development.
@@ -394,6 +437,35 @@ If validation fails, tools return an error response:
   }]
 }
 ```
+
+### Team Size Compliance (TEAM-007)
+
+All teams **MUST** comply with the 4-6 member size requirement:
+
+- **Minimum:** 4 members per team
+- **Maximum:** 6 members per team
+- **Rule ID:** TEAM-007
+- **Severity:** Error
+
+**Validation:**
+Use `guardrail_team_size_validate` to check compliance:
+
+```json
+{
+  "method": "tools/call",
+  "params": {
+    "name": "guardrail_team_size_validate",
+    "arguments": {
+      "project_name": "my-project"
+    }
+  }
+}
+```
+
+**Why This Matters:**
+- Teams with fewer than 4 members lack adequate role coverage
+- Teams with more than 6 members suffer from coordination overhead
+- This rule applies to human teams, AI agent teams, and mixed teams
 
 ### Implementation Details
 

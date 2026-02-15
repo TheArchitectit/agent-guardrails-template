@@ -465,6 +465,49 @@ class TeamManager:
         team_id = mapping.get(agent_type.lower())
         return self.teams.get(team_id) if team_id else None
 
+    def validate_team_size(self, team_id: Optional[int] = None) -> dict:
+        """Validate team sizes meet 4-6 member requirement.
+
+        Returns dict with validation results.
+        """
+        MIN_TEAM_SIZE = 4
+        MAX_TEAM_SIZE = 6
+
+        results = {
+            "valid": True,
+            "violations": [],
+            "teams_checked": 0
+        }
+
+        teams_to_check = [self.teams[team_id]] if team_id else self.teams.values()
+
+        for team in teams_to_check:
+            results["teams_checked"] += 1
+            assigned_count = sum(1 for role in team.roles if role.assigned_to)
+
+            if assigned_count < MIN_TEAM_SIZE:
+                results["valid"] = False
+                results["violations"].append({
+                    "team_id": team.id,
+                    "team_name": team.name,
+                    "issue": "undersized",
+                    "assigned": assigned_count,
+                    "required": MIN_TEAM_SIZE,
+                    "message": f"Team {team.id} ({team.name}) has {assigned_count} members, minimum is {MIN_TEAM_SIZE}"
+                })
+            elif assigned_count > MAX_TEAM_SIZE:
+                results["valid"] = False
+                results["violations"].append({
+                    "team_id": team.id,
+                    "team_name": team.name,
+                    "issue": "oversized",
+                    "assigned": assigned_count,
+                    "maximum": MAX_TEAM_SIZE,
+                    "message": f"Team {team.id} ({team.name}) has {assigned_count} members, maximum is {MAX_TEAM_SIZE}"
+                })
+
+        return results
+
 
 def main():
     parser = argparse.ArgumentParser(description="Team Manager - Standardized Team Layout")
@@ -497,6 +540,10 @@ def main():
     status_parser = subparsers.add_parser("status", help="Show phase status")
     status_parser.add_argument("--phase", help="Phase name")
 
+    # Validate-size command
+    validate_size_parser = subparsers.add_parser("validate-size", help="Validate team sizes (4-6 members)")
+    validate_size_parser.add_argument("--team", type=int, help="Specific team ID to validate (optional)")
+
     args = parser.parse_args()
 
     # Validate project name to prevent command injection
@@ -508,7 +555,7 @@ def main():
         manager.initialize_project()
         print(f"\nTeams configuration saved to: {manager.config_path}")
 
-    elif args.command in ["list", "assign", "start", "complete", "status"]:
+    elif args.command in ["list", "assign", "start", "complete", "status", "validate-size"]:
         if not manager.load():
             print(f"❌ Project '{args.project}' not found. Run: team_manager.py --project {args.project} init")
             sys.exit(1)
@@ -538,6 +585,17 @@ def main():
                 for phase in sorted(phases, key=lambda p: p.split(":")[0]):
                     status = manager.get_phase_status(phase)
                     print(f"\n{status['phase']}: {status['progress_pct']:.0f}% complete")
+
+        elif args.command == "validate-size":
+            results = manager.validate_team_size(args.team)
+            if results["valid"]:
+                print(f"✅ All {results['teams_checked']} teams have valid size (4-6 members)")
+                sys.exit(0)
+            else:
+                print(f"❌ Team size violations found:")
+                for violation in results["violations"]:
+                    print(f"   {violation['message']}")
+                sys.exit(1)
 
     else:
         parser.print_help()
