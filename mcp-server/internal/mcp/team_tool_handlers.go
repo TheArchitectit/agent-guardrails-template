@@ -127,6 +127,15 @@ func (s *MCPServer) handleTeamAssign(ctx context.Context, args map[string]interf
 		}, nil
 	}
 
+	// Validate team_id range (1-12)
+	teamIDInt := int(teamID)
+	if teamIDInt < 1 || teamIDInt > 12 {
+		return &mcp.CallToolResult{
+			Content: []interface{}{mcp.TextContent{Type: "text", Text: "Error: team_id must be between 1 and 12"}},
+			IsError: true,
+		}, nil
+	}
+
 	roleName, ok := args["role_name"].(string)
 	if !ok || roleName == "" {
 		return &mcp.CallToolResult{
@@ -144,7 +153,7 @@ func (s *MCPServer) handleTeamAssign(ctx context.Context, args map[string]interf
 	}
 
 	cmd := exec.CommandContext(ctx, "python", "scripts/team_manager.py", "--project", projectName, "assign",
-		"--team", strconv.Itoa(int(teamID)),
+		"--team", strconv.Itoa(teamIDInt),
 		"--role", roleName,
 		"--person", person)
 	output, err := cmd.CombinedOutput()
