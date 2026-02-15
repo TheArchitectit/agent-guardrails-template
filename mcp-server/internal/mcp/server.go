@@ -682,29 +682,27 @@ func (s *MCPServer) registerTools() {
 						},
 					},
 				},
-			},
-			{
-				Name:        "guardrail_team_unassign",
-				Description: "Remove a person from a role in a team",
-				InputSchema: mcp.ToolInputSchema{
-					Type: "object",
-					Properties: mcp.ToolInputSchemaProperties{
-						"project_name": map[string]interface{}{
-							"type":        "string",
-							"description": "Name of the project",
-						},
-						"team_id": map[string]interface{}{
-							"type":        "number",
-							"description": "Team ID (1-12)",
-						},
-						"role_name": map[string]interface{}{
-							"type":        "string",
-							"description": "Name of the role to unassign",
+				{
+					Name:        "guardrail_team_unassign",
+					Description: "Remove a person from a role in a team",
+					InputSchema: mcp.ToolInputSchema{
+						Type: "object",
+						Properties: mcp.ToolInputSchemaProperties{
+							"project_name": map[string]interface{}{
+								"type":        "string",
+								"description": "Name of the project",
+							},
+							"team_id": map[string]interface{}{
+								"type":        "number",
+								"description": "Team ID (1-12)",
+							},
+							"role_name": map[string]interface{}{
+								"type":        "string",
+								"description": "Name of the role to unassign",
+							},
 						},
 					},
 				},
-			},
-			{
 				{
 					Name:        "guardrail_team_status",
 					Description: "Get phase or project status",
@@ -750,66 +748,67 @@ func (s *MCPServer) registerTools() {
 						Type: "object",
 						Properties: mcp.ToolInputSchemaProperties{
 							"agent_type": map[string]interface{}{
-			},
-			{
+								"type":        "string",
+								"description": "Type of agent (planner, architect, infrastructure, platform, backend, frontend, security, qa, sre, ops)",
+							},
 						},
 					},
 				},
-			},
-			{
-				Name:        "guardrail_team_size_validate",
-				Description: "Validate team sizes meet 4-6 member requirement",
-				InputSchema: mcp.ToolInputSchema{
-					Type: "object",
-					Properties: mcp.ToolInputSchemaProperties{
-						"project_name": map[string]interface{}{
-							"type":        "string",
-							"description": "Name of the project",
-						},
-						"team_id": map[string]interface{}{
-							"type":        "number",
-							"description": "Optional: Specific team ID to validate",
-						},
+				{
+					Name:        "guardrail_team_size_validate",
+					Description: "Validate team sizes meet 4-6 member requirement",
+					InputSchema: mcp.ToolInputSchema{
+						Type: "object",
+						Properties: mcp.ToolInputSchemaProperties{
+							"project_name": map[string]interface{}{
+								"type":        "string",
+								"description": "Name of the project",
+							},
+							"team_id": map[string]interface{}{
+								"type":        "number",
+								"description": "Optional: Specific team ID to validate",
+							},
 						},
 					},
 				},
+		{
+			Name:        "guardrail_team_delete",
+			Description: "Delete a specific team from a project. Requires confirmation.",
+			InputSchema: mcp.ToolInputSchema{
+				Type: "object",
+				Properties: mcp.ToolInputSchemaProperties{
+					"project_name": map[string]interface{}{
+						"type":        "string",
+						"description": "Name of the project",
+					},
+					"team_id": map[string]interface{}{
+						"type":        "number",
+						"description": "Team ID to delete (1-12)",
+					},
+					"confirmed": map[string]interface{}{
+						"type":        "boolean",
+						"description": "Set to true to confirm deletion. First call without this to see confirmation prompt.",
+					},
+				},
+			},
 		},
-				Name:        "guardrail_team_delete",
-				Description: "Delete a specific team from a project. Requires confirmation.",
-				InputSchema: mcp.ToolInputSchema{
-					Type: "object",
-					Properties: mcp.ToolInputSchemaProperties{
-						"project_name": map[string]interface{}{
-							"type":        "string",
-							"description": "Name of the project",
-						},
-						"team_id": map[string]interface{}{
-							"type":        "number",
-							"description": "Team ID to delete (1-12)",
-						},
-						"confirmed": map[string]interface{}{
-							"type":        "boolean",
-							"description": "Set to true to confirm deletion. First call without this to see confirmation prompt.",
-						},
+		{
+			Name:        "guardrail_project_delete",
+			Description: "Delete an entire project and all its teams. Requires confirmation.",
+			InputSchema: mcp.ToolInputSchema{
+				Type: "object",
+				Properties: mcp.ToolInputSchemaProperties{
+					"project_name": map[string]interface{}{
+						"type":        "string",
+						"description": "Name of the project to delete",
+					},
+					"confirmed": map[string]interface{}{
+						"type":        "boolean",
+						"description": "Set to true to confirm deletion. First call without this to see confirmation prompt.",
 					},
 				},
 			},
-			{
-				Name:        "guardrail_project_delete",
-				Description: "Delete an entire project and all its teams. Requires confirmation.",
-				InputSchema: mcp.ToolInputSchema{
-					Type: "object",
-					Properties: mcp.ToolInputSchemaProperties{
-						"project_name": map[string]interface{}{
-							"type":        "string",
-							"description": "Name of the project to delete",
-						},
-						"confirmed": map[string]interface{}{
-							"type":        "boolean",
-							"description": "Set to true to confirm deletion. First call without this to see confirmation prompt.",
-						},
-					},
-				},
+		},
 			},
 		}, nil
 	})
