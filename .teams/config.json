@@ -7,6 +7,9 @@
   },
   "security": {
     "path_traversal_protection": true,
-    "encryption_enabled": false
+    "encryption_at_rest": {
+      "enabled": false,
+      "requires_env_key": "TEAM_ENCRYPTION_KEY"
+    }
   }
 }
