@@ -116,7 +116,7 @@ func validateRoleName(name string) error {
 }
 
 // validatePersonName validates person/assignee name format (SEC-003)
-// Accepts email addresses or usernames with alphanumeric, dots, hyphens, underscores
+// Accepts email addresses, usernames, or display names with alphanumeric, spaces, dots, hyphens, underscores, apostrophes
 func validatePersonName(name string) error {
 	if name == "" {
 		return fmt.Errorf("person is required")
@@ -137,9 +137,10 @@ func validatePersonName(name string) error {
 			return fmt.Errorf("person contains forbidden pattern: %s", pattern)
 		}
 	}
-	// Validate format: must be email or username (alphanumeric + dots + hyphens + underscores)
+	// Validate format: email, username, or display name
 	// Email pattern: user@domain.com
 	// Username pattern: alphanumeric + dots + hyphens + underscores
+	// Display name: alphanumeric + spaces + dots + hyphens + underscores + apostrophes
 	isEmail := false
 	if strings.Contains(name, "@") {
 		parts := strings.Split(name, "@")
@@ -152,11 +153,12 @@ func validatePersonName(name string) error {
 		}
 	}
 	if !isEmail {
-		// Must be username format - alphanumeric, dots, hyphens, underscores only
+		// Must be username or display name format
+		// Allow alphanumeric, spaces, dots, hyphens, underscores, apostrophes (for names like O'Connor)
 		for _, r := range name {
 			if !((r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') ||
-				r == '.' || r == '-' || r == '_') {
-				return fmt.Errorf("person must be a valid email address or username (alphanumeric, dots, hyphens, underscores only)")
+				r == ' ' || r == '.' || r == '-' || r == '_' || r == '\'') {
+				return fmt.Errorf("person contains invalid characters")
 			}
 		}
 	}
