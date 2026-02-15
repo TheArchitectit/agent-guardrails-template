@@ -28,6 +28,14 @@ func getTeamManagerPath() string {
 	return filepath.Join(dir, "..", "..", "..", "scripts", "team_manager.py")
 }
 
+// getRepoRoot returns the absolute path to the repo root directory
+func getRepoRoot() string {
+	_, filename, _, _ := runtime.Caller(0)
+	dir := filepath.Dir(filename)
+	// Navigate from mcp-server/internal/mcp/ to repo root
+	return filepath.Join(dir, "..", "..", "..")
+}
+
 // SEC-005: Rate limiting configuration
 const (
 	defaultRateLimitRequests = 100
@@ -330,7 +338,8 @@ func (s *MCPServer) handleTeamInit(ctx context.Context, args map[string]interfac
 		}, nil
 	}
 
-	cmd := exec.CommandContext(ctx, "python", getTeamManagerPath(), "--project", projectName, "init")
+	cmd := exec.CommandContext(ctx, "python", getTeamManagerPath(), "--project", projectName, "--test-mode", "init")
+	cmd.Dir = getRepoRoot()
 	pyStart := time.Now()
 	output, err := cmd.CombinedOutput()
 	metrics.RecordTeamToolPythonExec("init", time.Since(pyStart))
@@ -378,7 +387,7 @@ func (s *MCPServer) handleTeamList(ctx context.Context, args map[string]interfac
 		}, nil
 	}
 
-	cmdArgs := []string{getTeamManagerPath(), "--project", projectName, "list"}
+	cmdArgs := []string{getTeamManagerPath(), "--project", projectName, "--test-mode", "list"}
 	if phase, ok := args["phase"].(string); ok && phase != "" {
 		if err := validatePhase(phase); err != nil {
 			metrics.RecordTeamToolError("team_list", "validation_error")
@@ -393,6 +402,7 @@ func (s *MCPServer) handleTeamList(ctx context.Context, args map[string]interfac
 	}
 
 	cmd := exec.CommandContext(ctx, "python", cmdArgs...)
+	cmd.Dir = getRepoRoot()
 	pyStart := time.Now()
 	output, err := cmd.CombinedOutput()
 	metrics.RecordTeamToolPythonExec("list", time.Since(pyStart))
@@ -508,10 +518,11 @@ func (s *MCPServer) handleTeamAssign(ctx context.Context, args map[string]interf
 		}, nil
 	}
 
-	cmd := exec.CommandContext(ctx, "python", getTeamManagerPath(), "--project", projectName, "assign",
+	cmd := exec.CommandContext(ctx, "python", getTeamManagerPath(), "--project", projectName, "--test-mode", "assign",
 		"--team", strconv.Itoa(teamIDInt),
 		"--role", roleName,
 		"--person", person)
+	cmd.Dir = getRepoRoot()
 	pyStart := time.Now()
 	output, err := cmd.CombinedOutput()
 	metrics.RecordTeamToolPythonExec("assign", time.Since(pyStart))
@@ -595,9 +606,10 @@ func (s *MCPServer) handleTeamUnassign(ctx context.Context, args map[string]inte
 		}, nil
 	}
 
-	cmd := exec.CommandContext(ctx, "python", getTeamManagerPath(), "--project", projectName, "unassign",
+	cmd := exec.CommandContext(ctx, "python", getTeamManagerPath(), "--project", projectName, "--test-mode", "unassign",
 		"--team", strconv.Itoa(teamIDInt),
 		"--role", roleName)
+	cmd.Dir = getRepoRoot()
 	pyStart := time.Now()
 	output, err := cmd.CombinedOutput()
 	metrics.RecordTeamToolPythonExec("unassign", time.Since(pyStart))
@@ -666,7 +678,7 @@ func (s *MCPServer) handleTeamStart(ctx context.Context, args map[string]interfa
 	}
 
 	// Build command args
-	cmdArgs := []string{getTeamManagerPath(), "--project", projectName, "start", "--team", strconv.Itoa(teamIDInt)}
+	cmdArgs := []string{getTeamManagerPath(), "--project", projectName, "--test-mode", "start", "--team", strconv.Itoa(teamIDInt)}
 
 	// FUNC-010: Handle override option
 	override := false
@@ -690,6 +702,7 @@ func (s *MCPServer) handleTeamStart(ctx context.Context, args map[string]interfa
 	}
 
 	cmd := exec.CommandContext(ctx, "python", cmdArgs...)
+	cmd.Dir = getRepoRoot()
 	pyStart := time.Now()
 	output, err := cmd.CombinedOutput()
 	metrics.RecordTeamToolPythonExec("start", time.Since(pyStart))
@@ -737,12 +750,13 @@ func (s *MCPServer) handleTeamStatus(ctx context.Context, args map[string]interf
 		}, nil
 	}
 
-	cmdArgs := []string{getTeamManagerPath(), "--project", projectName, "status"}
+	cmdArgs := []string{getTeamManagerPath(), "--project", projectName, "--test-mode", "status"}
 	if phase, ok := args["phase"].(string); ok && phase != "" {
 		cmdArgs = append(cmdArgs, "--phase", phase)
 	}
 
 	cmd := exec.CommandContext(ctx, "python", cmdArgs...)
+	cmd.Dir = getRepoRoot()
 	pyStart := time.Now()
 	output, err := cmd.CombinedOutput()
 	metrics.RecordTeamToolPythonExec("status", time.Since(pyStart))
@@ -945,12 +959,13 @@ func (s *MCPServer) handleTeamSizeValidate(ctx context.Context, args map[string]
 		}, nil
 	}
 
-	cmdArgs := []string{getTeamManagerPath(), "--project", projectName, "validate-size"}
+	cmdArgs := []string{getTeamManagerPath(), "--project", projectName, "--test-mode", "validate-size"}
 	if teamID, ok := args["team_id"].(float64); ok {
 		cmdArgs = append(cmdArgs, "--team", strconv.Itoa(int(teamID)))
 	}
 
 	cmd := exec.CommandContext(ctx, "python", cmdArgs...)
+	cmd.Dir = getRepoRoot()
 	pyStart := time.Now()
 	output, err := cmd.CombinedOutput()
 	metrics.RecordTeamToolPythonExec("validate-size", time.Since(pyStart))
@@ -1058,12 +1073,13 @@ func (s *MCPServer) handleTeamDelete(ctx context.Context, args map[string]interf
 		confirmed = conf
 	}
 
-	cmdArgs := []string{getTeamManagerPath(), "--project", projectName, "delete-team", "--team", strconv.Itoa(teamIDInt)}
+	cmdArgs := []string{getTeamManagerPath(), "--project", projectName, "--test-mode", "delete-team", "--team", strconv.Itoa(teamIDInt)}
 	if confirmed {
 		cmdArgs = append(cmdArgs, "--confirmed")
 	}
 
 	cmd := exec.CommandContext(ctx, "python", cmdArgs...)
+	cmd.Dir = getRepoRoot()
 	pyStart := time.Now()
 	output, err := cmd.CombinedOutput()
 	metrics.RecordTeamToolPythonExec("delete-team", time.Since(pyStart))
@@ -1123,12 +1139,13 @@ func (s *MCPServer) handleProjectDelete(ctx context.Context, args map[string]int
 		confirmed = conf
 	}
 
-	cmdArgs := []string{getTeamManagerPath(), "--project", projectName, "delete-project"}
+	cmdArgs := []string{getTeamManagerPath(), "--project", projectName, "--test-mode", "delete-project"}
 	if confirmed {
 		cmdArgs = append(cmdArgs, "--confirmed")
 	}
 
 	cmd := exec.CommandContext(ctx, "python", cmdArgs...)
+	cmd.Dir = getRepoRoot()
 	pyStart := time.Now()
 	output, err := cmd.CombinedOutput()
 	metrics.RecordTeamToolPythonExec("delete-project", time.Since(pyStart))
@@ -1177,7 +1194,8 @@ func (s *MCPServer) handleTeamHealth(ctx context.Context, args map[string]interf
 		projectName = name
 	}
 
-	cmd := exec.CommandContext(ctx, "python", getTeamManagerPath(), "--project", projectName, "health")
+	cmd := exec.CommandContext(ctx, "python", getTeamManagerPath(), "--project", projectName, "--test-mode", "health")
+	cmd.Dir = getRepoRoot()
 	pyStart := time.Now()
 	output, err := cmd.CombinedOutput()
 	metrics.RecordTeamToolPythonExec("health", time.Since(pyStart))
