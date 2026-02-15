@@ -164,6 +164,40 @@ Assign a person to a role in a team.
 
 ---
 
+### guardrail_team_unassign
+
+Remove a person from a role in a team.
+
+**Purpose:** Unassign team members from specific roles, enabling role reassignment and team restructuring.
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `project_name` | string | Yes | Name of the project |
+| `team_id` | number | Yes | Team ID (1-12) |
+| `role_name` | string | Yes | Name of the role to unassign |
+
+**Example:**
+
+```json
+{
+  "method": "tools/call",
+  "params": {
+    "name": "guardrail_team_unassign",
+    "arguments": {
+      "project_name": "my-project",
+      "team_id": 7,
+      "role_name": "Technical Lead"
+    }
+  }
+}
+```
+
+**Response:** Confirmation of role unassignment.
+
+---
+
 ### guardrail_team_status
 
 Get phase or project status.
