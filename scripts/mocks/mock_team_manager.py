@@ -302,6 +302,7 @@ class MockTeamManager:
         self._track_call("initialize_project", (), {})
         self._require_auth("initialize project")
         self.teams = {team_id: deepcopy(team) for team_id, team in self.STANDARD_TEAMS.items()}
+        self.save()
         self.logger.info("project_initialized", {"project": self.project_name, "teams": len(self.teams)})
         return True
 
@@ -316,7 +317,10 @@ class MockTeamManager:
             data = self.fs.read_json(config_path)
             self.teams = {}
             for team_data in data.get("teams", []):
-                team = MockTeam(**{k: v for k, v in team_data.items() if k != 'roles'})
+                # Filter out roles and provide empty list initially
+                team_kwargs = {k: v for k, v in team_data.items() if k != 'roles'}
+                team_kwargs['roles'] = []  # Will be populated next
+                team = MockTeam(**team_kwargs)
                 team.roles = [MockRole(**r) for r in team_data.get("roles", [])]
                 self.teams[team.id] = team
             return True
@@ -593,3 +597,24 @@ class MockTeamManager:
                 for tid, t in self.teams.items()
             }
         }
+
+    # FUNC-005: Batch operation wrappers
+    def import_csv_file(self, csv_path: Path, dry_run: bool = False) -> Dict[str, Any]:
+        """Import role assignments from CSV file."""
+        from ..batch_operations import import_csv
+        return import_csv(self, csv_path, dry_run)
+
+    def export_csv_file(self, csv_path: Path) -> Dict[str, Any]:
+        """Export role assignments to CSV file."""
+        from ..batch_operations import export_csv
+        return export_csv(self, csv_path)
+
+    def import_json_file(self, json_path: Path, dry_run: bool = False) -> Dict[str, Any]:
+        """Import role assignments from JSON file."""
+        from ..batch_operations import import_json
+        return import_json(self, json_path, dry_run)
+
+    def export_json_file(self, json_path: Path, pretty: bool = True) -> Dict[str, Any]:
+        """Export project state to JSON file."""
+        from ..batch_operations import export_json
+        return export_json(self, json_path, pretty)
