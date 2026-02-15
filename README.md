@@ -1055,6 +1055,7 @@ agent-guardrails-template/
 | [**TEST_PRODUCTION_SEPARATION.md**](docs/standards/TEST_PRODUCTION_SEPARATION.md) | EVERYONE | Test/production isolation (MANDATORY) |
 | [**HOW_TO_APPLY.md**](docs/HOW_TO_APPLY.md) | Applying template | Step-by-step instructions with prompts |
 | [**AGENTS_AND_SKILLS_SETUP.md**](docs/AGENTS_AND_SKILLS_SETUP.md) | AI tool users | Setup guide for Claude Code/OpenCode |
+| [**TEAM_TOOLS.md**](docs/TEAM_TOOLS.md) | AI tool users | Team layout management MCP tools reference |
 | [**TOC.md**](TOC.md) | Everyone | Complete file listing and organization |
 | [**INDEX_MAP.md**](INDEX_MAP.md) | Everyone | Find docs by keyword (saves 60-80% tokens) |
 
