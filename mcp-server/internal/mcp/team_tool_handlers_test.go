@@ -978,8 +978,8 @@ func getResultText(result *mcp.CallToolResult) string {
 // Helper function to cleanup test projects
 func cleanupTestProject(t *testing.T, projectName string) {
 	t.Helper()
-	// Clean up the test project file if it exists
-	configPath := filepath.Join(".teams", projectName+".json")
+	// Clean up the test project file if it exists (repo root .teams directory)
+	configPath := filepath.Join("..", "..", "..", ".teams", projectName+".json")
 	if err := os.Remove(configPath); err != nil && !os.IsNotExist(err) {
 		t.Logf("Failed to cleanup test project %s: %v", projectName, err)
 	}
