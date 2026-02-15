@@ -14,6 +14,9 @@ Tests complete workflows including:
 import sys
 import os
 import unittest
+import tempfile
+import json
+import shutil
 from pathlib import Path
 
 # Add parent directory to path
@@ -285,7 +288,9 @@ class TestE2ERBAC(unittest.TestCase):
             logger=MockLogger("test"),
             fs=self.fs
         )
-        lead_manager.load()
+        load_result = lead_manager.load()
+        self.assertTrue(load_result, "Failed to load project for team lead")
+        self.assertIn(5, lead_manager.teams, "Team 5 should exist after loading")
 
         from scripts.team_manager import PermissionDenied
 
@@ -329,6 +334,12 @@ class TestE2EBatchOperations(unittest.TestCase):
             fs=self.fs
         )
         self.manager.initialize_project()
+        self.temp_dir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        """Clean up temp files."""
+        import shutil
+        shutil.rmtree(self.temp_dir, ignore_errors=True)
 
     def test_csv_export_import_roundtrip(self):
         """
@@ -340,14 +351,19 @@ class TestE2EBatchOperations(unittest.TestCase):
         self.manager.assign_role(1, "Business Relationship Manager", "Alice")
         self.manager.assign_role(1, "Lead Product Manager", "Bob")
 
-        # Export to CSV
-        from scripts.mocks.mock_file_system import MockFileSystem
-        csv_path = Path("test_export.csv")
+        # Export to CSV using real file system
+        csv_path = Path(self.temp_dir) / "test_export.csv"
         result = self.manager.export_csv_file(csv_path)
         self.assertTrue(result["success"])
 
-        # Verify CSV content exists
-        self.assertTrue(self.fs.exists(csv_path))
+        # Verify CSV content exists on real file system
+        self.assertTrue(csv_path.exists())
+
+        # Verify content
+        with open(csv_path, 'r') as f:
+            content = f.read()
+            self.assertIn("Alice", content)
+            self.assertIn("Business Relationship Manager", content)
 
         print("[E2E-012] ✓ CSV roundtrip test passed")
 
@@ -362,11 +378,20 @@ class TestE2EBatchOperations(unittest.TestCase):
         self.manager.start_team(1)
         self.manager.complete_team(1)
 
-        # Export to JSON
-        json_path = Path("test_export.json")
+        # Export to JSON using real file system
+        json_path = Path(self.temp_dir) / "test_export.json"
         result = self.manager.export_json_file(json_path)
         self.assertTrue(result["success"])
         self.assertEqual(result["team_count"], 12)
+
+        # Verify JSON file exists
+        self.assertTrue(json_path.exists())
+
+        # Verify JSON content
+        with open(json_path, 'r') as f:
+            data = json.load(f)
+            self.assertEqual(data["project_name"], "e2e-batch-test")
+            self.assertEqual(len(data["teams"]), 12)
 
         print("[E2E-013] ✓ JSON roundtrip test passed")
 
