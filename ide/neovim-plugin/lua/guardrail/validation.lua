@@ -13,7 +13,9 @@ function M.test_connection(callback)
       ["Authorization"] = config.api_key ~= "" and "Bearer " .. config.api_key or nil,
     },
     callback = function(response)
-      if response.status == 200 then
+      if not response then
+        callback(false)
+      elseif response.status == 200 then
         callback(true)
       else
         callback(false)
@@ -42,14 +44,18 @@ function M.validate_file(file_path, content, language, callback)
       ["Authorization"] = config.api_key ~= "" and "Bearer " .. config.api_key or nil,
     },
     callback = function(response)
+      if not response then
+        callback({ valid = false, violations = {}, error = "Network error: unable to reach server" })
+        return
+      end
       if response.status ~= 200 then
-        callback({ valid = true, violations = {}, error = response.body })
+        callback({ valid = false, violations = {}, error = response.body })
         return
       end
 
       local ok, result = pcall(vim.fn.json_decode, response.body)
       if not ok then
-        callback({ valid = true, violations = {}, error = "Failed to parse response" })
+        callback({ valid = false, violations = {}, error = "Failed to parse response" })
         return
       end
 
@@ -76,14 +82,18 @@ function M.validate_selection(code, language, callback)
       ["Authorization"] = config.api_key ~= "" and "Bearer " .. config.api_key or nil,
     },
     callback = function(response)
+      if not response then
+        callback({ valid = false, violations = {}, error = "Network error: unable to reach server" })
+        return
+      end
       if response.status ~= 200 then
-        callback({ valid = true, violations = {}, error = response.body })
+        callback({ valid = false, violations = {}, error = response.body })
         return
       end
 
       local ok, result = pcall(vim.fn.json_decode, response.body)
       if not ok then
-        callback({ valid = true, violations = {}, error = "Failed to parse response" })
+        callback({ valid = false, violations = {}, error = "Failed to parse response" })
         return
       end
 
