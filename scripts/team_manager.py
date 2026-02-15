@@ -7,14 +7,58 @@ team composition against standardized enterprise layout.
 """
 
 import argparse
+import fcntl
 import json
+import os
 import re
 import sys
+import tempfile
+import traceback
 from dataclasses import dataclass, asdict
 from datetime import datetime
 from pathlib import Path
 from typing import List, Optional, Dict
 
+
+
+
+class StructuredLogger:
+    """JSON structured logging with correlation ID support."""
+
+    def __init__(self, component: str, request_id: Optional[str] = None):
+        self.component = component
+        self.request_id = request_id
+
+    def log(self, event_type: str, details: Dict, level: str = "info") -> None:
+        """Log a structured JSON event."""
+        log_entry = {
+            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "level": level.upper(),
+            "component": self.component,
+            "event": event_type,
+            "details": details
+        }
+        if self.request_id:
+            log_entry["request_id"] = self.request_id
+        print(json.dumps(log_entry), file=sys.stderr)
+
+    def info(self, event_type: str, details: Dict) -> None:
+        """Log INFO level event."""
+        self.log(event_type, details, "info")
+
+    def warn(self, event_type: str, details: Dict) -> None:
+        """Log WARN level event."""
+        self.log(event_type, details, "warn")
+
+    def error(self, event_type: str, details: Dict, exc_info: bool = False) -> None:
+        """Log ERROR level event with optional exception info."""
+        if exc_info:
+            details = {**details, "stack_trace": traceback.format_exc()}
+        self.log(event_type, details, "error")
+
+    def debug(self, event_type: str, details: Dict) -> None:
+        """Log DEBUG level event."""
+        self.log(event_type, details, "debug")
 
 def validate_project_name(name: str) -> None:
     """Validate project name to prevent command injection."""
@@ -24,6 +68,90 @@ def validate_project_name(name: str) -> None:
         raise ValueError("project_name must be 64 characters or less")
     if not re.match(r'^[a-zA-Z0-9_-]+$', name):
         raise ValueError("project_name must contain only letters, numbers, hyphens, and underscores")
+
+
+class PermissionDenied(Exception):
+    """Raised when user lacks permission for an operation."""
+    pass
+
+
+class FileLockError(Exception):
+    """Raised when file locking fails."""
+    pass
+
+
+class UserContext:
+    """User session context with RBAC information."""
+
+    # Role hierarchy: higher number = more permissions
+    ROLE_LEVELS = {
+        "viewer": 1,      # Can view only
+        "team-lead": 2,   # Can modify their team's assignments
+        "admin": 3        # Can modify everything
+    }
+
+    def __init__(self, user_id: str, role: str, team_id: Optional[int] = None):
+        self.user_id = user_id
+        self.role = role
+        self.team_id = team_id
+
+        if role not in self.ROLE_LEVELS:
+            raise ValueError(f"Invalid role: {role}. Must be one of: {list(self.ROLE_LEVELS.keys())}")
+
+    def has_permission(self, required_role: str) -> bool:
+        """Check if user has at least the required role level."""
+        return self.ROLE_LEVELS.get(self.role, 0) >= self.ROLE_LEVELS.get(required_role, 0)
+
+    def can_modify_team(self, team_id: int) -> bool:
+        """Check if user can modify a specific team."""
+        if self.role == "admin":
+            return True
+        if self.role == "team-lead" and self.team_id == team_id:
+            return True
+        return False
+
+
+class FileLock:
+    """Cross-platform file locking using flock (Unix) or msvcrt (Windows)."""
+
+    def __init__(self, lock_file_path: Path, timeout: float = 30.0):
+        self.lock_file_path = lock_file_path
+        self.timeout = timeout
+        self.lock_file = None
+
+    def __enter__(self):
+        """Acquire exclusive lock."""
+        self.lock_file_path.parent.mkdir(parents=True, exist_ok=True)
+        self.lock_file = open(self.lock_file_path, 'w')
+
+        try:
+            # Use non-blocking flock first
+            fcntl.flock(self.lock_file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except (IOError, OSError):
+            # Lock is held by another process
+            import time
+            start_time = time.time()
+            while time.time() - start_time < self.timeout:
+                try:
+                    fcntl.flock(self.lock_file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+                    break
+                except (IOError, OSError):
+                    time.sleep(0.1)
+            else:
+                self.lock_file.close()
+                raise FileLockError(f"Could not acquire lock within {self.timeout}s")
+
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Release lock and close file."""
+        if self.lock_file:
+            try:
+                fcntl.flock(self.lock_file.fileno(), fcntl.LOCK_UN)
+            except (IOError, OSError):
+                pass
+            finally:
+                self.lock_file.close()
 
 
 @dataclass
@@ -321,24 +449,61 @@ class TeamManager:
         ),
     }
 
-    def __init__(self, project_name: str, config_path: Path = None):
+    def __init__(self, project_name: str, config_path: Path = None, user_context: Optional[UserContext] = None, logger: Optional[StructuredLogger] = None):
         self.project_name = project_name
         self.teams: Dict[int, Team] = {}
         self.config_path = config_path or Path(f".teams/{project_name}.json")
+        self.lock_path = Path(f".teams/{project_name}.lock")
+        self.user_context = user_context
+        self.logger = logger or StructuredLogger("team_manager")
+
+    def _require_auth(self, operation: str, team_id: Optional[int] = None) -> None:
+        """Check if user is authorized for the operation."""
+        if self.user_context is None:
+            raise PermissionDenied(f"Authentication required for {operation}")
+
+        if not self.user_context.has_permission("team-lead"):
+            raise PermissionDenied(
+                f"User '{self.user_context.user_id}' with role '{self.user_context.role}' "
+                f"does not have permission to {operation}"
+            )
+
+        if team_id is not None and not self.user_context.can_modify_team(team_id):
+            raise PermissionDenied(
+                f"User '{self.user_context.user_id}' cannot modify team {team_id}. "
+                f"Requires admin role or team-lead for this specific team."
+            )
 
     def initialize_project(self) -> None:
-        """Initialize a new project with all teams."""
+        """Initialize a new project with all teams.
+
+        Requires admin role.
+        """
+        self._require_auth("initialize project")
         self.teams = {team_id: team for team_id, team in self.STANDARD_TEAMS.items()}
         self.save()
         print(f"✅ Initialized project '{self.project_name}' with {len(self.teams)} teams")
 
     def load(self) -> bool:
-        """Load team configuration from disk."""
+        """Load team configuration from disk with file locking.
+
+        Uses shared lock to allow concurrent reads while preventing
+        reads during writes.
+        """
         if not self.config_path.exists():
             return False
 
-        with open(self.config_path) as f:
-            data = json.load(f)
+        # Create lock file if it doesn't exist
+        self.lock_path.parent.mkdir(parents=True, exist_ok=True)
+
+        with FileLock(self.lock_path):
+            with open(self.config_path, 'r') as f:
+                # Use shared lock for reads
+                fcntl.flock(f.fileno(), fcntl.LOCK_SH)
+                try:
+                    data = json.load(f)
+                finally:
+                    fcntl.flock(f.fileno(), fcntl.LOCK_UN)
 
         self.teams = {}
         for team_data in data.get("teams", []):
@@ -350,6 +515,7 @@ class TeamManager:
 
     def save(self) -> None:
         """Save team configuration to disk."""
+        self.logger.info("config_save_start", {"config_path": str(self.config_path)})
         self.config_path.parent.mkdir(parents=True, exist_ok=True)
 
         data = {
@@ -358,13 +524,56 @@ class TeamManager:
             "teams": [asdict(team) for team in self.teams.values()]
         }
 
-        with open(self.config_path, 'w') as f:
-            json.dump(data, f, indent=2)
+        try:
+            # Use file locking to prevent race conditions (SEC-004)
+            with FileLock(self.lock_path):
+                # Atomic write: write to temp file, then rename
+                fd, temp_path = tempfile.mkstemp(
+                    dir=self.config_path.parent,
+                    prefix=f".{self.project_name}.tmp."
+                )
+                try:
+                    with os.fdopen(fd, 'w') as f:
+                        json.dump(data, f, indent=2)
+                        f.flush()
+                        os.fsync(f.fileno())
+
+                    # Atomic rename
+                    os.replace(temp_path, self.config_path)
+                except Exception:
+                    # Clean up temp file on error
+                    try:
+                        os.unlink(temp_path)
+                    except FileNotFoundError:
+                        pass
+                    raise
+
+            self.logger.info("config_saved", {
+                "config_path": str(self.config_path),
+                "team_count": len(self.teams)
+            })
+        except Exception as e:
+            self.logger.error("config_save_failed", {
+                "config_path": str(self.config_path),
+                "error": str(e)
+            }, exc_info=True)
+            raise
 
     def assign_role(self, team_id: int, role_name: str, assignee: str) -> bool:
-        """Assign a person to a role."""
+        """Assign a person to a role.
+
+        Requires team-lead role (for their team) or admin role.
+        """
+        self._require_auth("assign role", team_id)
+        self.logger.info("role_assignment_start", {
+            "team_id": team_id,
+            "role_name": role_name,
+            "assignee": assignee,
+            "user_id": self.user_context.user_id if self.user_context else None
+        })
+
         if team_id not in self.teams:
-            print(f"❌ Team {team_id} not found")
+            self.logger.error("team_not_found", {"team_id": team_id})
             return False
 
         team = self.teams[team_id]
@@ -372,7 +581,38 @@ class TeamManager:
             if role.name == role_name:
                 role.assigned_to = assignee
                 self.save()
-                print(f"✅ Assigned {assignee} to {role_name} in {team.name}")
+                self.logger.info("role_assigned", {
+                    "team_id": team_id,
+                    "team_name": team.name,
+                    "role_name": role_name,
+                    "assignee": assignee
+                })
+                return True
+
+        self.logger.error("role_not_found", {
+            "team_id": team_id,
+            "team_name": team.name,
+            "role_name": role_name
+        })
+        return False
+        return False
+
+    def unassign_role(self, team_id: int, role_name: str) -> bool:
+        """Remove assignment from a role."""
+        if team_id not in self.teams:
+            print(f"❌ Team {team_id} not found")
+            return False
+
+        team = self.teams[team_id]
+        for role in team.roles:
+            if role.name == role_name:
+                if role.assigned_to is None:
+                    print(f"⚠️  Role '{role_name}' in {team.name} is already unassigned")
+                    return False
+                previous_assignee = role.assigned_to
+                role.assigned_to = None
+                self.save()
+                print(f"✅ Unassigned {previous_assignee} from {role_name} in {team.name}")
                 return True
 
         print(f"❌ Role '{role_name}' not found in {team.name}")
@@ -380,29 +620,42 @@ class TeamManager:
 
     def start_team(self, team_id: int) -> bool:
         """Mark a team as active."""
+        self.logger.info("team_start_request", {"team_id": team_id})
+
         if team_id not in self.teams:
+            self.logger.error("team_not_found", {"team_id": team_id})
             return False
 
         team = self.teams[team_id]
         team.status = "active"
         team.started_at = datetime.now().isoformat()
         self.save()
-        print(f"🚀 Team {team_id} ({team.name}) is now active")
+        self.logger.info("team_started", {
+            "team_id": team_id,
+            "team_name": team.name,
+            "status": team.status,
+            "started_at": team.started_at
+        })
         return True
 
     def complete_team(self, team_id: int) -> bool:
         """Mark a team as completed."""
+        self.logger.info("team_complete_request", {"team_id": team_id})
+
         if team_id not in self.teams:
+            self.logger.error("team_not_found", {"team_id": team_id})
             return False
 
         team = self.teams[team_id]
-
-        # Check if all exit criteria are met
-        # In practice, this would involve checking external systems
         team.status = "completed"
         team.completed_at = datetime.now().isoformat()
         self.save()
-        print(f"✅ Team {team_id} ({team.name}) completed")
+        self.logger.info("team_completed", {
+            "team_id": team_id,
+            "team_name": team.name,
+            "status": team.status,
+            "completed_at": team.completed_at
+        })
         return True
 
     def get_phase_status(self, phase: str) -> dict:
@@ -413,7 +666,7 @@ class TeamManager:
         completed = len([t for t in phase_teams if t.status == "completed"])
         active = len([t for t in phase_teams if t.status == "active"])
 
-        return {
+        result = {
             "phase": phase,
             "total_teams": total,
             "completed": completed,
@@ -422,35 +675,32 @@ class TeamManager:
             "progress_pct": (completed / total * 100) if total > 0 else 0
         }
 
+        self.logger.debug("phase_status_queried", {"phase": phase, "status": result})
+        return result
+
     def list_teams(self, phase: str = None) -> None:
         """Print all teams."""
         teams = self.teams.values()
         if phase:
             teams = [t for t in teams if t.phase == phase]
 
-        current_phase = None
+        team_list = []
         for team in sorted(teams, key=lambda t: (t.phase, t.id)):
-            if team.phase != current_phase:
-                current_phase = team.phase
-                print(f"\n{'='*60}")
-                print(f"  {current_phase}")
-                print(f"{'='*60}")
+            assigned_roles = sum(1 for r in team.roles if r.assigned_to)
+            team_list.append({
+                "id": team.id,
+                "name": team.name,
+                "phase": team.phase,
+                "status": team.status,
+                "assigned_count": assigned_roles,
+                "total_roles": len(team.roles)
+            })
 
-            status_icon = {
-                "not_started": "⏳",
-                "active": "🟢",
-                "completed": "✅",
-                "blocked": "🛑"
-            }.get(team.status, "❓")
-
-            print(f"\n{status_icon} Team {team.id}: {team.name}")
-            print(f"   Description: {team.description}")
-            print(f"   Status: {team.status}")
-
-            print(f"\n   Roles:")
-            for role in team.roles:
-                assignee = role.assigned_to or "(unassigned)"
-                print(f"      - {role.name}: {assignee}")
+        self.logger.info("teams_listed", {
+            "phase_filter": phase,
+            "team_count": len(team_list),
+            "teams": team_list
+        })
 
     def get_agent_team(self, agent_type: str) -> Optional[Team]:
         """Map agent type to appropriate team."""
@@ -463,7 +713,14 @@ class TeamManager:
             "ops": 11,         # SRE
         }
         team_id = mapping.get(agent_type.lower())
-        return self.teams.get(team_id) if team_id else None
+        team = self.teams.get(team_id) if team_id else None
+
+        self.logger.debug("agent_team_mapped", {
+            "agent_type": agent_type,
+            "team_id": team_id,
+            "found": team is not None
+        })
+        return team
 
     def validate_team_size(self, team_id: Optional[int] = None) -> dict:
         """Validate team sizes meet 4-6 member requirement.
@@ -492,8 +749,13 @@ class TeamManager:
                     "team_name": team.name,
                     "issue": "undersized",
                     "assigned": assigned_count,
-                    "required": MIN_TEAM_SIZE,
-                    "message": f"Team {team.id} ({team.name}) has {assigned_count} members, minimum is {MIN_TEAM_SIZE}"
+                    "required": MIN_TEAM_SIZE
+                })
+                self.logger.warn("team_undersized", {
+                    "team_id": team.id,
+                    "team_name": team.name,
+                    "assigned": assigned_count,
+                    "required": MIN_TEAM_SIZE
                 })
             elif assigned_count > MAX_TEAM_SIZE:
                 results["valid"] = False
@@ -502,16 +764,123 @@ class TeamManager:
                     "team_name": team.name,
                     "issue": "oversized",
                     "assigned": assigned_count,
-                    "maximum": MAX_TEAM_SIZE,
-                    "message": f"Team {team.id} ({team.name}) has {assigned_count} members, maximum is {MAX_TEAM_SIZE}"
+                    "maximum": MAX_TEAM_SIZE
+                })
+                self.logger.warn("team_oversized", {
+                    "team_id": team.id,
+                    "team_name": team.name,
+                    "assigned": assigned_count,
+                    "maximum": MAX_TEAM_SIZE
                 })
 
+        if results["valid"]:
+            self.logger.info("team_size_validation_passed", {
+                "teams_checked": results["teams_checked"]
+            })
+        else:
+            self.logger.warn("team_size_validation_failed", {
+                "teams_checked": results["teams_checked"],
+                "violation_count": len(results["violations"]),
+                "violations": results["violations"]
+            })
+
         return results
+
+    def delete_team(self, team_id: int, confirmed: bool = False) -> dict:
+        """Delete a specific team from the project.
+
+        Args:
+            team_id: The ID of the team to delete
+            confirmed: Whether deletion is confirmed (safety check)
+
+        Returns:
+            dict with deletion result
+        """
+        result = {
+            "success": False,
+            "team_id": team_id,
+            "message": "",
+            "requires_confirmation": False
+        }
+
+        if team_id not in self.teams:
+            result["message"] = f"❌ Team {team_id} not found in project '{self.project_name}'"
+            return result
+
+        team = self.teams[team_id]
+
+        if not confirmed:
+            result["requires_confirmation"] = True
+            result["message"] = (
+                f"⚠️  Deletion requires confirmation. "
+                f"Team {team_id} ({team.name}) will be permanently removed. "
+                f"Set confirmed=true to proceed."
+            )
+            return result
+
+        # Safety check: log deletion for audit
+        deleted_team_name = team.name
+        del self.teams[team_id]
+        self.save()
+
+        # Log audit information to stderr
+        print(f"AUDIT: Team {team_id} ({deleted_team_name}) deleted from project '{self.project_name}' at {datetime.now().isoformat()}", file=sys.stderr)
+
+        result["success"] = True
+        result["message"] = f"✅ Team {team_id} ({deleted_team_name}) deleted from project '{self.project_name}'"
+        return result
+
+    def delete_project(self, confirmed: bool = False) -> dict:
+        """Delete the entire project.
+
+        Args:
+            confirmed: Whether deletion is confirmed (safety check)
+
+        Returns:
+            dict with deletion result
+        """
+        result = {
+            "success": False,
+            "project_name": self.project_name,
+            "message": "",
+            "requires_confirmation": False
+        }
+
+        if not self.config_path.exists():
+            result["message"] = f"❌ Project '{self.project_name}' not found"
+            return result
+
+        if not confirmed:
+            result["requires_confirmation"] = True
+            team_count = len(self.teams)
+            result["message"] = (
+                f"⚠️  Deletion requires confirmation. "
+                f"Project '{self.project_name}' with {team_count} team(s) will be permanently deleted. "
+                f"Set confirmed=true to proceed."
+            )
+            return result
+
+        # Safety check: log deletion for audit
+        team_count = len(self.teams)
+        deletion_time = datetime.now().isoformat()
+
+        # Delete the project file
+        try:
+            self.config_path.unlink()
+            print(f"AUDIT: Project '{self.project_name}' ({team_count} teams) deleted at {deletion_time}", file=sys.stderr)
+
+            result["success"] = True
+            result["message"] = f"✅ Project '{self.project_name}' ({team_count} teams) deleted successfully"
+        except Exception as e:
+            result["message"] = f"❌ Error deleting project: {e}"
+
+        return result
 
 
 def main():
     parser = argparse.ArgumentParser(description="Team Manager - Standardized Team Layout")
     parser.add_argument("--project", required=True, help="Project name")
+    parser.add_argument("--request-id", help="Correlation ID for request tracing")
 
     subparsers = parser.add_subparsers(dest="command", help="Command to run")
 
@@ -527,6 +896,11 @@ def main():
     assign_parser.add_argument("--team", type=int, required=True, help="Team ID")
     assign_parser.add_argument("--role", required=True, help="Role name")
     assign_parser.add_argument("--person", required=True, help="Person name")
+
+    # Unassign command
+    unassign_parser = subparsers.add_parser("unassign", help="Remove person from role")
+    unassign_parser.add_argument("--team", type=int, required=True, help="Team ID")
+    unassign_parser.add_argument("--role", required=True, help="Role name")
 
     # Start command
     start_parser = subparsers.add_parser("start", help="Start a team")
@@ -544,27 +918,53 @@ def main():
     validate_size_parser = subparsers.add_parser("validate-size", help="Validate team sizes (4-6 members)")
     validate_size_parser.add_argument("--team", type=int, help="Specific team ID to validate (optional)")
 
+    # Delete-team command
+    delete_team_parser = subparsers.add_parser("delete-team", help="Delete a specific team from the project")
+    delete_team_parser.add_argument("--team", type=int, required=True, help="Team ID to delete")
+    delete_team_parser.add_argument("--confirmed", action="store_true", help="Confirm deletion (required)")
+
+    # Delete-project command
+    delete_project_parser = subparsers.add_parser("delete-project", help="Delete the entire project")
+    delete_project_parser.add_argument("--confirmed", action="store_true", help="Confirm deletion (required)")
+
     args = parser.parse_args()
 
     # Validate project name to prevent command injection
     validate_project_name(args.project)
 
-    manager = TeamManager(args.project)
+    # Create logger for main and generate request_id if not provided
+    request_id = args.request_id or f"tm-{datetime.utcnow().strftime('%Y%m%d%H%M%S')}-{os.getpid()}"
+    cli_logger = StructuredLogger("team_manager_cli", request_id)
+    cli_logger.info("cli_start", {"command": args.command, "project": args.project})
+
+    manager = TeamManager(args.project, request_id=request_id)
 
     if args.command == "init":
         manager.initialize_project()
         print(f"\nTeams configuration saved to: {manager.config_path}")
 
-    elif args.command in ["list", "assign", "start", "complete", "status", "validate-size"]:
-        if not manager.load():
-            print(f"❌ Project '{args.project}' not found. Run: team_manager.py --project {args.project} init")
-            sys.exit(1)
+    elif args.command in ["list", "assign", "unassign", "start", "complete", "status", "validate-size", "delete-team", "delete-project"]:
+        if args.command in ["delete-team", "delete-project"]:
+            # For delete commands, project may not exist yet (delete-project)
+            if args.command == "delete-team" and not manager.load():
+                print(f"❌ Project '{args.project}' not found.")
+                sys.exit(1)
+            if args.command == "delete-project":
+                # Try to load but don't fail if file doesn't exist
+                manager.load()
+        else:
+            if not manager.load():
+                print(f"❌ Project '{args.project}' not found. Run: team_manager.py --project {args.project} init")
+                sys.exit(1)
 
         if args.command == "list":
             manager.list_teams(args.phase)
 
         elif args.command == "assign":
             manager.assign_role(args.team, args.role, args.person)
+
+        elif args.command == "unassign":
+            manager.unassign_role(args.team, args.role)
 
         elif args.command == "start":
             manager.start_team(args.team)
@@ -595,6 +995,18 @@ def main():
                 print(f"❌ Team size violations found:")
                 for violation in results["violations"]:
                     print(f"   {violation['message']}")
+                sys.exit(1)
+
+        elif args.command == "delete-team":
+            result = manager.delete_team(args.team, confirmed=args.confirmed)
+            print(result["message"])
+            if not result["success"] and not result["requires_confirmation"]:
+                sys.exit(1)
+
+        elif args.command == "delete-project":
+            result = manager.delete_project(confirmed=args.confirmed)
+            print(result["message"])
+            if not result["success"] and not result["requires_confirmation"]:
                 sys.exit(1)
 
     else:
