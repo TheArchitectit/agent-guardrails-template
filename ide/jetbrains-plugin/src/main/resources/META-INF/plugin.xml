@@ -2,7 +2,7 @@
     <id>com.guardrail.plugin</id>
     <name>Guardrail</name>
     <version>1.0.0</version>
-    <vendor>TheArchitectit</vendor>
+    <vendor url="https://github.com/TheArchitectit" email="support@guardrail.dev">TheArchitectit</vendor>
     <description><![CDATA[
         <h2>Guardrail IDE Integration</h2>
         <p>Real-time guardrail validation for AI-assisted coding.</p>
