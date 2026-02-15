@@ -157,3 +157,12 @@ In your init.lua:
 vim.opt.rtp:prepend("/path/to/agent-guardrails-template/ide/neovim-plugin")
 require("guardrail").setup({ ... })
 ```
+
+## Security Notes
+
+> **⚠️ Never commit API keys to version control.** Use environment variables:
+> ```lua
+> api_key = vim.env.GUARDRAIL_API_KEY,
+> ```
+>
+> **HTTPS Recommended:** For production MCP servers, always use HTTPS.

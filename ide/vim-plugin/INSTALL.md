@@ -62,14 +62,17 @@ Add to `.vimrc`:
 
 ```vim
 " Required settings
-g:guardrail_server_url = 'http://localhost:8095'
-g:guardrail_project_slug = 'your-project'
+let g:guardrail_server_url = 'http://localhost:8095'
+let g:guardrail_project_slug = 'your-project'
 
 " Optional settings
-g:guardrail_api_key = 'your-api-key'
-g:guardrail_validate_on_save = 1
-g:guardrail_severity_threshold = 'warning'  " error, warning, info
+let g:guardrail_api_key = 'your-api-key'
+let g:guardrail_validate_on_save = 1
+let g:guardrail_severity_threshold = 'warning'  " error, warning, info
 ```
+
+> **Security Warning:** Never commit API keys to version control.
+> Use environment variables: `let g:guardrail_api_key = $GUARDRAIL_API_KEY`
 
 ## Commands
 
