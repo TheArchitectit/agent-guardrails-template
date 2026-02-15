@@ -279,7 +279,8 @@ Clear list of actions agents must never perform:
 ### 🤖 AI Tool Integration
 
 **Claude Code Support:**
-- `scripts/setup_agents.py` - Generate Claude Code skills and hooks
+- `scripts/setup_agents.py` - Generate Claude Code skills and hooks (Python - local setup only)
+- MCP Server integration via remote MCP connection (Go - production)
 - Skills: guardrails-enforcer, commit-validator, env-separator
 - Hooks: pre-execution, post-execution, pre-commit
 
@@ -1071,8 +1072,11 @@ agent-guardrails-template/
 │   ├── ruby/                  # Ruby examples
 │   ├── rust/                  # Rust examples
 │   └── typescript/            # TypeScript examples
-├── scripts/                ← Setup and utility scripts
-│   └── setup_agents.py        # CLI tool for AI tool configuration
+├── scripts/                ← Setup and utility scripts (Python - Local Only)
+│   ├── setup_agents.py        # CLI tool for AI tool configuration
+│   ├── team_manager.py        # ⚠️ DEPRECATED: Migrated to Go (v2.6.0)
+│   ├── encryption.py          # ⚠️ DEPRECATED: Migrated to Go (v2.6.0)
+│   └── batch_operations.py    # ⚠️ DEPRECATED: Migrated to Go (v2.6.0)
 ├── skills/                 ← Reusable skill components
 │   └── shared-prompts/        # Shared prompts for agents
 └── .github/                ← GitHub integration
