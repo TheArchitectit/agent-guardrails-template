@@ -809,6 +809,19 @@ func (s *MCPServer) registerTools() {
 				},
 			},
 		},
+		{
+			Name:        "guardrail_team_health",
+			Description: "Check team_manager.py health status - validates Python backend and file system access",
+			InputSchema: mcp.ToolInputSchema{
+				Type: "object",
+				Properties: mcp.ToolInputSchemaProperties{
+					"project_name": map[string]interface{}{
+						"type":        "string",
+						"description": "Optional: Project name for config directory check",
+					},
+				},
+			},
+		},
 			},
 		}, nil
 	})
@@ -948,6 +961,8 @@ func (s *MCPServer) handleToolCall(ctx context.Context, name string, arguments m
 		return s.handleTeamDelete(ctx, arguments)
 	case "guardrail_project_delete":
 		return s.handleProjectDelete(ctx, arguments)
+	case "guardrail_team_health":
+		return s.handleTeamHealth(ctx, arguments)
 	default:
 		return &mcp.CallToolResult{
 			Content: []interface{}{
