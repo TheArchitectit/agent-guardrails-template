@@ -8,18 +8,18 @@ This directory contains IDE extensions that provide real-time guardrail validati
 
 ## Status
 
-**Branch:** `ide`  
-**Phase:** Development Complete (Ready for Testing)  
-**Target Release:** v1.13.0
+**Branch:** `main` (merged)
+**Phase:** Released
+**Release:** v2.0.0
 
 ## Supported IDEs
 
-| IDE | Status | Lead | Priority | Language |
-|-----|--------|------|----------|----------|
-| VS Code | 🚧 Complete | TBD | P0 | TypeScript |
-| JetBrains | 🚧 Complete | TBD | P1 | Kotlin |
-| Neovim | 🚧 Complete | TBD | P2 | Lua |
-| Vim | 🚧 Complete | TBD | P3 | VimScript |
+| IDE | Status | Priority | Language |
+|-----|--------|----------|----------|
+| VS Code | ✅ Released | P0 | TypeScript |
+| JetBrains | ✅ Released | P1 | Kotlin |
+| Neovim | ✅ Released | P2 | Lua |
+| Vim | ✅ Released | P3 | VimScript |
 
 Legend:
 - ✅ Released
@@ -78,6 +78,15 @@ git clone https://github.com/TheArchitectit/guardrail.vim.git ~/.vim/pack/plugin
 " Add to .vimrc:
 Plug 'TheArchitectit/guardrail.vim'
 ```
+
+## Security Notice
+
+> **⚠️ Important:** Never commit API keys to version control. Use environment variables:
+> - VS Code: Uses SecretStorage API (secure by default)
+> - JetBrains: Uses JPasswordField with encryption at rest
+> - Neovim/Vim: Use `let g:guardrail_api_key = $GUARDRAIL_API_KEY`
+>
+> For production deployments, always use HTTPS to connect to the MCP server.
 
 ## Directory Structure
 

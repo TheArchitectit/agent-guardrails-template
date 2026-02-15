@@ -27,10 +27,10 @@ run_test() {
     echo "Running $name tests..."
     if bash "$script"; then
         echo -e "${GREEN}✓ $name tests PASSED${NC}"
-        ((PASSED++))
+        PASSED=$((PASSED + 1))
     else
         echo -e "${RED}✗ $name tests FAILED${NC}"
-        ((FAILED++))
+        FAILED=$((FAILED + 1))
     fi
     echo
 }
