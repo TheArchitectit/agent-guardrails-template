@@ -98,7 +98,7 @@ func NewMCPServer(cfg *config.Config, db *database.DB, cacheClient *cache.Client
 	}
 
 	// Create MCP server using the default server
-	s.mcpServer = server.NewDefaultServer("guardrail_mcp", "1.0.0")
+	s.mcpServer = server.NewDefaultServer("guardrail-mcp", "1.0.0")
 
 	// Register tool handlers
 	s.registerTools()
@@ -272,9 +272,9 @@ func (s *MCPServer) registerTools() {
 							"file_paths": map[string]interface{}{
 								"type":        "array",
 								"description": "Array of file paths that will be modified",
-								"items": map[string]interface{}{
-									"type": "string",
-								},
+							"items": map[string]interface{}{
+								"type": "string",
+							},
 							},
 							"code_content": map[string]interface{}{
 								"type":        "string",
