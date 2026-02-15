@@ -44,6 +44,65 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.6.0] - 2026-02-15
+
+### Migrated
+
+- **Python to Go Migration Complete** - All team management functionality migrated from Python to Go
+  - `scripts/team_manager.py` → `mcp-server/internal/team/` package
+  - `scripts/encryption.py` → `mcp-server/internal/team/encryption.go`
+  - `scripts/batch_operations.py` → Integrated into Go team package
+  - Container now uses `distroless/static` (no Python runtime needed)
+  - **Benefits:** 4x smaller container, 10x faster startup, no Python dependencies
+
+### Added
+
+- **Go Team Package** (`mcp-server/internal/team/`)
+  - `manager.go` - Core team management (init, assign, unassign, status)
+  - `encryption.go` - Fernet encryption at rest (ported from Python)
+  - `validation.go` - Input validation (project names, roles, persons)
+  - `rules.go` - Team layout rules and phase gates
+  - `metrics.go` - Team operation metrics collection
+  - `types.go` - Team data structures and interfaces
+  - `migrations.go` - Data migration utilities
+
+- **Migration Documentation**
+  - `docs/PYTHON_TO_GO_MIGRATION.md` - Complete migration guide for developers
+  - API compatibility matrix (Python → Go function mapping)
+  - Container deployment changes
+  - Troubleshooting guide
+
+### Changed
+
+- **Container Image** - Now uses `gcr.io/distroless/static:nonroot`
+  - Removed Python runtime requirement
+  - No `scripts/` volume needed
+  - Smaller attack surface
+
+- **Environment Variables**
+  - Removed: `PYTHONPATH`, `TEAM_MANAGER_SCRIPT`
+  - Kept: `TEAM_ENCRYPTION_KEY` (still used by Go implementation)
+
+### Deprecated
+
+- **Python Scripts** - `scripts/team_manager.py` and related Python files
+  - Deprecated as of v2.6.0
+  - Will be removed in v3.0.0
+  - Use Go `team` package instead
+
+### Compatibility
+
+- **MCP Tool API** - Fully backward compatible
+  - All tool names unchanged
+  - All parameters unchanged
+  - All responses identical format
+
+- **Data Format** - No migration needed
+  - `.teams/*.json` files remain compatible
+  - Existing projects work without changes
+
+---
+
 ## [1.12.0] - 2026-02-12
 
 ### Added

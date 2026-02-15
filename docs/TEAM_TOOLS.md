@@ -11,7 +11,7 @@
 
 The Team Layout Management system provides MCP tools to initialize, manage, and validate team structures for software development projects. It enforces a standardized 12-team structure across 5 phases of the development lifecycle, ensuring proper governance, phase gates, and role assignments.
 
-These tools integrate with the `team_manager.py` script to provide real-time team management capabilities through the MCP protocol.
+These tools use the Go `team` package (`mcp-server/internal/team/`) to provide real-time team management capabilities through the MCP protocol. As of v2.6.0, all functionality has been migrated from Python to Go for improved performance and security.
 
 ---
 
@@ -880,9 +880,9 @@ done
 
 ---
 
-##### SERV-002: Team Manager Script Failure
+##### SERV-002: Team Manager Execution Failure
 
-**Cause:** Backend script execution failed.
+**Cause:** Backend team management operation failed.
 
 **Example:**
 ```json
@@ -890,17 +890,17 @@ done
   "IsError": true,
   "Content": [{
     "Type": "text",
-    "Text": "SERV-002: Team manager script failure"
+    "Text": "SERV-002: Team manager execution failure"
   }],
   "error_code": "SERV-002",
-  "error_message": "scripts/team_manager.py exited with code 1"
+  "error_message": "Team operation failed: unable to initialize team"
 }
 ```
 
 **Troubleshooting:**
-1. Check server logs for Python errors
-2. Verify `scripts/team_manager.py` exists and is executable
-3. Ensure `.teams/` directory has write permissions
+1. Check server logs for error details
+2. Verify `.teams/` directory has write permissions
+3. Ensure project name is valid (alphanumeric, hyphens, underscores only)
 
 ---
 
@@ -956,7 +956,7 @@ Use `guardrail_team_size_validate` to check compliance:
 
 ### Implementation Details
 
-Team tools delegate to `scripts/team_manager.py` for persistence. Project data is stored in `.teams/{project_name}.json`.
+Team tools use the native Go `team` package for persistence. Project data is stored in `.teams/{project_name}.json`. The Go implementation provides the same functionality as the previous Python script with improved performance and security.
 
 ---
 
