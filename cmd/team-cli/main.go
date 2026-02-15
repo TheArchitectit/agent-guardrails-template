@@ -29,8 +29,8 @@ var (
 	output      string
 
 	// Styles
-	titleStyle  = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#7C3AED"))
-	textStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("#E5E7EB"))
+	titleStyle   = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#7C3AED"))
+	textStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("#E5E7EB"))
 	successStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#10B981"))
 	errorStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("#EF4444"))
 	warnStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("#F59E0B"))
@@ -63,12 +63,17 @@ role assignments, and status tracking.`,
 	rootCmd.AddCommand(statusCmd())
 	rootCmd.AddCommand(validateCmd())
 	rootCmd.AddCommand(phaseGateCmd())
-	rootCmd.AddCommand(agentMapCmd())
+	rootCmd.AddCommand(queryCmd())
+	rootCmd.AddCommand(reassignCmd())
 	rootCmd.AddCommand(exportCmd())
 	rootCmd.AddCommand(importCmd())
 	rootCmd.AddCommand(backupCmd())
 	rootCmd.AddCommand(restoreCmd())
 	rootCmd.AddCommand(deleteCmd())
+	rootCmd.AddCommand(auditCmd())
+	rootCmd.AddCommand(historyCmd())
+	rootCmd.AddCommand(templateCmd())
+	rootCmd.AddCommand(healthCmd())
 
 	if err := rootCmd.Execute(); err != nil {
 		log.Error(err)
@@ -121,9 +126,11 @@ func runTeamManager(project string, command string, args ...string) ([]byte, err
 
 	// Build command: script --project PROJECT command [args...]
 	cmdArgs := []string{scriptPath}
-	if project != "" {
-		cmdArgs = append(cmdArgs, "--project", project)
+	// Always include --project since Python script requires it
+	if project == "" {
+		project = "_cli_health_check_"
 	}
+	cmdArgs = append(cmdArgs, "--project", project)
 	cmdArgs = append(cmdArgs, command)
 	cmdArgs = append(cmdArgs, args...)
 
@@ -241,13 +248,15 @@ func assignCmd() *cobra.Command {
 				return fmt.Errorf("--person flag is required")
 			}
 
+			assignArgs := []string{
+				"--team", fmt.Sprintf("%d", teamID),
+				"--role", roleName,
+				"--person", person,
+			}
+
 			if output == "json" {
-				result, err := runTeamManager("assign",
-					"--project", projectName,
-					"--team", fmt.Sprintf("%d", teamID),
-					"--role", roleName,
-					"--person", person,
-					"--format", "json")
+				assignArgs = append(assignArgs, "--format", "json")
+				result, err := runTeamManager(projectName, "assign", assignArgs...)
 				if err != nil {
 					return err
 				}
@@ -261,11 +270,7 @@ func assignCmd() *cobra.Command {
 			fmt.Printf("Role: %s\n", textStyle.Render(roleName))
 			fmt.Printf("Person: %s\n\n", textStyle.Render(person))
 
-			result, err := runTeamManager("assign",
-				"--project", projectName,
-				"--team", fmt.Sprintf("%d", teamID),
-				"--role", roleName,
-				"--person", person)
+			result, err := runTeamManager(projectName, "assign", assignArgs...)
 			if err != nil {
 				return err
 			}
@@ -303,12 +308,14 @@ func unassignCmd() *cobra.Command {
 				return fmt.Errorf("--role flag is required")
 			}
 
+			unassignArgs := []string{
+				"--team", fmt.Sprintf("%d", teamID),
+				"--role", roleName,
+			}
+
 			if output == "json" {
-				result, err := runTeamManager("unassign",
-					"--project", projectName,
-					"--team", fmt.Sprintf("%d", teamID),
-					"--role", roleName,
-					"--format", "json")
+				unassignArgs = append(unassignArgs, "--format", "json")
+				result, err := runTeamManager(projectName, "unassign", unassignArgs...)
 				if err != nil {
 					return err
 				}
@@ -321,10 +328,7 @@ func unassignCmd() *cobra.Command {
 			fmt.Printf("Team: %s\n", textStyle.Render(fmt.Sprintf("Team %d", teamID)))
 			fmt.Printf("Role: %s\n\n", textStyle.Render(roleName))
 
-			result, err := runTeamManager("unassign",
-				"--project", projectName,
-				"--team", fmt.Sprintf("%d", teamID),
-				"--role", roleName)
+			result, err := runTeamManager(projectName, "unassign", unassignArgs...)
 			if err != nil {
 				return err
 			}
@@ -357,11 +361,11 @@ func startCmd() *cobra.Command {
 				return fmt.Errorf("--team flag is required")
 			}
 
+			startArgs := []string{"--team", fmt.Sprintf("%d", teamID)}
+
 			if output == "json" {
-				result, err := runTeamManager("start",
-					"--project", projectName,
-					"--team", fmt.Sprintf("%d", teamID),
-					"--format", "json")
+				startArgs = append(startArgs, "--format", "json")
+				result, err := runTeamManager(projectName, "start", startArgs...)
 				if err != nil {
 					return err
 				}
@@ -373,9 +377,7 @@ func startCmd() *cobra.Command {
 			fmt.Printf("Project: %s\n", textStyle.Render(projectName))
 			fmt.Printf("Team: %s\n\n", textStyle.Render(fmt.Sprintf("Team %d", teamID)))
 
-			result, err := runTeamManager("start",
-				"--project", projectName,
-				"--team", fmt.Sprintf("%d", teamID))
+			result, err := runTeamManager(projectName, "start", startArgs...)
 			if err != nil {
 				return err
 			}
@@ -405,11 +407,11 @@ func completeCmd() *cobra.Command {
 				return fmt.Errorf("--team flag is required")
 			}
 
+			completeArgs := []string{"--team", fmt.Sprintf("%d", teamID)}
+
 			if output == "json" {
-				result, err := runTeamManager("complete",
-					"--project", projectName,
-					"--team", fmt.Sprintf("%d", teamID),
-					"--format", "json")
+				completeArgs = append(completeArgs, "--format", "json")
+				result, err := runTeamManager(projectName, "complete", completeArgs...)
 				if err != nil {
 					return err
 				}
@@ -421,9 +423,7 @@ func completeCmd() *cobra.Command {
 			fmt.Printf("Project: %s\n", textStyle.Render(projectName))
 			fmt.Printf("Team: %s\n\n", textStyle.Render(fmt.Sprintf("Team %d", teamID)))
 
-			result, err := runTeamManager("complete",
-				"--project", projectName,
-				"--team", fmt.Sprintf("%d", teamID))
+			result, err := runTeamManager(projectName, "complete", completeArgs...)
 			if err != nil {
 				return err
 			}
@@ -450,12 +450,14 @@ func statusCmd() *cobra.Command {
 				return fmt.Errorf("--project flag is required")
 			}
 
+			statusArgs := []string{}
+			if phase != "" {
+				statusArgs = append(statusArgs, "--phase", phase)
+			}
+
 			if output == "json" {
-				args := []string{"status", "--project", projectName, "--format", "json"}
-				if phase != "" {
-					args = append(args, "--phase", phase)
-				}
-				result, err := runTeamManager(args...)
+				statusArgs = append(statusArgs, "--format", "json")
+				result, err := runTeamManager(projectName, "status", statusArgs...)
 				if err != nil {
 					return err
 				}
@@ -466,12 +468,7 @@ func statusCmd() *cobra.Command {
 			fmt.Println(titleStyle.Render("Project Status"))
 			fmt.Printf("Project: %s\n\n", textStyle.Render(projectName))
 
-			statusArgs := []string{"status", "--project", projectName}
-			if phase != "" {
-				statusArgs = append(statusArgs, "--phase", phase)
-			}
-
-			result, err := runTeamManager(statusArgs...)
+			result, err := runTeamManager(projectName, "status", statusArgs...)
 			if err != nil {
 				return err
 			}
@@ -497,7 +494,7 @@ func validateCmd() *cobra.Command {
 			}
 
 			if output == "json" {
-				result, err := runTeamManager("validate-size", "--project", projectName, "--format", "json")
+				result, err := runTeamManager(projectName, "validate-size", "--format", "json")
 				if err != nil {
 					return err
 				}
@@ -508,7 +505,7 @@ func validateCmd() *cobra.Command {
 			fmt.Println(titleStyle.Render("Team Size Validation"))
 			fmt.Printf("Project: %s\n\n", textStyle.Render(projectName))
 
-			result, err := runTeamManager("validate-size", "--project", projectName)
+			result, err := runTeamManager(projectName, "validate-size")
 			if err != nil {
 				return err
 			}
@@ -535,12 +532,14 @@ func phaseGateCmd() *cobra.Command {
 				return fmt.Errorf("--from and --to flags are required")
 			}
 
+			phaseGateArgs := []string{
+				"--from", fmt.Sprintf("%d", fromPhase),
+				"--to", fmt.Sprintf("%d", toPhase),
+			}
+
 			if output == "json" {
-				result, err := runTeamManager("phase-gate-check",
-					"--project", projectName,
-					"--from", fmt.Sprintf("%d", fromPhase),
-					"--to", fmt.Sprintf("%d", toPhase),
-					"--format", "json")
+				phaseGateArgs = append(phaseGateArgs, "--format", "json")
+				result, err := runTeamManager(projectName, "phase-gate-check", phaseGateArgs...)
 				if err != nil {
 					return err
 				}
@@ -552,10 +551,7 @@ func phaseGateCmd() *cobra.Command {
 			fmt.Printf("Project: %s\n", textStyle.Render(projectName))
 			fmt.Printf("From: Phase %d → To: Phase %d\n\n", fromPhase, toPhase)
 
-			result, err := runTeamManager("phase-gate-check",
-				"--project", projectName,
-				"--from", fmt.Sprintf("%d", fromPhase),
-				"--to", fmt.Sprintf("%d", toPhase))
+			result, err := runTeamManager(projectName, "phase-gate-check", phaseGateArgs...)
 			if err != nil {
 				return err
 			}
@@ -574,29 +570,239 @@ func phaseGateCmd() *cobra.Command {
 	return cmd
 }
 
-// agentMapCmd creates the agent-map command
-func agentMapCmd() *cobra.Command {
-	return &cobra.Command{
-		Use:   "agent-map [agent-type]",
-		Short: "Get team mapping for an agent type",
-		Long:  `Show which team and roles an agent type should be assigned to.`,
-		Args:  cobra.ExactArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			agentType := args[0]
+// queryCmd creates the query command
+func queryCmd() *cobra.Command {
+	var statusFilter, assigneeFilter, roleFilter string
 
-			if output == "json" {
-				result, err := runTeamManager("agent-team-map", "--agent-type", agentType, "--format", "json")
-				if err != nil {
-					return err
-				}
-				fmt.Println(string(result))
-				return nil
+	cmd := &cobra.Command{
+		Use:   "query",
+		Short: "Query teams with filters",
+		Long:  `Query teams with filters for status, assignee, or role.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if projectName == "" {
+				return fmt.Errorf("--project flag is required")
 			}
 
-			fmt.Println(titleStyle.Render("Agent Team Mapping"))
-			fmt.Printf("Agent Type: %s\n\n", textStyle.Render(agentType))
+			queryArgs := []string{}
+			if statusFilter != "" {
+				queryArgs = append(queryArgs, "--status", statusFilter)
+			}
+			if assigneeFilter != "" {
+				queryArgs = append(queryArgs, "--assignee", assigneeFilter)
+			}
+			if roleFilter != "" {
+				queryArgs = append(queryArgs, "--role", roleFilter)
+			}
 
-			result, err := runTeamManager("agent-team-map", "--agent-type", agentType)
+			if output == "json" {
+				queryArgs = append(queryArgs, "--format", "json")
+			}
+
+			result, err := runTeamManager(projectName, "query", queryArgs...)
+			if err != nil {
+				return err
+			}
+
+			fmt.Println(string(result))
+			return nil
+		},
+	}
+
+	cmd.Flags().StringVar(&statusFilter, "status", "", "Filter by status (not_started, active, completed, blocked)")
+	cmd.Flags().StringVar(&assigneeFilter, "assignee", "", "Filter by assignee")
+	cmd.Flags().StringVar(&roleFilter, "role", "", "Filter by role")
+
+	return cmd
+}
+
+// reassignCmd creates the reassign command
+func reassignCmd() *cobra.Command {
+	var fromTeam, toTeam int
+	var fromRole, toRole, personName string
+
+	cmd := &cobra.Command{
+		Use:   "reassign",
+		Short: "Reassign person from one role to another",
+		Long:  `Move a person from one role/team to another role/team.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if projectName == "" {
+				return fmt.Errorf("--project flag is required")
+			}
+
+			reassignArgs := []string{
+				"--from-team", fmt.Sprintf("%d", fromTeam),
+				"--from-role", fromRole,
+				"--to-team", fmt.Sprintf("%d", toTeam),
+				"--to-role", toRole,
+				"--person", personName,
+			}
+
+			if output == "json" {
+				reassignArgs = append(reassignArgs, "--format", "json")
+			}
+
+			result, err := runTeamManager(projectName, "reassign", reassignArgs...)
+			if err != nil {
+				return err
+			}
+
+			fmt.Println(string(result))
+			return nil
+		},
+	}
+
+	cmd.Flags().IntVar(&fromTeam, "from-team", 0, "Source team ID")
+	cmd.Flags().StringVar(&fromRole, "from-role", "", "Source role")
+	cmd.Flags().IntVar(&toTeam, "to-team", 0, "Target team ID")
+	cmd.Flags().StringVar(&toRole, "to-role", "", "Target role")
+	cmd.Flags().StringVar(&personName, "person", "", "Person to reassign")
+
+	cmd.MarkFlagRequired("from-team")
+	cmd.MarkFlagRequired("from-role")
+	cmd.MarkFlagRequired("to-team")
+	cmd.MarkFlagRequired("to-role")
+	cmd.MarkFlagRequired("person")
+
+	return cmd
+}
+
+// auditCmd creates the audit command
+func auditCmd() *cobra.Command {
+	var limit int
+
+	cmd := &cobra.Command{
+		Use:   "audit",
+		Short: "Query audit log",
+		Long:  `Query the audit log for project changes.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if projectName == "" {
+				return fmt.Errorf("--project flag is required")
+			}
+
+			auditArgs := []string{}
+			if limit > 0 {
+				auditArgs = append(auditArgs, "--limit", fmt.Sprintf("%d", limit))
+			}
+
+			if output == "json" {
+				auditArgs = append(auditArgs, "--format", "json")
+			}
+
+			result, err := runTeamManager(projectName, "audit", auditArgs...)
+			if err != nil {
+				return err
+			}
+
+			fmt.Println(string(result))
+			return nil
+		},
+	}
+
+	cmd.Flags().IntVar(&limit, "limit", 50, "Number of entries to show")
+
+	return cmd
+}
+
+// historyCmd creates the history command
+func historyCmd() *cobra.Command {
+	var startDate, endDate string
+
+	cmd := &cobra.Command{
+		Use:   "history",
+		Short: "Show team history",
+		Long:  `Show history for a specific team.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if projectName == "" {
+				return fmt.Errorf("--project flag is required")
+			}
+			if teamID == 0 {
+				return fmt.Errorf("--team flag is required")
+			}
+
+			historyArgs := []string{
+				"--team", fmt.Sprintf("%d", teamID),
+			}
+			if startDate != "" {
+				historyArgs = append(historyArgs, "--start-date", startDate)
+			}
+			if endDate != "" {
+				historyArgs = append(historyArgs, "--end-date", endDate)
+			}
+
+			if output == "json" {
+				historyArgs = append(historyArgs, "--format", "json")
+			}
+
+			result, err := runTeamManager(projectName, "team-history", historyArgs...)
+			if err != nil {
+				return err
+			}
+
+			fmt.Println(string(result))
+			return nil
+		},
+	}
+
+	cmd.Flags().IntVarP(&teamID, "team", "t", 0, "Team ID")
+	cmd.Flags().StringVar(&startDate, "start-date", "", "Start date (ISO format)")
+	cmd.Flags().StringVar(&endDate, "end-date", "", "End date (ISO format)")
+
+	cmd.MarkFlagRequired("team")
+
+	return cmd
+}
+
+// templateCmd creates the template command
+func templateCmd() *cobra.Command {
+	var format, outputFile string
+
+	cmd := &cobra.Command{
+		Use:   "template",
+		Short: "Create template for bulk assignments",
+		Long:  `Create a CSV or JSON template for bulk role assignments.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if projectName == "" {
+				return fmt.Errorf("--project flag is required")
+			}
+
+			var cmdName string
+			var fileFlag string
+			switch format {
+			case "csv":
+				cmdName = "template-csv"
+				fileFlag = "--file"
+			case "json":
+				cmdName = "template-json"
+				fileFlag = "--file"
+			default:
+				return fmt.Errorf("unsupported format: %s (use csv or json)", format)
+			}
+
+			result, err := runTeamManager(projectName, cmdName, fileFlag, outputFile)
+			if err != nil {
+				return err
+			}
+
+			fmt.Println(string(result))
+			return nil
+		},
+	}
+
+	cmd.Flags().StringVarP(&format, "format", "f", "csv", "Template format (csv or json)")
+	cmd.Flags().StringVarP(&outputFile, "output", "o", "", "Output file path")
+
+	return cmd
+}
+
+// healthCmd creates the health command
+func healthCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "health",
+		Short: "Check team manager health status",
+		Long:  `Check the health status of the team manager.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			// Health check doesn't require a project
+			result, err := runTeamManager("", "health")
 			if err != nil {
 				return err
 			}
@@ -625,9 +831,9 @@ func exportCmd() *cobra.Command {
 
 			switch format {
 			case "json":
-				result, err = runTeamManager("export-json", "--project", projectName)
+				result, err = runTeamManager(projectName, "export-json")
 			case "csv":
-				result, err = runTeamManager("export-csv", "--project", projectName)
+				result, err = runTeamManager(projectName, "export-csv")
 			default:
 				return fmt.Errorf("unsupported export format: %s", format)
 			}
@@ -668,9 +874,9 @@ func importCmd() *cobra.Command {
 
 			switch format {
 			case "json":
-				result, err = runTeamManager("import-json", "--project", projectName, "--file", filePath)
+				result, err = runTeamManager(projectName, "import-json", "--file", filePath)
 			case "csv":
-				result, err = runTeamManager("import-csv", "--project", projectName, "--file", filePath)
+				result, err = runTeamManager(projectName, "import-csv", "--file", filePath)
 			default:
 				return fmt.Errorf("unsupported import format: %s", format)
 			}
@@ -704,7 +910,7 @@ func backupCmd() *cobra.Command {
 			}
 
 			if output == "json" {
-				result, err := runTeamManager("list-backups", "--project", projectName, "--format", "json")
+				result, err := runTeamManager(projectName, "list-backups", "--format", "json")
 				if err != nil {
 					return err
 				}
@@ -715,7 +921,7 @@ func backupCmd() *cobra.Command {
 			fmt.Println(titleStyle.Render("Available Backups"))
 			fmt.Printf("Project: %s\n\n", textStyle.Render(projectName))
 
-			result, err := runTeamManager("list-backups", "--project", projectName)
+			result, err := runTeamManager(projectName, "list-backups")
 			if err != nil {
 				return err
 			}
@@ -746,7 +952,7 @@ func restoreCmd() *cobra.Command {
 			fmt.Printf("Project: %s\n", textStyle.Render(projectName))
 			fmt.Printf("Backup: %s\n\n", textStyle.Render(backupFile))
 
-			result, err := runTeamManager("restore", "--project", projectName, "--backup", backupFile)
+			result, err := runTeamManager(projectName, "restore", "--backup", backupFile)
 			if err != nil {
 				return err
 			}
@@ -794,9 +1000,7 @@ func deleteCmd() *cobra.Command {
 				fmt.Printf("Project: %s\n", textStyle.Render(projectName))
 				fmt.Printf("Team: %d\n\n", teamID)
 
-				result, err = runTeamManager("delete-team",
-					"--project", projectName,
-					"--team", fmt.Sprintf("%d", teamID))
+				result, err = runTeamManager(projectName, "delete-team", "--team", fmt.Sprintf("%d", teamID))
 			} else {
 				// Delete entire project
 				if !force {
@@ -812,7 +1016,7 @@ func deleteCmd() *cobra.Command {
 				fmt.Println(titleStyle.Render("Deleting Project"))
 				fmt.Printf("Project: %s\n\n", textStyle.Render(projectName))
 
-				result, err = runTeamManager("delete-project", "--project", projectName)
+				result, err = runTeamManager(projectName, "delete-project")
 			}
 
 			if err != nil {
