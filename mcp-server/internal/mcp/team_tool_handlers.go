@@ -412,6 +412,125 @@ type AgentTeam struct {
 	Phase string   `json:"phase"`
 }
 
+// handleTeamDelete deletes a specific team from a project
+func (s *MCPServer) handleTeamDelete(ctx context.Context, args map[string]interface{}) (*mcp.CallToolResult, error) {
+	projectName, ok := args["project_name"].(string)
+	if !ok || projectName == "" {
+		return &mcp.CallToolResult{
+			Content: []interface{}{mcp.TextContent{Type: "text", Text: "Error: project_name is required"}},
+			IsError: true,
+		}, nil
+	}
+
+	if err := validateProjectName(projectName); err != nil {
+		return &mcp.CallToolResult{
+			Content: []interface{}{mcp.TextContent{Type: "text", Text: err.Error()}},
+			IsError: true,
+		}, nil
+	}
+
+	teamID, ok := args["team_id"].(float64)
+	if !ok {
+		return &mcp.CallToolResult{
+			Content: []interface{}{mcp.TextContent{Type: "text", Text: "Error: team_id is required"}},
+			IsError: true,
+		}, nil
+	}
+
+	// Validate team_id range (1-12)
+	teamIDInt := int(teamID)
+	if teamIDInt < 1 || teamIDInt > 12 {
+		return &mcp.CallToolResult{
+			Content: []interface{}{mcp.TextContent{Type: "text", Text: "Error: team_id must be between 1 and 12"}},
+			IsError: true,
+		}, nil
+	}
+
+	// Check for confirmation
+	confirmed := false
+	if conf, ok := args["confirmed"].(bool); ok {
+		confirmed = conf
+	}
+
+	cmdArgs := []string{"scripts/team_manager.py", "--project", projectName, "delete-team", "--team", strconv.Itoa(teamIDInt)}
+	if confirmed {
+		cmdArgs = append(cmdArgs, "--confirmed")
+	}
+
+	cmd := exec.CommandContext(ctx, "python", cmdArgs...)
+	output, err := cmd.CombinedOutput()
+
+	resultText := string(output)
+	if err != nil {
+		// Check if this is just a confirmation required error
+		if strings.Contains(resultText, "requires confirmation") {
+			return &mcp.CallToolResult{
+				Content: []interface{}{mcp.TextContent{Type: "text", Text: resultText}},
+			}, nil
+		}
+		resultText = fmt.Sprintf("Error deleting team: %v\nOutput: %s", err, string(output))
+		return &mcp.CallToolResult{
+			Content: []interface{}{mcp.TextContent{Type: "text", Text: resultText}},
+			IsError: true,
+		}, nil
+	}
+
+	return &mcp.CallToolResult{
+		Content: []interface{}{mcp.TextContent{Type: "text", Text: resultText}},
+	}, nil
+}
+
+// handleProjectDelete deletes an entire project
+func (s *MCPServer) handleProjectDelete(ctx context.Context, args map[string]interface{}) (*mcp.CallToolResult, error) {
+	projectName, ok := args["project_name"].(string)
+	if !ok || projectName == "" {
+		return &mcp.CallToolResult{
+			Content: []interface{}{mcp.TextContent{Type: "text", Text: "Error: project_name is required"}},
+			IsError: true,
+		}, nil
+	}
+
+	if err := validateProjectName(projectName); err != nil {
+		return &mcp.CallToolResult{
+			Content: []interface{}{mcp.TextContent{Type: "text", Text: err.Error()}},
+			IsError: true,
+		}, nil
+	}
+
+	// Check for confirmation
+	confirmed := false
+	if conf, ok := args["confirmed"].(bool); ok {
+		confirmed = conf
+	}
+
+	cmdArgs := []string{"scripts/team_manager.py", "--project", projectName, "delete-project"}
+	if confirmed {
+		cmdArgs = append(cmdArgs, "--confirmed")
+	}
+
+	cmd := exec.CommandContext(ctx, "python", cmdArgs...)
+	output, err := cmd.CombinedOutput()
+
+	resultText := string(output)
+	if err != nil {
+		// Check if this is just a confirmation required error
+		if strings.Contains(resultText, "requires confirmation") {
+			return &mcp.CallToolResult{
+				Content: []interface{}{mcp.TextContent{Type: "text", Text: resultText}},
+			}, nil
+		}
+		resultText = fmt.Sprintf("Error deleting project: %v\nOutput: %s", err, string(output))
+		return &mcp.CallToolResult{
+			Content: []interface{}{mcp.TextContent{Type: "text", Text: resultText}},
+			IsError: true,
+		}, nil
+	}
+
+	return &mcp.CallToolResult{
+		Content: []interface{}{mcp.TextContent{Type: "text", Text: resultText}},
+	}, nil
+}
+
 func loadTeamLayoutRules() (*TeamLayoutRules, error) {
 	// Return hardcoded rules matching .guardrails/team-layout-rules.json
 	return &TeamLayoutRules{
