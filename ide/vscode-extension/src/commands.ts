@@ -86,10 +86,13 @@ export function registerCommands(
             if (projectSlug === undefined) return;
 
             await config.update('serverUrl', serverUrl, true);
-            await config.update('apiKey', apiKey, true);
             await config.update('projectSlug', projectSlug, true);
+            // Store API key in SecretStorage, not plain settings
+            if (apiKey !== undefined) {
+                await context.secrets.store('guardrail.apiKey', apiKey);
+            }
 
-            client.updateConfiguration();
+            client.updateConfiguration(context);
 
             const connected = await client.testConnection();
             if (connected) {

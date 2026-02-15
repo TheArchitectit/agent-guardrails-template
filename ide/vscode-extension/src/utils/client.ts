@@ -4,18 +4,24 @@ import { ValidationRequest, ValidationResponse, GuardrailConfig } from '../types
 export class GuardrailClient {
     private config!: GuardrailConfig;
     private outputChannel: vscode.OutputChannel;
+    private context: vscode.ExtensionContext | undefined;
 
     constructor(outputChannel: vscode.OutputChannel) {
         this.outputChannel = outputChannel;
-        this.updateConfiguration();
     }
 
-    updateConfiguration(): void {
+    async updateConfiguration(context?: vscode.ExtensionContext): Promise<void> {
+        this.context = context;
         const config = vscode.workspace.getConfiguration('guardrail');
+        // Get API key from SecretStorage if available
+        let apiKey = '';
+        if (context) {
+            apiKey = await context.secrets.get('guardrail.apiKey') || '';
+        }
         this.config = {
             enabled: config.get<boolean>('enabled', true),
             serverUrl: config.get<string>('serverUrl', 'http://localhost:8095'),
-            apiKey: config.get<string>('apiKey', ''),
+            apiKey: apiKey,
             projectSlug: config.get<string>('projectSlug', ''),
             validateOnSave: config.get<boolean>('validateOnSave', true),
             validateOnType: config.get<boolean>('validateOnType', false),
