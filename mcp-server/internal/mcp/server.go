@@ -733,6 +733,23 @@ func (s *MCPServer) registerTools() {
 						},
 					},
 				},
+				{
+					Name:        "guardrail_team_size_validate",
+					Description: "Validate team sizes meet 4-6 member requirement",
+					InputSchema: mcp.ToolInputSchema{
+						Type: "object",
+						Properties: mcp.ToolInputSchemaProperties{
+							"project_name": map[string]interface{}{
+								"type":        "string",
+								"description": "Name of the project",
+							},
+							"team_id": map[string]interface{}{
+								"type":        "number",
+								"description": "Optional: Specific team ID to validate",
+							},
+						},
+					},
+				},
 			},
 		}, nil
 	})
@@ -864,6 +881,8 @@ func (s *MCPServer) handleToolCall(ctx context.Context, name string, arguments m
 		return s.handlePhaseGateCheck(ctx, arguments)
 	case "guardrail_agent_team_map":
 		return s.handleAgentTeamMap(ctx, arguments)
+	case "guardrail_team_size_validate":
+		return s.handleTeamSizeValidate(ctx, arguments)
 	default:
 		return &mcp.CallToolResult{
 			Content: []interface{}{
