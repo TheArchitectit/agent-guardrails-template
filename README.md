@@ -111,7 +111,7 @@ The **Model Context Protocol (MCP) Server** provides real-time guardrail enforce
 
 ### Features
 
-**11 MCP Tools:**
+**17 MCP Tools:**
 
 | Tool | Purpose |
 |------|---------|
@@ -126,6 +126,12 @@ The **Model Context Protocol (MCP) Server** provides real-time guardrail enforce
 | `guardrail_prevent_regression` | Check failure registry for pattern matches |
 | `guardrail_check_test_prod_separation` | Verify test/production isolation |
 | `guardrail_validate_push` | Validate git push safety conditions |
+| `guardrail_team_init` | Initialize team structure for a project |
+| `guardrail_team_list` | List all teams and their status |
+| `guardrail_team_assign` | Assign a person to a role in a team |
+| `guardrail_team_status` | Get phase or project status |
+| `guardrail_phase_gate_check` | Check if phase gate requirements are met |
+| `guardrail_agent_team_map` | Get the team assignment for an agent type |
 
 **8 MCP Resources:**
 
@@ -508,6 +514,39 @@ fetch('http://your-server:8095/api/rules', {
 ```
 
 **Prevents:** Repeating past failures by pattern matching
+
+#### 5. Team Layout Management Tools
+
+**Purpose:** Initialize and manage standardized team structure across projects
+
+**Tools:**
+- `guardrail_team_init` - Initialize team structure for a project
+- `guardrail_team_list` - List all teams and their status
+- `guardrail_team_assign` - Assign a person to a role in a team
+- `guardrail_team_status` - Get phase or project status
+- `guardrail_phase_gate_check` - Check if phase gate requirements are met
+- `guardrail_agent_team_map` - Get the team assignment for an agent type
+
+**When to use:**
+- At project start to initialize team structure
+- When assigning team members to roles
+- Before transitioning between project phases
+- When determining which team an agent should work with
+
+**Example:**
+```json
+{
+  "method": "tools/call",
+  "params": {
+    "name": "guardrail_team_init",
+    "arguments": {
+      "project_name": "my-project"
+    }
+  }
+}
+```
+
+**See:** [TEAM_TOOLS.md](docs/TEAM_TOOLS.md) for complete documentation
 
 ### Common Use Cases
 
@@ -1084,7 +1123,7 @@ agent-guardrails-template/
 | **Supported AI Models** | 30+ LLM families |
 | **Programming Languages** | Go, Java, Python, Ruby, Rust, TypeScript |
 | **AI Tool Integrations** | Claude Code, OpenCode |
-| **MCP Server** | 6 tools, 2 resources, SSE + HTTP endpoints |
+| **MCP Server** | 17 tools, 8 resources, SSE + HTTP endpoints |
 | **Infrastructure** | PostgreSQL 16, Redis 7, Docker/Podman |
 
 ---
