@@ -379,6 +379,7 @@ def export_json(manager, json_path: Path, pretty: bool = True) -> Dict[str, Any]
 
     data = {
         "project_name": manager.project_name,
+        "version": getattr(manager, '_data_version', '1.0.0'),  # OPS-005: Include version
         "exported_at": datetime.now().isoformat(),
         "team_count": len(manager.teams),
         "teams": []

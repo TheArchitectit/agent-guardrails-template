@@ -6,11 +6,99 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/thearchitectit/guardrail-mcp/internal/metrics"
 )
+
+// SEC-005: Rate limiting configuration
+const (
+	defaultRateLimitRequests = 100
+	defaultRateLimitWindow   = 60 // seconds
+)
+
+// rateBucket represents a token bucket for rate limiting
+type rateBucket struct {
+	tokens     int
+	lastReset  time.Time
+}
+
+// rateLimiter implements token bucket rate limiting
+type rateLimiter struct {
+	mu              sync.RWMutex
+	buckets         map[string]*rateBucket
+	requestsLimit   int
+	windowSeconds   int
+}
+
+// globalRateLimiter is the singleton rate limiter instance
+var globalRateLimiter = &rateLimiter{
+	buckets:       make(map[string]*rateBucket),
+	requestsLimit: defaultRateLimitRequests,
+	windowSeconds: defaultRateLimitWindow,
+}
+
+// checkRateLimit checks if a request is allowed for the given user
+// Returns (allowed, rateLimitHeaders)
+func (rl *rateLimiter) checkRateLimit(userID string) (bool, map[string]string) {
+	rl.mu.Lock()
+	defer rl.mu.Unlock()
+
+	now := time.Now()
+	bucket, exists := rl.buckets[userID]
+
+	if !exists || now.Sub(bucket.lastReset) >= time.Duration(rl.windowSeconds)*time.Second {
+		// Create new bucket or reset expired bucket
+		rl.buckets[userID] = &rateBucket{
+			tokens:     rl.requestsLimit - 1, // Consume one token
+			lastReset:  now,
+		}
+		remaining := rl.requestsLimit - 1
+		resetTime := now.Add(time.Duration(rl.windowSeconds) * time.Second).Unix()
+		return true, map[string]string{
+			"X-RateLimit-Limit":     strconv.Itoa(rl.requestsLimit),
+			"X-RateLimit-Remaining": strconv.Itoa(remaining),
+			"X-RateLimit-Reset":     strconv.Itoa(int(resetTime)),
+		}
+	}
+
+	// Check if tokens available
+	if bucket.tokens <= 0 {
+		resetTime := bucket.lastReset.Add(time.Duration(rl.windowSeconds) * time.Second).Unix()
+		return false, map[string]string{
+			"X-RateLimit-Limit":     strconv.Itoa(rl.requestsLimit),
+			"X-RateLimit-Remaining": "0",
+			"X-RateLimit-Reset":     strconv.Itoa(int(resetTime)),
+		}
+	}
+
+	// Consume token
+	bucket.tokens--
+	remaining := bucket.tokens
+	resetTime := bucket.lastReset.Add(time.Duration(rl.windowSeconds) * time.Second).Unix()
+	return true, map[string]string{
+		"X-RateLimit-Limit":     strconv.Itoa(rl.requestsLimit),
+		"X-RateLimit-Remaining": strconv.Itoa(remaining),
+		"X-RateLimit-Reset":     strconv.Itoa(int(resetTime)),
+	}
+}
+
+// cleanupOldBuckets removes expired buckets (call periodically)
+func (rl *rateLimiter) cleanupOldBuckets() {
+	rl.mu.Lock()
+	defer rl.mu.Unlock()
+
+	now := time.Now()
+	window := time.Duration(rl.windowSeconds) * time.Second
+
+	for userID, bucket := range rl.buckets {
+		if now.Sub(bucket.lastReset) > window*2 {
+			delete(rl.buckets, userID)
+		}
+	}
+}
 
 // validateProjectName validates project name to prevent command injection
 func validateProjectName(name string) error {
@@ -322,6 +410,21 @@ func (s *MCPServer) handleTeamAssign(ctx context.Context, args map[string]interf
 		}, nil
 	}
 
+	// SEC-005: Check rate limit
+	userID := "default" // Could extract from context/auth if available
+	allowed, rateHeaders := globalRateLimiter.checkRateLimit(userID)
+	if !allowed {
+		metrics.RecordTeamToolError("team_assign", "rate_limit_exceeded")
+		retryAfter := rateHeaders["X-RateLimit-Reset"]
+		return &mcp.CallToolResult{
+			Content: []interface{}{mcp.TextContent{
+				Type: "text",
+				Text: fmt.Sprintf("Error: Rate limit exceeded. Retry after %s", retryAfter),
+			}},
+			IsError: true,
+		}, nil
+	}
+
 	teamID, ok := args["team_id"].(float64)
 	if !ok {
 		metrics.RecordTeamToolError("team_assign", "validation_error")
@@ -481,6 +584,98 @@ func (s *MCPServer) handleTeamUnassign(ctx context.Context, args map[string]inte
 	}
 
 	metrics.RecordTeamToolCall("team_unassign", true)
+	return &mcp.CallToolResult{
+		Content: []interface{}{mcp.TextContent{Type: "text", Text: resultText}},
+	}, nil
+}
+
+// handleTeamStart starts a team (marks as active)
+// FUNC-010: Supports override for admin users
+func (s *MCPServer) handleTeamStart(ctx context.Context, args map[string]interface{}) (*mcp.CallToolResult, error) {
+	start := time.Now()
+	metrics.IncrementTeamToolActive("team_start")
+	defer func() {
+		metrics.DecrementTeamToolActive("team_start")
+		metrics.RecordTeamToolDuration("team_start", time.Since(start))
+	}()
+
+	projectName, ok := args["project_name"].(string)
+	if !ok || projectName == "" {
+		metrics.RecordTeamToolError("team_start", "validation_error")
+		return &mcp.CallToolResult{
+			Content: []interface{}{mcp.TextContent{Type: "text", Text: "Error: project_name is required"}},
+			IsError: true,
+		}, nil
+	}
+
+	if err := validateProjectName(projectName); err != nil {
+		metrics.RecordTeamToolError("team_start", "validation_error")
+		return &mcp.CallToolResult{
+			Content: []interface{}{mcp.TextContent{Type: "text", Text: err.Error()}},
+			IsError: true,
+		}, nil
+	}
+
+	teamID, ok := args["team_id"].(float64)
+	if !ok {
+		metrics.RecordTeamToolError("team_start", "validation_error")
+		return &mcp.CallToolResult{
+			Content: []interface{}{mcp.TextContent{Type: "text", Text: "Error: team_id is required"}},
+			IsError: true,
+		}, nil
+	}
+
+	// Validate team_id range (1-12)
+	teamIDInt := int(teamID)
+	if teamIDInt < 1 || teamIDInt > 12 {
+		metrics.RecordTeamToolError("team_start", "validation_error")
+		return &mcp.CallToolResult{
+			Content: []interface{}{mcp.TextContent{Type: "text", Text: "Error: team_id must be between 1 and 12"}},
+			IsError: true,
+		}, nil
+	}
+
+	// Build command args
+	cmdArgs := []string{"scripts/team_manager.py", "--project", projectName, "start", "--team", strconv.Itoa(teamIDInt)}
+
+	// FUNC-010: Handle override option
+	override := false
+	if overrideVal, ok := args["override"].(bool); ok {
+		override = overrideVal
+	}
+
+	if override {
+		cmdArgs = append(cmdArgs, "--override")
+
+		// Reason is required when overriding
+		reason, ok := args["reason"].(string)
+		if !ok || reason == "" {
+			metrics.RecordTeamToolError("team_start", "validation_error")
+			return &mcp.CallToolResult{
+				Content: []interface{}{mcp.TextContent{Type: "text", Text: "Error: reason is required when using override"}},
+				IsError: true,
+			}, nil
+		}
+		cmdArgs = append(cmdArgs, "--reason", reason)
+	}
+
+	cmd := exec.CommandContext(ctx, "python", cmdArgs...)
+	pyStart := time.Now()
+	output, err := cmd.CombinedOutput()
+	metrics.RecordTeamToolPythonExec("start", time.Since(pyStart))
+
+	resultText := string(output)
+	if err != nil {
+		resultText = fmt.Sprintf("Error starting team: %v\nOutput: %s", err, string(output))
+		metrics.RecordTeamToolError("team_start", "python_error")
+		metrics.RecordTeamToolCall("team_start", false)
+		return &mcp.CallToolResult{
+			Content: []interface{}{mcp.TextContent{Type: "text", Text: resultText}},
+			IsError: true,
+		}, nil
+	}
+
+	metrics.RecordTeamToolCall("team_start", true)
 	return &mcp.CallToolResult{
 		Content: []interface{}{mcp.TextContent{Type: "text", Text: resultText}},
 	}, nil
@@ -1007,16 +1202,20 @@ func loadTeamLayoutRules() (*TeamLayoutRules, error) {
 			},
 		},
 		AgentMapping: map[string]AgentTeam{
-			"planner":        {Team: 2, Roles: []string{"Solution Architect"}, Phase: "Phase 1"},
-			"architect":      {Team: 2, Roles: []string{"Chief Architect", "Domain Architect"}, Phase: "Phase 1"},
-			"infrastructure": {Team: 4, Roles: []string{"Cloud Architect", "IaC Engineer"}, Phase: "Phase 2"},
-			"platform":       {Team: 5, Roles: []string{"CI/CD Architect", "Kubernetes Administrator"}, Phase: "Phase 2"},
-			"backend":        {Team: 7, Roles: []string{"Senior Backend Engineer"}, Phase: "Phase 3"},
-			"frontend":       {Team: 7, Roles: []string{"Senior Frontend Engineer", "Accessibility Expert"}, Phase: "Phase 3"},
-			"security":       {Team: 9, Roles: []string{"Security Architect"}, Phase: "Phase 4"},
-			"qa":             {Team: 10, Roles: []string{"QA Architect", "SDET"}, Phase: "Phase 4"},
-			"sre":            {Team: 11, Roles: []string{"SRE Lead", "Observability Engineer"}, Phase: "Phase 5"},
-			"ops":            {Team: 12, Roles: []string{"Release Manager", "NOC Analyst"}, Phase: "Phase 5"},
+			"planner":             {Team: 2, Roles: []string{"Solution Architect"}, Phase: "Phase 1"},
+			"architect":           {Team: 2, Roles: []string{"Chief Architect", "Domain Architect"}, Phase: "Phase 1"},
+			"infrastructure":        {Team: 4, Roles: []string{"Cloud Architect", "IaC Engineer"}, Phase: "Phase 2"},
+			"platform":            {Team: 5, Roles: []string{"CI/CD Architect", "Kubernetes Administrator"}, Phase: "Phase 2"},
+			"backend":             {Team: 7, Roles: []string{"Senior Backend Engineer"}, Phase: "Phase 3"},
+			"frontend":            {Team: 7, Roles: []string{"Senior Frontend Engineer", "Accessibility Expert"}, Phase: "Phase 3"},
+			"security":            {Team: 9, Roles: []string{"Security Architect"}, Phase: "Phase 4"},
+			"security-engineer":   {Team: 9, Roles: []string{"DevSecOps Engineer", "Vulnerability Researcher"}, Phase: "Phase 4"},
+			"qa":                  {Team: 10, Roles: []string{"QA Architect", "SDET"}, Phase: "Phase 4"},
+			"performance-tester":  {Team: 10, Roles: []string{"Performance/Load Engineer"}, Phase: "Phase 4"},
+			"accessibility-tester": {Team: 7, Roles: []string{"Accessibility (A11y) Expert"}, Phase: "Phase 3"},
+			"ux-researcher":       {Team: 1, Roles: []string{"Business Systems Analyst", "Lead Product Manager"}, Phase: "Phase 1"},
+			"sre":                 {Team: 11, Roles: []string{"SRE Lead", "Observability Engineer"}, Phase: "Phase 5"},
+			"ops":                 {Team: 12, Roles: []string{"Release Manager", "NOC Analyst"}, Phase: "Phase 5"},
 		},
 	}, nil
 }
