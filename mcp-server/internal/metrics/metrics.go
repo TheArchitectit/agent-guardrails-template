@@ -9,6 +9,33 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 )
 
+// TeamToolMetrics provides instrumentation for team tool handlers
+type TeamToolMetrics struct {
+	tool string
+	start time.Time
+}
+
+// NewTeamToolMetrics creates a new team tool metrics recorder
+func NewTeamToolMetrics(tool string) *TeamToolMetrics {
+	IncrementTeamToolActive(tool)
+	return &TeamToolMetrics{
+		tool:  tool,
+		start: time.Now(),
+	}
+}
+
+// Done records the completion of a team tool operation
+func (m *TeamToolMetrics) Done(success bool) {
+	DecrementTeamToolActive(m.tool)
+	RecordTeamToolDuration(m.tool, time.Since(m.start))
+	RecordTeamToolCall(m.tool, success)
+}
+
+// RecordError records an error for the team tool operation
+func (m *TeamToolMetrics) RecordError(errorType string) {
+	RecordTeamToolError(m.tool, errorType)
+}
+
 // Namespace for all guardrail metrics
 const namespace = "guardrail"
 
@@ -373,6 +400,66 @@ var (
 	)
 )
 
+// Team tool metrics
+var (
+	// TeamToolCallsTotal tracks total team tool calls
+	TeamToolCallsTotal = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Namespace: namespace,
+			Subsystem: "team_tool",
+			Name:      "calls_total",
+			Help:      "Total number of team tool calls",
+		},
+		[]string{"tool", "result"},
+	)
+
+	// TeamToolDuration tracks team tool execution latency
+	TeamToolDuration = promauto.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Namespace: namespace,
+			Subsystem: "team_tool",
+			Name:      "duration_seconds",
+			Help:      "Team tool execution latency in seconds",
+			Buckets:   []float64{0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10},
+		},
+		[]string{"tool"},
+	)
+
+	// TeamToolErrorsTotal tracks team tool errors
+	TeamToolErrorsTotal = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Namespace: namespace,
+			Subsystem: "team_tool",
+			Name:      "errors_total",
+			Help:      "Total number of team tool errors",
+		},
+		[]string{"tool", "error_type"},
+	)
+
+	// TeamToolActiveOperations tracks active team tool operations
+	TeamToolActiveOperations = promauto.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Namespace: namespace,
+			Subsystem: "team_tool",
+			Name:      "active_operations",
+			Help:      "Number of active team tool operations",
+		},
+		[]string{"tool"},
+	)
+
+	// TeamToolPythonExecDuration tracks Python script execution time
+	TeamToolPythonExecDuration = promauto.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Namespace: namespace,
+			Subsystem: "team_tool",
+			Name:      "python_exec_duration_seconds",
+			Help:      "Python script execution latency in seconds",
+			Buckets:   []float64{0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10},
+		},
+		[]string{"command"},
+	)
+)
+
 // PrometheusMiddleware returns Echo middleware for Prometheus metrics
 func PrometheusMiddleware() echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
@@ -545,4 +632,38 @@ func RecordErrorBudgetBurnRate(sloName, window string, rate float64) {
 // RecordSLI records SLI value
 func RecordSLI(sloName string, value float64) {
 	SLIValue.WithLabelValues(sloName).Set(value)
+}
+
+// RecordTeamToolCall records a team tool call
+func RecordTeamToolCall(tool string, success bool) {
+	result := "success"
+	if !success {
+		result = "error"
+	}
+	TeamToolCallsTotal.WithLabelValues(tool, result).Inc()
+}
+
+// RecordTeamToolDuration records team tool execution duration
+func RecordTeamToolDuration(tool string, duration time.Duration) {
+	TeamToolDuration.WithLabelValues(tool).Observe(duration.Seconds())
+}
+
+// RecordTeamToolError records a team tool error
+func RecordTeamToolError(tool string, errorType string) {
+	TeamToolErrorsTotal.WithLabelValues(tool, errorType).Inc()
+}
+
+// IncrementTeamToolActive increments active team tool operations
+func IncrementTeamToolActive(tool string) {
+	TeamToolActiveOperations.WithLabelValues(tool).Inc()
+}
+
+// DecrementTeamToolActive decrements active team tool operations
+func DecrementTeamToolActive(tool string) {
+	TeamToolActiveOperations.WithLabelValues(tool).Dec()
+}
+
+// RecordTeamToolPythonExec records Python script execution duration
+func RecordTeamToolPythonExec(command string, duration time.Duration) {
+	TeamToolPythonExecDuration.WithLabelValues(command).Observe(duration.Seconds())
 }
