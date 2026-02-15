@@ -58,8 +58,10 @@
 | mcp-api | API.md | mcp-server/ | MCP server REST API documentation |
 | mcp-changelog | CHANGELOG.md | mcp-server/ | MCP server version history |
 | guardrail-platform | MCP_SERVER_PLAN.md | docs/plans/ | Guardrail enforcement platform |
-| team-tools | TEAM_TOOLS.md | docs/ | Team layout management MCP tools reference |
+| team-tools | TEAM_TOOLS.md | docs/ | Team layout management MCP tools reference (Go implementation) |
 | team-structure | TEAM_STRUCTURE.md | docs/ | 12-team enterprise structure documentation |
+| python-migration | PYTHON_TO_GO_MIGRATION.md | docs/ | Python to Go migration guide for developers |
+| go-migration | PYTHON_TO_GO_MIGRATION.md | docs/ | Python to Go migration guide for developers |
 | team-cli | cmd/team-cli/README.md | cmd/team-cli/ | Team management CLI tool |
 | phase-gate | TEAM_TOOLS.md | docs/ | Phase transition requirements and deliverables |
 | aider | CLCODE_INTEGRATION.md | docs/ | Aider YAML configuration (see Claude Code) |

@@ -551,12 +551,14 @@ echo "Restoring from: $LATEST_BACKUP"
 # Restore files
 cp -r "$LATEST_BACKUP/." .
 
-# Checkout last known good version
-git checkout v1.10.0
+# Checkout last known good version (Go implementation)
+git checkout v2.0.0
 
 # Rebuild and start
-cd mcp-server && go build ./cmd/server && cd ..
-nohup ./mcp-server/cmd/server/server > mcp.log 2>&1 &
+cd mcp-server
+go build -o bin/server ./cmd/server
+cd ..
+nohup ./mcp-server/bin/server > mcp.log 2>&1 &
 
 echo "Emergency rollback complete"
 echo "Check logs: tail -f mcp.log"
@@ -689,11 +691,12 @@ echo "Zero-downtime migration complete"
 
 **Solution:**
 ```bash
-# Force version update
-python scripts/update_config_version.py --version 2.0
+# Force version update (Go binary)
+cd mcp-server
+go run ./cmd/tools/update_config.go --version 2.0
 
 # Re-run migration
-python scripts/migrate_team_config.py --from-version 1 --to-version 2 --force
+go run ./cmd/tools/migrate_config.go --from-version 1 --to-version 2 --force
 ```
 
 #### Issue: "Database migration failed"
@@ -703,14 +706,15 @@ python scripts/migrate_team_config.py --from-version 1 --to-version 2 --force
 **Solution:**
 ```bash
 # Check migration status
-python scripts/migrate_db.py --status
+cd mcp-server
+make migrate-status
 
 # Fix by marking as applied
-python scripts/migrate_db.py --mark-applied 20260215000001
+migrate -path internal/database/migrations -database "$DATABASE_URL" force 20260215000001
 
 # Or rollback and retry
-python scripts/migrate_db.py --rollback 1
-python scripts/migrate_db.py --migrate
+make migrate-down
+make migrate-up
 ```
 
 #### Issue: "Port already in use"
