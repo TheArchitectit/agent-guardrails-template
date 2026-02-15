@@ -1135,16 +1135,15 @@ func TestValidatePersonName(t *testing.T) {
 			errMsg:  "forbidden pattern",
 		},
 		{
-			name:    "invalid - invalid characters (spaces)",
+			name:    "valid - display name with spaces",
 			person:  "john doe",
-			wantErr: true,
-			errMsg:  "alphanumeric, dots, hyphens, underscores only",
+			wantErr: false,
 		},
 		{
 			name:    "invalid email - no domain",
 			person:  "john@",
 			wantErr: true,
-			errMsg:  "alphanumeric, dots, hyphens, underscores only",
+			errMsg:  "contains invalid characters",
 		},
 	}
 
@@ -1307,11 +1306,6 @@ func TestHandleTeamAssign_InvalidPerson(t *testing.T) {
 			name:      "person with semicolon",
 			person:    "john; rm -rf /",
 			wantError: "forbidden pattern",
-		},
-		{
-			name:      "person with spaces (not email)",
-			person:    "John Doe",
-			wantError: "alphanumeric, dots, hyphens, underscores only",
 		},
 	}
 
