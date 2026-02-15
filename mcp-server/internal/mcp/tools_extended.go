@@ -511,6 +511,13 @@ func (s *MCPServer) handleRecordFileRead(ctx context.Context, args map[string]in
 
 // handleRecordAttempt records a failed task attempt for three strikes tracking
 func (s *MCPServer) handleRecordAttempt(ctx context.Context, args map[string]interface{}) (*mcp.CallToolResult, error) {
+	// Panic recovery to prevent HTTP 500
+	defer func() {
+		if r := recover(); r != nil {
+			slog.Error("Panic in handleRecordAttempt", "recover", r)
+		}
+	}()
+
 	sessionToken, _ := args["session_token"].(string)
 	taskID, _ := args["task_id"].(string)
 	errorMsg, _ := args["error_message"].(string)
@@ -540,6 +547,14 @@ func (s *MCPServer) handleRecordAttempt(ctx context.Context, args map[string]int
 	if !exists {
 		return &mcp.CallToolResult{
 			Content: []interface{}{mcp.TextContent{Type: "text", Text: `{"valid":false,"error":"Invalid session token"}`}},
+			IsError: true,
+		}, nil
+	}
+
+	// Check if taskAttemptStore is available
+	if s.taskAttemptStore == nil {
+		return &mcp.CallToolResult{
+			Content: []interface{}{mcp.TextContent{Type: "text", Text: `{"valid":false,"error":"Task attempt store not available"}`}},
 			IsError: true,
 		}, nil
 	}
@@ -576,6 +591,13 @@ func (s *MCPServer) handleRecordAttempt(ctx context.Context, args map[string]int
 
 // handleValidateThreeStrikes checks three strikes status and determines if should halt
 func (s *MCPServer) handleValidateThreeStrikes(ctx context.Context, args map[string]interface{}) (*mcp.CallToolResult, error) {
+	// Panic recovery to prevent HTTP 500
+	defer func() {
+		if r := recover(); r != nil {
+			slog.Error("Panic in handleValidateThreeStrikes", "recover", r)
+		}
+	}()
+
 	sessionToken, _ := args["session_token"].(string)
 	taskID, _ := args["task_id"].(string)
 
@@ -595,6 +617,14 @@ func (s *MCPServer) handleValidateThreeStrikes(ctx context.Context, args map[str
 	if !exists {
 		return &mcp.CallToolResult{
 			Content: []interface{}{mcp.TextContent{Type: "text", Text: `{"valid":false,"error":"Invalid session token"}`}},
+			IsError: true,
+		}, nil
+	}
+
+	// Check if taskAttemptStore is available
+	if s.taskAttemptStore == nil {
+		return &mcp.CallToolResult{
+			Content: []interface{}{mcp.TextContent{Type: "text", Text: `{"valid":false,"error":"Task attempt store not available"}`}},
 			IsError: true,
 		}, nil
 	}
@@ -635,7 +665,18 @@ func (s *MCPServer) handleValidateThreeStrikes(ctx context.Context, args map[str
 }
 
 // handleResetAttempts resets attempt counter for a task (on successful completion)
-func (s *MCPServer) handleResetAttempts(ctx context.Context, args map[string]interface{}) (*mcp.CallToolResult, error) {
+func (s *MCPServer) handleResetAttempts(ctx context.Context, args map[string]interface{}) (result *mcp.CallToolResult, err error) {
+	// Panic recovery to prevent HTTP 500
+	defer func() {
+		if r := recover(); r != nil {
+			slog.Error("Panic in handleResetAttempts", "recover", r)
+			result = &mcp.CallToolResult{
+				Content: []interface{}{mcp.TextContent{Type: "text", Text: `{"valid":false,"error":"Internal server error"}`}},
+				IsError: true,
+			}
+		}
+	}()
+
 	sessionToken, _ := args["session_token"].(string)
 	taskID, _ := args["task_id"].(string)
 
@@ -659,16 +700,24 @@ func (s *MCPServer) handleResetAttempts(ctx context.Context, args map[string]int
 		}, nil
 	}
 
+	// Check if taskAttemptStore is available
+	if s.taskAttemptStore == nil {
+		return &mcp.CallToolResult{
+			Content: []interface{}{mcp.TextContent{Type: "text", Text: `{"valid":false,"error":"Task attempt store not available"}`}},
+			IsError: true,
+		}, nil
+	}
+
 	// Get current count before resolving
 	status, _ := s.taskAttemptStore.GetThreeStrikesStatus(ctx, sessionToken, taskID)
 	attemptsCleared := status.AttemptsCount
 
 	// Resolve attempts
-	err := s.taskAttemptStore.ResolveAttempts(ctx, sessionToken, taskID)
-	if err != nil {
-		slog.Error("Failed to reset attempts", "error", err, "session_token", sessionToken)
+	resolveErr := s.taskAttemptStore.ResolveAttempts(ctx, sessionToken, taskID)
+	if resolveErr != nil {
+		slog.Error("Failed to reset attempts", "error", resolveErr, "session_token", sessionToken)
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: fmt.Sprintf(`{"valid":false,"error":"Failed to reset attempts: %s"}`, jsonEscapeString(err.Error()))}},
+			Content: []interface{}{mcp.TextContent{Type: "text", Text: fmt.Sprintf(`{"valid":false,"error":"Failed to reset attempts: %s"}`, jsonEscapeString(resolveErr.Error()))}},
 			IsError: true,
 		}, nil
 	}
@@ -687,6 +736,13 @@ func (s *MCPServer) handleResetAttempts(ctx context.Context, args map[string]int
 
 // handleCheckHaltConditions checks if halt conditions should be triggered
 func (s *MCPServer) handleCheckHaltConditions(ctx context.Context, args map[string]interface{}) (*mcp.CallToolResult, error) {
+	// Panic recovery to prevent HTTP 500
+	defer func() {
+		if r := recover(); r != nil {
+			slog.Error("Panic in handleCheckHaltConditions", "recover", r)
+		}
+	}()
+
 	sessionToken, _ := args["session_token"].(string)
 	contextData, _ := args["context"].(map[string]interface{})
 
@@ -715,13 +771,15 @@ func (s *MCPServer) handleCheckHaltConditions(ctx context.Context, args map[stri
 	var severity string
 	var action string
 
-	// Check 1: Check for three strikes status
+	// Check 1: Check for three strikes status (if store is available)
 	taskID, _ := args["task_id"].(string)
-	threeStrikesStatus, err := s.taskAttemptStore.GetThreeStrikesStatus(ctx, sessionToken, taskID)
-	if err == nil && threeStrikesStatus.ShouldHalt {
-		haltReasons = append(haltReasons, "Three strikes reached")
-		severity = "high"
-		action = "Halt and escalate to user"
+	if s.taskAttemptStore != nil {
+		threeStrikesStatus, err := s.taskAttemptStore.GetThreeStrikesStatus(ctx, sessionToken, taskID)
+		if err == nil && threeStrikesStatus.ShouldHalt {
+			haltReasons = append(haltReasons, "Three strikes reached")
+			severity = "high"
+			action = "Halt and escalate to user"
+		}
 	}
 
 	// Check 2: Check for critical halt events
@@ -808,7 +866,18 @@ func arrayToJSON(arr []string) string {
 }
 
 // handleRecordHalt records a halt condition triggered during execution
-func (s *MCPServer) handleRecordHalt(ctx context.Context, args map[string]interface{}) (*mcp.CallToolResult, error) {
+func (s *MCPServer) handleRecordHalt(ctx context.Context, args map[string]interface{}) (result *mcp.CallToolResult, err error) {
+	// Panic recovery to prevent HTTP 500
+	defer func() {
+		if r := recover(); r != nil {
+			slog.Error("Panic in handleRecordHalt", "recover", r)
+			result = &mcp.CallToolResult{
+				Content: []interface{}{mcp.TextContent{Type: "text", Text: `{"success":false,"error":"Internal server error"}`}},
+				IsError: true,
+			}
+		}
+	}()
+
 	sessionToken, _ := args["session_token"].(string)
 	haltType, _ := args["halt_type"].(string)
 	description, _ := args["description"].(string)
@@ -850,19 +919,35 @@ func (s *MCPServer) handleRecordHalt(ctx context.Context, args map[string]interf
 		}, nil
 	}
 
+	// Check if database is available
+	if s.db == nil {
+		return &mcp.CallToolResult{
+			Content: []interface{}{mcp.TextContent{Type: "text", Text: `{"success":false,"error":"Database not available"}`}},
+			IsError: true,
+		}, nil
+	}
+
+	// Safe type assertion for contextData
+	var contextMap map[string]interface{}
+	if contextData != nil {
+		if cm, ok := contextData.(map[string]interface{}); ok {
+			contextMap = cm
+		}
+	}
+
 	// Record the halt event
 	haltStore := database.NewHaltEventStore(s.db)
-	recordID, err := haltStore.Create(ctx, sessionToken, haltType, severity, description, contextData.(map[string]interface{}))
-	if err != nil {
-		slog.Error("Failed to record halt", "error", err, "session_token", sessionToken)
+	recordID, haltErr := haltStore.Create(ctx, sessionToken, haltType, severity, description, contextMap)
+	if haltErr != nil {
+		slog.Error("Failed to record halt", "error", haltErr, "session_token", sessionToken)
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: fmt.Sprintf(`{"success":false,"error":"Failed to record halt: %s"}`, jsonEscapeString(err.Error()))}},
+			Content: []interface{}{mcp.TextContent{Type: "text", Text: fmt.Sprintf(`{"success":false,"error":"Failed to record halt: %s"}`, jsonEscapeString(haltErr.Error()))}},
 			IsError: true,
 		}, nil
 	}
 
 	// Return success confirmation
-	response := fmt.Sprintf(`{"success":true,"halt_id":"%s","recorded_at":"%s","status":""}`,
+	response := fmt.Sprintf(`{"success":true,"halt_id":"%s","recorded_at":"%s","status":"recorded"}`,
 		recordID.ID,
 		time.Now().Format(time.RFC3339),
 	)
