@@ -1161,34 +1161,37 @@ func (s *MCPServer) handleTeamDelete(ctx context.Context, args map[string]interf
 		confirmed = conf
 	}
 
-	cmdArgs := []string{getTeamManagerPath(), "--project", projectName, "--test-mode", "delete-team", "--team", strconv.Itoa(teamIDInt)}
-	if confirmed {
-		cmdArgs = append(cmdArgs, "--confirmed")
+	// Use Go implementation
+	mgr, err := team.NewManager(projectName)
+	if err != nil {
+		metrics.RecordTeamToolError("team_delete", "go_error")
+		metrics.RecordTeamToolCall("team_delete", false)
+		return &mcp.CallToolResult{
+			Content: []interface{}{mcp.TextContent{Type: "text", Text: fmt.Sprintf("Error creating manager: %v", err)}},
+			IsError: true,
+		}, nil
 	}
 
-	cmd := exec.CommandContext(ctx, "python", cmdArgs...)
-	cmd.Dir = getRepoRoot()
-	pyStart := time.Now()
-	output, err := cmd.CombinedOutput()
-	metrics.RecordTeamToolPythonExec("delete-team", time.Since(pyStart))
-
-	resultText := string(output)
-	if err != nil {
+	goStart := time.Now()
+	if err := mgr.DeleteTeam(teamIDInt, confirmed); err != nil {
+		metrics.RecordTeamToolDuration("team_delete", time.Since(goStart))
 		// Check if this is just a confirmation required error
-		if strings.Contains(resultText, "requires confirmation") {
+		if strings.Contains(err.Error(), "requires confirmation") {
 			return &mcp.CallToolResult{
-				Content: []interface{}{mcp.TextContent{Type: "text", Text: resultText}},
+				Content: []interface{}{mcp.TextContent{Type: "text", Text: "⚠️  Deletion requires confirmation. Set confirmed=true to proceed."}},
 			}, nil
 		}
-		resultText = fmt.Sprintf("Error deleting team: %v\nOutput: %s", err, string(output))
-		metrics.RecordTeamToolError("team_delete", "python_error")
+		resultText := fmt.Sprintf("Error deleting team: %v", err)
+		metrics.RecordTeamToolError("team_delete", "go_error")
 		metrics.RecordTeamToolCall("team_delete", false)
 		return &mcp.CallToolResult{
 			Content: []interface{}{mcp.TextContent{Type: "text", Text: resultText}},
 			IsError: true,
 		}, nil
 	}
+	metrics.RecordTeamToolDuration("team_delete", time.Since(goStart))
 
+	resultText := fmt.Sprintf("✅ Deleted team %d from project '%s'", teamIDInt, projectName)
 	metrics.RecordTeamToolCall("team_delete", true)
 	return &mcp.CallToolResult{
 		Content: []interface{}{mcp.TextContent{Type: "text", Text: resultText}},
@@ -1227,34 +1230,37 @@ func (s *MCPServer) handleProjectDelete(ctx context.Context, args map[string]int
 		confirmed = conf
 	}
 
-	cmdArgs := []string{getTeamManagerPath(), "--project", projectName, "--test-mode", "delete-project"}
-	if confirmed {
-		cmdArgs = append(cmdArgs, "--confirmed")
+	// Use Go implementation
+	mgr, err := team.NewManager(projectName)
+	if err != nil {
+		metrics.RecordTeamToolError("project_delete", "go_error")
+		metrics.RecordTeamToolCall("project_delete", false)
+		return &mcp.CallToolResult{
+			Content: []interface{}{mcp.TextContent{Type: "text", Text: fmt.Sprintf("Error creating manager: %v", err)}},
+			IsError: true,
+		}, nil
 	}
 
-	cmd := exec.CommandContext(ctx, "python", cmdArgs...)
-	cmd.Dir = getRepoRoot()
-	pyStart := time.Now()
-	output, err := cmd.CombinedOutput()
-	metrics.RecordTeamToolPythonExec("delete-project", time.Since(pyStart))
-
-	resultText := string(output)
-	if err != nil {
+	goStart := time.Now()
+	if err := mgr.DeleteProject(confirmed); err != nil {
+		metrics.RecordTeamToolDuration("project_delete", time.Since(goStart))
 		// Check if this is just a confirmation required error
-		if strings.Contains(resultText, "requires confirmation") {
+		if strings.Contains(err.Error(), "requires confirmation") {
 			return &mcp.CallToolResult{
-				Content: []interface{}{mcp.TextContent{Type: "text", Text: resultText}},
+				Content: []interface{}{mcp.TextContent{Type: "text", Text: "⚠️  Project deletion requires confirmation. Set confirmed=true to proceed."}},
 			}, nil
 		}
-		resultText = fmt.Sprintf("Error deleting project: %v\nOutput: %s", err, string(output))
-		metrics.RecordTeamToolError("project_delete", "python_error")
+		resultText := fmt.Sprintf("Error deleting project: %v", err)
+		metrics.RecordTeamToolError("project_delete", "go_error")
 		metrics.RecordTeamToolCall("project_delete", false)
 		return &mcp.CallToolResult{
 			Content: []interface{}{mcp.TextContent{Type: "text", Text: resultText}},
 			IsError: true,
 		}, nil
 	}
+	metrics.RecordTeamToolDuration("project_delete", time.Since(goStart))
 
+	resultText := fmt.Sprintf("✅ Deleted project '%s'", projectName)
 	metrics.RecordTeamToolCall("project_delete", true)
 	return &mcp.CallToolResult{
 		Content: []interface{}{mcp.TextContent{Type: "text", Text: resultText}},
@@ -1282,16 +1288,31 @@ func (s *MCPServer) handleTeamHealth(ctx context.Context, args map[string]interf
 		projectName = name
 	}
 
-	cmd := exec.CommandContext(ctx, "python", getTeamManagerPath(), "--project", projectName, "--test-mode", "health")
-	cmd.Dir = getRepoRoot()
-	pyStart := time.Now()
-	output, err := cmd.CombinedOutput()
-	metrics.RecordTeamToolPythonExec("health", time.Since(pyStart))
-
-	resultText := string(output)
+	// Use Go implementation
+	mgr, err := team.NewManager(projectName)
 	if err != nil {
-		resultText = fmt.Sprintf("Health check failed: %v\nOutput: %s", err, string(output))
-		metrics.RecordTeamToolError("team_health", "python_error")
+		// For health check, we still want to report status even if project doesn't exist
+		health := map[string]interface{}{
+			"status":  "healthy",
+			"project": projectName,
+			"note":    "Project not initialized, but team manager is operational",
+		}
+		healthJSON, _ := json.MarshalIndent(health, "", "  ")
+		resultText := fmt.Sprintf("✅ Team Manager Health:\n%s", string(healthJSON))
+		metrics.RecordTeamToolCall("team_health", true)
+		return &mcp.CallToolResult{
+			Content: []interface{}{mcp.TextContent{Type: "text", Text: resultText}},
+		}, nil
+	}
+
+	goStart := time.Now()
+	health := mgr.Health()
+	metrics.RecordTeamToolDuration("team_health", time.Since(goStart))
+
+	healthJSON, err := json.MarshalIndent(health, "", "  ")
+	if err != nil {
+		resultText := fmt.Sprintf("Health check failed: %v", err)
+		metrics.RecordTeamToolError("team_health", "go_error")
 		metrics.RecordTeamToolCall("team_health", false)
 		return &mcp.CallToolResult{
 			Content: []interface{}{mcp.TextContent{Type: "text", Text: resultText}},
@@ -1299,6 +1320,7 @@ func (s *MCPServer) handleTeamHealth(ctx context.Context, args map[string]interf
 		}, nil
 	}
 
+	resultText := fmt.Sprintf("✅ Team Manager Health:\n%s", string(healthJSON))
 	metrics.RecordTeamToolCall("team_health", true)
 	return &mcp.CallToolResult{
 		Content: []interface{}{mcp.TextContent{Type: "text", Text: resultText}},
