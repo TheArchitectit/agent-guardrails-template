@@ -16,8 +16,10 @@ import sys
 import tempfile
 import traceback
 from dataclasses import dataclass, asdict
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
+import time
+import statistics
 from typing import Any, List, Optional, Dict
 
 # FUNC-005: Batch operations support
@@ -31,6 +33,12 @@ except ImportError:
         import_csv, export_csv, import_json, export_json,
         create_csv_template, create_json_template
     )
+
+# SEC-007: Encryption support
+try:
+    from .encryption import EncryptionManager
+except ImportError:
+    from encryption import EncryptionManager
 
 
 
@@ -72,14 +80,548 @@ class StructuredLogger:
         """Log DEBUG level event."""
         self.log(event_type, details, "debug")
 
+class RulesLoader:
+    """Loads and manages rules from JSON configuration file (FUNC-008).
+
+    Provides dynamic loading of validation rules, team size limits,
+    phase gates, and other configurable settings.
+    """
+
+    DEFAULT_RULES_PATH = Path(".teams/rules.json")
+
+    def __init__(self, rules_path: Path = None):
+        self.rules_path = rules_path or self.DEFAULT_RULES_PATH
+        self._rules: Dict[str, Any] = {}
+        self._load_rules()
+
+    def _load_rules(self) -> None:
+        """Load rules from JSON file or use defaults."""
+        if self.rules_path.exists():
+            try:
+                with open(self.rules_path, 'r') as f:
+                    self._rules = json.load(f)
+            except (json.JSONDecodeError, IOError) as e:
+                print(f"⚠️  Failed to load rules from {self.rules_path}: {e}", file=sys.stderr)
+                self._rules = self._get_default_rules()
+        else:
+            self._rules = self._get_default_rules()
+
+    def _get_default_rules(self) -> Dict[str, Any]:
+        """Return default rules when rules.json is not available."""
+        return {
+            "team_size_limits": {"min": 4, "max": 6},
+            "duplicate_detection": {"enabled": True, "scope": "project", "action": "warn"},
+            "phase_gates": {},
+            "allowed_agent_types": ["planner", "coder", "reviewer", "security", "tester", "ops"],
+            "validation_rules": {
+                "person_name": {
+                    "max_length": 256,
+                    "email_pattern": r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
+                    "username_pattern": r'^[a-zA-Z0-9_.-]+$'
+                },
+                "role_name": {"max_length": 128},
+                "project_name": {"max_length": 64, "pattern": r'^[a-zA-Z0-9_-]+$'}
+            }
+        }
+
+    def reload_rules(self) -> None:
+        """Reload rules from disk."""
+        self._load_rules()
+
+    def get(self, key: str, default: Any = None) -> Any:
+        """Get a rule by key path (e.g., 'team_size_limits.min')."""
+        keys = key.split('.')
+        value = self._rules
+        for k in keys:
+            if isinstance(value, dict) and k in value:
+                value = value[k]
+            else:
+                return default
+        return value
+
+    def get_team_size_limits(self) -> tuple:
+        """Get min and max team size limits."""
+        limits = self._rules.get("team_size_limits", {})
+        return (limits.get("min", 4), limits.get("max", 6))
+
+    def get_duplicate_detection_config(self) -> Dict[str, Any]:
+        """Get duplicate detection configuration."""
+        return self._rules.get("duplicate_detection", {
+            "enabled": True,
+            "scope": "project",
+            "action": "warn"
+        })
+
+    def get_validation_pattern(self, rule_type: str, pattern_name: str) -> Optional[str]:
+        """Get a validation regex pattern."""
+        rules = self._rules.get("validation_rules", {})
+        if rule_type in rules:
+            return rules[rule_type].get(pattern_name)
+        return None
+
+    @property
+    def rules(self) -> Dict[str, Any]:
+        """Return all loaded rules."""
+        return self._rules
+
+
+class EncryptionManager:
+    """Optional encryption at rest for sensitive data (SEC-007).
+
+    Uses Fernet symmetric encryption when TEAM_ENCRYPTION_KEY env var is set.
+    Encrypts sensitive fields while keeping structure readable.
+    """
+
+    def __init__(self):
+        self._key = None
+        self._fernet = None
+        self._enabled = False
+        self._init_encryption()
+
+    def _init_encryption(self) -> None:
+        """Initialize encryption from environment key."""
+        import base64
+        import os
+
+        key = os.environ.get("TEAM_ENCRYPTION_KEY")
+        if key:
+            try:
+                # Ensure key is proper Fernet key (32 bytes, base64 encoded)
+                if len(key) == 44:  # Base64 encoded 32 bytes
+                    from cryptography.fernet import Fernet
+                    self._key = key.encode()
+                    self._fernet = Fernet(self._key)
+                    self._enabled = True
+                else:
+                    # Derive key from provided string
+                    import hashlib
+                    derived = hashlib.sha256(key.encode()).digest()
+                    from cryptography.fernet import Fernet
+                    self._key = base64.urlsafe_b64encode(derived)
+                    self._fernet = Fernet(self._key)
+                    self._enabled = True
+            except ImportError:
+                print("⚠️  cryptography library not installed. Encryption disabled.", file=sys.stderr)
+            except Exception as e:
+                print(f"⚠️  Failed to initialize encryption: {e}", file=sys.stderr)
+
+    @property
+    def enabled(self) -> bool:
+        """Check if encryption is enabled."""
+        return self._enabled
+
+    def encrypt(self, data: str) -> str:
+        """Encrypt a string value."""
+        if not self._enabled or not data:
+            return data
+        try:
+            return self._fernet.encrypt(data.encode()).decode()
+        except Exception:
+            return data
+
+    def decrypt(self, data: str) -> str:
+        """Decrypt an encrypted value."""
+        if not self._enabled or not data:
+            return data
+        try:
+            return self._fernet.decrypt(data.encode()).decode()
+        except Exception:
+            return data  # Return as-is if decryption fails
+
+    def encrypt_dict(self, data: Dict, sensitive_fields: List[str]) -> Dict:
+        """Encrypt sensitive fields in a dictionary."""
+        if not self._enabled:
+            return data
+
+        result = data.copy()
+        for field in sensitive_fields:
+            if field in result and isinstance(result[field], str):
+                result[field] = self.encrypt(result[field])
+        return result
+
+    def decrypt_dict(self, data: Dict, sensitive_fields: List[str]) -> Dict:
+        """Decrypt sensitive fields in a dictionary."""
+        if not self._enabled:
+            return data
+
+        result = data.copy()
+        for field in sensitive_fields:
+            if field in result and isinstance(result[field], str):
+                result[field] = self.decrypt(result[field])
+        return result
+
+
+class MigrationManager:
+    """Manages data migrations between versions (OPS-006).
+
+    Provides automatic migration detection and execution for
+    project data files when schema versions change.
+    """
+
+    CURRENT_VERSION = "1.0.0"
+    MIGRATIONS_DIR = Path("scripts/migrations")
+
+    def __init__(self, project_name: str):
+        self.project_name = project_name
+        self.config_path = Path(f".teams/{project_name}.json")
+        self.migrations: Dict[str, callable] = {}
+        self._register_migrations()
+
+    def _register_migrations(self) -> None:
+        """Register available migration scripts."""
+        # Register migrations from version -> version
+        # Each migration should be a callable that takes data dict and returns migrated data
+        self.migrations = {
+            # Example: "0.9.0": self._migrate_v090_to_v100,
+        }
+
+    def get_data_version(self, data: Dict[str, Any]) -> str:
+        """Extract version from data dict."""
+        return data.get("version", "1.0.0")
+
+    def needs_migration(self, data: Dict[str, Any]) -> bool:
+        """Check if data needs migration."""
+        data_version = self.get_data_version(data)
+        return self._version_compare(data_version, self.CURRENT_VERSION) < 0
+
+    def _version_compare(self, v1: str, v2: str) -> int:
+        """Compare two version strings. Returns -1, 0, or 1."""
+        def parse_version(v):
+            parts = v.split('.')
+            return [int(p) for p in parts]
+
+        p1 = parse_version(v1)
+        p2 = parse_version(v2)
+
+        for i in range(max(len(p1), len(p2))):
+            n1 = p1[i] if i < len(p1) else 0
+            n2 = p2[i] if i < len(p2) else 0
+            if n1 < n2:
+                return -1
+            elif n1 > n2:
+                return 1
+        return 0
+
+    def migrate(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Migrate data to current version.
+
+        Args:
+            data: The data dict to migrate
+
+        Returns:
+            Migrated data dict with updated version
+        """
+        original_version = self.get_data_version(data)
+        current_version = original_version
+
+        if not self.needs_migration(data):
+            return data
+
+        print(f"🔄 Migrating project '{self.project_name}' from v{original_version} to v{self.CURRENT_VERSION}")
+
+        # Apply migrations in order
+        for target_version, migration_func in sorted(
+            self.migrations.items(),
+            key=lambda x: self._version_compare(x[0], self.CURRENT_VERSION)
+        ):
+            if self._version_compare(current_version, target_version) < 0:
+                print(f"   Applying migration to v{target_version}...")
+                try:
+                    data = migration_func(data)
+                    data["version"] = target_version
+                    current_version = target_version
+                except Exception as e:
+                    print(f"   ❌ Migration failed: {e}")
+                    raise
+
+        # Update to final version
+        data["version"] = self.CURRENT_VERSION
+        data["migrated_from"] = original_version
+        data["migrated_at"] = datetime.now().isoformat()
+
+        print(f"✅ Migration complete: v{original_version} -> v{self.CURRENT_VERSION}")
+        return data
+
+    def get_migration_status(self) -> Dict[str, Any]:
+        """Get migration status for project."""
+        if not self.config_path.exists():
+            return {"status": "not_found", "current_version": None}
+
+        try:
+            with open(self.config_path, 'r') as f:
+                data = json.load(f)
+            data_version = self.get_data_version(data)
+            needs_mig = self._version_compare(data_version, self.CURRENT_VERSION) < 0
+
+            return {
+                "status": "needs_migration" if needs_mig else "current",
+                "current_version": data_version,
+                "target_version": self.CURRENT_VERSION,
+                "project": self.project_name
+            }
+        except Exception as e:
+            return {"status": "error", "error": str(e)}
+
+
+        return self._rules.copy()
+
+
+# Global rules loader instance (initialized on first use)
+_rules_loader: Optional[RulesLoader] = None
+
+
+def get_rules_loader() -> RulesLoader:
+    """Get or create the global rules loader instance."""
+    global _rules_loader
+    if _rules_loader is None:
+        _rules_loader = RulesLoader()
+    return _rules_loader
+
+
+def reload_rules_cmd() -> None:
+    """Reload rules from JSON file (FUNC-008) - CLI command."""
+    global _rules_loader
+    if _rules_loader is None:
+        _rules_loader = RulesLoader()
+    else:
+        _rules_loader.reload_rules()
+    print(f"✅ Rules reloaded from {RulesLoader.DEFAULT_RULES_PATH}")
+
+class PerformanceMetrics:
+    """Performance metrics collector for team operations (OPS-008).
+
+    Tracks operation duration (init, assign, start, complete).
+    Stores metrics in .teams/metrics.json for analysis.
+    """
+
+    def __init__(self, project_name: str, metrics_dir: Path = None):
+        self.project_name = project_name
+        self.metrics_dir = metrics_dir or Path(".teams")
+        self.metrics_file = self.metrics_dir / "metrics.json"
+        self.metrics_dir.mkdir(parents=True, exist_ok=True)
+        self._current_operations: Dict[str, float] = {}
+
+    def start_operation(self, operation: str, **context) -> None:
+        """Start timing an operation."""
+        start_time = time.time()
+        self._current_operations[operation] = start_time
+        log_entry = {
+            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "level": "INFO",
+            "component": "performance_metrics",
+            "event": "operation_started",
+            "details": {"operation": operation, "project": self.project_name, **context}
+        }
+        print(json.dumps(log_entry), file=sys.stderr)
+
+    def end_operation(self, operation: str, success: bool = True,
+                      error_type: Optional[str] = None, **context) -> Dict[str, Any]:
+        """End timing an operation and record metrics."""
+        end_time = time.time()
+        start_time = self._current_operations.pop(operation, end_time)
+        duration_ms = (end_time - start_time) * 1000
+        metric_entry = {
+            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "project": self.project_name,
+            "operation": operation,
+            "duration_ms": round(duration_ms, 2),
+            "success": success,
+            "context": context
+        }
+        if error_type:
+            metric_entry["error_type"] = error_type
+        self._append_metric(metric_entry)
+        log_entry = {
+            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "level": "INFO" if success else "ERROR",
+            "component": "performance_metrics",
+            "event": "operation_completed",
+            "details": metric_entry
+        }
+        print(json.dumps(log_entry), file=sys.stderr)
+        return metric_entry
+
+    def _append_metric(self, metric: Dict[str, Any]) -> None:
+        """Append a metric entry to the metrics file."""
+        try:
+            with open(self.metrics_file, 'a') as f:
+                fcntl.flock(f.fileno(), fcntl.LOCK_EX)
+                try:
+                    f.write(json.dumps(metric) + "\n")
+                    f.flush()
+                    os.fsync(f.fileno())
+                finally:
+                    fcntl.flock(f.fileno(), fcntl.LOCK_UN)
+        except Exception as e:
+            print(f"⚠️  Failed to write metric: {e}", file=sys.stderr)
+
+    def load_metrics(self, since: Optional[datetime] = None,
+                     operation: Optional[str] = None) -> List[Dict[str, Any]]:
+        """Load metrics from file with optional filtering."""
+        if not self.metrics_file.exists():
+            return []
+        metrics = []
+        try:
+            with open(self.metrics_file, 'r') as f:
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        entry = json.loads(line)
+                        if since:
+                            entry_time = datetime.fromisoformat(entry["timestamp"].replace("Z", "+00:00"))
+                            if entry_time < since:
+                                continue
+                        if operation and entry.get("operation") != operation:
+                            continue
+                        metrics.append(entry)
+                    except (json.JSONDecodeError, KeyError):
+                        continue
+        except Exception as e:
+            print(f"⚠️  Failed to load metrics: {e}", file=sys.stderr)
+        return metrics
+
+    def get_operation_stats(self, operation: Optional[str] = None,
+                            since: Optional[datetime] = None) -> Dict[str, Any]:
+        """Get statistics for operations."""
+        metrics = self.load_metrics(since=since, operation=operation)
+        if not metrics:
+            return {"operation": operation or "all", "count": 0, "message": "No metrics found"}
+        durations = [m["duration_ms"] for m in metrics if "duration_ms" in m]
+        successes = [m for m in metrics if m.get("success", True)]
+        failures = [m for m in metrics if not m.get("success", True)]
+        stats = {
+            "operation": operation or "all",
+            "count": len(metrics),
+            "success_count": len(successes),
+            "failure_count": len(failures),
+            "success_rate": round(len(successes) / len(metrics) * 100, 2) if metrics else 0,
+            "error_rate": round(len(failures) / len(metrics) * 100, 2) if metrics else 0
+        }
+        if durations:
+            stats["duration_stats"] = {
+                "avg_ms": round(statistics.mean(durations), 2),
+                "min_ms": round(min(durations), 2),
+                "max_ms": round(max(durations), 2),
+                "median_ms": round(statistics.median(durations), 2),
+            }
+            if len(durations) > 1:
+                stats["duration_stats"]["stdev_ms"] = round(statistics.stdev(durations), 2)
+        sorted_by_duration = sorted(metrics, key=lambda m: m.get("duration_ms", 0), reverse=True)
+        stats["slowest_operations"] = [
+            {"operation": m["operation"], "duration_ms": m["duration_ms"],
+             "timestamp": m["timestamp"], "context": m.get("context", {})}
+            for m in sorted_by_duration[:5]
+        ]
+        return stats
+
+    def get_report(self, days: int = 7) -> Dict[str, Any]:
+        """Generate a performance report."""
+        since = datetime.utcnow() - timedelta(days=days)
+        all_metrics = self.load_metrics(since=since)
+        report = {
+            "generated_at": datetime.utcnow().isoformat() + "Z",
+            "project": self.project_name,
+            "time_window_days": days,
+            "since": since.isoformat() + "Z",
+            "overall": self.get_operation_stats(since=since),
+            "by_operation": {}
+        }
+        operations = set(m.get("operation", "unknown") for m in all_metrics)
+        for op in operations:
+            report["by_operation"][op] = self.get_operation_stats(operation=op, since=since)
+        return report
+
+    def export_report(self, output_path: Path, format: str = "json", days: int = 7) -> bool:
+        """Export performance report to file."""
+        report = self.get_report(days=days)
+        try:
+            if format == "json":
+                with open(output_path, 'w') as f:
+                    json.dump(report, f, indent=2)
+            elif format == "csv":
+                since = datetime.utcnow() - timedelta(days=days)
+                metrics = self.load_metrics(since=since)
+                with open(output_path, 'w', newline='') as f:
+                    if metrics:
+                        writer = csv.DictWriter(f, fieldnames=["timestamp", "project", "operation", "duration_ms", "success", "context"])
+                        writer.writeheader()
+                        for m in metrics:
+                            m_flat = {k: v for k, v in m.items() if k != "error_type"}
+                            m_flat["context"] = json.dumps(m_flat.get("context", {}))
+                            writer.writerow(m_flat)
+            return True
+        except Exception as e:
+            print(f"❌ Export failed: {e}", file=sys.stderr)
+            return False
+
+
+
+
 def validate_project_name(name: str) -> None:
     """Validate project name to prevent command injection."""
+    loader = get_rules_loader()
+    rules = loader.get("validation_rules.project_name", {})
+    max_len = rules.get("max_length", 64)
+    pattern = rules.get("pattern", r'^[a-zA-Z0-9_-]+$')
+
     if not name:
         raise ValueError("project_name is required")
-    if len(name) > 64:
-        raise ValueError("project_name must be 64 characters or less")
-    if not re.match(r'^[a-zA-Z0-9_-]+$', name):
+    if len(name) > max_len:
+        raise ValueError(f"project_name must be {max_len} characters or less")
+    if not re.match(pattern, name):
         raise ValueError("project_name must contain only letters, numbers, hyphens, and underscores")
+
+
+def validate_project_path(project_name: str, base_dir: str = ".teams") -> Path:
+    """Validate project path to prevent path traversal attacks (SEC-006).
+
+    Args:
+        project_name: The project name to validate
+        base_dir: The base directory for projects (default: .teams)
+
+    Returns:
+        Path: The validated and resolved path
+
+    Raises:
+        SecurityError: If path traversal is detected
+    """
+    # First validate the project name format
+    validate_project_name(project_name)
+
+    # Check for path traversal patterns in the raw input
+    dangerous_patterns = ['..', '/', '\\', '\x00']
+    for pattern in dangerous_patterns:
+        if pattern in project_name:
+            raise SecurityError(
+                f"Path traversal detected: project_name contains forbidden pattern '{pattern}'"
+            )
+
+    # Construct the intended path
+    base_path = Path(base_dir).resolve()
+    intended_path = base_path / f"{project_name}.json"
+
+    # Resolve any symlinks and get the real path
+    try:
+        if intended_path.exists():
+            real_path = Path(os.path.realpath(intended_path))
+        else:
+            # For non-existent paths, resolve the parent and join the filename
+            real_parent = Path(os.path.realpath(base_path))
+            real_path = real_parent / f"{project_name}.json"
+    except (OSError, ValueError) as e:
+        raise SecurityError(f"Path resolution failed: {e}")
+
+    # Ensure the resolved path is within the base directory
+    try:
+        real_path.relative_to(base_path)
+    except ValueError:
+        raise SecurityError(
+            f"Path traversal detected: resolved path '{real_path}' is outside base directory '{base_path}'"
+        )
+
+    return real_path
 
 
 # Valid phases from TEAM_STRUCTURE.md
@@ -157,6 +699,22 @@ VALID_ROLES = {
 }
 
 
+def get_valid_phases() -> set:
+    """Get valid phases from rules or defaults."""
+    loader = get_rules_loader()
+    phase_gates = loader.get("phase_gates", {})
+    if phase_gates:
+        return set(phase_gates.keys())
+    # Default phases if not configured
+    return {
+        "Phase 1: Strategy, Governance & Planning",
+        "Phase 2: Platform & Foundation",
+        "Phase 3: The Build Squads",
+        "Phase 4: Validation & Hardening",
+        "Phase 5: Delivery & Sustainment",
+    }
+
+
 def validate_phase(phase: str) -> None:
     """Validate phase name against valid phases.
 
@@ -166,12 +724,13 @@ def validate_phase(phase: str) -> None:
     Raises:
         ValueError: If phase is not a valid phase name
     """
+    valid_phases = get_valid_phases()
     if not phase:
         raise ValueError("phase is required")
-    if phase not in VALID_PHASES:
+    if phase not in valid_phases:
         raise ValueError(
             f"Invalid phase: '{phase}'. Must be one of: "
-            f"{', '.join(sorted(VALID_PHASES))}"
+            f"{', '.join(sorted(valid_phases))}"
         )
 
 
@@ -210,18 +769,20 @@ def validate_person_name(person: str) -> None:
     Raises:
         ValueError: If person format is invalid
     """
+    loader = get_rules_loader()
+    rules = loader.get("validation_rules.person_name", {})
+    max_len = rules.get("max_length", 256)
+    email_pattern = rules.get("email_pattern", r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
+    username_pattern = rules.get("username_pattern", r'^[a-zA-Z0-9_.-]+$')
+
     if not person:
         raise ValueError("person is required")
-    if len(person) > 256:
-        raise ValueError("person must be 256 characters or less")
+    if len(person) > max_len:
+        raise ValueError(f"person must be {max_len} characters or less")
     # Check for control characters
     if re.search(r'[\x00-\x1f\x7f]', person):
         raise ValueError("person contains invalid control characters")
     # Allow email format or username format
-    # Email: user@domain.com
-    # Username: alphanumeric + hyphens + underscores + dots
-    email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
-    username_pattern = r'^[a-zA-Z0-9_.-]+$'
     if not re.match(email_pattern, person) and not re.match(username_pattern, person):
         raise ValueError(
             f"Invalid person format: '{person}'. "
@@ -237,6 +798,139 @@ class PermissionDenied(Exception):
 class FileLockError(Exception):
     """Raised when file locking fails."""
     pass
+
+
+class SecurityError(Exception):
+    """Raised when a security violation is detected."""
+    pass
+
+
+class RateLimitExceeded(Exception):
+    """Raised when rate limit is exceeded."""
+    def __init__(self, message: str, retry_after: int = None):
+        super().__init__(message)
+        self.retry_after = retry_after
+
+
+class RateLimiter:
+    """Token bucket rate limiter for API requests (SEC-005).
+
+    Implements per-user rate limiting with configurable limits.
+    Stores state in memory with automatic cleanup.
+    """
+
+    DEFAULT_REQUESTS = 100
+    DEFAULT_WINDOW = 60  # seconds
+    CLEANUP_INTERVAL = 300  # cleanup every 5 minutes
+
+    def __init__(self, config_path: Path = None):
+        self.config_path = config_path or Path(".teams/config.json")
+        self._buckets: Dict[str, Dict] = {}
+        self._last_cleanup = time.time()
+        self._load_config()
+
+    def _load_config(self) -> None:
+        """Load rate limit configuration from config file."""
+        self.enabled = True
+        self.requests_per_window = self.DEFAULT_REQUESTS
+        self.window_seconds = self.DEFAULT_WINDOW
+
+        if self.config_path.exists():
+            try:
+                with open(self.config_path, 'r') as f:
+                    config = json.load(f)
+                rate_config = config.get("rate_limiting", {})
+                self.enabled = rate_config.get("enabled", True)
+                self.requests_per_window = rate_config.get("requests_per_window", self.DEFAULT_REQUESTS)
+                self.window_seconds = rate_config.get("window_seconds", self.DEFAULT_WINDOW)
+            except (json.JSONDecodeError, IOError):
+                pass  # Use defaults
+
+    def _cleanup_old_buckets(self) -> None:
+        """Remove expired buckets to prevent memory leaks."""
+        now = time.time()
+        if now - self._last_cleanup < self.CLEANUP_INTERVAL:
+            return
+
+        expired = []
+        for user_id, bucket in self._buckets.items():
+            if now - bucket.get("last_reset", 0) > self.window_seconds * 2:
+                expired.append(user_id)
+
+        for user_id in expired:
+            del self._buckets[user_id]
+
+        self._last_cleanup = now
+
+    def check_rate_limit(self, user_id: str = "default") -> tuple[bool, dict]:
+        """Check if request is within rate limit.
+
+        Args:
+            user_id: Unique identifier for the user (default: "default")
+
+        Returns:
+            Tuple of (allowed, rate_limit_info)
+            rate_limit_info contains: limit, remaining, reset_time
+        """
+        if not self.enabled:
+            return True, {"limit": -1, "remaining": -1, "reset_time": 0}
+
+        self._cleanup_old_buckets()
+
+        now = time.time()
+
+        if user_id not in self._buckets:
+            self._buckets[user_id] = {
+                "tokens": self.requests_per_window,
+                "last_reset": now
+            }
+
+        bucket = self._buckets[user_id]
+
+        # Check if window has passed and reset
+        if now - bucket["last_reset"] >= self.window_seconds:
+            bucket["tokens"] = self.requests_per_window
+            bucket["last_reset"] = now
+
+        # Calculate remaining time until reset
+        reset_time = int(bucket["last_reset"] + self.window_seconds)
+        remaining = max(0, bucket["tokens"] - 1)
+
+        rate_limit_info = {
+            "limit": self.requests_per_window,
+            "remaining": remaining,
+            "reset_time": reset_time
+        }
+
+        # Check if token available
+        if bucket["tokens"] <= 0:
+            return False, rate_limit_info
+
+        # Consume token
+        bucket["tokens"] -= 1
+        return True, rate_limit_info
+
+    def get_rate_limit_headers(self, user_id: str = "default") -> Dict[str, str]:
+        """Get rate limit headers for response.
+
+        Args:
+            user_id: Unique identifier for the user
+
+        Returns:
+            Dict of HTTP headers for rate limiting
+        """
+        if not self.enabled or user_id not in self._buckets:
+            return {}
+
+        bucket = self._buckets[user_id]
+        remaining = max(0, bucket["tokens"])
+        reset_time = int(bucket["last_reset"] + self.window_seconds)
+
+        return {
+            "X-RateLimit-Limit": str(self.requests_per_window),
+            "X-RateLimit-Remaining": str(remaining),
+            "X-RateLimit-Reset": str(reset_time)
+        }
 
 
 class BackupManager:
@@ -257,7 +951,9 @@ class BackupManager:
     def _get_backup_path(self, timestamp: str = None) -> Path:
         """Generate backup file path with timestamp."""
         ts = timestamp or datetime.now().strftime("%Y%m%d_%H%M%S")
-        return self.backup_dir / f"{self.project_name}_{ts}.json.gz"
+        # SEC-006: Sanitize project name for filename to prevent path traversal
+        safe_name = re.sub(r'[^a-zA-Z0-9_-]', '_', self.project_name)
+        return self.backup_dir / f"{safe_name}_{ts}.json.gz"
 
     def create_backup(self, config_path: Path) -> Optional[Path]:
         """Create a backup of the current configuration.
@@ -860,10 +1556,19 @@ class TeamManager:
     }
 
     def __init__(self, project_name: str, config_path: Path = None, user_context: Optional["UserContext"] = None, logger: Optional[StructuredLogger] = None, enable_backup: bool = True, enable_audit: bool = True, max_backups: int = 10):
+        # SEC-006: Validate project name and path to prevent path traversal
         self.project_name = project_name
         self.teams: Dict[int, Team] = {}
-        self.config_path = config_path or Path(f".teams/{project_name}.json")
-        self.lock_path = Path(f".teams/{project_name}.lock")
+
+        # Validate and resolve the config path
+        if config_path is not None:
+            self.config_path = config_path
+        else:
+            self.config_path = validate_project_path(project_name)
+
+        # Validate lock file path is within .teams/
+        self.lock_path = validate_project_path(project_name).with_suffix(".lock")
+
         self.user_context = user_context
         self.logger = logger or StructuredLogger("team_manager")
 
@@ -880,6 +1585,40 @@ class TeamManager:
             self.audit_logger = AuditLogger(project_name)
         else:
             self.audit_logger = None
+
+        # OPS-006: Migration manager
+        self.migration_manager = MigrationManager(project_name)
+
+        # OPS-005: Version tracking
+        self._data_version = "1.0.0"
+
+        # OPS-008: Performance metrics
+        self.performance_metrics = PerformanceMetrics(project_name)
+
+        # SEC-005: Rate limiter (lazy initialization)
+        self._rate_limiter: Optional[RateLimiter] = None
+
+        # SEC-007: Encryption manager
+        self.encryption_manager = EncryptionManager()
+
+    def _check_rate_limit(self, user_id: str = "default") -> tuple[bool, dict]:
+        """Check rate limit for the current user (SEC-005).
+
+        Args:
+            user_id: Unique identifier for the user
+
+        Returns:
+            Tuple of (allowed, rate_limit_info)
+        """
+        if self._rate_limiter is None:
+            self._rate_limiter = RateLimiter()
+        return self._rate_limiter.check_rate_limit(user_id)
+
+    def _get_rate_limit_headers(self, user_id: str = "default") -> Dict[str, str]:
+        """Get rate limit headers for response (SEC-005)."""
+        if self._rate_limiter is None:
+            return {}
+        return self._rate_limiter.get_rate_limit_headers(user_id)
 
     def _require_auth(self, operation: str, team_id: Optional[int] = None) -> None:
         """Check if user is authorized for the operation."""
@@ -903,10 +1642,16 @@ class TeamManager:
 
         Requires admin role.
         """
-        self._require_auth("initialize project")
-        self.teams = {team_id: team for team_id, team in self.STANDARD_TEAMS.items()}
-        self.save()
-        print(f"✅ Initialized project '{self.project_name}' with {len(self.teams)} teams")
+        self.performance_metrics.start_operation("init", project=self.project_name)
+        try:
+            self._require_auth("initialize project")
+            self.teams = {team_id: team for team_id, team in self.STANDARD_TEAMS.items()}
+            self.save()
+            print(f"✅ Initialized project '{self.project_name}' with {len(self.teams)} teams")
+            self.performance_metrics.end_operation("init", success=True, team_count=len(self.teams))
+        except Exception as e:
+            self.performance_metrics.end_operation("init", success=False, error_type=type(e).__name__)
+            raise
 
     def load(self) -> bool:
         """Load team configuration from disk with file locking.
@@ -929,11 +1674,27 @@ class TeamManager:
                 finally:
                     fcntl.flock(f.fileno(), fcntl.LOCK_UN)
 
+        # SEC-007: Decrypt data if encryption is detected and enabled
+        if self.encryption_manager.enabled and self.encryption_manager.is_encrypted(data):
+            data = self.encryption_manager.decrypt_data(data)
+            self.logger.info("data_decrypted", {"project": self.project_name})
+
         self.teams = {}
         for team_data in data.get("teams", []):
             team = Team(**team_data)
             team.roles = [Role(**r) for r in team_data.get("roles", [])]
             self.teams[team.id] = team
+
+        # OPS-005: Store version info
+        self._data_version = data.get("version", "1.0.0")
+
+        # OPS-006: Apply migrations if needed
+        if self.migration_manager.needs_migration(data):
+            data = self.migration_manager.migrate(data)
+            # Save migrated data back
+            with FileLock(self.lock_path):
+                with open(self.config_path, 'w') as f:
+                    json.dump(data, f, indent=2)
 
         return True
 
@@ -954,9 +1715,15 @@ class TeamManager:
 
         data = {
             "project_name": self.project_name,
+            "version": "1.0.0",  # OPS-005: Version tracking
             "updated_at": datetime.now().isoformat(),
             "teams": [asdict(team) for team in self.teams.values()]
         }
+
+        # SEC-007: Encrypt sensitive data if encryption is enabled
+        if self.encryption_manager.enabled:
+            data = self.encryption_manager.encrypt_data(data)
+            self.logger.info("data_encrypted", {"project": self.project_name})
 
         try:
             # Use file locking to prevent race conditions (SEC-004)
@@ -1000,6 +1767,8 @@ class TeamManager:
         Requires team-lead role (for their team) or admin role.
         SEC-008: Logs audit trail.
         """
+        self.performance_metrics.start_operation("assign", team_id=team_id, role_name=role_name, assignee=assignee)
+
         # Validate inputs (FUNC-003, SEC-002, SEC-003)
         try:
             validate_role_name(role_name)
@@ -1011,10 +1780,41 @@ class TeamManager:
                 "assignee": assignee,
                 "error": str(e)
             })
+            self.performance_metrics.end_operation("assign", success=False, error_type="validation_error")
             print(f"❌ Validation error: {e}", file=sys.stderr)
             return False
 
         self._require_auth("assign role", team_id)
+
+        # SEC-005: Check rate limit
+        user_id = self.user_context.user_id if self.user_context else "default"
+        allowed, rate_info = self._check_rate_limit(user_id)
+        if not allowed:
+            retry_after = rate_info.get("reset_time", 60)
+            self.logger.error("rate_limit_exceeded", {
+                "user_id": user_id,
+                "operation": "assign_role",
+                "retry_after": retry_after
+            })
+            print(f"❌ Rate limit exceeded. Retry after {retry_after} seconds.", file=sys.stderr)
+            return False
+
+        # FUNC-012: Check for duplicate assignments
+        dup_check = self.check_duplicate_assignment(assignee, team_id)
+        if dup_check["is_duplicate"]:
+            if dup_check["action"] == "block":
+                self.logger.error("duplicate_assignment_blocked", {
+                    "team_id": team_id,
+                    "role_name": role_name,
+                    "assignee": assignee,
+                    "existing": dup_check["existing_assignments"]
+                })
+                print(dup_check["message"], file=sys.stderr)
+                return False
+            else:
+                # Warn but continue
+                print(dup_check["message"], file=sys.stderr)
+
         self.logger.info("role_assignment_start", {
             "team_id": team_id,
             "role_name": role_name,
@@ -1054,6 +1854,7 @@ class TeamManager:
                     "role_name": role_name,
                     "assignee": assignee
                 })
+                self.performance_metrics.end_operation("assign", success=True, team_id=team_id, role_name=role_name)
                 return True
 
         self.logger.error("role_not_found", {
@@ -1061,6 +1862,7 @@ class TeamManager:
             "team_name": team.name,
             "role_name": role_name
         })
+        self.performance_metrics.end_operation("assign", success=False, error_type="role_not_found")
         return False
 
     def unassign_role(self, team_id: int, role_name: str) -> bool:
@@ -1102,16 +1904,169 @@ class TeamManager:
         print(f"❌ Role '{role_name}' not found in {team.name}")
         return False
 
-    def start_team(self, team_id: int) -> bool:
-        """Mark a team as active.
+    def reassign_role(self, team_id: int, from_role: str, to_role: str, person: str) -> bool:
+        """Reassign a person from one role to another within the same team.
 
-        SEC-008: Logs audit trail.
+        FUNC-009: Role reassignment capability.
+
+        Args:
+            team_id: The team ID
+            from_role: The role to move person from
+            to_role: The role to move person to
+            person: The person to reassign
+
+        Returns:
+            True if successful, False otherwise
         """
-        self.logger.info("team_start_request", {"team_id": team_id})
+        # Validate inputs
+        try:
+            validate_role_name(from_role)
+            validate_role_name(to_role)
+            validate_person_name(person)
+        except ValueError as e:
+            self.logger.error("reassignment_validation_failed", {
+                "team_id": team_id,
+                "from_role": from_role,
+                "to_role": to_role,
+                "person": person,
+                "error": str(e)
+            })
+            print(f"❌ Validation error: {e}", file=sys.stderr)
+            return False
+
+        self._require_auth("reassign role", team_id)
 
         if team_id not in self.teams:
             self.logger.error("team_not_found", {"team_id": team_id})
+            print(f"❌ Team {team_id} not found")
             return False
+
+        team = self.teams[team_id]
+
+        # Find both roles
+        from_role_obj = None
+        to_role_obj = None
+        for role in team.roles:
+            if role.name == from_role:
+                from_role_obj = role
+            if role.name == to_role:
+                to_role_obj = role
+
+        # Validate both roles exist
+        if from_role_obj is None:
+            self.logger.error("from_role_not_found", {
+                "team_id": team_id,
+                "from_role": from_role
+            })
+            print(f"❌ Role '{from_role}' not found in {team.name}")
+            return False
+
+        if to_role_obj is None:
+            self.logger.error("to_role_not_found", {
+                "team_id": team_id,
+                "to_role": to_role
+            })
+            print(f"❌ Role '{to_role}' not found in {team.name}")
+            return False
+
+        # Validate person is actually assigned to from_role
+        if from_role_obj.assigned_to != person:
+            self.logger.error("person_not_assigned_to_from_role", {
+                "team_id": team_id,
+                "from_role": from_role,
+                "person": person,
+                "actual_assignee": from_role_obj.assigned_to
+            })
+            print(f"❌ '{person}' is not assigned to '{from_role}' in {team.name}")
+            return False
+
+        # Perform reassignment
+        previous_assignee = to_role_obj.assigned_to
+        from_role_obj.assigned_to = None
+        to_role_obj.assigned_to = person
+        self.save()
+
+        # Log audit trail
+        if self.enable_audit and self.audit_logger:
+            self.audit_logger.log_action(
+                "reassign_role",
+                {
+                    "team_id": team_id,
+                    "team_name": team.name,
+                    "person": person,
+                    "from_role": from_role,
+                    "to_role": to_role,
+                    "to_role_previous_assignee": previous_assignee
+                },
+                self.user_context
+            )
+
+        self.logger.info("role_reassigned", {
+            "team_id": team_id,
+            "team_name": team.name,
+            "person": person,
+            "from_role": from_role,
+            "to_role": to_role
+        })
+
+        if previous_assignee:
+            print(f"✅ Reassigned {person} from '{from_role}' to '{to_role}' in {team.name}")
+            print(f"   Note: {previous_assignee} was previously assigned to '{to_role}'")
+        else:
+            print(f"✅ Reassigned {person} from '{from_role}' to '{to_role}' in {team.name}")
+        return True
+
+    def start_team(self, team_id: int, override: bool = False, reason: Optional[str] = None) -> bool:
+        """Mark a team as active.
+
+        SEC-008: Logs audit trail.
+        FUNC-010: Supports override for admin users.
+
+        Args:
+            team_id: The team ID to start
+            override: Whether to override phase gate checks (requires admin)
+            reason: Reason for override (required if override=True)
+
+        Returns:
+            True if successful, False otherwise
+        """
+        self.performance_metrics.start_operation("start", team_id=team_id, override=override)
+        self.logger.info("team_start_request", {
+            "team_id": team_id,
+            "override": override,
+            "reason": reason
+        })
+
+        if team_id not in self.teams:
+            self.performance_metrics.end_operation("start", success=False, error_type="team_not_found")
+            self.logger.error("team_not_found", {"team_id": team_id})
+            return False
+
+        team = self.teams[team_id]
+
+        # FUNC-010: Check for override capability
+        if override:
+            # Verify admin role
+            if self.user_context is None or not self.user_context.has_permission("admin"):
+                self.logger.error("override_permission_denied", {
+                    "team_id": team_id,
+                    "user": self.user_context.user_id if self.user_context else None,
+                    "role": self.user_context.role if self.user_context else None
+                })
+                print(f"❌ Override requires admin role")
+                return False
+
+            if not reason:
+                self.logger.error("override_missing_reason", {"team_id": team_id})
+                print(f"❌ Override requires a reason (--reason)")
+                return False
+
+            self.logger.warn("phase_gate_override", {
+                "team_id": team_id,
+                "team_name": team.name,
+                "reason": reason,
+                "user": self.user_context.user_id if self.user_context else "system"
+            })
 
         team = self.teams[team_id]
         previous_status = team.status
@@ -1139,6 +2094,7 @@ class TeamManager:
             "status": team.status,
             "started_at": team.started_at
         })
+        self.performance_metrics.end_operation("start", success=True, team_id=team_id)
         return True
 
     def complete_team(self, team_id: int) -> bool:
@@ -1146,10 +2102,12 @@ class TeamManager:
 
         SEC-008: Logs audit trail.
         """
+        self.performance_metrics.start_operation("complete", team_id=team_id)
         self.logger.info("team_complete_request", {"team_id": team_id})
 
         if team_id not in self.teams:
             self.logger.error("team_not_found", {"team_id": team_id})
+            self.performance_metrics.end_operation("complete", success=False, error_type="team_not_found")
             return False
 
         team = self.teams[team_id]
@@ -1178,7 +2136,84 @@ class TeamManager:
             "status": team.status,
             "completed_at": team.completed_at
         })
+        self.performance_metrics.end_operation("complete", success=True, team_id=team_id)
         return True
+
+    def query_teams(self, status: Optional[str] = None, phase: Optional[str] = None,
+                    assignee: Optional[str] = None, role_name: Optional[str] = None) -> List[Dict[str, Any]]:
+        """Query teams with filters.
+
+        FUNC-006: Query API for filtering teams by status, phase, assignee, or role.
+
+        Args:
+            status: Filter by team status (not_started, active, completed, blocked)
+            phase: Filter by phase name
+            assignee: Filter by person assigned to any role
+            role_name: Filter by specific role name
+
+        Returns:
+            List of teams matching all specified filters (AND logic)
+        """
+        results = []
+
+        for team in self.teams.values():
+            # Check status filter
+            if status is not None and team.status != status:
+                continue
+
+            # Check phase filter
+            if phase is not None and team.phase != phase:
+                continue
+
+            # Check assignee filter - person assigned to any role in team
+            if assignee is not None:
+                assigned_roles = [r for r in team.roles if r.assigned_to == assignee]
+                if not assigned_roles:
+                    continue
+
+            # Check role_name filter - specific role exists in team
+            if role_name is not None:
+                matching_roles = [r for r in team.roles if r.name == role_name]
+                if not matching_roles:
+                    continue
+
+            # Team passed all filters - build result
+            team_data = {
+                "id": team.id,
+                "name": team.name,
+                "phase": team.phase,
+                "description": team.description,
+                "status": team.status,
+                "started_at": team.started_at,
+                "completed_at": team.completed_at,
+                "assigned_count": sum(1 for r in team.roles if r.assigned_to),
+                "total_roles": len(team.roles),
+                "roles": []
+            }
+
+            # Include role details, filtered if assignee or role_name specified
+            for role in team.roles:
+                if assignee is not None and role.assigned_to != assignee:
+                    continue
+                if role_name is not None and role.name != role_name:
+                    continue
+                team_data["roles"].append({
+                    "name": role.name,
+                    "assigned_to": role.assigned_to,
+                    "responsibility": role.responsibility
+                })
+
+            results.append(team_data)
+
+        self.logger.info("teams_queried", {
+            "status_filter": status,
+            "phase_filter": phase,
+            "assignee_filter": assignee,
+            "role_filter": role_name,
+            "result_count": len(results)
+        })
+
+        return results
 
     def get_phase_status(self, phase: str) -> dict:
         """Get status summary for a phase."""
@@ -1254,12 +2289,13 @@ class TeamManager:
         return team
 
     def validate_team_size(self, team_id: Optional[int] = None) -> dict:
-        """Validate team sizes meet 4-6 member requirement.
+        """Validate team sizes meet configured member requirement.
 
         Returns dict with validation results.
+        Uses team_size_limits from rules.json (FUNC-008).
         """
-        MIN_TEAM_SIZE = 4
-        MAX_TEAM_SIZE = 6
+        loader = get_rules_loader()
+        MIN_TEAM_SIZE, MAX_TEAM_SIZE = loader.get_team_size_limits()
 
         results = {
             "valid": True,
@@ -1427,6 +2463,141 @@ class TeamManager:
         except Exception as e:
             result["message"] = f"❌ Error deleting project: {e}"
 
+
+    # FUNC-012: Duplicate Detection Methods
+    def get_person_assignments(self, person: str) -> List[Dict[str, Any]]:
+        """Get all role assignments for a person across all teams.
+
+        Args:
+            person: The person name/email to look up
+
+        Returns:
+            List of assignments with team_id, team_name, role_name
+        """
+        assignments = []
+        person_lower = person.lower()
+
+        for team in self.teams.values():
+            for role in team.roles:
+                if role.assigned_to and role.assigned_to.lower() == person_lower:
+                    assignments.append({
+                        "team_id": team.id,
+                        "team_name": team.name,
+                        "role_name": role.name,
+                        "person": role.assigned_to
+                    })
+
+        return assignments
+
+    def check_duplicate_assignment(self, person: str, team_id: Optional[int] = None) -> Dict[str, Any]:
+        """Check if assigning this person would create a duplicate.
+
+        FUNC-012: Duplicate detection with configurable scope and action.
+
+        Args:
+            person: The person being assigned
+            team_id: The team being assigned to (optional, for scope checking)
+
+        Returns:
+            Dict with duplicate check results:
+            {
+                "is_duplicate": bool,
+                "existing_assignments": List[Dict],
+                "action": "allow" | "warn" | "block",
+                "message": str
+            }
+        """
+        loader = get_rules_loader()
+        config = loader.get_duplicate_detection_config()
+
+        result = {
+            "is_duplicate": False,
+            "existing_assignments": [],
+            "action": "allow",
+            "message": ""
+        }
+
+        if not config.get("enabled", True):
+            return result
+
+        scope = config.get("scope", "project")
+        action = config.get("action", "warn")
+
+        # Get existing assignments
+        existing = self.get_person_assignments(person)
+
+        if not existing:
+            return result
+
+        # Check scope
+        if scope == "team":
+            # Only check if person is already in the same team
+            existing = [a for a in existing if a["team_id"] == team_id]
+
+        if existing:
+            result["is_duplicate"] = True
+            result["existing_assignments"] = existing
+            result["action"] = action
+
+            if action == "block":
+                result["message"] = f"❌ Cannot assign '{person}': already assigned to {len(existing)} role(s)"
+            else:
+                result["message"] = f"⚠️  Warning: '{person}' is already assigned to {len(existing)} role(s)"
+
+        return result
+
+    def validate_no_duplicates(self, team_id: Optional[int] = None) -> Dict[str, Any]:
+        """Validate entire project for duplicate assignments.
+
+        Args:
+            team_id: Optional team to limit validation to
+
+        Returns:
+            Dict with validation results
+        """
+        loader = get_rules_loader()
+        config = loader.get_duplicate_detection_config()
+
+        result = {
+            "valid": True,
+            "duplicates": [],
+            "total_affected": 0
+        }
+
+        if not config.get("enabled", True):
+            return result
+
+        # Build map of person -> assignments
+        person_assignments: Dict[str, List[Dict]] = {}
+
+        teams_to_check = [self.teams[team_id]] if team_id else self.teams.values()
+
+        for team in teams_to_check:
+            for role in team.roles:
+                if role.assigned_to:
+                    person = role.assigned_to.lower()
+                    if person not in person_assignments:
+                        person_assignments[person] = []
+                    person_assignments[person].append({
+                        "team_id": team.id,
+                        "team_name": team.name,
+                        "role_name": role.name,
+                        "person": role.assigned_to
+                    })
+
+        # Find duplicates (people with multiple assignments)
+        for person, assignments in person_assignments.items():
+            if len(assignments) > 1:
+                result["valid"] = False
+                result["duplicates"].append({
+                    "person": person,
+                    "assignment_count": len(assignments),
+                    "assignments": assignments
+                })
+                result["total_affected"] += 1
+
+        return result
+
         return result
 
     def list_backups(self) -> List[Dict[str, Any]]:
@@ -1519,6 +2690,72 @@ class TeamManager:
         if not self.audit_logger:
             return []
         return self.audit_logger.get_recent_actions(count)
+
+    def get_team_history(self, team_id: int,
+                         start_date: Optional[datetime] = None,
+                         end_date: Optional[datetime] = None) -> List[Dict[str, Any]]:
+        """Get history of changes for a specific team.
+
+        FUNC-011: Team history view with date range filtering.
+
+        Args:
+            team_id: The team ID to get history for
+            start_date: Optional start date filter
+            end_date: Optional end date filter
+
+        Returns:
+            List of audit entries for the team
+        """
+        if not self.audit_logger:
+            return []
+
+        entries = self.audit_logger.query_audit_log(
+            team_id=team_id,
+            start_time=start_date,
+            end_time=end_date,
+            limit=1000
+        )
+
+        self.logger.info("team_history_queried", {
+            "team_id": team_id,
+            "start_date": start_date.isoformat() if start_date else None,
+            "end_date": end_date.isoformat() if end_date else None,
+            "entry_count": len(entries)
+        })
+
+        return entries
+
+    def get_project_timeline(self,
+                             start_date: Optional[datetime] = None,
+                             end_date: Optional[datetime] = None) -> List[Dict[str, Any]]:
+        """Get timeline of all project events.
+
+        FUNC-011: Project timeline view with date range filtering.
+
+        Args:
+            start_date: Optional start date filter
+            end_date: Optional end date filter
+
+        Returns:
+            List of all project events sorted by timestamp
+        """
+        if not self.audit_logger:
+            return []
+
+        entries = self.audit_logger.query_audit_log(
+            start_time=start_date,
+            end_time=end_date,
+            limit=1000
+        )
+
+        self.logger.info("project_timeline_queried", {
+            "project": self.project_name,
+            "start_date": start_date.isoformat() if start_date else None,
+            "end_date": end_date.isoformat() if end_date else None,
+            "entry_count": len(entries)
+        })
+
+        return entries
 
     def health_check(self) -> dict:
         """Perform health check on team manager.
@@ -1642,6 +2879,16 @@ def main():
     list_parser = subparsers.add_parser("list", help="List teams")
     list_parser.add_argument("--phase", help="Filter by phase")
 
+    # Query command (FUNC-006)
+    query_parser = subparsers.add_parser("query", help="Query teams with filters")
+    query_parser.add_argument("--status", choices=["not_started", "active", "completed", "blocked"],
+                              help="Filter by team status")
+    query_parser.add_argument("--phase", help="Filter by phase")
+    query_parser.add_argument("--assignee", help="Filter by person assigned to any role")
+    query_parser.add_argument("--role", help="Filter by specific role name")
+    query_parser.add_argument("--format", choices=["table", "json"], default="table",
+                              help="Output format (default: table)")
+
     # Assign command
     assign_parser = subparsers.add_parser("assign", help="Assign person to role")
     assign_parser.add_argument("--team", type=int, required=True, help="Team ID")
@@ -1653,9 +2900,18 @@ def main():
     unassign_parser.add_argument("--team", type=int, required=True, help="Team ID")
     unassign_parser.add_argument("--role", required=True, help="Role name")
 
+    # Reassign command (FUNC-009)
+    reassign_parser = subparsers.add_parser("reassign", help="Reassign person from one role to another")
+    reassign_parser.add_argument("--team", type=int, required=True, help="Team ID")
+    reassign_parser.add_argument("--from-role", required=True, help="Role to move from")
+    reassign_parser.add_argument("--to-role", required=True, help="Role to move to")
+    reassign_parser.add_argument("--person", required=True, help="Person to reassign")
+
     # Start command
     start_parser = subparsers.add_parser("start", help="Start a team")
     start_parser.add_argument("--team", type=int, required=True, help="Team ID")
+    start_parser.add_argument("--override", action="store_true", help="Override phase gate check (admin only)")
+    start_parser.add_argument("--reason", help="Reason for override (required with --override)")
 
     # Complete command
     complete_parser = subparsers.add_parser("complete", help="Complete a team")
@@ -1685,6 +2941,12 @@ def main():
     restore_parser = subparsers.add_parser("restore", help="Restore from a backup")
     restore_parser.add_argument("--backup", required=True, help="Backup filename to restore")
 
+    # FUNC-008: Reload-rules command
+    reload_rules_parser = subparsers.add_parser("reload-rules", help="Reload rules from rules.json")
+
+    # OPS-006: Migrate command
+    migrate_parser = subparsers.add_parser("migrate", help="Migrate project to current version")
+
     # Audit command (SEC-008)
     audit_parser = subparsers.add_parser("audit", help="Query audit log")
     audit_parser.add_argument("--user", help="Filter by user")
@@ -1693,8 +2955,28 @@ def main():
     audit_parser.add_argument("--limit", type=int, default=20, help="Maximum entries to show (default: 20)")
     audit_parser.add_argument("--recent", action="store_true", help="Show most recent entries")
 
+    # Team history command (FUNC-011)
+    history_parser = subparsers.add_parser("team-history", help="Show history for a team")
+    history_parser.add_argument("--team", type=int, required=True, help="Team ID")
+    history_parser.add_argument("--start-date", help="Start date (ISO format: YYYY-MM-DD)")
+    history_parser.add_argument("--end-date", help="End date (ISO format: YYYY-MM-DD)")
+    history_parser.add_argument("--format", choices=["table", "json"], default="table", help="Output format")
+
+    # Project timeline command (FUNC-011)
+    timeline_parser = subparsers.add_parser("project-timeline", help="Show timeline of all project events")
+    timeline_parser.add_argument("--start-date", help="Start date (ISO format: YYYY-MM-DD)")
+    timeline_parser.add_argument("--end-date", help="End date (ISO format: YYYY-MM-DD)")
+    timeline_parser.add_argument("--format", choices=["table", "json"], default="table", help="Output format")
+
     # Health command (OPS-003)
     health_parser = subparsers.add_parser("health", help="Check team manager health status")
+
+    # OPS-008: Performance report command
+    perf_parser = subparsers.add_parser("performance-report", help="Show performance metrics report")
+    perf_parser.add_argument("--days", type=int, default=7, help="Number of days to include (default: 7)")
+    perf_parser.add_argument("--operation", help="Filter by operation type")
+    perf_parser.add_argument("--export", choices=["json", "csv"], help="Export to file format")
+    perf_parser.add_argument("--output", help="Output file path for export")
 
     # FUNC-005: Batch operations commands
     # Import CSV command
@@ -1723,6 +3005,10 @@ def main():
     template_json_parser = subparsers.add_parser("template-json", help="Create JSON template for bulk assignments")
     template_json_parser.add_argument("--file", default="assignments_template.json", help="Output file path")
 
+    # SEC-007: Encryption commands
+    encrypt_parser = subparsers.add_parser("encrypt-project", help="Encrypt sensitive project data")
+    decrypt_parser = subparsers.add_parser("decrypt-project", help="Decrypt sensitive project data")
+
     args = parser.parse_args()
 
     # Validate project name to prevent command injection
@@ -1733,7 +3019,20 @@ def main():
     cli_logger = StructuredLogger("team_manager_cli", request_id)
     cli_logger.info("cli_start", {"command": args.command, "project": args.project})
 
-    manager = TeamManager(args.project)
+    # SEC-006: Handle SecurityError from path validation
+    try:
+        manager = TeamManager(args.project)
+    except SecurityError as e:
+        cli_logger.error("security_error", {"error": str(e)})
+        print(f"🔒 Security error: {e}", file=sys.stderr)
+        sys.exit(1)
+
+    # SEC-005: Handle RateLimitExceeded
+    except RateLimitExceeded as e:
+        retry_msg = f" Retry after {e.retry_after}s." if e.retry_after else ""
+        cli_logger.error("rate_limit_exceeded", {"error": str(e), "retry_after": e.retry_after})
+        print(f"⏱️  Rate limit exceeded.{retry_msg}", file=sys.stderr)
+        sys.exit(429)
 
     if args.command == "init":
         manager.initialize_project()
@@ -1756,14 +3055,44 @@ def main():
         if args.command == "list":
             manager.list_teams(args.phase)
 
+        elif args.command == "query":
+            results = manager.query_teams(
+                status=args.status,
+                phase=args.phase,
+                assignee=args.assignee,
+                role_name=args.role
+            )
+            if args.format == "json":
+                print(json.dumps(results, indent=2))
+            else:
+                # Table format
+                if not results:
+                    print("No teams match the specified filters.")
+                else:
+                    print(f"\nFound {len(results)} team(s) matching filters:\n")
+                    for team in results:
+                        print(f"Team {team['id']}: {team['name']}")
+                        print(f"  Phase: {team['phase']}")
+                        print(f"  Status: {team['status']}")
+                        print(f"  Assigned: {team['assigned_count']}/{team['total_roles']}")
+                        if team['roles']:
+                            print("  Matching Roles:")
+                            for role in team['roles']:
+                                assignee = role['assigned_to'] or "(unassigned)"
+                                print(f"    - {role['name']}: {assignee}")
+                        print()
+
         elif args.command == "assign":
             manager.assign_role(args.team, args.role, args.person)
 
         elif args.command == "unassign":
             manager.unassign_role(args.team, args.role)
 
+        elif args.command == "reassign":
+            manager.reassign_role(args.team, args.from_role, args.to_role, args.person)
+
         elif args.command == "start":
-            manager.start_team(args.team)
+            manager.start_team(args.team, override=args.override, reason=args.reason)
 
         elif args.command == "complete":
             manager.complete_team(args.team)
@@ -1853,6 +3182,64 @@ def main():
             else:
                 print(f"ℹ️  No audit entries found for '{args.project}'")
 
+        elif args.command == "team-history":
+            from datetime import datetime
+            start_date = None
+            end_date = None
+            if args.start_date:
+                start_date = datetime.fromisoformat(args.start_date)
+            if args.end_date:
+                end_date = datetime.fromisoformat(args.end_date)
+
+            entries = manager.get_team_history(args.team, start_date, end_date)
+
+            if args.format == "json":
+                print(json.dumps(entries, indent=2))
+            else:
+                if entries:
+                    team = manager.teams.get(args.team)
+                    team_name = team.name if team else f"Team {args.team}"
+                    print(f"\n📜 History for {team_name}:")
+                    print(f"{'Timestamp':<25} {'Action':<20} {'Details'}")
+                    print("-" * 80)
+                    for entry in entries:
+                        ts = entry["timestamp"].replace("T", " ").replace("Z", "")[:19]
+                        action = entry.get("action", "unknown")[:19]
+                        details = json.dumps(entry.get("details", {}))[:40]
+                        print(f"{ts:<25} {action:<20} {details}")
+                    print(f"\nTotal entries: {len(entries)}")
+                else:
+                    print(f"ℹ️  No history found for team {args.team}")
+
+        elif args.command == "project-timeline":
+            from datetime import datetime
+            start_date = None
+            end_date = None
+            if args.start_date:
+                start_date = datetime.fromisoformat(args.start_date)
+            if args.end_date:
+                end_date = datetime.fromisoformat(args.end_date)
+
+            entries = manager.get_project_timeline(start_date, end_date)
+
+            if args.format == "json":
+                print(json.dumps(entries, indent=2))
+            else:
+                if entries:
+                    print(f"\n📅 Project Timeline for '{args.project}':")
+                    print(f"{'Timestamp':<25} {'User':<15} {'Action':<20} {'Team/Details'}")
+                    print("-" * 90)
+                    for entry in entries:
+                        ts = entry["timestamp"].replace("T", " ").replace("Z", "")[:19]
+                        user = entry.get("user", "unknown")[:14]
+                        action = entry.get("action", "unknown")[:19]
+                        details = entry.get("details", {})
+                        team_info = f"Team {details.get('team_id', 'N/A')}"
+                        print(f"{ts:<25} {user:<15} {action:<20} {team_info}")
+                    print(f"\nTotal entries: {len(entries)}")
+                else:
+                    print(f"ℹ️  No timeline entries found for '{args.project}'")
+
         # FUNC-005: Batch operation handlers
         elif args.command == "import-csv":
             result = manager.import_csv_file(Path(args.file), dry_run=args.dry_run)
@@ -1928,12 +3315,150 @@ def main():
                 print(f"❌ Failed to create template: {result['errors']}")
                 sys.exit(1)
 
+    elif args.command == "reload-rules":
+        # FUNC-008: Reload rules
+        reload_rules_cmd()
+
+    elif args.command == "migrate":
+        # OPS-006: Migration check and run
+        status = manager.migration_manager.get_migration_status()
+        if status["status"] == "needs_migration":
+            print(f"🔄 Project '{args.project}' needs migration:")
+            print(f"   Current: v{status['current_version']}")
+            print(f"   Target:  v{status['target_version']}")
+            # Load will trigger migration
+            manager.load()
+            print(f"✅ Migration complete")
+        elif status["status"] == "current":
+            print(f"✅ Project '{args.project}' is at current version (v{status['current_version']})")
+        elif status["status"] == "not_found":
+            print(f"❌ Project '{args.project}' not found")
+            sys.exit(1)
+        else:
+            print(f"❌ Error: {status.get('error', 'Unknown error')}")
+            sys.exit(1)
+
     elif args.command == "health":
         # OPS-003: Health check - doesn't require project to exist
         health = manager.health_check()
+        # FUNC-008: Add rules check
+        try:
+            loader = get_rules_loader()
+            health["checks"]["rules"] = {
+                "status": "pass",
+                "rules_path": str(loader.rules_path),
+                "rules_loaded": bool(loader.rules)
+            }
+        except Exception as e:
+            health["checks"]["rules"] = {
+                "status": "fail",
+                "error": str(e)
+            }
+            health["status"] = "unhealthy"
         print(json.dumps(health, indent=2))
         if health["status"] != "healthy":
             sys.exit(1)
+
+
+    elif args.command == "performance-report":
+        # OPS-008: Performance metrics report
+        if args.export and args.output:
+            success = manager.performance_metrics.export_report(
+                Path(args.output), format=args.export, days=args.days
+            )
+            if success:
+                print(f"✅ Performance report exported to {args.output}")
+            else:
+                sys.exit(1)
+        else:
+            if args.operation:
+                stats = manager.performance_metrics.get_operation_stats(
+                    operation=args.operation, since=datetime.utcnow() - timedelta(days=args.days)
+                )
+                print(f"\n📊 Performance Report: {args.operation}")
+                print(f"{'='*50}")
+            else:
+                stats = manager.performance_metrics.get_report(days=args.days)
+                print(f"\n📊 Performance Report (last {args.days} days)")
+                print(f"{'='*50}")
+                print(f"Project: {stats['project']}")
+                print(f"Generated: {stats['generated_at']}")
+                print()
+                # Overall stats
+                overall = stats['overall']
+                print(f"Overall Operations: {overall['count']}")
+                print(f"  Success: {overall['success_count']} ({overall['success_rate']}%)")
+                print(f"  Failures: {overall['failure_count']} ({overall['error_rate']}%)")
+                if 'duration_stats' in overall:
+                    ds = overall['duration_stats']
+                    print(f"\nDuration Statistics:")
+                    print(f"  Average: {ds['avg_ms']}ms")
+                    print(f"  Median: {ds['median_ms']}ms")
+                    print(f"  Min: {ds['min_ms']}ms")
+                    print(f"  Max: {ds['max_ms']}ms")
+                # By operation
+                if 'by_operation' in stats and stats['by_operation']:
+                    print(f"\nBy Operation:")
+                    for op, op_stats in stats['by_operation'].items():
+                        if op_stats['count'] > 0:
+                            print(f"  {op}: {op_stats['count']} ops, avg {op_stats.get('duration_stats', {}).get('avg_ms', 'N/A')}ms")
+            if args.export == "json" and not args.output:
+                print(json.dumps(stats, indent=2))
+
+    elif args.command in ["encrypt-project", "decrypt-project"]:
+        # SEC-007: Encryption/Decryption commands
+        if not manager.encryption_manager.enabled:
+            print("❌ Encryption not enabled. Set TEAM_ENCRYPTION_KEY environment variable.")
+            sys.exit(1)
+
+        if not manager.config_path.exists():
+            print(f"❌ Project '{args.project}' not found.")
+            sys.exit(1)
+
+        # Load current data
+        with open(manager.config_path, 'r') as f:
+            data = json.load(f)
+
+        # Define sensitive fields to encrypt/decrypt
+        sensitive_fields = ["assigned_to", "assignee", "person", "user", "user_id"]
+        encrypted_count = 0
+
+        def process_encrypted_value(value, encrypt):
+            """Process a potentially encrypted value."""
+            if not isinstance(value, str):
+                return value, 0
+            if encrypt:
+                if value.startswith('gAAAA'):
+                    return value, 0
+                return manager.encryption_manager.encrypt(value), 1
+            else:
+                if not value.startswith('gAAAA'):
+                    return value, 0
+                return manager.encryption_manager.decrypt(value), 1
+
+        def process_dict(d, encrypt):
+            """Process a dictionary recursively."""
+            count = 0
+            for key, value in d.items():
+                if key in sensitive_fields and isinstance(value, str):
+                    d[key], c = process_encrypted_value(value, encrypt)
+                    count += c
+                elif isinstance(value, dict):
+                    count += process_dict(value, encrypt)
+                elif isinstance(value, list):
+                    for item in value:
+                        if isinstance(item, dict):
+                            count += process_dict(item, encrypt)
+            return count
+
+        encrypted_count = process_dict(data, args.command == "encrypt-project")
+
+        # Save back
+        with open(manager.config_path, 'w') as f:
+            json.dump(data, f, indent=2)
+
+        action = "Encrypted" if args.command == "encrypt-project" else "Decrypted"
+        print(f"✅ {action} {encrypted_count} sensitive fields in project '{args.project}'")
 
     else:
         parser.print_help()
