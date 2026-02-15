@@ -50,13 +50,13 @@ function! guardrail#TestConnection()
   
   let l:config = s:GetConfig()
   let l:url = l:config.server_url . '/health/ready'
-  let l:cmd = [s:curl_cmd, '-s', '-o', '/dev/null', '-w', '%{http_code}', l:url]
-  
+  let l:cmd = [s:curl_cmd, '-s', '-o', '/dev/null', '-w', '%{http_code}', shellescape(l:url)]
+
   if !empty(l:config.api_key)
     call add(l:cmd, '-H')
-    call add(l:cmd, 'Authorization: Bearer ' . l:config.api_key)
+    call add(l:cmd, shellescape('Authorization: Bearer ' . l:config.api_key))
   endif
-  
+
   let l:result = system(join(l:cmd, ' '))
   
   if l:result == '200'
@@ -100,18 +100,18 @@ function! guardrail#ValidateBuffer()
     \ 'project_slug': empty(l:config.project_slug) ? v:null : l:config.project_slug
   \ })
   
-  let l:cmd = [s:curl_cmd, '-s', '-X', 'POST', l:url]
+  let l:cmd = [s:curl_cmd, '-s', '-X', 'POST', shellescape(l:url)]
   call add(l:cmd, '-H')
-  call add(l:cmd, 'Content-Type: application/json')
-  
+  call add(l:cmd, shellescape('Content-Type: application/json'))
+
   if !empty(l:config.api_key)
     call add(l:cmd, '-H')
-    call add(l:cmd, 'Authorization: Bearer ' . l:config.api_key)
+    call add(l:cmd, shellescape('Authorization: Bearer ' . l:config.api_key))
   endif
-  
+
   call add(l:cmd, '-d')
   call add(l:cmd, shellescape(l:body))
-  
+
   " Execute validation
   let l:result = system(join(l:cmd, ' '))
   
@@ -168,18 +168,18 @@ function! guardrail#ValidateSelection()
     \ 'language': l:language
   \ })
   
-  let l:cmd = [s:curl_cmd, '-s', '-X', 'POST', l:url]
+  let l:cmd = [s:curl_cmd, '-s', '-X', 'POST', shellescape(l:url)]
   call add(l:cmd, '-H')
-  call add(l:cmd, 'Content-Type: application/json')
-  
+  call add(l:cmd, shellescape('Content-Type: application/json'))
+
   if !empty(l:config.api_key)
     call add(l:cmd, '-H')
-    call add(l:cmd, 'Authorization: Bearer ' . l:config.api_key)
+    call add(l:cmd, shellescape('Authorization: Bearer ' . l:config.api_key))
   endif
-  
+
   call add(l:cmd, '-d')
   call add(l:cmd, shellescape(l:body))
-  
+
   let l:result = system(join(l:cmd, ' '))
   
   if v:shell_error != 0
