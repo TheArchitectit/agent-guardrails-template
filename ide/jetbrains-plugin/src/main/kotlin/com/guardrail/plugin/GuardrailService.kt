@@ -15,6 +15,9 @@ import java.util.concurrent.TimeUnit
 
 data class GuardrailSettings(
     var serverUrl: String = "http://localhost:8095",
+    // SECURITY NOTE: API key is stored in plain text in IDE settings.
+    // For production use, migrate to PasswordSafe:
+    // https://plugins.jetbrains.com/docs/intellij/persisting-sensitive-data.html
     var apiKey: String = "",
     var projectSlug: String = "",
     var enabled: Boolean = true,
@@ -94,14 +97,14 @@ class GuardrailService : PersistentStateComponent<GuardrailSettings> {
             val request = buildRequest(endpoint, body)
             client.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) {
-                    return ValidationResult(true, emptyList(), "HTTP ${response.code}")
+                    return ValidationResult(false, emptyList(), "HTTP ${response.code}")
                 }
 
                 response.body?.string()?.let { responseBody ->
                     val type = object : TypeToken<Map<String, Any>>() {}.type
                     val result = gson.fromJson<Map<String, Any>>(responseBody, type)
 
-                    val valid = result["valid"] as? Boolean ?: true
+                    val valid = result["valid"] as? Boolean ?: false
                     @Suppress("UNCHECKED_CAST")
                     val violations = (result["violations"] as? List<Map<String, Any>>)?.map { v ->
                         Violation(
@@ -115,11 +118,11 @@ class GuardrailService : PersistentStateComponent<GuardrailSettings> {
                     } ?: emptyList()
 
                     ValidationResult(valid, violations)
-                } ?: ValidationResult(true, emptyList())
+                } ?: ValidationResult(false, emptyList(), "Empty response body")
             }
         } catch (e: IOException) {
             logger.error("Validation request failed", e)
-            ValidationResult(true, emptyList(), e.message)
+            ValidationResult(false, emptyList(), e.message)
         }
     }
 
