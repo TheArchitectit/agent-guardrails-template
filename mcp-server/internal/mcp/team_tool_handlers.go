@@ -2,6 +2,7 @@ package mcp
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os/exec"
 	"path/filepath"
@@ -14,6 +15,7 @@ import (
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/thearchitectit/guardrail-mcp/internal/metrics"
+	"github.com/thearchitectit/guardrail-mcp/internal/team"
 )
 
 // getTeamManagerPath returns the absolute path to the team_manager.py script
@@ -338,23 +340,30 @@ func (s *MCPServer) handleTeamInit(ctx context.Context, args map[string]interfac
 		}, nil
 	}
 
-	cmd := exec.CommandContext(ctx, "python", getTeamManagerPath(), "--project", projectName, "--test-mode", "init")
-	cmd.Dir = getRepoRoot()
-	pyStart := time.Now()
-	output, err := cmd.CombinedOutput()
-	metrics.RecordTeamToolPythonExec("init", time.Since(pyStart))
-
-	resultText := string(output)
+	// Use Go implementation instead of Python
+	mgr, err := team.NewManager(projectName, team.WithTestMode(true))
 	if err != nil {
-		resultText = fmt.Sprintf("Error initializing team: %v\nOutput: %s", err, string(output))
-		metrics.RecordTeamToolError("team_init", "python_error")
+		metrics.RecordTeamToolError("team_init", "go_error")
 		metrics.RecordTeamToolCall("team_init", false)
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: resultText}},
+			Content: []interface{}{mcp.TextContent{Type: "text", Text: fmt.Sprintf("Error creating manager: %v", err)}},
 			IsError: true,
 		}, nil
 	}
 
+	goStart := time.Now()
+	if err := mgr.InitializeProject(); err != nil {
+		metrics.RecordTeamToolDuration("team_init", time.Since(goStart))
+		metrics.RecordTeamToolError("team_init", "go_error")
+		metrics.RecordTeamToolCall("team_init", false)
+		return &mcp.CallToolResult{
+			Content: []interface{}{mcp.TextContent{Type: "text", Text: fmt.Sprintf("Error initializing project: %v", err)}},
+			IsError: true,
+		}, nil
+	}
+	metrics.RecordTeamToolDuration("team_init", time.Since(goStart))
+
+	resultText := fmt.Sprintf("✅ Initialized project '%s' with %d teams", projectName, len(team.StandardTeams))
 	metrics.RecordTeamToolCall("team_init", true)
 	return &mcp.CallToolResult{
 		Content: []interface{}{mcp.TextContent{Type: "text", Text: resultText}},
@@ -387,37 +396,63 @@ func (s *MCPServer) handleTeamList(ctx context.Context, args map[string]interfac
 		}, nil
 	}
 
-	cmdArgs := []string{getTeamManagerPath(), "--project", projectName, "--test-mode", "list"}
+	// Use Go implementation
+	mgr, err := team.NewManager(projectName, team.WithTestMode(true))
+	if err != nil {
+		metrics.RecordTeamToolError("team_list", "go_error")
+		metrics.RecordTeamToolCall("team_list", false)
+		return &mcp.CallToolResult{
+			Content: []interface{}{mcp.TextContent{Type: "text", Text: fmt.Sprintf("Error creating manager: %v", err)}},
+			IsError: true,
+		}, nil
+	}
+
+	goStart := time.Now()
+	if err := mgr.Load(); err != nil {
+		metrics.RecordTeamToolError("team_list", "go_error")
+		metrics.RecordTeamToolCall("team_list", false)
+		return &mcp.CallToolResult{
+			Content: []interface{}{mcp.TextContent{Type: "text", Text: fmt.Sprintf("Error loading project: %v", err)}},
+			IsError: true,
+		}, nil
+	}
+
+	var teams []team.Team
 	if phase, ok := args["phase"].(string); ok && phase != "" {
-		if err := validatePhase(phase); err != nil {
+		if err := team.ValidatePhase(phase); err != nil {
 			metrics.RecordTeamToolError("team_list", "validation_error")
 			return &mcp.CallToolResult{
 				Content: []interface{}{mcp.TextContent{Type: "text", Text: fmt.Sprintf("Error: %v", err)}},
 				IsError: true,
 			}, nil
 		}
-		// SEC-010: Sanitize phase before command execution
-		sanitizedPhase := sanitizePhase(phase)
-		cmdArgs = append(cmdArgs, "--phase", sanitizedPhase)
+		teams = mgr.GetTeamsByPhase(phase)
+	} else {
+		teams = mgr.GetAllTeams()
+	}
+	metrics.RecordTeamToolDuration("team_list", time.Since(goStart))
+
+	// Build result
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("\n📋 Teams for project '%s':\n\n", projectName))
+	sb.WriteString(fmt.Sprintf("%-5s %-35s %-30s %s\n", "ID", "Name", "Phase", "Status"))
+	sb.WriteString(strings.Repeat("-", 100) + "\n")
+
+	for _, t := range teams {
+		assignedCount := 0
+		for _, role := range t.Roles {
+			if role.AssignedTo != nil {
+				assignedCount++
+			}
+		}
+		statusStr := string(t.Status)
+		if t.Status == team.TeamStatusNotStarted && assignedCount > 0 {
+			statusStr = fmt.Sprintf("%s (%d/%d assigned)", t.Status, assignedCount, len(t.Roles))
+		}
+		sb.WriteString(fmt.Sprintf("%-5d %-35s %-30s %s\n", t.ID, t.Name, t.Phase, statusStr))
 	}
 
-	cmd := exec.CommandContext(ctx, "python", cmdArgs...)
-	cmd.Dir = getRepoRoot()
-	pyStart := time.Now()
-	output, err := cmd.CombinedOutput()
-	metrics.RecordTeamToolPythonExec("list", time.Since(pyStart))
-
-	resultText := string(output)
-	if err != nil {
-		resultText = fmt.Sprintf("Error listing teams: %v\nOutput: %s", err, string(output))
-		metrics.RecordTeamToolError("team_list", "python_error")
-		metrics.RecordTeamToolCall("team_list", false)
-		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: resultText}},
-			IsError: true,
-		}, nil
-	}
-
+	resultText := sb.String()
 	metrics.RecordTeamToolCall("team_list", true)
 	return &mcp.CallToolResult{
 		Content: []interface{}{mcp.TextContent{Type: "text", Text: resultText}},
@@ -518,26 +553,40 @@ func (s *MCPServer) handleTeamAssign(ctx context.Context, args map[string]interf
 		}, nil
 	}
 
-	cmd := exec.CommandContext(ctx, "python", getTeamManagerPath(), "--project", projectName, "--test-mode", "assign",
-		"--team", strconv.Itoa(teamIDInt),
-		"--role", roleName,
-		"--person", person)
-	cmd.Dir = getRepoRoot()
-	pyStart := time.Now()
-	output, err := cmd.CombinedOutput()
-	metrics.RecordTeamToolPythonExec("assign", time.Since(pyStart))
-
-	resultText := string(output)
+	// Use Go implementation
+	mgr, err := team.NewManager(projectName, team.WithTestMode(true))
 	if err != nil {
-		resultText = fmt.Sprintf("Error assigning role: %v\nOutput: %s", err, string(output))
-		metrics.RecordTeamToolError("team_assign", "python_error")
+		metrics.RecordTeamToolError("team_assign", "go_error")
 		metrics.RecordTeamToolCall("team_assign", false)
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: resultText}},
+			Content: []interface{}{mcp.TextContent{Type: "text", Text: fmt.Sprintf("Error creating manager: %v", err)}},
 			IsError: true,
 		}, nil
 	}
 
+	goStart := time.Now()
+	if err := mgr.Load(); err != nil {
+		metrics.RecordTeamToolError("team_assign", "go_error")
+		metrics.RecordTeamToolCall("team_assign", false)
+		return &mcp.CallToolResult{
+			Content: []interface{}{mcp.TextContent{Type: "text", Text: fmt.Sprintf("Error loading project: %v", err)}},
+			IsError: true,
+		}, nil
+	}
+
+	if err := mgr.AssignRole(teamIDInt, roleName, person); err != nil {
+		metrics.RecordTeamToolDuration("team_assign", time.Since(goStart))
+		metrics.RecordTeamToolError("team_assign", "go_error")
+		metrics.RecordTeamToolCall("team_assign", false)
+		return &mcp.CallToolResult{
+			Content: []interface{}{mcp.TextContent{Type: "text", Text: fmt.Sprintf("Error assigning role: %v", err)}},
+			IsError: true,
+		}, nil
+	}
+	metrics.RecordTeamToolDuration("team_assign", time.Since(goStart))
+
+	resultText := fmt.Sprintf("✅ Assigned '%s' to '%s' in Team %d (%s)",
+		person, roleName, teamIDInt, team.StandardTeams[teamIDInt].Name)
 	metrics.RecordTeamToolCall("team_assign", true)
 	return &mcp.CallToolResult{
 		Content: []interface{}{mcp.TextContent{Type: "text", Text: resultText}},
@@ -606,25 +655,40 @@ func (s *MCPServer) handleTeamUnassign(ctx context.Context, args map[string]inte
 		}, nil
 	}
 
-	cmd := exec.CommandContext(ctx, "python", getTeamManagerPath(), "--project", projectName, "--test-mode", "unassign",
-		"--team", strconv.Itoa(teamIDInt),
-		"--role", roleName)
-	cmd.Dir = getRepoRoot()
-	pyStart := time.Now()
-	output, err := cmd.CombinedOutput()
-	metrics.RecordTeamToolPythonExec("unassign", time.Since(pyStart))
-
-	resultText := string(output)
+	// Use Go implementation
+	mgr, err := team.NewManager(projectName, team.WithTestMode(true))
 	if err != nil {
-		resultText = fmt.Sprintf("Error unassigning role: %v\nOutput: %s", err, string(output))
-		metrics.RecordTeamToolError("team_unassign", "python_error")
+		metrics.RecordTeamToolError("team_unassign", "go_error")
 		metrics.RecordTeamToolCall("team_unassign", false)
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: resultText}},
+			Content: []interface{}{mcp.TextContent{Type: "text", Text: fmt.Sprintf("Error creating manager: %v", err)}},
 			IsError: true,
 		}, nil
 	}
 
+	goStart := time.Now()
+	if err := mgr.Load(); err != nil {
+		metrics.RecordTeamToolError("team_unassign", "go_error")
+		metrics.RecordTeamToolCall("team_unassign", false)
+		return &mcp.CallToolResult{
+			Content: []interface{}{mcp.TextContent{Type: "text", Text: fmt.Sprintf("Error loading project: %v", err)}},
+			IsError: true,
+		}, nil
+	}
+
+	if err := mgr.UnassignRole(teamIDInt, roleName); err != nil {
+		metrics.RecordTeamToolDuration("team_unassign", time.Since(goStart))
+		metrics.RecordTeamToolError("team_unassign", "go_error")
+		metrics.RecordTeamToolCall("team_unassign", false)
+		return &mcp.CallToolResult{
+			Content: []interface{}{mcp.TextContent{Type: "text", Text: fmt.Sprintf("Error unassigning role: %v", err)}},
+			IsError: true,
+		}, nil
+	}
+	metrics.RecordTeamToolDuration("team_unassign", time.Since(goStart))
+
+	resultText := fmt.Sprintf("✅ Unassigned role '%s' from Team %d (%s)",
+		roleName, teamIDInt, team.StandardTeams[teamIDInt].Name)
 	metrics.RecordTeamToolCall("team_unassign", true)
 	return &mcp.CallToolResult{
 		Content: []interface{}{mcp.TextContent{Type: "text", Text: resultText}},
@@ -677,9 +741,6 @@ func (s *MCPServer) handleTeamStart(ctx context.Context, args map[string]interfa
 		}, nil
 	}
 
-	// Build command args
-	cmdArgs := []string{getTeamManagerPath(), "--project", projectName, "--test-mode", "start", "--team", strconv.Itoa(teamIDInt)}
-
 	// FUNC-010: Handle override option
 	override := false
 	if overrideVal, ok := args["override"].(bool); ok {
@@ -687,8 +748,6 @@ func (s *MCPServer) handleTeamStart(ctx context.Context, args map[string]interfa
 	}
 
 	if override {
-		cmdArgs = append(cmdArgs, "--override")
-
 		// Reason is required when overriding
 		reason, ok := args["reason"].(string)
 		if !ok || reason == "" {
@@ -698,26 +757,44 @@ func (s *MCPServer) handleTeamStart(ctx context.Context, args map[string]interfa
 				IsError: true,
 			}, nil
 		}
-		cmdArgs = append(cmdArgs, "--reason", reason)
 	}
 
-	cmd := exec.CommandContext(ctx, "python", cmdArgs...)
-	cmd.Dir = getRepoRoot()
-	pyStart := time.Now()
-	output, err := cmd.CombinedOutput()
-	metrics.RecordTeamToolPythonExec("start", time.Since(pyStart))
-
-	resultText := string(output)
+	// Use Go implementation
+	mgr, err := team.NewManager(projectName, team.WithTestMode(true))
 	if err != nil {
-		resultText = fmt.Sprintf("Error starting team: %v\nOutput: %s", err, string(output))
-		metrics.RecordTeamToolError("team_start", "python_error")
+		metrics.RecordTeamToolError("team_start", "go_error")
 		metrics.RecordTeamToolCall("team_start", false)
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: resultText}},
+			Content: []interface{}{mcp.TextContent{Type: "text", Text: fmt.Sprintf("Error creating manager: %v", err)}},
 			IsError: true,
 		}, nil
 	}
 
+	goStart := time.Now()
+	if err := mgr.Load(); err != nil {
+		metrics.RecordTeamToolError("team_start", "go_error")
+		metrics.RecordTeamToolCall("team_start", false)
+		return &mcp.CallToolResult{
+			Content: []interface{}{mcp.TextContent{Type: "text", Text: fmt.Sprintf("Error loading project: %v", err)}},
+			IsError: true,
+		}, nil
+	}
+
+	if err := mgr.StartTeam(teamIDInt, override, ""); err != nil {
+		metrics.RecordTeamToolDuration("team_start", time.Since(goStart))
+		metrics.RecordTeamToolError("team_start", "go_error")
+		metrics.RecordTeamToolCall("team_start", false)
+		return &mcp.CallToolResult{
+			Content: []interface{}{mcp.TextContent{Type: "text", Text: fmt.Sprintf("Error starting team: %v", err)}},
+			IsError: true,
+		}, nil
+	}
+	metrics.RecordTeamToolDuration("team_start", time.Since(goStart))
+
+	resultText := fmt.Sprintf("✅ Started Team %d (%s)", teamIDInt, team.StandardTeams[teamIDInt].Name)
+	if override {
+		resultText += " (with override)"
+	}
 	metrics.RecordTeamToolCall("team_start", true)
 	return &mcp.CallToolResult{
 		Content: []interface{}{mcp.TextContent{Type: "text", Text: resultText}},
@@ -750,27 +827,38 @@ func (s *MCPServer) handleTeamStatus(ctx context.Context, args map[string]interf
 		}, nil
 	}
 
-	cmdArgs := []string{getTeamManagerPath(), "--project", projectName, "--test-mode", "status"}
-	if phase, ok := args["phase"].(string); ok && phase != "" {
-		cmdArgs = append(cmdArgs, "--phase", phase)
-	}
-
-	cmd := exec.CommandContext(ctx, "python", cmdArgs...)
-	cmd.Dir = getRepoRoot()
-	pyStart := time.Now()
-	output, err := cmd.CombinedOutput()
-	metrics.RecordTeamToolPythonExec("status", time.Since(pyStart))
-
-	resultText := string(output)
+	// Use Go implementation
+	mgr, err := team.NewManager(projectName, team.WithTestMode(true))
 	if err != nil {
-		resultText = fmt.Sprintf("Error getting status: %v\nOutput: %s", err, string(output))
-		metrics.RecordTeamToolError("team_status", "python_error")
+		metrics.RecordTeamToolError("team_status", "go_error")
 		metrics.RecordTeamToolCall("team_status", false)
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: resultText}},
+			Content: []interface{}{mcp.TextContent{Type: "text", Text: fmt.Sprintf("Error creating manager: %v", err)}},
 			IsError: true,
 		}, nil
 	}
+
+	goStart := time.Now()
+	if err := mgr.Load(); err != nil {
+		metrics.RecordTeamToolError("team_status", "go_error")
+		metrics.RecordTeamToolCall("team_status", false)
+		return &mcp.CallToolResult{
+			Content: []interface{}{mcp.TextContent{Type: "text", Text: fmt.Sprintf("Error loading project: %v", err)}},
+			IsError: true,
+		}, nil
+	}
+
+	var resultText string
+	if phase, ok := args["phase"].(string); ok && phase != "" {
+		status, _ := mgr.GetPhaseStatus(phase)
+		data, _ := json.MarshalIndent(status, "", "  ")
+		resultText = string(data)
+	} else {
+		status := mgr.GetProjectStatus()
+		data, _ := json.MarshalIndent(status, "", "  ")
+		resultText = string(data)
+	}
+	metrics.RecordTeamToolDuration("team_status", time.Since(goStart))
 
 	metrics.RecordTeamToolCall("team_status", true)
 	return &mcp.CallToolResult{
