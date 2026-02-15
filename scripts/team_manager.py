@@ -8,11 +8,22 @@ team composition against standardized enterprise layout.
 
 import argparse
 import json
+import re
 import sys
 from dataclasses import dataclass, asdict
 from datetime import datetime
 from pathlib import Path
 from typing import List, Optional, Dict
+
+
+def validate_project_name(name: str) -> None:
+    """Validate project name to prevent command injection."""
+    if not name:
+        raise ValueError("project_name is required")
+    if len(name) > 64:
+        raise ValueError("project_name must be 64 characters or less")
+    if not re.match(r'^[a-zA-Z0-9_-]+$', name):
+        raise ValueError("project_name must contain only letters, numbers, hyphens, and underscores")
 
 
 @dataclass
@@ -487,6 +498,9 @@ def main():
     status_parser.add_argument("--phase", help="Phase name")
 
     args = parser.parse_args()
+
+    # Validate project name to prevent command injection
+    validate_project_name(args.project)
 
     manager = TeamManager(args.project)
 

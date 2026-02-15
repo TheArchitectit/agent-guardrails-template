@@ -10,6 +10,23 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 )
 
+// validateProjectName validates project name to prevent command injection
+func validateProjectName(name string) error {
+	if name == "" {
+		return fmt.Errorf("project_name is required")
+	}
+	if len(name) > 64 {
+		return fmt.Errorf("project_name must be 64 characters or less")
+	}
+	// Allow alphanumeric, hyphen, underscore only
+	for _, r := range name {
+		if !((r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '-' || r == '_') {
+			return fmt.Errorf("project_name must contain only letters, numbers, hyphens, and underscores")
+		}
+	}
+	return nil
+}
+
 // Team tool handler implementations for MCP server
 
 // handleTeamInit initializes team structure for a project
@@ -18,6 +35,13 @@ func (s *MCPServer) handleTeamInit(ctx context.Context, args map[string]interfac
 	if !ok || projectName == "" {
 		return &mcp.CallToolResult{
 			Content: []interface{}{mcp.TextContent{Type: "text", Text: "Error: project_name is required"}},
+			IsError: true,
+		}, nil
+	}
+
+	if err := validateProjectName(projectName); err != nil {
+		return &mcp.CallToolResult{
+			Content: []interface{}{mcp.TextContent{Type: "text", Text: err.Error()}},
 			IsError: true,
 		}, nil
 	}
@@ -45,6 +69,13 @@ func (s *MCPServer) handleTeamList(ctx context.Context, args map[string]interfac
 	if !ok || projectName == "" {
 		return &mcp.CallToolResult{
 			Content: []interface{}{mcp.TextContent{Type: "text", Text: "Error: project_name is required"}},
+			IsError: true,
+		}, nil
+	}
+
+	if err := validateProjectName(projectName); err != nil {
+		return &mcp.CallToolResult{
+			Content: []interface{}{mcp.TextContent{Type: "text", Text: err.Error()}},
 			IsError: true,
 		}, nil
 	}
@@ -77,6 +108,13 @@ func (s *MCPServer) handleTeamAssign(ctx context.Context, args map[string]interf
 	if !ok || projectName == "" {
 		return &mcp.CallToolResult{
 			Content: []interface{}{mcp.TextContent{Type: "text", Text: "Error: project_name is required"}},
+			IsError: true,
+		}, nil
+	}
+
+	if err := validateProjectName(projectName); err != nil {
+		return &mcp.CallToolResult{
+			Content: []interface{}{mcp.TextContent{Type: "text", Text: err.Error()}},
 			IsError: true,
 		}, nil
 	}
@@ -135,6 +173,13 @@ func (s *MCPServer) handleTeamStatus(ctx context.Context, args map[string]interf
 		}, nil
 	}
 
+	if err := validateProjectName(projectName); err != nil {
+		return &mcp.CallToolResult{
+			Content: []interface{}{mcp.TextContent{Type: "text", Text: err.Error()}},
+			IsError: true,
+		}, nil
+	}
+
 	cmdArgs := []string{"scripts/team_manager.py", "--project", projectName, "status"}
 	if phase, ok := args["phase"].(string); ok && phase != "" {
 		cmdArgs = append(cmdArgs, "--phase", phase)
@@ -163,6 +208,13 @@ func (s *MCPServer) handlePhaseGateCheck(ctx context.Context, args map[string]in
 	if !ok || projectName == "" {
 		return &mcp.CallToolResult{
 			Content: []interface{}{mcp.TextContent{Type: "text", Text: "Error: project_name is required"}},
+			IsError: true,
+		}, nil
+	}
+
+	if err := validateProjectName(projectName); err != nil {
+		return &mcp.CallToolResult{
+			Content: []interface{}{mcp.TextContent{Type: "text", Text: err.Error()}},
 			IsError: true,
 		}, nil
 	}
