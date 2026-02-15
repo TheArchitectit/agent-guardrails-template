@@ -75,6 +75,12 @@ Settings → Tools → Guardrail:
 - RubyMine 2022.3+
 - CLion 2022.3+
 
+## Security Notes
+
+> **API Key Storage:** The API key is masked in the settings UI using JPasswordField. For production use, consider using IDE password safe storage.
+>
+> **HTTPS Recommended:** Always use HTTPS when connecting to remote MCP servers.
+
 ## Troubleshooting
 
 Plugin not loading? Check:
