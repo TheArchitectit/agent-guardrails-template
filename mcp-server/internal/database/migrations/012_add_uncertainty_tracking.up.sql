@@ -25,11 +25,11 @@ CREATE TABLE IF NOT EXISTS uncertainty_tracking (
 );
 
 -- Indexes for query performance
-CREATE INDEX idx_uncertainty_session_id ON uncertainty_tracking(session_id);
-CREATE INDEX idx_uncertainty_task_id ON uncertainty_tracking(task_id);
-CREATE INDEX idx_uncertainty_level ON uncertainty_tracking(uncertainty_level);
-CREATE INDEX idx_uncertainty_escalation ON uncertainty_tracking(escalation_required) WHERE escalation_required = true;
-CREATE INDEX idx_uncertainty_created_at ON uncertainty_tracking(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_uncertainty_session_id ON uncertainty_tracking(session_id);
+CREATE INDEX IF NOT EXISTS idx_uncertainty_task_id ON uncertainty_tracking(task_id);
+CREATE INDEX IF NOT EXISTS idx_uncertainty_level ON uncertainty_tracking(uncertainty_level);
+CREATE INDEX IF NOT EXISTS idx_uncertainty_escalation ON uncertainty_tracking(escalation_required) WHERE escalation_required = true;
+CREATE INDEX IF NOT EXISTS idx_uncertainty_created_at ON uncertainty_tracking(created_at DESC);
 
 -- Add comment documentation
 COMMENT ON TABLE uncertainty_tracking IS 'Tracks uncertainty levels during MCP operations and decision-making context';

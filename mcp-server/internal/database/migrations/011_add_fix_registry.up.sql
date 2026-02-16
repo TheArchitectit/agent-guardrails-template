@@ -28,5 +28,5 @@ CREATE TABLE IF NOT EXISTS fix_verification_tracking (
 
 -- Create indexes
 CREATE INDEX IF NOT EXISTS idx_fix_verification_session_file ON fix_verification_tracking(session_id, file_path);
-CREATE UNIQUE INDEX IF NOT EXISTS idx_fix_verification_session_failure ON fix_verification_tracking(session_id, failure_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_fix_session_failure ON fix_verification_tracking(session_id, failure_id) WHERE failure_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_fix_verification_status ON fix_verification_tracking(verification_status);
