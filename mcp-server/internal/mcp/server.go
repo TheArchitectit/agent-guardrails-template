@@ -1209,8 +1209,9 @@ func (s *MCPServer) handleSSE(c echo.Context) error {
 	}
 	c.Response().Flush()
 
-	// Keep connection open with periodic pings (every 30 seconds)
-	ticker := time.NewTicker(30 * time.Second)
+	// Keep connection open with periodic pings (every 15 seconds)
+	// Shorter interval prevents idle TCP drops by proxies and NATs
+	ticker := time.NewTicker(15 * time.Second)
 	defer ticker.Stop()
 
 	for {
@@ -1348,9 +1349,15 @@ func (s *MCPServer) handleMessage(c echo.Context) error {
 		s.sessionsMu.Unlock()
 	}
 
+	// Re-check session liveness after processing; the SSE connection may have
+	// dropped while the request was being handled.
+	s.sessionsMu.RLock()
+	currentSession, currentExists := s.sessions[sessionID]
+	s.sessionsMu.RUnlock()
+
 	// For SSE sessions, queue JSON-RPC responses onto the SSE stream as
 	// `event: message` payloads.
-	if sessionExists && session != nil && session.ResponseQueue != nil {
+	if currentExists && currentSession != nil && currentSession.ResponseQueue != nil {
 		// Notifications (no ID) do not require a response payload.
 		if request.ID == nil {
 			return c.NoContent(http.StatusAccepted)
@@ -1373,34 +1380,14 @@ func (s *MCPServer) handleMessage(c echo.Context) error {
 		}
 
 		select {
-		case session.ResponseQueue <- responseJSON:
+		case currentSession.ResponseQueue <- responseJSON:
 			return c.NoContent(http.StatusAccepted)
-		case <-session.Closed:
-			slog.Warn("SSE session closed before response enqueue", "session_id", sessionID)
-			return c.JSON(http.StatusGone, server.JSONRPCResponse{
-				JSONRPC: "2.0",
-				ID:      request.ID,
-				Error: &struct {
-					Code    int    `json:"code"`
-					Message string `json:"message"`
-				}{
-					Code:    -32000,
-					Message: "Session closed",
-				},
-			})
+		case <-currentSession.Closed:
+			// SSE stream closed during request; fall through to direct HTTP response
+			slog.Warn("SSE session closed during request, falling back to HTTP response", "session_id", sessionID)
 		case <-time.After(1 * time.Second):
-			slog.Warn("SSE response queue full", "session_id", sessionID)
-			return c.JSON(http.StatusServiceUnavailable, server.JSONRPCResponse{
-				JSONRPC: "2.0",
-				ID:      request.ID,
-				Error: &struct {
-					Code    int    `json:"code"`
-					Message string `json:"message"`
-				}{
-					Code:    -32000,
-					Message: "Session busy",
-				},
-			})
+			// Queue full; fall through to direct HTTP response
+			slog.Warn("SSE response queue full, falling back to HTTP response", "session_id", sessionID)
 		}
 	}
 
