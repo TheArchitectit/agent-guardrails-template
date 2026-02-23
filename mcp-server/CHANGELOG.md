@@ -8,6 +8,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **SSE Timeout Resilience** - Fixed MCP client `Request timed out` (-32001) errors
+  - Reduced keep-alive interval from 30s to 15s to prevent proxy/NAT drops
+  - Added fresh session liveness check after request processing
+  - Implemented graceful HTTP fallback when SSE session closes during request
+  - Affects: `guardrail_init_session`, `guardrail_validate_bash`, all MCP tools
+
 ### Added
 
 ### Changed
