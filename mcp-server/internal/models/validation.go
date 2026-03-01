@@ -114,3 +114,46 @@ type FeatureCreepDetectionResult struct {
 	} `json:"total_changes"`
 	Recommendation string `json:"recommendation"`
 }
+
+// TestValidationResult represents the result of verifying tests before commit
+type TestValidationResult struct {
+	Valid       bool     `json:"valid"`
+	Passed      bool     `json:"passed"`
+	Message     string   `json:"message"`
+	FailedTests []string `json:"failed_tests,omitempty"`
+	CoverageMet bool     `json:"coverage_met,omitempty"`
+}
+
+// PayloadFinding represents a single finding from commit payload scanning
+type PayloadFinding struct {
+	File        string `json:"file"`
+	Type        string `json:"type"` // secret, binary, generated, large
+	Severity    string `json:"severity"`
+	Description string `json:"description"`
+	LineNumber  int    `json:"line_number,omitempty"`
+}
+
+// PayloadScanResult represents the result of scanning commit payload
+type PayloadScanResult struct {
+	Valid    bool             `json:"valid"`
+	Clean    bool             `json:"clean"`
+	Message  string           `json:"message"`
+	Findings []PayloadFinding `json:"findings,omitempty"`
+	Scanned  int              `json:"scanned"`
+}
+
+// ConflictFinding represents a single merge conflict finding
+type ConflictFinding struct {
+	File       string `json:"file"`
+	LineNumber int    `json:"line_number"`
+	Context    string `json:"context"`
+}
+
+// MergeConflictResult represents the result of detecting merge conflicts
+type MergeConflictResult struct {
+	Valid     bool              `json:"valid"`
+	Clean     bool              `json:"clean"`
+	Message   string            `json:"message"`
+	Conflicts []ConflictFinding `json:"conflicts,omitempty"`
+	Checked   int               `json:"checked"`
+}
