@@ -745,6 +745,12 @@ func (s *MCPServer) handleToolCall(ctx context.Context, name string, arguments m
 		return s.handleDetectFeatureCreep(ctx, arguments)
 	case "guardrail_verify_fixes_intact":
 		return s.handleVerifyFixesIntact(ctx, arguments)
+	case "guardrail_verify_tests_before_commit":
+		return s.handleVerifyTestsBeforeCommit(ctx, arguments)
+	case "guardrail_scan_commit_payload":
+		return s.handleScanCommitPayload(ctx, arguments)
+	case "guardrail_detect_merge_conflicts":
+		return s.handleDetectMergeConflicts(ctx, arguments)
 	default:
 		return &mcp.CallToolResult{
 			Content: []interface{}{
@@ -810,6 +816,12 @@ func (s *MCPServer) handleReadResource(ctx context.Context, uri string) (*mcp.Re
 
 	case "guardrail://checklist/pre-work", "guardrail://docs/pre-work-checklist":
 		return s.readPreWorkChecklistResource(ctx, uri)
+
+	case "guardrail://policy/git-safety":
+		return s.readGitSafetyPolicyResource(ctx, uri)
+
+	case "guardrail://policy/test-prod-separation":
+		return s.readTestProdSeparationPolicyResource(ctx, uri)
 
 	default:
 		return nil, fmt.Errorf("unknown resource: %s", uri)
