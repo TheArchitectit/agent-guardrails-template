@@ -188,3 +188,129 @@ func (s *MCPServer) readPreWorkChecklistResource(ctx context.Context, uri string
 		},
 	}, nil
 }
+
+// readGitSafetyPolicyResource returns git safety policy
+func (s *MCPServer) readGitSafetyPolicyResource(ctx context.Context, uri string) (*mcp.ReadResourceResult, error) {
+	content := `# Git Safety Policy
+
+## Forbidden Operations
+
+The following git operations are FORBIDDEN:
+
+- **NO FORCE PUSH** - Never use ` + "`git push --force`" + ` or ` + "`git push -f`" + `
+  - Consequence: Data loss, history corruption
+
+- **NO AMEND** - Do not amend commits you didn't create this session
+  - Consequence: Breaks collaborator history
+
+- **NO REBASE** - Never rebase shared branches
+  - Consequence: Destroys collaborator work
+
+- **NO SKIP HOOKS** - Never use ` + "`--no-verify`" + `
+  - Consequence: Bypasses safety checks
+
+- **NO DESTRUCTIVE OPS** - No ` + "`git reset --hard`" + ` on shared branches
+  - Consequence: Irreversible data loss
+
+## Required Checks
+
+Before any push operation:
+
+1. **All tests must pass** - Run full test suite
+2. **No secrets in commit** - Scan for API keys, passwords, tokens
+3. **No merge conflicts** - Verify clean working directory
+4. **No binaries without justification** - Document why binary is needed
+
+## Push Permission
+
+**CRITICAL**: Only push if user EXPLICITLY requests it.
+
+If uncertain, ASK before pushing.
+`
+
+	return &mcp.ReadResourceResult{
+		Contents: []interface{}{
+			mcp.TextResourceContents{
+				Uri:      uri,
+				MimeType: "text/markdown",
+				Text:     content,
+			},
+		},
+	}, nil
+}
+
+// readTestProdSeparationPolicyResource returns test/production separation policy
+func (s *MCPServer) readTestProdSeparationPolicyResource(ctx context.Context, uri string) (*mcp.ReadResourceResult, error) {
+	content := `# Test/Production Separation Policy
+
+## Core Principles
+
+### 1. Production Code FIRST
+
+Production code MUST be created before test or infrastructure code.
+
+**Violation Action:** HALT and ask user
+
+### 2. Separate Databases
+
+- Production databases MUST NOT be used for testing
+- Test databases MUST NOT contain production data
+- Connection strings MUST be environment-specific
+
+**Violation Action:** HALT and rollback
+
+### 3. Separate Services
+
+- Production services MUST run separately from test services
+- Test fixtures MUST NOT call production APIs
+- Production credentials MUST NOT be in test files
+
+**Violation Action:** HALT and rollback
+
+### 4. No Test Data in Production
+
+- Test users MUST NOT exist in production
+- Test data MUST be clearly marked and isolated
+- Test transactions MUST NOT affect production state
+
+**Violation Action:** HALT and rollback
+
+## Validation Rules
+
+When creating test code, verify:
+
+- [ ] Production code exists for the feature being tested
+- [ ] Test uses mock/test services, not production
+- [ ] Test data is synthetic or clearly marked
+- [ ] Database connections point to test instances
+- [ ] No production credentials in test configuration
+
+## Separation Checklist
+
+Before creating test files:
+
+1. Verify production implementation exists
+2. Confirm test database is configured
+3. Ensure test services are running
+4. Mark test data appropriately
+5. Document any production-like test needs
+
+## When to Halt
+
+HALT immediately if:
+- Attempting to use production DB for tests
+- Production credentials found in test code
+- Test data detected in production environment
+- Uncertain about environment boundaries
+`
+
+	return &mcp.ReadResourceResult{
+		Contents: []interface{}{
+			mcp.TextResourceContents{
+				Uri:      uri,
+				MimeType: "text/markdown",
+				Text:     content,
+			},
+		},
+	}, nil
+}
