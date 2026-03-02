@@ -2,6 +2,11 @@
 
 > Comprehensive safety protocol framework for AI agents, LLMs, and automated systems working with codebases.
 
+[![Go Implementation](https://img.shields.io/badge/Implementation-Go-blue.svg?style=flat&logo=go)](https://golang.org)
+[![Version](https://img.shields.io/badge/version-v2.6.0-blue.svg)](./CHANGELOG.md)
+
+> **Important:** All future development is in **Go**. The Python implementation is deprecated as of v2.6.0.
+
 ---
 
 ## What Is This?
@@ -105,13 +110,15 @@ This isn't just a list of rules—it's a **real-time enforcement system**:
 
 ---
 
-## MCP Server (v2.0.0)
+## MCP Server (v2.6.0)
 
 The **Model Context Protocol (MCP) Server** provides real-time guardrail enforcement via a standardized protocol for AI agents and IDEs.
 
+> **Implementation Note:** The MCP Server is written in **Go** (package: `mcp-server/internal/`). All future development is in Go. Python implementation is deprecated as of v2.6.0.
+
 ### Features
 
-**11 MCP Tools:**
+**17 MCP Tools:**
 
 | Tool | Purpose |
 |------|---------|
@@ -126,6 +133,12 @@ The **Model Context Protocol (MCP) Server** provides real-time guardrail enforce
 | `guardrail_prevent_regression` | Check failure registry for pattern matches |
 | `guardrail_check_test_prod_separation` | Verify test/production isolation |
 | `guardrail_validate_push` | Validate git push safety conditions |
+| `guardrail_team_init` | Initialize team structure for a project |
+| `guardrail_team_list` | List all teams and their status |
+| `guardrail_team_assign` | Assign a person to a role in a team |
+| `guardrail_team_status` | Get phase or project status |
+| `guardrail_phase_gate_check` | Check if phase gate requirements are met |
+| `guardrail_agent_team_map` | Get the team assignment for an agent type |
 
 **8 MCP Resources:**
 
@@ -164,11 +177,19 @@ Browser-based guardrail management interface:
 
 ### Project Structure with MCP Server
 
+> **Go Implementation:** All MCP Server code is in Go. Package location: `mcp-server/internal/`
+
 ```
 agent-guardrails-template/
-├── mcp-server/            ← MCP Server implementation
+├── mcp-server/            ← MCP Server implementation (Go)
 │   ├── cmd/server/        # Go application entry point
-│   ├── internal/          # MCP, web API, DB, cache, security modules
+│   ├── internal/          # Core packages:
+│   │   ├── mcp/           # MCP protocol implementation
+│   │   ├── team/          # Team management logic
+│   │   ├── web/           # HTTP handlers and middleware
+│   │   ├── database/      # PostgreSQL operations
+│   │   ├── cache/         # Redis caching
+│   │   └── security/      # Secrets scanning & validation
 │   ├── deploy/            # Deployment manifests and container config
 │   │   ├── Dockerfile
 │   │   ├── podman-compose.yml
@@ -258,7 +279,8 @@ Clear list of actions agents must never perform:
 ### 🤖 AI Tool Integration
 
 **Claude Code Support:**
-- `scripts/setup_agents.py` - Generate Claude Code skills and hooks
+- `scripts/setup_agents.py` - Generate Claude Code skills and hooks (Python - local setup only)
+- MCP Server integration via remote MCP connection (Go - production)
 - Skills: guardrails-enforcer, commit-validator, env-separator
 - Hooks: pre-execution, post-execution, pre-commit
 
@@ -508,6 +530,39 @@ fetch('http://your-server:8095/api/rules', {
 ```
 
 **Prevents:** Repeating past failures by pattern matching
+
+#### 5. Team Layout Management Tools
+
+**Purpose:** Initialize and manage standardized team structure across projects
+
+**Tools:**
+- `guardrail_team_init` - Initialize team structure for a project
+- `guardrail_team_list` - List all teams and their status
+- `guardrail_team_assign` - Assign a person to a role in a team
+- `guardrail_team_status` - Get phase or project status
+- `guardrail_phase_gate_check` - Check if phase gate requirements are met
+- `guardrail_agent_team_map` - Get the team assignment for an agent type
+
+**When to use:**
+- At project start to initialize team structure
+- When assigning team members to roles
+- Before transitioning between project phases
+- When determining which team an agent should work with
+
+**Example:**
+```json
+{
+  "method": "tools/call",
+  "params": {
+    "name": "guardrail_team_init",
+    "arguments": {
+      "project_name": "my-project"
+    }
+  }
+}
+```
+
+**See:** [TEAM_TOOLS.md](docs/TEAM_TOOLS.md) for complete documentation
 
 ### Common Use Cases
 
@@ -1017,8 +1072,11 @@ agent-guardrails-template/
 │   ├── ruby/                  # Ruby examples
 │   ├── rust/                  # Rust examples
 │   └── typescript/            # TypeScript examples
-├── scripts/                ← Setup and utility scripts
-│   └── setup_agents.py        # CLI tool for AI tool configuration
+├── scripts/                ← Setup and utility scripts (Python - Local Only)
+│   ├── setup_agents.py        # CLI tool for AI tool configuration
+│   ├── team_manager.py        # ⚠️ DEPRECATED: Migrated to Go (v2.6.0)
+│   ├── encryption.py          # ⚠️ DEPRECATED: Migrated to Go (v2.6.0)
+│   └── batch_operations.py    # ⚠️ DEPRECATED: Migrated to Go (v2.6.0)
 ├── skills/                 ← Reusable skill components
 │   └── shared-prompts/        # Shared prompts for agents
 └── .github/                ← GitHub integration
@@ -1055,6 +1113,7 @@ agent-guardrails-template/
 | [**TEST_PRODUCTION_SEPARATION.md**](docs/standards/TEST_PRODUCTION_SEPARATION.md) | EVERYONE | Test/production isolation (MANDATORY) |
 | [**HOW_TO_APPLY.md**](docs/HOW_TO_APPLY.md) | Applying template | Step-by-step instructions with prompts |
 | [**AGENTS_AND_SKILLS_SETUP.md**](docs/AGENTS_AND_SKILLS_SETUP.md) | AI tool users | Setup guide for Claude Code/OpenCode |
+| [**TEAM_TOOLS.md**](docs/TEAM_TOOLS.md) | AI tool users | Team layout management MCP tools reference |
 | [**TOC.md**](TOC.md) | Everyone | Complete file listing and organization |
 | [**INDEX_MAP.md**](INDEX_MAP.md) | Everyone | Find docs by keyword (saves 60-80% tokens) |
 
@@ -1081,9 +1140,10 @@ agent-guardrails-template/
 | **Examples** | 53 files (6 languages) |
 | **500-Line Compliance** | 30/31 (97%) |
 | **Supported AI Models** | 30+ LLM families |
-| **Programming Languages** | Go, Java, Python, Ruby, Rust, TypeScript |
+| **Primary Language** | Go 1.23+ (MCP Server) |
+| **Example Languages** | Java, Python, Ruby, Rust, TypeScript |
 | **AI Tool Integrations** | Claude Code, OpenCode |
-| **MCP Server** | 6 tools, 2 resources, SSE + HTTP endpoints |
+| **MCP Server** | 17 tools, 8 resources, SSE + HTTP endpoints |
 | **Infrastructure** | PostgreSQL 16, Redis 7, Docker/Podman |
 
 ---
@@ -1092,7 +1152,15 @@ agent-guardrails-template/
 
 See [CHANGELOG.md](CHANGELOG.md) for complete release history.
 
-**Current Version:** v2.0.0 (2026-02-12)
+**Current Version:** v2.6.0 (2026-02-15)
+
+### v2.6.0 Migration Notice
+
+**Go Migration Complete:** The team management and MCP server logic has been migrated from Python to Go:
+- **Go Package:** `mcp-server/internal/team/`
+- **Benefits:** Smaller container size, distroless compatibility, better security
+- **API Compatibility:** Unchanged from MCP perspective
+- **Python:** Deprecated as of v2.6.0 (see [docs/PYTHON_TO_GO_MIGRATION.md](docs/PYTHON_TO_GO_MIGRATION.md))
 
 ---
 
@@ -1126,6 +1194,7 @@ in subscription credit when they subscribe!
 
 ---
 
-**Last Updated:** 2026-02-13
-**Status:** v2.0.0 - Production Ready
-**Deployment:** ✅ MCP Server deployed to AI01 (0.0.0.0:8095/8096) with schema validation error fixed
+**Last Updated:** 2026-02-15
+**Status:** v2.6.0 - Production Ready (Go Implementation)
+**Deployment:** ✅ MCP Server deployed to AI01 (0.0.0.0:8095/8096)
+**Implementation:** Go (mcp-server/internal/)

@@ -2,6 +2,12 @@
 
 A Model Context Protocol (MCP) server for enforcing guardrails across AI coding assistants and IDE extensions.
 
+[![Go Implementation](https://img.shields.io/badge/Implementation-Go-blue.svg?style=flat&logo=go)](https://golang.org)
+[![Version](https://img.shields.io/badge/version-v2.6.0-blue.svg)](./CHANGELOG.md)
+
+> **Go Implementation:** All code is written in Go. Package location: `mcp-server/internal/`
+> **Migration:** Python implementation deprecated as of v2.6.0. See [../docs/PYTHON_MIGRATION.md](../docs/PYTHON_MIGRATION.md).
+
 ## 🚨 Critical Deployment Information
 
 **Deployment Status:** ✅ Successfully deployed to AI01 (0.0.0.0:8095/8096)
@@ -304,11 +310,18 @@ See [API.md](API.md) for complete API documentation.
 │   ├── mcp/             # MCP protocol implementation
 │   ├── models/          # Data models (Document, Rule, Project, Failure)
 │   ├── security/        # Secrets scanning and detection
+│   ├── team/            # Team management (migrated from Python v2.6.0)
+│   │   ├── manager.go   # Core team operations
+│   │   ├── encryption.go # Data encryption at rest
+│   │   ├── rules.go     # Team layout rules
+│   │   └── types.go     # Data structures
 │   ├── validation/      # Input validation utilities
 │   └── web/             # HTTP server, handlers, middleware
 ├── deploy/              # Deployment files (Dockerfile, compose)
 └── README.md            # This file
 ```
+
+**Note:** As of v2.6.0, all team management functionality has been migrated from Python (`scripts/team_manager.py`) to Go (`internal/team/`). See [../docs/PYTHON_TO_GO_MIGRATION.md](../docs/PYTHON_TO_GO_MIGRATION.md) for details.
 
 ### Adding New Features
 
@@ -409,10 +422,11 @@ MIT
 
 ## Deployment Status
 
-**Version:** v2.0.0
-**Deployment Date:** 2026-02-13
+**Version:** v2.6.0
+**Deployment Date:** 2026-02-15
 **Deployed To:** AI01 (0.0.0.0:8095/8096)
 **Status:** ✅ Successfully deployed and verified
+**Implementation:** Go (mcp-server/internal/)
 
 ### What Was Fixed During Deployment
 
