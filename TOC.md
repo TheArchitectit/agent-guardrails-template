@@ -41,6 +41,7 @@
 | **AGENTS_AND_SKILLS_SETUP.md** | ~200 | 6 | Setup guide for Claude Code/OpenCode |
 | **CLCODE_INTEGRATION.md** | ~250 | 7 | Claude Code skills and hooks integration |
 | **OPENCODE_INTEGRATION.md** | ~300 | 8 | OpenCode agents and skills integration |
+| **PYTHON_TO_GO_MIGRATION.md** | ~350 | 11 | Python to Go migration guide (v2.6.0) |
 
 ### Workflows (`docs/workflows/`)
 
