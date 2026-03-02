@@ -29,7 +29,7 @@
 
 ## PROBLEM STATEMENT
 
-The MCP server currently provides 24 tools and 12 resources, but there is **no mechanism for specialized advisor roles** that can:
+The MCP server currently provides 27 tools and 14 resources, but there is **no mechanism for specialized advisor roles** that can:
 
 1. **Provide contextual guidance** based on specific expertise (security, performance, compliance)
 2. **Filter tool access** by role - all agents see all tools
@@ -40,6 +40,31 @@ The MCP server currently provides 24 tools and 12 resources, but there is **no m
 **Root Cause:** Initial MCP design focused on general-purpose validation tools, not role-based specialization.
 
 **Impact:** Agents cannot get specialized guidance for domain-specific concerns (security reviews, performance optimization, compliance checks).
+
+## REFERENCE DOCUMENTATION
+
+**Comprehensive Advisor Roles Proposal:** See [docs/advisors/INDEX.md](../advisors/INDEX.md) for the full 9-advisor framework including:
+- Persona definitions for all 9 advisors
+- Enforcement levels (Block/Warn/Info)
+- Team consultation matrices
+- Trigger patterns for auto-activation
+- MCP tool integration examples
+
+**Configuration:** See [.teams/advisors.json](../../../.teams/advisors.json) for the advisor registry.
+
+## THE 9 ADVISOR PERSONAS
+
+| ID | Name | Alias | Enforcement | Scope |
+|----|------|-------|-------------|-------|
+| `advisor-cost` | Cost & Efficiency Advisor | The Accountant | Warn | All phases |
+| `advisor-dx` | Developer Experience Advisor | The Advocate | Info | All phases |
+| `advisor-resilience` | Resilience & Failure Advisor | The Pessimist | **Block** | Phase 2-5 |
+| `advisor-privacy` | Data Privacy & Ethics Advisor | The Conscience | **Block** | All phases |
+| `advisor-api` | API & Integration Advisor | The Diplomat | **Block** | Phase 2-4 |
+| `advisor-perf` | Performance & Scalability Advisor | The Profiler | Warn | Phase 2-5 |
+| `advisor-a11y` | Accessibility & UX Advisor | The Equalizer | Warn | Phase 3-4 |
+| `advisor-supply-chain` | Supply Chain & OSS Advisor | The Librarian | **Block** | All phases |
+| `advisor-audit` | Compliance & Audit Advisor | The Auditor | **Block** | All phases |
 
 ---
 
