@@ -98,7 +98,7 @@ func NewMCPServer(cfg *config.Config, db *database.DB, cacheClient *cache.Client
 	}
 
 	// Create MCP server using the default server
-	s.mcpServer = server.NewDefaultServer("guardrail_mcp", "1.0.0")
+	s.mcpServer = server.NewDefaultServer("guardrail-mcp", "1.0.0")
 
 	// Register tool handlers
 	s.registerTools()
@@ -272,9 +272,9 @@ func (s *MCPServer) registerTools() {
 							"file_paths": map[string]interface{}{
 								"type":        "array",
 								"description": "Array of file paths that will be modified",
-								"items": map[string]interface{}{
-									"type": "string",
-								},
+							"items": map[string]interface{}{
+								"type": "string",
+							},
 							},
 							"code_content": map[string]interface{}{
 								"type":        "string",
@@ -627,6 +627,226 @@ func (s *MCPServer) registerTools() {
 						},
 					},
 				},
+				{
+					Name:        "guardrail_team_init",
+					Description: "Initialize team structure for a project",
+					InputSchema: mcp.ToolInputSchema{
+						Type: "object",
+						Properties: mcp.ToolInputSchemaProperties{
+							"project_name": map[string]interface{}{
+								"type":        "string",
+								"description": "Name of the project (alphanumeric, hyphens, underscores only)",
+							},
+						},
+					},
+				},
+				{
+					Name:        "guardrail_team_list",
+					Description: "List all teams and their status for a project",
+					InputSchema: mcp.ToolInputSchema{
+						Type: "object",
+						Properties: mcp.ToolInputSchemaProperties{
+							"project_name": map[string]interface{}{
+								"type":        "string",
+								"description": "Name of the project",
+							},
+							"phase": map[string]interface{}{
+								"type":        "string",
+								"description": "Optional: Filter by phase (Phase 1-5)",
+							},
+						},
+					},
+				},
+				{
+					Name:        "guardrail_team_assign",
+					Description: "Assign a person to a role in a team",
+					InputSchema: mcp.ToolInputSchema{
+						Type: "object",
+						Properties: mcp.ToolInputSchemaProperties{
+							"project_name": map[string]interface{}{
+								"type":        "string",
+								"description": "Name of the project",
+							},
+							"team_id": map[string]interface{}{
+								"type":        "number",
+								"description": "Team ID (1-12)",
+							},
+							"role_name": map[string]interface{}{
+								"type":        "string",
+								"description": "Name of the role to assign",
+							},
+							"person": map[string]interface{}{
+								"type":        "string",
+								"description": "Name of the person to assign",
+							},
+						},
+					},
+				},
+				{
+					Name:        "guardrail_team_unassign",
+					Description: "Remove a person from a role in a team",
+					InputSchema: mcp.ToolInputSchema{
+						Type: "object",
+						Properties: mcp.ToolInputSchemaProperties{
+							"project_name": map[string]interface{}{
+								"type":        "string",
+								"description": "Name of the project",
+							},
+							"team_id": map[string]interface{}{
+								"type":        "number",
+								"description": "Team ID (1-12)",
+							},
+							"role_name": map[string]interface{}{
+								"type":        "string",
+								"description": "Name of the role to unassign",
+							},
+						},
+					},
+				},
+				{
+					Name:        "guardrail_team_start",
+					Description: "Start a team (mark as active). Optionally override phase gate checks with admin privileges.",
+					InputSchema: mcp.ToolInputSchema{
+						Type: "object",
+						Properties: mcp.ToolInputSchemaProperties{
+							"project_name": map[string]interface{}{
+								"type":        "string",
+								"description": "Name of the project",
+							},
+							"team_id": map[string]interface{}{
+								"type":        "number",
+								"description": "Team ID to start (1-12)",
+							},
+							"override": map[string]interface{}{
+								"type":        "boolean",
+								"description": "Optional: Override phase gate check (requires admin privileges)",
+							},
+							"reason": map[string]interface{}{
+								"type":        "string",
+								"description": "Required when override is true: Reason for bypassing phase gate",
+							},
+						},
+					},
+				},
+				{
+					Name:        "guardrail_team_status",
+					Description: "Get phase or project status",
+					InputSchema: mcp.ToolInputSchema{
+						Type: "object",
+						Properties: mcp.ToolInputSchemaProperties{
+							"project_name": map[string]interface{}{
+								"type":        "string",
+								"description": "Name of the project",
+							},
+							"phase": map[string]interface{}{
+								"type":        "string",
+								"description": "Optional: Specific phase to check (Phase 1-5)",
+							},
+						},
+					},
+				},
+				{
+					Name:        "guardrail_phase_gate_check",
+					Description: "Check if phase gate requirements are met",
+					InputSchema: mcp.ToolInputSchema{
+						Type: "object",
+						Properties: mcp.ToolInputSchemaProperties{
+							"project_name": map[string]interface{}{
+								"type":        "string",
+								"description": "Name of the project",
+							},
+							"from_phase": map[string]interface{}{
+								"type":        "number",
+								"description": "Source phase number (1-4)",
+							},
+							"to_phase": map[string]interface{}{
+								"type":        "number",
+								"description": "Target phase number (2-5)",
+							},
+						},
+					},
+				},
+				{
+					Name:        "guardrail_agent_team_map",
+					Description: "Get the team assignment for an agent type",
+					InputSchema: mcp.ToolInputSchema{
+						Type: "object",
+						Properties: mcp.ToolInputSchemaProperties{
+							"agent_type": map[string]interface{}{
+								"type":        "string",
+								"description": "Type of agent (planner, architect, infrastructure, platform, backend, frontend, security, qa, sre, ops)",
+							},
+						},
+					},
+				},
+				{
+					Name:        "guardrail_team_size_validate",
+					Description: "Validate team sizes meet 4-6 member requirement",
+					InputSchema: mcp.ToolInputSchema{
+						Type: "object",
+						Properties: mcp.ToolInputSchemaProperties{
+							"project_name": map[string]interface{}{
+								"type":        "string",
+								"description": "Name of the project",
+							},
+							"team_id": map[string]interface{}{
+								"type":        "number",
+								"description": "Optional: Specific team ID to validate",
+							},
+						},
+					},
+				},
+		{
+			Name:        "guardrail_team_delete",
+			Description: "Delete a specific team from a project. Requires confirmation.",
+			InputSchema: mcp.ToolInputSchema{
+				Type: "object",
+				Properties: mcp.ToolInputSchemaProperties{
+					"project_name": map[string]interface{}{
+						"type":        "string",
+						"description": "Name of the project",
+					},
+					"team_id": map[string]interface{}{
+						"type":        "number",
+						"description": "Team ID to delete (1-12)",
+					},
+					"confirmed": map[string]interface{}{
+						"type":        "boolean",
+						"description": "Set to true to confirm deletion. First call without this to see confirmation prompt.",
+					},
+				},
+			},
+		},
+		{
+			Name:        "guardrail_project_delete",
+			Description: "Delete an entire project and all its teams. Requires confirmation.",
+			InputSchema: mcp.ToolInputSchema{
+				Type: "object",
+				Properties: mcp.ToolInputSchemaProperties{
+					"project_name": map[string]interface{}{
+						"type":        "string",
+						"description": "Name of the project to delete",
+					},
+					"confirmed": map[string]interface{}{
+						"type":        "boolean",
+						"description": "Set to true to confirm deletion. First call without this to see confirmation prompt.",
+					},
+				},
+			},
+		},
+		{
+			Name:        "guardrail_team_health",
+			Description: "Check team_manager.py health status - validates Python backend and file system access",
+			InputSchema: mcp.ToolInputSchema{
+				Type: "object",
+				Properties: mcp.ToolInputSchemaProperties{
+					"project_name": map[string]interface{}{
+						"type":        "string",
+						"description": "Optional: Project name for config directory check",
+					},
+				},
+			},
+		},
 			},
 		}, nil
 	})
@@ -745,20 +965,31 @@ func (s *MCPServer) handleToolCall(ctx context.Context, name string, arguments m
 		return s.handleDetectFeatureCreep(ctx, arguments)
 	case "guardrail_verify_fixes_intact":
 		return s.handleVerifyFixesIntact(ctx, arguments)
-	case "guardrail_verify_tests_before_commit":
-		return s.handleVerifyTestsBeforeCommit(ctx, arguments)
-	case "guardrail_scan_commit_payload":
-		return s.handleScanCommitPayload(ctx, arguments)
-	case "guardrail_detect_merge_conflicts":
-		return s.handleDetectMergeConflicts(ctx, arguments)
-	case "guardrail_advisor_list":
-		return s.handleAdvisorList(ctx, arguments)
-	case "guardrail_advisor_trigger_check":
-		return s.handleAdvisorTriggerCheck(ctx, arguments)
-	case "guardrail_advisor_consult":
-		return s.handleAdvisorConsult(ctx, arguments)
-	case "guardrail_advisor_resolve":
-		return s.handleAdvisorResolve(ctx, arguments)
+	// Team Layout Management Tools
+	case "guardrail_team_init":
+		return s.handleTeamInit(ctx, arguments)
+	case "guardrail_team_list":
+		return s.handleTeamList(ctx, arguments)
+	case "guardrail_team_assign":
+		return s.handleTeamAssign(ctx, arguments)
+	case "guardrail_team_unassign":
+		return s.handleTeamUnassign(ctx, arguments)
+	case "guardrail_team_start":
+		return s.handleTeamStart(ctx, arguments)
+	case "guardrail_team_status":
+		return s.handleTeamStatus(ctx, arguments)
+	case "guardrail_phase_gate_check":
+		return s.handlePhaseGateCheck(ctx, arguments)
+	case "guardrail_agent_team_map":
+		return s.handleAgentTeamMap(ctx, arguments)
+	case "guardrail_team_size_validate":
+		return s.handleTeamSizeValidate(ctx, arguments)
+	case "guardrail_team_delete":
+		return s.handleTeamDelete(ctx, arguments)
+	case "guardrail_project_delete":
+		return s.handleProjectDelete(ctx, arguments)
+	case "guardrail_team_health":
+		return s.handleTeamHealth(ctx, arguments)
 	default:
 		return &mcp.CallToolResult{
 			Content: []interface{}{
@@ -824,42 +1055,6 @@ func (s *MCPServer) handleReadResource(ctx context.Context, uri string) (*mcp.Re
 
 	case "guardrail://checklist/pre-work", "guardrail://docs/pre-work-checklist":
 		return s.readPreWorkChecklistResource(ctx, uri)
-
-	case "guardrail://policy/git-safety":
-		return s.readGitSafetyPolicyResource(ctx, uri)
-
-	case "guardrail://policy/test-prod-separation":
-		return s.readTestProdSeparationPolicyResource(ctx, uri)
-
-	case "guardrail://advisors/available":
-		return s.readAvailableAdvisorsResource(ctx, uri)
-
-	case "guardrail://advisors/cost":
-		return s.readAdvisorDetailResource(ctx, uri, "advisor-cost")
-
-	case "guardrail://advisors/dx":
-		return s.readAdvisorDetailResource(ctx, uri, "advisor-dx")
-
-	case "guardrail://advisors/resilience":
-		return s.readAdvisorDetailResource(ctx, uri, "advisor-resilience")
-
-	case "guardrail://advisors/privacy":
-		return s.readAdvisorDetailResource(ctx, uri, "advisor-privacy")
-
-	case "guardrail://advisors/api":
-		return s.readAdvisorDetailResource(ctx, uri, "advisor-api")
-
-	case "guardrail://advisors/perf":
-		return s.readAdvisorDetailResource(ctx, uri, "advisor-perf")
-
-	case "guardrail://advisors/a11y":
-		return s.readAdvisorDetailResource(ctx, uri, "advisor-a11y")
-
-	case "guardrail://advisors/supply-chain":
-		return s.readAdvisorDetailResource(ctx, uri, "advisor-supply-chain")
-
-	case "guardrail://advisors/audit":
-		return s.readAdvisorDetailResource(ctx, uri, "advisor-audit")
 
 	default:
 		return nil, fmt.Errorf("unknown resource: %s", uri)
@@ -1014,8 +1209,9 @@ func (s *MCPServer) handleSSE(c echo.Context) error {
 	}
 	c.Response().Flush()
 
-	// Keep connection open with periodic pings (every 30 seconds)
-	ticker := time.NewTicker(30 * time.Second)
+	// Keep connection open with periodic pings (every 15 seconds)
+	// Shorter interval prevents idle TCP drops by proxies and NATs
+	ticker := time.NewTicker(15 * time.Second)
 	defer ticker.Stop()
 
 	for {
@@ -1153,9 +1349,15 @@ func (s *MCPServer) handleMessage(c echo.Context) error {
 		s.sessionsMu.Unlock()
 	}
 
+	// Re-check session liveness after processing; the SSE connection may have
+	// dropped while the request was being handled.
+	s.sessionsMu.RLock()
+	currentSession, currentExists := s.sessions[sessionID]
+	s.sessionsMu.RUnlock()
+
 	// For SSE sessions, queue JSON-RPC responses onto the SSE stream as
 	// `event: message` payloads.
-	if sessionExists && session != nil && session.ResponseQueue != nil {
+	if currentExists && currentSession != nil && currentSession.ResponseQueue != nil {
 		// Notifications (no ID) do not require a response payload.
 		if request.ID == nil {
 			return c.NoContent(http.StatusAccepted)
@@ -1178,34 +1380,14 @@ func (s *MCPServer) handleMessage(c echo.Context) error {
 		}
 
 		select {
-		case session.ResponseQueue <- responseJSON:
+		case currentSession.ResponseQueue <- responseJSON:
 			return c.NoContent(http.StatusAccepted)
-		case <-session.Closed:
-			slog.Warn("SSE session closed before response enqueue", "session_id", sessionID)
-			return c.JSON(http.StatusGone, server.JSONRPCResponse{
-				JSONRPC: "2.0",
-				ID:      request.ID,
-				Error: &struct {
-					Code    int    `json:"code"`
-					Message string `json:"message"`
-				}{
-					Code:    -32000,
-					Message: "Session closed",
-				},
-			})
+		case <-currentSession.Closed:
+			// SSE stream closed during request; fall through to direct HTTP response
+			slog.Warn("SSE session closed during request, falling back to HTTP response", "session_id", sessionID)
 		case <-time.After(1 * time.Second):
-			slog.Warn("SSE response queue full", "session_id", sessionID)
-			return c.JSON(http.StatusServiceUnavailable, server.JSONRPCResponse{
-				JSONRPC: "2.0",
-				ID:      request.ID,
-				Error: &struct {
-					Code    int    `json:"code"`
-					Message string `json:"message"`
-				}{
-					Code:    -32000,
-					Message: "Session busy",
-				},
-			})
+			// Queue full; fall through to direct HTTP response
+			slog.Warn("SSE response queue full, falling back to HTTP response", "session_id", sessionID)
 		}
 	}
 
