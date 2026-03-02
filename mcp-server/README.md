@@ -371,6 +371,26 @@ See [API.md](API.md) for complete API documentation.
 - Check that MCP_API_KEY or IDE_API_KEY environment variables are set
 - For Web UI access and read-only browsing APIs, no API key is required
 
+### Guardrails Not Enforcing (`rules_evaluated=0` or dangerous commands allowed)
+
+**Problem:** MCP tool calls return permissive results even for dangerous commands.
+
+**Cause:** Runtime rule/project data is missing, or rule categories do not match validator categories.
+
+**Solution:**
+- Check data state:
+  - `curl -s http://localhost:8096/api/stats`
+  - If `rules_count` or `projects_count` is `0`, run rule sync and seed a project.
+- Trigger rule sync:
+  - `curl -X POST http://localhost:8096/api/rules/sync -H "Authorization: Bearer $MCP_API_KEY" -H "Content-Type: application/json" -d '{"force":true}'`
+  - `curl -s http://localhost:8096/api/rules/sync/status`
+- Ensure the project used by `guardrail_init_session` has `active_rules` populated.
+- Verify categories for command enforcement:
+  - `guardrail_validate_bash` evaluates `bash` (and compatible legacy categories) plus `all`.
+  - `guardrail_validate_git_operation` evaluates `git` (and compatible legacy categories) plus `all`.
+  - Rules intended to apply globally should use category `all`.
+- Re-test using MCP `initialize` -> `guardrail_init_session` -> `guardrail_validate_bash`/`guardrail_validate_git_operation` and confirm `rules_evaluated > 0`.
+
 ### Schema Validation Error (Critical!)
 
 **Error:**
