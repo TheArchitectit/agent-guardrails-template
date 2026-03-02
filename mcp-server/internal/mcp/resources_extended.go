@@ -2,12 +2,14 @@ package mcp
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/thearchitectit/guardrail-mcp/internal/models"
 )
 
 // Base path for documentation files (relative to project root)
@@ -310,6 +312,51 @@ HALT immediately if:
 				Uri:      uri,
 				MimeType: "text/markdown",
 				Text:     content,
+			},
+		},
+	}, nil
+}
+
+// readAvailableAdvisorsResource returns list of all advisors
+func (s *MCPServer) readAvailableAdvisorsResource(ctx context.Context, uri string) (*mcp.ReadResourceResult, error) {
+	advisors := models.StandardAdvisors()
+
+	content, err := json.MarshalIndent(advisors, "", "  ")
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal advisors: %w", err)
+	}
+
+	return &mcp.ReadResourceResult{
+		Contents: []interface{}{
+			mcp.TextResourceContents{
+				Uri:      uri,
+				MimeType: "application/json",
+				Text:     string(content),
+			},
+		},
+	}, nil
+}
+
+// readAdvisorDetailResource returns specific advisor details
+func (s *MCPServer) readAdvisorDetailResource(ctx context.Context, uri string, advisorID string) (*mcp.ReadResourceResult, error) {
+	advisors := models.StandardAdvisors()
+
+	advisor, ok := advisors[advisorID]
+	if !ok {
+		return nil, fmt.Errorf("advisor not found: %s", advisorID)
+	}
+
+	content, err := json.MarshalIndent(advisor, "", "  ")
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal advisor: %w", err)
+	}
+
+	return &mcp.ReadResourceResult{
+		Contents: []interface{}{
+			mcp.TextResourceContents{
+				Uri:      uri,
+				MimeType: "application/json",
+				Text:     string(content),
 			},
 		},
 	}, nil

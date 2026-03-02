@@ -751,6 +751,14 @@ func (s *MCPServer) handleToolCall(ctx context.Context, name string, arguments m
 		return s.handleScanCommitPayload(ctx, arguments)
 	case "guardrail_detect_merge_conflicts":
 		return s.handleDetectMergeConflicts(ctx, arguments)
+	case "guardrail_advisor_list":
+		return s.handleAdvisorList(ctx, arguments)
+	case "guardrail_advisor_trigger_check":
+		return s.handleAdvisorTriggerCheck(ctx, arguments)
+	case "guardrail_advisor_consult":
+		return s.handleAdvisorConsult(ctx, arguments)
+	case "guardrail_advisor_resolve":
+		return s.handleAdvisorResolve(ctx, arguments)
 	default:
 		return &mcp.CallToolResult{
 			Content: []interface{}{
@@ -822,6 +830,36 @@ func (s *MCPServer) handleReadResource(ctx context.Context, uri string) (*mcp.Re
 
 	case "guardrail://policy/test-prod-separation":
 		return s.readTestProdSeparationPolicyResource(ctx, uri)
+
+	case "guardrail://advisors/available":
+		return s.readAvailableAdvisorsResource(ctx, uri)
+
+	case "guardrail://advisors/cost":
+		return s.readAdvisorDetailResource(ctx, uri, "advisor-cost")
+
+	case "guardrail://advisors/dx":
+		return s.readAdvisorDetailResource(ctx, uri, "advisor-dx")
+
+	case "guardrail://advisors/resilience":
+		return s.readAdvisorDetailResource(ctx, uri, "advisor-resilience")
+
+	case "guardrail://advisors/privacy":
+		return s.readAdvisorDetailResource(ctx, uri, "advisor-privacy")
+
+	case "guardrail://advisors/api":
+		return s.readAdvisorDetailResource(ctx, uri, "advisor-api")
+
+	case "guardrail://advisors/perf":
+		return s.readAdvisorDetailResource(ctx, uri, "advisor-perf")
+
+	case "guardrail://advisors/a11y":
+		return s.readAdvisorDetailResource(ctx, uri, "advisor-a11y")
+
+	case "guardrail://advisors/supply-chain":
+		return s.readAdvisorDetailResource(ctx, uri, "advisor-supply-chain")
+
+	case "guardrail://advisors/audit":
+		return s.readAdvisorDetailResource(ctx, uri, "advisor-audit")
 
 	default:
 		return nil, fmt.Errorf("unknown resource: %s", uri)
