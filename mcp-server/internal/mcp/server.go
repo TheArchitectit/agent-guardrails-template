@@ -965,31 +965,15 @@ func (s *MCPServer) handleToolCall(ctx context.Context, name string, arguments m
 		return s.handleDetectFeatureCreep(ctx, arguments)
 	case "guardrail_verify_fixes_intact":
 		return s.handleVerifyFixesIntact(ctx, arguments)
-	// Team Layout Management Tools
-	case "guardrail_team_init":
-		return s.handleTeamInit(ctx, arguments)
-	case "guardrail_team_list":
-		return s.handleTeamList(ctx, arguments)
-	case "guardrail_team_assign":
-		return s.handleTeamAssign(ctx, arguments)
-	case "guardrail_team_unassign":
-		return s.handleTeamUnassign(ctx, arguments)
-	case "guardrail_team_start":
-		return s.handleTeamStart(ctx, arguments)
-	case "guardrail_team_status":
-		return s.handleTeamStatus(ctx, arguments)
-	case "guardrail_phase_gate_check":
-		return s.handlePhaseGateCheck(ctx, arguments)
-	case "guardrail_agent_team_map":
-		return s.handleAgentTeamMap(ctx, arguments)
-	case "guardrail_team_size_validate":
-		return s.handleTeamSizeValidate(ctx, arguments)
-	case "guardrail_team_delete":
-		return s.handleTeamDelete(ctx, arguments)
-	case "guardrail_project_delete":
-		return s.handleProjectDelete(ctx, arguments)
-	case "guardrail_team_health":
-		return s.handleTeamHealth(ctx, arguments)
+	// Team Layout Management Tools - TODO: implement handlers
+	case "guardrail_team_init", "guardrail_team_list", "guardrail_team_assign",
+		"guardrail_team_unassign", "guardrail_team_start", "guardrail_team_status",
+		"guardrail_phase_gate_check", "guardrail_agent_team_map", "guardrail_team_size_validate",
+		"guardrail_team_delete", "guardrail_project_delete", "guardrail_team_health":
+		return &mcp.CallToolResult{
+			Content: []interface{}{mcp.TextContent{Type: "text", Text: `{"error":"Team management tools not yet implemented"}`}},
+			IsError: true,
+		}, nil
 	default:
 		return &mcp.CallToolResult{
 			Content: []interface{}{
@@ -1296,6 +1280,7 @@ func (s *MCPServer) handleMessage(c echo.Context) error {
 	s.sessionsMu.RLock()
 	session, sessionExists := s.sessions[sessionID]
 	s.sessionsMu.RUnlock()
+	_ = session // May be used later for session-specific processing
 
 	if !sessionExists {
 		// Session may have expired or invalid session ID
