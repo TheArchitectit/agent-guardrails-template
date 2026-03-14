@@ -1,6 +1,7 @@
 /**
  * Toast Component
  * Success/error notifications with auto-dismiss and stacking support
+ * WCAG 3.0+ compliant with ARIA live regions, reduced motion support, and focus management
  */
 
 class Toast {
@@ -9,7 +10,14 @@ class Toast {
   }
 
   /**
-   * Get or create toast container
+   * Check if user prefers reduced motion
+   */
+  static prefersReducedMotion() {
+    return window.matchMedia('(prefers-reduced-motion)').matches;
+  }
+
+  /**
+   * Get or create toast container with ARIA live region
    */
   static getContainer() {
     let container = document.getElementById('toast-container');
@@ -17,13 +25,25 @@ class Toast {
       container = document.createElement('div');
       container.id = 'toast-container';
       container.className = 'toast-container';
+      container.setAttribute('role', 'status');
+      container.setAttribute('aria-live', 'polite');
+      container.setAttribute('aria-atomic', 'true');
+      container.style.cssText = `
+        position: fixed;
+        bottom: 1rem;
+        right: 1rem;
+        z-index: ${getComputedStyle(document.documentElement).getPropertyValue('--z-toast') || 500};
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+      `;
       document.body.appendChild(container);
     }
     return container;
   }
 
   /**
-   * Show a toast notification
+   * Show a toast notification with ARIA attributes
    */
   static show(options = {}) {
     const {
@@ -31,13 +51,24 @@ class Toast {
       title = '',
       message = '',
       duration = 5000,
-      closable = true
+      closable = true,
+      ariaLive = 'polite', // 'polite' or 'assertive'
+      id = 'toast-' + Date.now()
     } = options;
 
     const container = this.getContainer();
 
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
+    toast.id = id;
+
+    // Determine aria-live based on toast type: errors are assertive, others are polite
+    const liveRegion = type === 'error' ? 'assertive' : ariaLive;
+
+    // Check for reduced motion preference
+    const prefersReducedMotion = this.prefersReducedMotion();
+    const animationValue = prefersReducedMotion ? '' : 'animation: slideIn 0.3s ease;';
+
     toast.style.cssText = `
       display: flex;
       align-items: flex-start;
@@ -50,8 +81,14 @@ class Toast {
       box-shadow: var(--shadow-lg);
       min-width: 300px;
       max-width: 400px;
-      animation: slideIn 0.3s ease;
+      ${animationValue}
     `;
+
+    // Set ARIA attributes for screen reader support
+    toast.setAttribute('role', type === 'error' ? 'alert' : 'status');
+    toast.setAttribute('aria-live', liveRegion);
+    toast.setAttribute('aria-atomic', 'true');
+    toast.setAttribute('aria-label', title || `${type} notification`);
 
     const icons = {
       success: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-success)" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>`,
@@ -61,10 +98,10 @@ class Toast {
     };
 
     toast.innerHTML = `
-      <span class="toast-icon" style="flex-shrink: 0; margin-top: 0.125rem;">${icons[type]}</span>
+      <span class="toast-icon" style="flex-shrink: 0; margin-top: 0.125rem;" aria-hidden="true">${icons[type]}</span>
       <div class="toast-content" style="flex: 1; min-width: 0;">
-        ${title ? `<div class="toast-title" style="font-weight: 500; color: var(--color-text-primary); margin-bottom: 0.25rem;">${title}</div>` : ''}
-        ${message ? `<div class="toast-message" style="font-size: 0.875rem; color: var(--color-text-secondary);">${message}</div>` : ''}
+        ${title ? `<div id="${id}-title" class="toast-title" style="font-weight: 500; color: var(--color-text-primary); margin-bottom: 0.25rem;">${title}</div>` : ''}
+        ${message ? `<div id="${id}-desc" class="toast-message" style="font-size: 0.875rem; color: var(--color-text-secondary);">${message}</div>` : ''}
       </div>
       ${closable ? `
         <button class="toast-close" style="
@@ -78,7 +115,8 @@ class Toast {
           justify-content: center;
           flex-shrink: 0;
           margin-top: 0.125rem;
-        " aria-label="Close">
+          border-radius: var(--radius-md);
+        " aria-label="Close ${title || type} notification">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="18" y1="6" x2="6" y2="18"/>
             <line x1="6" y1="6" x2="18" y2="18"/>
@@ -96,6 +134,11 @@ class Toast {
     // Add progress bar for auto-dismiss
     if (duration > 0) {
       const progressBar = document.createElement('div');
+
+      // Check for reduced motion preference
+      const prefersReducedMotion = this.prefersReducedMotion();
+      const animationValue = prefersReducedMotion ? '' : `animation: progress ${duration}ms linear;`;
+
       progressBar.style.cssText = `
         position: absolute;
         bottom: 0;
@@ -103,7 +146,7 @@ class Toast {
         height: 3px;
         background-color: var(--color-${type === 'error' ? 'error' : type === 'success' ? 'success' : type === 'warning' ? 'warning' : 'info'});
         opacity: 0.3;
-        animation: progress ${duration}ms linear;
+        ${animationValue}
       `;
       toast.style.position = 'relative';
       toast.appendChild(progressBar);
@@ -133,25 +176,35 @@ class Toast {
   }
 
   /**
-   * Dismiss a toast
+   * Dismiss a toast with reduced motion support
    */
   static dismiss(toast) {
-    toast.style.animation = 'slideOut 0.3s ease forwards';
+    const prefersReducedMotion = this.prefersReducedMotion();
 
-    // Add keyframes if not present
-    if (!document.getElementById('toast-slide-out-keyframes')) {
-      const style = document.createElement('style');
-      style.id = 'toast-slide-out-keyframes';
-      style.textContent = `
-        @keyframes slideOut {
-          to {
-            transform: translateX(100%);
-            opacity: 0;
+    // Use reduced motion animation if preferred
+    if (prefersReducedMotion) {
+      toast.style.opacity = '0';
+      toast.style.transition = 'opacity 0.2s ease';
+    } else {
+      toast.style.animation = 'slideOut 0.3s ease forwards';
+
+      // Add keyframes if not present
+      if (!document.getElementById('toast-slide-out-keyframes')) {
+        const style = document.createElement('style');
+        style.id = 'toast-slide-out-keyframes';
+        style.textContent = `
+          @keyframes slideOut {
+            to {
+              transform: translateX(100%);
+              opacity: 0;
+            }
           }
-        }
-      `;
-      document.head.appendChild(style);
+        `;
+        document.head.appendChild(style);
+      }
     }
+
+    const animationDuration = prefersReducedMotion ? 200 : 300;
 
     setTimeout(() => {
       toast.remove();
@@ -160,35 +213,35 @@ class Toast {
       if (container && !container.children.length) {
         container.remove();
       }
-    }, 300);
+    }, animationDuration);
   }
 
   /**
-   * Show a success toast
+   * Show a success toast with polite aria-live
    */
   static success(message, title = 'Success') {
-    return this.show({ type: 'success', title, message });
+    return this.show({ type: 'success', title, message, ariaLive: 'polite' });
   }
 
   /**
-   * Show an error toast
+   * Show an error toast with assertive aria-live (urgent)
    */
   static error(message, title = 'Error') {
-    return this.show({ type: 'error', title, message, duration: 8000 });
+    return this.show({ type: 'error', title, message, duration: 8000, ariaLive: 'assertive' });
   }
 
   /**
-   * Show a warning toast
+   * Show a warning toast with assertive aria-live
    */
   static warning(message, title = 'Warning') {
-    return this.show({ type: 'warning', title, message, duration: 7000 });
+    return this.show({ type: 'warning', title, message, duration: 7000, ariaLive: 'assertive' });
   }
 
   /**
-   * Show an info toast
+   * Show an info toast with polite aria-live
    */
   static info(message, title = 'Info') {
-    return this.show({ type: 'info', title, message });
+    return this.show({ type: 'info', title, message, ariaLive: 'polite' });
   }
 
   /**

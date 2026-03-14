@@ -31,6 +31,8 @@
 | api | API_SPECIFICATIONS.md | docs/standards/ | OpenAPI/OpenSpec guidance |
 | secrets | SECRETS_MANAGEMENT.md | .github/ | GitHub Secrets setup |
 | examples | examples/ | examples/ | Multi-language implementation examples |
+| scala-examples | examples/scala/functional-ui/ | Scala 3.4+ functional UI, type-safe CSS, DDA telemetry |
+| r-examples | examples/r/game-analytics/ | R ggplot2 4.0+, Shiny 2.0+, ethics auditing, retention analysis |
 | regression-examples | regression-prevention/ | examples/regression-prevention/ | Practical regression prevention examples |
 | sprint | SPRINT_TEMPLATE.md | docs/sprints/ | Sprint task template |
 | sprint-guide | SPRINT_GUIDE.md | docs/sprints/ | How to write sprints |
