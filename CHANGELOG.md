@@ -6,6 +6,32 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.7.0] - 2026-03-14
+
+### Major Release: 2026 UI/UX & Game Design Update
+
+**Type:** Major Version Bump (breaking changes in documentation structure)
+
+#### Added
+
+- **Agent-GDUI-2026** role - Specialized agent for game design, spatial computing, UI/UX
+- **docs/game-design/2026_GAME_DESIGN.md** - Game design guardrails, XR/VR comfort zones, platform performance budgets
+- **docs/ui-ux/2026_UI_UX_STANDARD.md** - UI/UX component patterns, design tokens, animation, responsive breakpoints
+- **docs/accessibility/ACCESSIBILITY_GUIDE.md** - WCAG 3.0+ conformance (Bronze/Silver/Gold), perceptual/cognitive/physical accessibility
+- **docs/spatial/SPATIAL_COMPUTING_UI.md** - XR/VR/AR/MR layout patterns, comfort zones, latency requirements, depth layering
+- **docs/ethical/ETHICAL_ENGAGEMENT.md** - Dark pattern taxonomy and prevention, ethical design principles
+- **Four Laws of Spatial Safety** - Comfort First, Accessibility Required, Performance Bound, Ethical Engagement
+- **Scala examples** (`examples/scala/functional-ui/`) - Functional composition, type-safe CSS, DDA telemetry
+- **R examples** (`examples/r/game-analytics/`) - ggplot2 4.0+, Shiny 2.0+, ethics auditing, retention analysis
+
+#### Changed
+
+- **CLAUDE.md** - Added Agent-GDUI-2026 initialization context and quick links
+- **INDEX_MAP.md** - Added 2026 document entries, categories, and cross-references
+- **HEADER_MAP.md** - Added section-level mappings for all 2026 documents
+
+---
+
 ## [Unreleased]
 
 ### Added

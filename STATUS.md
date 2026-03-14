@@ -1,8 +1,8 @@
 # Project Status - Guardrail MCP Server
 
-**Last Updated:** 2026-02-12
+**Last Updated:** 2026-03-14
 **Branch:** main
-**Current Version:** v1.12.0 (deployed on AI01)
+**Current Version:** v2.7.0
 
 ---
 
@@ -90,7 +90,7 @@
 
 **Web UI Access:**
 - URL: http://0.0.0.0:8095/web/
-- API Key: `QbSF9bV991PAhyjoyqMbqT5dUPuG4hEcVWLx6sLnqOG7iszbQI0o85Ly9eoNE`
+- API Key: `<REDACTED — rotate and set via environment variable>`
 
 ---
 

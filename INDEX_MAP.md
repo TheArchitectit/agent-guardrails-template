@@ -77,6 +77,11 @@
 | log-failure | log_failure.py | scripts/ | CLI tool to log bugs to failure registry |
 | regression-check | regression_check.py | scripts/ | Pre-commit regression pattern scanner |
 | prevention-rules | pattern-rules.json | .guardrails/prevention-rules/ | Regex patterns to prevent regressions |
+| game-design | 2026_GAME_DESIGN.md | docs/game-design/ | Agent-GDUI-2026 game design guardrails, XR/VR comfort zones |
+| ui-ux | 2026_UI_UX_STANDARD.md | docs/ui-ux/ | UI/UX component standards, design tokens, interaction states |
+| accessibility | ACCESSIBILITY_GUIDE.md | docs/accessibility/ | WCAG 3.0+ compliance, conformance levels, testing methods |
+| spatial | SPATIAL_COMPUTING_UI.md | docs/spatial/ | XR/VR/AR UI patterns, comfort zones, latency requirements |
+| ethical | ETHICAL_ENGAGEMENT.md | docs/ethical/ | Dark pattern prevention, ethical design principles |
 | semantic-rules | semantic-rules.json | .guardrails/prevention-rules/ | AST-based prevention rules |
 | extracted-rules | extracted-rules.json | .guardrails/prevention-rules/ | Rules extracted from AGENT_GUARDRAILS.md |
 | bug-fix | REGRESSION_PREVENTION.md | docs/workflows/ | Requirements for bug fixes (regression tests) |
@@ -136,6 +141,11 @@
 | **OPENCODE_INTEGRATION.md** | OpenCode agents and skills integration | When using OpenCode |
 | **CURSOR_INTEGRATION.md** | Cursor rules and guardrails integration | When using Cursor |
 | **GENERIC_LLM_INTEGRATION.md** | Generic/local LLM configuration (Ollama, vLLM, etc.) | When using custom LLMs |
+| **2026_GAME_DESIGN.md** | Game design guardrails, XR comfort zones, platform budgets | When building game interfaces or spatial UIs |
+| **2026_UI_UX_STANDARD.md** | UI/UX component patterns, design tokens, animation | When implementing UI components |
+| **ACCESSIBILITY_GUIDE.md** | WCAG 3.0+ compliance, perceptual/cognitive/physical a11y | When ensuring accessibility compliance |
+| **SPATIAL_COMPUTING_UI.md** | XR/VR/AR layout patterns, comfort zones, latency | When building spatial computing interfaces |
+| **ETHICAL_ENGAGEMENT.md** | Dark pattern taxonomy, ethical design principles | When reviewing engagement patterns |
 
 ---
 
@@ -185,6 +195,13 @@
 ### Infrastructure & Operations
 - `INFRASTRUCTURE_STANDARDS.md` - IaC and Terraform standards
 - `OPERATIONAL_PATTERNS.md` - Health checks, circuit breakers, retry
+
+### 2026 Game Design & UI/UX
+- `2026_GAME_DESIGN.md` - Game design guardrails, XR/VR comfort zones, platform rules
+- `2026_UI_UX_STANDARD.md` - UI/UX component standards, design tokens, responsive patterns
+- `ACCESSIBILITY_GUIDE.md` - WCAG 3.0+ conformance (Bronze/Silver/Gold), automated testing
+- `SPATIAL_COMPUTING_UI.md` - XR/VR/AR comfort zones, latency, depth layering, interaction
+- `ETHICAL_ENGAGEMENT.md` - Dark pattern taxonomy, ethical review capabilities
 
 ### Project Setup
 - `PROJECT_CONTEXT_TEMPLATE.md` - Project Bible template
@@ -237,11 +254,21 @@ agent-guardrails-template/
 │   │   ├── LOGGING_PATTERNS.md
 │   │   ├── LOGGING_INTEGRATION.md
 │   │   └── API_SPECIFICATIONS.md
-│   └── sprints/
+│   ├── sprints/
 │       ├── INDEX.md
 │       ├── SPRINT_TEMPLATE.md
 │       ├── SPRINT_GUIDE.md
 │       └── archive/
+│   ├── game-design/
+│   │   └── 2026_GAME_DESIGN.md      # Game design guardrails, XR comfort
+│   ├── ui-ux/
+│   │   └── 2026_UI_UX_STANDARD.md   # UI/UX components, design tokens
+│   ├── accessibility/
+│   │   └── ACCESSIBILITY_GUIDE.md   # WCAG 3.0+ compliance
+│   ├── spatial/
+│   │   └── SPATIAL_COMPUTING_UI.md  # XR/VR/AR patterns
+│   └── ethical/
+│       └── ETHICAL_ENGAGEMENT.md    # Dark pattern prevention
 ├── examples/               ← Multi-language implementation examples
 │   ├── go/
 │   ├── java/
@@ -304,13 +331,18 @@ agent-guardrails-template/
 | Prevention rules index | RULES_INDEX_MAP.md |
 | MCP tools reference | MCP_TOOLS_REFERENCE.md |
 | Pattern authoring | RULE_PATTERNS_GUIDE.md |
+| Game design guardrails | 2026_GAME_DESIGN.md |
+| UI/UX component standards | 2026_UI_UX_STANDARD.md |
+| Accessibility (WCAG 3.0+) | ACCESSIBILITY_GUIDE.md |
+| Spatial computing / XR / VR | SPATIAL_COMPUTING_UI.md |
+| Dark pattern prevention | ETHICAL_ENGAGEMENT.md |
 
 ---
 
 **Authored by:** TheArchitectit
 **Document Owner:** Project Maintainers
-**Last Updated:** 2026-02-11
-**Document Count:** 74 (excluding INDEX files)
+**Last Updated:** 2026-03-14
+**Document Count:** 79 (excluding INDEX files)
 **Line Count:** ~260
 
 ---

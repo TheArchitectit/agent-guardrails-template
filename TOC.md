@@ -89,6 +89,18 @@
 
 **Total:** 3 sprint documents
 
+### 2026 Game Design & UI/UX (`docs/`)
+
+| File | Path | Purpose |
+|------|------|---------|
+| **2026_GAME_DESIGN.md** | `docs/game-design/` | Game design guardrails, XR/VR comfort zones, platform budgets |
+| **2026_UI_UX_STANDARD.md** | `docs/ui-ux/` | UI/UX component patterns, design tokens, responsive breakpoints |
+| **ACCESSIBILITY_GUIDE.md** | `docs/accessibility/` | WCAG 3.0+ conformance (Bronze/Silver/Gold), testing methods |
+| **SPATIAL_COMPUTING_UI.md** | `docs/spatial/` | XR/VR/AR layout patterns, comfort zones, latency requirements |
+| **ETHICAL_ENGAGEMENT.md** | `docs/ethical/` | Dark pattern taxonomy and prevention, ethical design principles |
+
+**Total:** 5 documents covering Agent-GDUI-2026 capabilities
+
 ### Overall Documentation Summary
 
 | Category | Documents | Total Lines |
@@ -97,7 +109,8 @@
 | Workflows | 11 | ~3,500 |
 | Standards | 11 | ~4,400 |
 | Sprints | 3 | ~816 |
-| **TOTAL** | **32** | **~9,766** |
+| 2026 Game/UI/UX | 5 | ~2,500 |
+| **TOTAL** | **37** | **~12,266** |
 
 ---
 
@@ -134,6 +147,8 @@
 | **ruby/** | 7 | ~300 | Ruby 3.0+ | BDD-style testing |
 | **rust/** | 4 | ~200 | Rust 1.70+ | Type-safe Serde config |
 | **typescript/** | 10 | ~350 | TypeScript 5+ | Modular logging hooks |
+| **scala/functional-ui/** | ~10 | ~400 | Scala 3.4+ | Functional composition, type-safe CSS, DDA telemetry |
+| **r/game-analytics/** | ~8 | ~350 | R 4.3+ | ggplot2 4.0+, Shiny 2.0+, ethics auditing |
 
 ### Examples Structure
 
@@ -222,6 +237,11 @@ All documents comply with the 500-line maximum rule:
 | Separate test/production | TEST_PRODUCTION_SEPARATION.md | CORE MANDATORY RULES (line 18) |
 | Create task document | SPRINT_TEMPLATE.md | STEP-BY-STEP EXECUTION (line 91) |
 | Write documentation | MODULAR_DOCUMENTATION.md | The 500-Line Rule (line 15) |
+| Build game interfaces | 2026_GAME_DESIGN.md | XR/VR Comfort, Platform Rules |
+| Design UI components | 2026_UI_UX_STANDARD.md | Components, Design Tokens |
+| Ensure accessibility | ACCESSIBILITY_GUIDE.md | WCAG 3.0+ Compliance |
+| Build XR/VR/AR UIs | SPATIAL_COMPUTING_UI.md | Comfort Zones, Latency |
+| Prevent dark patterns | ETHICAL_ENGAGEMENT.md | Dark Pattern Taxonomy |
 
 ---
 
@@ -240,6 +260,6 @@ All files follow these conventions:
 
 **Authored by:** TheArchitectit
 **Document Owner:** Project Maintainers
-**Last Updated:** 2026-01-21  
-**Total Files:** 91  
-**Total Lines:** ~10,000
+**Last Updated:** 2026-03-14
+**Total Files:** 96
+**Total Lines:** ~12,500
