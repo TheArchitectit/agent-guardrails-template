@@ -4,6 +4,8 @@
 
 [![Go Implementation](https://img.shields.io/badge/Implementation-Go-blue.svg?style=flat&logo=go)](https://golang.org)
 [![Version](https://img.shields.io/badge/version-v2.6.0-blue.svg)](./CHANGELOG.md)
+[![WCAG 3.0+](https://img.shields.io/badge/Accessibility-WCAG_3.0+_Silver-green.svg)](docs/accessibility/ACCESSIBILITY_GUIDE.md)
+[![Spatial Computing](https://img.shields.io/badge/Spatial-XR/VR/AR-blue.svg)](docs/spatial/SPATIAL_COMPUTING_UI.md)
 
 > **Important:** All future development is in **Go**. The Python implementation is deprecated as of v2.6.0.
 
@@ -196,6 +198,18 @@ agent-guardrails-template/
 │   │   └── k8s-deployment.yaml
 │   ├── API.md             # REST/API contract
 │   └── README.md          # MCP server docs
+├── docs/                  ← Documentation (includes 2026 UI/UX Game Design)
+│   ├── game-design/       # Game design guardrails (NEW 2026)
+│   │   └── 2026_GAME_DESIGN.md
+│   ├── ui-ux/             # UI/UX standards (NEW 2026)
+│   │   └── 2026_UI_UX_STANDARD.md
+│   ├── accessibility/     # WCAG 3.0+ guide (NEW 2026)
+│   │   └── ACCESSIBILITY_GUIDE.md
+│   ├── spatial/           # Spatial computing UI (NEW 2026)
+│   │   └── SPATIAL_COMPUTING_UI.md
+│   ├── ethical/           # Ethical engagement (NEW 2026)
+│   │   └── ETHICAL_ENGAGEMENT.md
+│   ├── ...
 ├── ...
 ```
 
@@ -268,6 +282,28 @@ Clear list of actions agents must never perform:
 - Step-by-step execution instructions
 - Validation gates and completion checklists
 - Rollback procedures for every scenario
+
+### 🎮 2026 Game Design & UI/UX
+
+**Agent-GDUI-2026** capabilities for game interfaces, spatial computing, and immersive experiences:
+
+- **Spatial Layout** - XR viewport, depth layering, comfort zone enforcement
+- **Motion Design** - 60fps minimum, 120fps target, reduced-motion support
+- **Audio Spatialization** - 3D audio positioning, HRTF calibration
+- **Input Mapping** - Multi-modal input handlers, accessibility priority
+- **Ethical Review** - Dark pattern detection, automatic rejection
+- **Performance Budget** - Frame-rate budgets strict, latency < 20ms
+- **Accessibility Compliance** - WCAG 3.0+ Level AAA embedded
+- **Platform Consistency** - Mobile, PC, Console, XR cross-platform standards
+
+**New Documentation:**
+- [2026_GAME_DESIGN.md](docs/game-design/2026_GAME_DESIGN.md) - Core game design guardrails
+- [2026_UI_UX_STANDARD.md](docs/ui-ux/2026_UI_UX_STANDARD.md) - UI component standards
+- [ACCESSIBILITY_GUIDE.md](docs/accessibility/ACCESSIBILITY_GUIDE.md) - WCAG 3.0+ implementation
+- [SPATIAL_COMPUTING_UI.md](docs/spatial/SPATIAL_COMPUTING_UI.md) - XR/VR/AR UI patterns
+- [ETHICAL_ENGAGEMENT.md](docs/ethical/ETHICAL_ENGAGEMENT.md) - Dark pattern prevention
+
+**Accessibility Compliance:** [![WCAG 3.0+ Silver](https://img.shields.io/badge/WCAG-3.0+_Silver-blue.svg)](docs/accessibility/ACCESSIBILITY_GUIDE.md)
 
 ### 📊 Token Efficiency
 
@@ -1102,6 +1138,9 @@ agent-guardrails-template/
 5. **Find a specific document?** Use [INDEX_MAP.md](INDEX_MAP.md) - keyword search
 6. **Jump to a section?** Use [HEADER_MAP.md](HEADER_MAP.md) - line-number lookup
 7. **Applying to your repo?** See [docs/HOW_TO_APPLY.md](docs/HOW_TO_APPLY.md) - detailed instructions
+8. **Game/UI development?** See [2026_GAME_DESIGN.md](docs/game-design/2026_GAME_DESIGN.md) - 2026 game design guardrails
+9. **Accessibility?** See [ACCESSIBILITY_GUIDE.md](docs/accessibility/ACCESSIBILITY_GUIDE.md) - WCAG 3.0+ implementation
+10. **Spatial computing?** See [SPATIAL_COMPUTING_UI.md](docs/spatial/SPATIAL_COMPUTING_UI.md) - XR/VR/AR patterns
 
 ### Core Documents
 
@@ -1111,6 +1150,11 @@ agent-guardrails-template/
 | [**PROMPTING_GUIDE.md**](PROMPTING_GUIDE.md) | **EVERYONE** | **Master prompting techniques** ⭐ |
 | [**AGENT_GUARDRAILS.md**](docs/AGENT_GUARDRAILS.md) | EVERYONE | Core safety protocols (MANDATORY) |
 | [**TEST_PRODUCTION_SEPARATION.md**](docs/standards/TEST_PRODUCTION_SEPARATION.md) | EVERYONE | Test/production isolation (MANDATORY) |
+| [**2026_GAME_DESIGN.md**](docs/game-design/2026_GAME_DESIGN.md) | GAME/UI DEVELOPERS | Game design guardrails 2026 (MANDATORY) |
+| [**2026_UI_UX_STANDARD.md**](docs/ui-ux/2026_UI_UX_STANDARD.md) | UI/UX DEVELOPERS | UI component standards (MANDATORY) |
+| [**ACCESSIBILITY_GUIDE.md**](docs/accessibility/ACCESSIBILITY_GUIDE.md) | EVERYONE | WCAG 3.0+ implementation (MANDATORY) |
+| [**SPATIAL_COMPUTING_UI.md**](docs/spatial/SPATIAL_COMPUTING_UI.md) | XR/VR/AR DEVELOPERS | Spatial computing patterns (MANDATORY) |
+| [**ETHICAL_ENGAGEMENT.md**](docs/ethical/ETHICAL_ENGAGEMENT.md) | EVERYONE | Dark pattern prevention (MANDATORY) |
 | [**HOW_TO_APPLY.md**](docs/HOW_TO_APPLY.md) | Applying template | Step-by-step instructions with prompts |
 | [**AGENTS_AND_SKILLS_SETUP.md**](docs/AGENTS_AND_SKILLS_SETUP.md) | AI tool users | Setup guide for Claude Code/OpenCode |
 | [**TEAM_TOOLS.md**](docs/TEAM_TOOLS.md) | AI tool users | Team layout management MCP tools reference |
@@ -1133,18 +1177,20 @@ agent-guardrails-template/
 
 | Metric | Count |
 |--------|-------|
-| **Total Documentation Files** | 31 |
-| **Total Lines** | ~9,000 |
+| **Total Documentation Files** | 36 (+5 new 2026 UI/UX) |
+| **Total Lines** | ~11,500 |
 | **Workflows** | 10 documents |
 | **Standards** | 11 documents |
+| **2026 Game Design** | 5 documents (NEW) |
 | **Examples** | 53 files (6 languages) |
-| **500-Line Compliance** | 30/31 (97%) |
+| **500-Line Compliance** | 35/36 (97%) |
 | **Supported AI Models** | 30+ LLM families |
 | **Primary Language** | Go 1.23+ (MCP Server) |
-| **Example Languages** | Java, Python, Ruby, Rust, TypeScript |
+| **Example Languages** | Java, Python, Ruby, Rust, TypeScript, Go |
 | **AI Tool Integrations** | Claude Code, OpenCode |
 | **MCP Server** | 17 tools, 8 resources, SSE + HTTP endpoints |
 | **Infrastructure** | PostgreSQL 16, Redis 7, Docker/Podman |
+| **2026 UI/UX Features** | Spatial computing, WCAG 3.0+, ethical engagement |
 
 ---
 
