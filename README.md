@@ -3,7 +3,7 @@
 > Comprehensive safety protocol framework for AI agents, LLMs, and automated systems working with codebases.
 
 [![Go Implementation](https://img.shields.io/badge/Implementation-Go-blue.svg?style=flat&logo=go)](https://golang.org)
-[![Version](https://img.shields.io/badge/version-v2.6.0-blue.svg)](./CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-v2.7.0-blue.svg)](./CHANGELOG.md)
 [![WCAG 3.0+](https://img.shields.io/badge/Accessibility-WCAG_3.0+_Silver-green.svg)](docs/accessibility/ACCESSIBILITY_GUIDE.md)
 [![Spatial Computing](https://img.shields.io/badge/Spatial-XR/VR/AR-blue.svg)](docs/spatial/SPATIAL_COMPUTING_UI.md)
 
@@ -112,7 +112,7 @@ This isn't just a list of rules—it's a **real-time enforcement system**:
 
 ---
 
-## MCP Server (v2.6.0)
+## MCP Server (v2.7.0)
 
 The **Model Context Protocol (MCP) Server** provides real-time guardrail enforcement via a standardized protocol for AI agents and IDEs.
 
