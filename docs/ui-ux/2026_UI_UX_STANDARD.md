@@ -8,7 +8,9 @@
 
 ## Purpose
 
-This document establishes the 2026 UI/UX standard for AI agents implementing user interfaces. It defines:
+This document establishes the 2026 UI/UX standard for AI agents implementing user interfaces. These patterns are optimized for AI generation — agents can compose complex UIs by combining proven, pre-validated components instead of designing from scratch.
+
+It defines:
 
 1. **Component patterns** - Reusable UI building blocks
 2. **Design tokens** - Consistent visual language
@@ -30,6 +32,13 @@ This document establishes the 2026 UI/UX standard for AI agents implementing use
 | **Animation System** | Transitions, easing, duration | Reduced-motion aware |
 | **Layout Adaptation** | Mobile, tablet, desktop, XR | Breakpoint-aware |
 | **Theme Management** | Light, dark, high-contrast | System-sync |
+
+### AI Generation Optimization
+
+These component patterns exist so agents don't reinvent UI primitives on every generation:
+- **Pre-validated accessibility** — every pattern meets WCAG 3.0+ out of the box
+- **Consistent design tokens** — spacing, color, and typography are standardized
+- **Composable building blocks** — combine patterns for complex interfaces without custom design work
 
 ---
 
@@ -332,19 +341,11 @@ func Button(w http.ResponseWriter, r *http.Request) {
 
 ## RELATED DOCUMENTS
 
-### Core Standards
-- **This document** - 2026 UI/UX Standard (MANDATORY)
-- [2026_GAME_DESIGN.md](../game-design/2026_GAME_DESIGN.md) - Game design guardrails
-- [ACCESSIBILITY_GUIDE.md](../accessibility/ACCESSIBILITY_GUIDE.md) - WCAG 3.0+ guide
-- [SPATIAL_COMPUTING_UI.md](../spatial/SPATIAL_COMPUTING_UI.md) - XR/VR/AR patterns
-- [ETHICAL_ENGAGEMENT.md](../ethical/ETHICAL_ENGAGEMENT.md) - Dark pattern prevention
-
-### Design Systems
-- Material Design 3 (Google)
-- Apple Human Interface Guidelines
-- Microsoft Fluent Design
-- IBM Carbon Design
-- Shopify Polaris
+| Document | Purpose |
+|----------|---------|
+| [AI_ASSISTED_DEV.md](../ai-dev/AI_ASSISTED_DEV.md) | AI development patterns and prompt-to-UI scaffolding |
+| [STATE_MANAGEMENT.md](../state/STATE_MANAGEMENT.md) | Client/server state architecture |
+| [ACCESSIBILITY_GUIDE.md](../accessibility/ACCESSIBILITY_GUIDE.md) | Full WCAG 3.0+ compliance guide |
 
 ---
 

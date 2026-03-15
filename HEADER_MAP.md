@@ -890,7 +890,144 @@
 
 ---
 
+## AI_ASSISTED_DEV.md
+
+| Line | Header |
+|------|--------|
+| 1 | # AI-Assisted Development Patterns |
+| 9 | ## Purpose |
+| 17 | ## The Vibe Coding Workflow |
+| 21 | ### The Speed Equation |
+| 34 | ## Decision Matrix: Ask vs Decide vs Halt |
+| 38 | ### Risk Level: LOW — Decide Autonomously |
+| 48 | ### Risk Level: MEDIUM — Ask Before Proceeding |
+| 58 | ### Risk Level: HIGH — Halt and Confirm |
+| 70 | ## Design-Intent Preservation |
+| 74 | ### Style Anchors |
+| 108 | ### Intent Logs |
+| 121 | ## Prompt-to-UI Scaffolding |
+| 161 | ## Iteration Safety |
+| 199 | ## Human Approval Gates |
+| 214 | ## Design Tool Integration |
+| 234 | ## HALT CONDITIONS |
+| 251 | ## Language Patterns |
+| 316 | ## RELATED DOCUMENTS |
+
+---
+
+## STATE_MANAGEMENT.md
+
+| Line | Header |
+|------|--------|
+| 1 | # State Management & Data Patterns |
+| 9 | ## Purpose |
+| 17 | ## State Architecture Decision Tree |
+| 31 | ## Client State Patterns |
+| 33 | ### Local State (Single Component) |
+| 55 | ### Global Client State (Shared Across Components) |
+| 99 | ### Atomic State (Fine-Grained Reactivity) |
+| 116 | ## Server State Patterns |
+| 148 | ## Offline-First & Local Persistence |
+| 180 | ## Real-Time & CRDT Collaboration |
+| 205 | ## Forbidden Patterns |
+| 218 | ## HALT CONDITIONS |
+| 231 | ## Language Patterns |
+| 296 | ## RELATED DOCUMENTS |
+
+---
+
+## GENERATIVE_ASSET_SAFETY.md
+
+| Line | Header |
+|------|--------|
+| 1 | # Generative Asset Safety |
+| 9 | ## Purpose |
+| 17 | ## AI Content Disclosure |
+| 19 | ### Mandatory Labeling |
+| 32 | ### C2PA Metadata (Content Provenance) |
+| 75 | ## Procedural Generation Guardrails |
+| 77 | ### Seed Reproducibility |
+| 102 | ### Output Bounding |
+| 115 | ### Safety Filters |
+| 140 | ## Asset Attribution |
+| 183 | ## Synthetic Media Ethics |
+| 207 | ## Content Filtering Pipeline |
+| 229 | ## HALT CONDITIONS |
+| 244 | ## Language Patterns |
+| 324 | ## RELATED DOCUMENTS |
+
+---
+
+## MONETIZATION_GUARDRAILS.md
+
+| Line | Header |
+|------|--------|
+| 1 | # Monetization & Economy Guardrails |
+| 9 | ## Purpose |
+| 17 | ## In-App Purchase (IAP) Ethics |
+| 42 | ## Loot Box Transparency |
+| 87 | ## Subscription Fairness |
+| 100 | ## Virtual Economy Balance |
+| 131 | ## Battle Pass Patterns |
+| 154 | ## Age-Gated Spending |
+| 184 | ## HALT CONDITIONS |
+| 200 | ## Language Patterns |
+| 255 | ## RELATED DOCUMENTS |
+
+---
+
+## MULTIPLAYER_SAFETY.md
+
+| Line | Header |
+|------|--------|
+| 1 | # Multiplayer & Social Safety |
+| 9 | ## Purpose |
+| 17 | ## Presence & Social Graph |
+| 41 | ## Matchmaking Fairness |
+| 72 | ## Chat & Communication Moderation |
+| 104 | ## Harassment Prevention |
+| 128 | ## Content Moderation (User-Generated Content) |
+| 161 | ## Trust & Safety Operations |
+| 185 | ## HALT CONDITIONS |
+| 201 | ## Language Patterns |
+| 268 | ## RELATED DOCUMENTS |
+
+---
+
+## ANALYTICS_ETHICS.md
+
+| Line | Header |
+|------|--------|
+| 1 | # Analytics & Telemetry Ethics |
+| 9 | ## Purpose |
+| 17 | ## Event Tracking Consent |
+| 62 | ## Data Minimization |
+| 101 | ## Behavioral Targeting Limits |
+| 125 | ## A/B Testing Ethics |
+| 166 | ## Algorithmic Transparency |
+| 191 | ## HALT CONDITIONS |
+| 207 | ## Language Patterns |
+| 294 | ## RELATED DOCUMENTS |
+
+---
+
+## CROSS_PLATFORM_DEPLOYMENT.md
+
+| Line | Header |
+|------|--------|
+| 1 | # Cross-Platform Deployment |
+| 9 | ## Purpose |
+| 17 | ## App Store Compliance Matrix |
+| 73 | ## CI/CD for Games & Apps |
+| 121 | ## Feature Flags |
+| 156 | ## Progressive Rollout |
+| 178 | ## HALT CONDITIONS |
+| 193 | ## Language Patterns |
+| 251 | ## RELATED DOCUMENTS |
+
+---
+
 **Authored by:** TheArchitectit
 **Document Owner:** Project Maintainers
-**Last Updated:** 2026-02-15
+**Last Updated:** 2026-03-14
 **Status:** Complete - all documents and headers accurately mapped
