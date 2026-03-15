@@ -8,6 +8,8 @@
 
 ## Purpose
 
+**AI-Automated Ethics:** Dark pattern detection runs automatically on every AI-generated interface. Fast AI development doesn't mean compromising ethics — automation makes ethics faster, not slower.
+
 This guide defines ethical engagement standards and provides detection/prevention for dark patterns. Dark patterns are UI designs that:
 
 1. **Manipulate users** - Coerce unintended actions
@@ -30,6 +32,10 @@ This guide defines ethical engagement standards and provides detection/preventio
 | **Privacy UX Auditor** | Consent interface review | Compliance check |
 | **Transparency Checker** | Information clarity | Enhancement suggestion |
 | **Wellbeing Assessor** | User impact evaluation | Mitigation required |
+
+### Automated Ethical Review
+
+Agent-GDUI-2026 includes real-time ethical review on every UI generation. Agents don't need to manually audit for dark patterns — detection is automatic and rejection is immediate.
 
 ---
 
@@ -330,18 +336,12 @@ func (a *EthicalAudit) Passes() bool {
 
 ## RELATED DOCUMENTS
 
-### Ethical Engagement
-- **This document** - Ethical Engagement Guide (MANDATORY)
-- [2026_GAME_DESIGN.md](../game-design/2026_GAME_DESIGN.md) - Game design guardrails
-- [2026_UI_UX_STANDARD.md](../ui-ux/2026_UI_UX_STANDARD.md) - UI component standards
-- [ACCESSIBILITY_GUIDE.md](../accessibility/ACCESSIBILITY_GUIDE.md) - WCAG 3.0+ guide
-
-### External Standards
-- EU Digital Services Act
-- EU Artificial Intelligence Act
-- California Consumer Privacy Act (CCPA)
-- GDPR (EU General Data Protection Regulation)
-- FTC Dark Pattern Guidance
+| Document | Purpose |
+|----------|---------|
+| [MONETIZATION_GUARDRAILS.md](../monetization/MONETIZATION_GUARDRAILS.md) | IAP ethics and spending protections |
+| [ANALYTICS_ETHICS.md](../analytics/ANALYTICS_ETHICS.md) | Telemetry and behavioral tracking ethics |
+| [GENERATIVE_ASSET_SAFETY.md](../generative/GENERATIVE_ASSET_SAFETY.md) | AI-generated content safety |
+| [AI_ASSISTED_DEV.md](../ai-dev/AI_ASSISTED_DEV.md) | AI development approval gates |
 
 ---
 
