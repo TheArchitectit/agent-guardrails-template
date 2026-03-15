@@ -250,6 +250,16 @@ BSD-3-Clause — See [LICENSE](LICENSE)
 - **Maintainer:** [TheArchitectit](https://github.com/TheArchitectit)
 - **Built with:** Claude Code + Opus
 
+### Support This Project
+
+Help support development with a [Synthetic referral](https://synthetic.new/?referral=UAWqkKQQLFkzMkY):
+
+> Invite your friends to Synthetic and both of you will receive **$10.00 in subscription credit** when they subscribe!
+>
+> Each subscription pack is **$30/month** (aka $1/day). You can buy multiple subscription packs! Each pack gets you:
+> - **135 requests** per five hours
+> - **500 free tool calls** per day
+
 ---
 
 **v2.8.0** · AI-First Rapid Development Framework · [Get Started →](QUICK_SETUP.md)
