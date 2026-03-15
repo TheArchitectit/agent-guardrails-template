@@ -1,6 +1,6 @@
 # 🚀 Quick Setup Guide
 
-> Get Agent Guardrails running in 5 minutes (for busy people who want results NOW)
+> Get Agent Guardrails running in 5 minutes — for teams building with AI at full velocity
 
 ---
 
@@ -236,6 +236,20 @@ git pull origin main
 # Re-run setup to get updates
 python scripts/setup_agents.py --claude --full
 ```
+
+---
+
+## What You Can Now Do
+
+With guardrails in place, your AI agents are cleared for rapid development:
+
+- **Generate code at full speed** — Agents know the safety boundaries, so they spend tokens building instead of safety-checking
+- **Iterate without fear** — Rollback points and verification gates mean experiments are safe
+- **Ship accessible by default** — WCAG 3.0+ compliance is baked into every component pattern
+- **Catch ethical issues automatically** — Dark pattern detection runs on every UI generation
+- **Scale to any platform** — Cross-platform patterns mean one generation works everywhere
+
+You're not adding constraints. You're removing the need for agents to self-constrain on every decision.
 
 ---
 

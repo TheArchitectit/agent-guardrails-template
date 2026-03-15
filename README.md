@@ -3,7 +3,7 @@
 > Comprehensive safety protocol framework for AI agents, LLMs, and automated systems working with codebases.
 
 [![Go Implementation](https://img.shields.io/badge/Implementation-Go-blue.svg?style=flat&logo=go)](https://golang.org)
-[![Version](https://img.shields.io/badge/version-v2.7.0-blue.svg)](./CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-v2.8.0-blue.svg)](./CHANGELOG.md)
 [![WCAG 3.0+](https://img.shields.io/badge/Accessibility-WCAG_3.0+_Silver-green.svg)](docs/accessibility/ACCESSIBILITY_GUIDE.md)
 [![Spatial Computing](https://img.shields.io/badge/Spatial-XR/VR/AR-blue.svg)](docs/spatial/SPATIAL_COMPUTING_UI.md)
 
@@ -13,7 +13,7 @@
 
 ## What Is This?
 
-**The Agent Guardrails Template** is a standardized framework that defines safety protocols, guardrails, and operating procedures for AI agents interacting with code repositories.
+**The Agent Guardrails Template** is a standardized framework that defines safety protocols, guardrails, and operating procedures for AI agents interacting with code repositories. Built for AI agents developing software at high velocity — guardrails don't slow you down, they're your license to move fast.
 
 It ensures that any AI system (Claude, GPT, Gemini, LLaMA, etc.) follows strict safety rules when performing tasks like:
 
@@ -99,6 +99,9 @@ This isn't just a list of rules—it's a **real-time enforcement system**:
 - Maintain audit logs
 - Enforce separation of concerns
 
+**🎨 AI-First Development Teams**
+- Teams practicing "vibe coding" — rapid, AI-driven development where agents generate most of the code. Guardrails let your agents build at full velocity without human bottlenecks on every decision.
+
 ### The ROI of Prevention
 
 | Metric | Impact |
@@ -109,6 +112,14 @@ This isn't just a list of rules—it's a **real-time enforcement system**:
 | **Confidence** | Teams ship AI-assisted code faster, knowing it's safe |
 
 **Bottom Line**: For the cost of a coffee per day, you get peace of mind that your AI agents won't accidentally break production.
+
+### The Paradox: Why Guardrails Enable Speed
+
+Without guardrails, AI agents spend tokens on safety verification: "Is this file safe to edit? Will this break something? Should I ask the user first?" This constant self-checking burns context and slows output.
+
+With guardrails, agents know the boundaries upfront. They spend tokens on building, not on second-guessing. The result: faster iteration, fewer rollbacks, and code that ships with confidence.
+
+Think of guardrails like lane markers on a highway — they don't slow you down. They're the reason you can drive at full speed without crashing.
 
 ---
 
@@ -250,6 +261,8 @@ agent-guardrails-template/
 ---
 
 ## Key Features
+
+Whether you're vibe coding a game prototype or building production infrastructure, guardrails let you move at full velocity.
 
 ### 🛡️ Four Laws of Agent Safety
 
