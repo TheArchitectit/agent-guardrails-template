@@ -2,7 +2,7 @@
 
 **Last Updated:** 2026-03-14
 **Branch:** main
-**Current Version:** v2.7.0
+**Current Version:** v2.8.0
 
 ---
 

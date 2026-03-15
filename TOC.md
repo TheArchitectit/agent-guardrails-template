@@ -101,6 +101,20 @@
 
 **Total:** 5 documents covering Agent-GDUI-2026 capabilities
 
+### AI-First Development & Safety (`docs/`)
+
+| File | Path | Lines | Purpose |
+|------|------|-------|---------|
+| **AI_ASSISTED_DEV.md** | `docs/ai-dev/` | 326 | AI development patterns, vibe coding, decision matrix |
+| **STATE_MANAGEMENT.md** | `docs/state/` | 303 | State architecture, client/server state, CRDTs |
+| **GENERATIVE_ASSET_SAFETY.md** | `docs/generative/` | 332 | AI content disclosure, procedural generation safety |
+| **MONETIZATION_GUARDRAILS.md** | `docs/monetization/` | 263 | IAP ethics, loot box transparency, virtual economy |
+| **MULTIPLAYER_SAFETY.md** | `docs/multiplayer/` | 276 | Social safety, chat moderation, matchmaking |
+| **ANALYTICS_ETHICS.md** | `docs/analytics/` | 302 | Analytics consent, data minimization, A/B testing |
+| **CROSS_PLATFORM_DEPLOYMENT.md** | `docs/deployment/` | 259 | App store compliance, CI/CD, feature flags |
+
+**Total:** 7 documents covering AI-first development guardrails
+
 ### Overall Documentation Summary
 
 | Category | Documents | Total Lines |
@@ -110,7 +124,8 @@
 | Standards | 11 | ~4,400 |
 | Sprints | 3 | ~816 |
 | 2026 Game/UI/UX | 5 | ~2,500 |
-| **TOTAL** | **37** | **~12,266** |
+| AI-First Development | 7 | ~2,061 |
+| **TOTAL** | **44** | **~14,327** |
 
 ---
 
@@ -149,6 +164,8 @@
 | **typescript/** | 10 | ~350 | TypeScript 5+ | Modular logging hooks |
 | **scala/functional-ui/** | ~10 | ~400 | Scala 3.4+ | Functional composition, type-safe CSS, DDA telemetry |
 | **r/game-analytics/** | ~8 | ~350 | R 4.3+ | ggplot2 4.0+, Shiny 2.0+, ethics auditing |
+| **flutter/cross-platform/** | 4 | ~350 | Dart/Flutter | Ethical widgets, accessibility wrappers, guardrail config |
+| **gdscript/godot-game/** | 4 | ~300 | GDScript | XR comfort zones, ethical UI, accessibility manager |
 
 ### Examples Structure
 

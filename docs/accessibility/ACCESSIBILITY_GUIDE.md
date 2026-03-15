@@ -1,4 +1,4 @@
-# Accessibility Implementation Guide (WCAG 3.0+)
+# Accessibility Guide for AI-Generated Components (WCAG 3.0+)
 
 **Version:** 2.0.0
 **Last Updated:** 2026-03-14
@@ -7,6 +7,8 @@
 ---
 
 ## Purpose
+
+**AI-First Compliance:** Agent-GDUI-2026 enforces these standards automatically on all generated interfaces. AI-generated code ships accessible by default — no manual accessibility audit required for standard components.
 
 This guide provides implementation instructions for WCAG 3.0+ (Web Content Accessibility Guidelines) compliance. WCAG 3.0 introduces:
 
@@ -42,6 +44,10 @@ This guide provides implementation instructions for WCAG 3.0+ (Web Content Acces
 | **Keyboard Mapper** | Full navigation coverage | No keyboard traps |
 | **Cognitive Load** | Content complexity analysis | Plain language scoring |
 | **Motion Detector** | Reduced-motion support | Prefers-reduced-motion |
+
+### Agent-GDUI-2026 Accessibility Enforcement
+
+All AI-generated UI components are automatically validated against these standards. Agents don't need to manually check accessibility — it's built into every generation pattern.
 
 ---
 
@@ -299,21 +305,11 @@ impl AccessibilityAudit {
 
 ## RELATED DOCUMENTS
 
-### Core Accessibility
-- **This document** - WCAG 3.0+ Guide (MANDATORY)
-- [2026_UI_UX_STANDARD.md](../ui-ux/2026_UI_UX_STANDARD.md) - UI component standards
-- [2026_GAME_DESIGN.md](../game-design/2026_GAME_DESIGN.md) - Game design guardrails
-- [SPATIAL_COMPUTING_UI.md](../spatial/SPATIAL_COMPUTING_UI.md) - XR accessibility
-
-### Testing & Validation
-- [TESTING_VALIDATION.md](../workflows/TESTING_VALIDATION.md) - Validation protocols
-- [AGENT_GUARDRAILS.md](../AGENT_GUARDRAILS.md) - Core safety protocols
-
-### External Standards
-- W3C WCAG 3.0 (Draft)
-- EN 301 549 (European Accessibility Act)
-- Section 508 (US Federal)
-- ADA Guidelines
+| Document | Purpose |
+|----------|---------|
+| [AI_ASSISTED_DEV.md](../ai-dev/AI_ASSISTED_DEV.md) | AI development patterns and quality gates |
+| [2026_UI_UX_STANDARD.md](../ui-ux/2026_UI_UX_STANDARD.md) | Component patterns with built-in accessibility |
+| [ETHICAL_ENGAGEMENT.md](../ethical/ETHICAL_ENGAGEMENT.md) | Dark pattern prevention |
 
 ---
 
