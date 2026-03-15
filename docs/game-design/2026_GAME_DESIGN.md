@@ -8,7 +8,7 @@
 
 ## Purpose
 
-This document defines mandatory guardrails for AI agents developing game interfaces, spatial computing experiences, and immersive applications in 2026. These rules ensure:
+This document enables AI agents to rapidly build game interfaces, spatial computing experiences, and immersive applications with built-in safety. These guardrails are your license to generate at full velocity — they ensure:
 
 1. **Accessibility compliance** - WCAG 3.0+ standards enforced
 2. **Ethical engagement** - Dark patterns prevented
@@ -30,6 +30,13 @@ This document defines mandatory guardrails for AI agents developing game interfa
 | **Input Mapping** | Multi-modal input handlers | Accessibility priority |
 | **Ethical Review** | Dark pattern detection | Automatic rejection |
 | **Performance Budget** | Resource allocation | Frame-time budgets strict |
+
+### AI-Optimized Development
+
+These standardized patterns exist so agents don't reinvent the wheel on every generation. When building game UIs:
+- **Use the constraint tables as checklists** — they're pre-validated, so you can apply them without analysis
+- **Performance budgets are pre-calculated** — no need to benchmark from scratch
+- **Comfort zones are defined** — spatial placement is safe by default
 
 ---
 
@@ -241,23 +248,14 @@ func EthicalMiddleware(next http.Handler) http.Handler {
 
 ## RELATED DOCUMENTS
 
-### Core Guardrails
-- **This document** - 2026 Game Design Guardrails (MANDATORY)
-- [2026_UI_UX_STANDARD.md](../ui-ux/2026_UI_UX_STANDARD.md) - UI/UX component standards
-- [ACCESSIBILITY_GUIDE.md](../accessibility/ACCESSIBILITY_GUIDE.md) - WCAG 3.0+ implementation
-- [SPATIAL_COMPUTING_UI.md](../spatial/SPATIAL_COMPUTING_UI.md) - XR/VR/AR patterns
-- [ETHICAL_ENGAGEMENT.md](../ethical/ETHICAL_ENGAGEMENT.md) - Dark pattern prevention
-
-### Workflow Integration
-- [AGENT_GUARDRAILS.md](../AGENT_GUARDRAILS.md) - Core safety protocols
-- [AGENT_EXECUTION.md](../workflows/AGENT_EXECUTION.md) - Execution protocol
-- [TESTING_VALIDATION.md](../workflows/TESTING_VALIDATION.md) - Validation protocols
-
-### Platform Guidelines
-- Mobile: Apple HIG, Material Design 3
-- PC: W3C Web Standards, OpenXR
-- Console: Platform TRCs (Technical Requirements)
-- XR: ISO 20885-1 (VR/AR Safety)
+| Document | Purpose |
+|----------|---------|
+| [AI_ASSISTED_DEV.md](../ai-dev/AI_ASSISTED_DEV.md) | AI development patterns and decision matrix |
+| [MONETIZATION_GUARDRAILS.md](../monetization/MONETIZATION_GUARDRAILS.md) | IAP ethics and economy balance |
+| [MULTIPLAYER_SAFETY.md](../multiplayer/MULTIPLAYER_SAFETY.md) | Multiplayer and social safety |
+| [ANALYTICS_ETHICS.md](../analytics/ANALYTICS_ETHICS.md) | Telemetry and tracking ethics |
+| [CROSS_PLATFORM_DEPLOYMENT.md](../deployment/CROSS_PLATFORM_DEPLOYMENT.md) | App store compliance and CI/CD |
+| [STATE_MANAGEMENT.md](../state/STATE_MANAGEMENT.md) | State architecture patterns |
 
 ---
 

@@ -23,6 +23,9 @@
 3. **Performance Bound** - Maintain frame rate budgets strictly
 4. **Ethical Engagement** - Reject dark pattern implementations
 
+**Vibe Coding Philosophy:**
+These constraints enable flow state. Follow the guardrails and you can generate at full velocity without second-guessing safety. Constraints aren't friction — they're your fast lane.
+
 **Quick Links:**
 - [2026_GAME_DESIGN.md](docs/game-design/2026_GAME_DESIGN.md) - Game design guardrails
 - [2026_UI_UX_STANDARD.md](docs/ui-ux/2026_UI_UX_STANDARD.md) - UI component standards
@@ -36,6 +39,9 @@
 * **Guardrails**: Read [docs/AGENT_GUARDRAILS.md](docs/AGENT_GUARDRAILS.md) before any code changes.
 
 ## 2. Token-Saving Rules (STRICT)
+
+> These rules exist to maximize your speed. Every token saved on exploration is a token spent on building.
+
 * **NO EXPLORATION**: Do not use "ls -R" or explore file structure.
 * **NO RE-READING**: Trust your context; do not re-read files just edited.
 * **TARGETED CONTEXT**: Read ONLY files explicitly relevant to the request.

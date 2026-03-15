@@ -6,6 +6,50 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.8.0] - 2026-03-14
+
+### Major Release: AI-First Reframe & Gap Remediation
+
+**Type:** Major Version Bump (new documents + framework reframing)
+
+#### Philosophy Change
+
+- **Reframed entire framework** as AI-first rapid development enablement
+- Core message: "Guardrails are your license to move fast"
+- Vibe coding philosophy introduced across all documents
+- Constraints repositioned as speed enablers, not restrictions
+
+#### Added
+
+- **docs/ai-dev/AI_ASSISTED_DEV.md** - Centerpiece: AI development patterns, decision matrix, vibe coding workflow
+- **docs/state/STATE_MANAGEMENT.md** - State architecture decision tree, client/server/offline/CRDT patterns
+- **docs/generative/GENERATIVE_ASSET_SAFETY.md** - AI content disclosure, C2PA metadata, procedural generation safety
+- **docs/monetization/MONETIZATION_GUARDRAILS.md** - IAP ethics, loot box transparency, virtual economy balance
+- **docs/multiplayer/MULTIPLAYER_SAFETY.md** - Social safety, chat moderation, matchmaking fairness, CSAM detection
+- **docs/analytics/ANALYTICS_ETHICS.md** - Consent tiers, data minimization, A/B testing ethics
+- **docs/deployment/CROSS_PLATFORM_DEPLOYMENT.md** - App store compliance matrix, CI/CD, feature flags, progressive rollout
+- **skills/shared-prompts/vibe-coding.md** - Canonical vibe coding principles (5 principles)
+- **examples/flutter/cross-platform/** - Flutter guardrails: config, ethical widgets, accessibility wrappers
+- **examples/gdscript/godot-game/** - Godot GDScript: comfort zones, ethical UI, accessibility manager
+
+#### Changed
+
+- **README.md** - Repositioned as AI-first rapid development framework, added "The Paradox" section, vibe coding context
+- **CLAUDE.md** - Added Vibe Coding Philosophy, speed-first Token-Saving Rules framing
+- **QUICK_SETUP.md** - Added "What You Can Now Do" section, velocity-first subtitle
+- **docs/AGENT_GUARDRAILS.md** - Reframed Four Laws as speed enablers, added "How These Laws Enable Rapid Development"
+- **PROMPTING_GUIDE.md** - Added "Rapid Development Patterns (Vibe Coding)" section with 4 prompt patterns
+- **docs/game-design/2026_GAME_DESIGN.md** - Reframed as AI enablement, added "AI-Optimized Development"
+- **docs/ui-ux/2026_UI_UX_STANDARD.md** - Added "AI Generation Optimization" section
+- **docs/accessibility/ACCESSIBILITY_GUIDE.md** - Reframed for AI-generated components, Agent-GDUI-2026 enforcement
+- **docs/spatial/SPATIAL_COMPUTING_UI.md** - Added "AI-Driven Spatial Development" section
+- **docs/ethical/ETHICAL_ENGAGEMENT.md** - Added "Automated Ethical Review" section
+- **INDEX_MAP.md** - Added 10 new entries for new docs and examples
+- **HEADER_MAP.md** - Added section-level mappings for all 7 new docs
+- **TOC.md** - Added new document categories and updated totals
+
+---
+
 ## [2.7.0] - 2026-03-14
 
 ### Major Release: 2026 UI/UX & Game Design Update

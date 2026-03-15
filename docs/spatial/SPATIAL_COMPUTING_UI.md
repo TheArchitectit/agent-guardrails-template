@@ -8,7 +8,9 @@
 
 ## Purpose
 
-This document defines UI patterns for spatial computing interfaces. Spatial computing encompasses:
+This document defines UI patterns for spatial computing interfaces. These patterns let AI agents generate spatial UIs rapidly — comfort zones, performance budgets, and safety thresholds are pre-defined so agents can scaffold XR interfaces without iterating on human factors research.
+
+Spatial computing encompasses:
 
 1. **Virtual Reality (VR)** - Fully immersive digital environments
 2. **Augmented Reality (AR)** - Digital overlay on physical world
@@ -30,6 +32,13 @@ This document defines UI patterns for spatial computing interfaces. Spatial comp
 | **Hand Tracking** | Gesture recognition | Comfort zone bounds |
 | **Gaze Detection** | Eye tracking, focus | Dwell time thresholds |
 | **Haptic Mapping** | Touch feedback | Platform API sync |
+
+### AI-Driven Spatial Development
+
+Agent-GDUI-2026 uses these constraints as generation templates:
+- **Comfort zones are pre-calculated** — spatial placement is safe by default
+- **Performance budgets are strict** — agents generate within frame-time limits automatically
+- **Motion safety is built-in** — no need to test for motion sickness triggers manually
 
 ---
 
@@ -330,18 +339,11 @@ impl SpatialSafety {
 
 ## RELATED DOCUMENTS
 
-### Spatial Computing
-- **This document** - Spatial Computing UI (MANDATORY)
-- [2026_GAME_DESIGN.md](../game-design/2026_GAME_DESIGN.md) - Game design guardrails
-- [2026_UI_UX_STANDARD.md](../ui-ux/2026_UI_UX_STANDARD.md) - UI component standards
-- [ACCESSIBILITY_GUIDE.md](../accessibility/ACCESSIBILITY_GUIDE.md) - WCAG 3.0+ guide
-- [ETHICAL_ENGAGEMENT.md](../ethical/ETHICAL_ENGAGEMENT.md) - Dark pattern prevention
-
-### External Standards
-- OpenXR Specification (Khronos)
-- WebXR Device API (W3C)
-- ISO 20885-1 (VR/AR Safety)
-- IEEE 1857 (VR Standards)
+| Document | Purpose |
+|----------|---------|
+| [AI_ASSISTED_DEV.md](../ai-dev/AI_ASSISTED_DEV.md) | AI development patterns and iteration safety |
+| [2026_GAME_DESIGN.md](../game-design/2026_GAME_DESIGN.md) | Game design guardrails |
+| [ACCESSIBILITY_GUIDE.md](../accessibility/ACCESSIBILITY_GUIDE.md) | WCAG 3.0+ compliance for spatial interfaces |
 
 ---
 

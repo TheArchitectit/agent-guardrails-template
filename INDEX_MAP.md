@@ -95,6 +95,16 @@
 | rules-index | RULES_INDEX_MAP.md | docs/ | Master index of all prevention rules |
 | mcp-tools | MCP_TOOLS_REFERENCE.md | docs/ | MCP validation tools documentation |
 | rule-patterns | RULE_PATTERNS_GUIDE.md | docs/ | Pattern authoring guide |
+| ai-dev | AI_ASSISTED_DEV.md | docs/ai-dev/ | AI-assisted development patterns, vibe coding, decision matrix |
+| state | STATE_MANAGEMENT.md | docs/state/ | State architecture patterns, client/server state, CRDTs |
+| generative | GENERATIVE_ASSET_SAFETY.md | docs/generative/ | Generative asset safety, C2PA metadata, content filtering |
+| monetization | MONETIZATION_GUARDRAILS.md | docs/monetization/ | IAP ethics, loot box transparency, virtual economy |
+| multiplayer | MULTIPLAYER_SAFETY.md | docs/multiplayer/ | Multiplayer safety, chat moderation, matchmaking fairness |
+| analytics | ANALYTICS_ETHICS.md | docs/analytics/ | Analytics ethics, consent tiers, A/B testing, data minimization |
+| deployment | CROSS_PLATFORM_DEPLOYMENT.md | docs/deployment/ | Cross-platform deployment, app store compliance, CI/CD |
+| vibe-coding | vibe-coding.md | skills/shared-prompts/ | Canonical vibe coding principles for rapid AI development |
+| flutter-examples | examples/flutter/cross-platform/ | examples/flutter/ | Flutter guardrails: ethical widgets, accessibility wrappers |
+| godot-examples | examples/gdscript/godot-game/ | examples/gdscript/ | Godot GDScript: comfort zones, ethical UI, accessibility |
 
 ---
 
@@ -146,6 +156,16 @@
 | **ACCESSIBILITY_GUIDE.md** | WCAG 3.0+ compliance, perceptual/cognitive/physical a11y | When ensuring accessibility compliance |
 | **SPATIAL_COMPUTING_UI.md** | XR/VR/AR layout patterns, comfort zones, latency | When building spatial computing interfaces |
 | **ETHICAL_ENGAGEMENT.md** | Dark pattern taxonomy, ethical design principles | When reviewing engagement patterns |
+| **AI_ASSISTED_DEV.md** | AI development patterns, decision matrix, vibe coding workflow | When implementing AI-first rapid development |
+| **STATE_MANAGEMENT.md** | State architecture decision tree, client/server/offline/CRDT patterns | When designing state management |
+| **GENERATIVE_ASSET_SAFETY.md** | AI content disclosure, C2PA metadata, procedural generation safety | When handling AI-generated assets |
+| **MONETIZATION_GUARDRAILS.md** | IAP ethics, loot box transparency, virtual economy balance | When implementing monetization |
+| **MULTIPLAYER_SAFETY.md** | Social safety, chat moderation, matchmaking fairness, CSAM detection | When building multiplayer systems |
+| **ANALYTICS_ETHICS.md** | Consent tiers, data minimization, A/B testing ethics | When implementing analytics |
+| **CROSS_PLATFORM_DEPLOYMENT.md** | App store compliance matrix, CI/CD, feature flags, progressive rollout | When deploying across platforms |
+| **vibe-coding.md** | Canonical vibe coding principles (5 principles) | When establishing rapid development culture |
+| **examples/flutter/cross-platform/** | Flutter guardrails: config, ethical widgets, accessibility wrappers | When implementing Flutter guardrails |
+| **examples/gdscript/godot-game/** | Godot GDScript: comfort zones, ethical UI, accessibility manager | When implementing Godot GDScript guardrails |
 
 ---
 
