@@ -91,6 +91,8 @@ Warnings (severity: `warning`) don't fail the build but are reported. Example: G
 - **Headless mode:** `godot --headless --path <project>`
 - **Test scripts:** `test_runner.gd`, `tests/test_runner.gd`
 - **Custom Godot:** Use `godot_path` to point to automation fork binary
+- **Profile:** See `Sentinel Profile - GDScript - Godot.txt` for full language guardrails
+- **Polyglot Engine:** Auto-detected and added to the ToolchainManager
 
 ### Unity (Planned)
 
