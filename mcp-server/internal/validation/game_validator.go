@@ -277,6 +277,7 @@ func (v *GodotValidator) ValidateSceneFiles(projectPath string, result *models.G
 }
 
 // ValidateGDScripts scans for .gd files and checks for syntax issues
+// Implements guardrails from Sentinel Profile - GDScript - Godot
 func (v *GodotValidator) ValidateGDScripts(projectPath string, result *models.GameBuildResult) error {
 	return filepath.Walk(projectPath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -299,7 +300,7 @@ func (v *GodotValidator) ValidateGDScripts(projectPath string, result *models.Ga
 
 		content := string(data)
 
-		// Basic checks
+		// Check 1: Empty script file
 		if len(content) == 0 {
 			result.Errors = append(result.Errors, models.BuildError{
 				Type:     models.GameErrorScript,
@@ -310,7 +311,7 @@ func (v *GodotValidator) ValidateGDScripts(projectPath string, result *models.Ga
 			return nil
 		}
 
-		// Check for extends declaration (every GDScript should have one)
+		// Check 2: Missing 'extends' declaration (GDScript Mandate rule)
 		if !strings.Contains(content, "extends ") && !strings.Contains(content, "@tool") {
 			result.Errors = append(result.Errors, models.BuildError{
 				Type:     models.GameErrorScript,
@@ -318,6 +319,49 @@ func (v *GodotValidator) ValidateGDScripts(projectPath string, result *models.Ga
 				Message:  "Script missing 'extends' declaration",
 				Severity: "warning",
 			})
+		}
+
+		// Check 3: Direct .free() on nodes (use queue_free instead)
+		if strings.Contains(content, ".free()") && !strings.Contains(content, "queue_free") {
+			result.Errors = append(result.Errors, models.BuildError{
+				Type:     models.GameErrorScript,
+				File:     path,
+				Message:  "Direct .free() detected — use queue_free() for safe deferred deletion",
+				Severity: "warning",
+			})
+		}
+
+		// Check 4: String-based get_node() (fragile, use @onready)
+		if strings.Contains(content, "get_node(\"") || strings.Contains(content, "get_node('") {
+			result.Errors = append(result.Errors, models.BuildError{
+				Type:     models.GameErrorScript,
+				File:     path,
+				Message:  "String-based get_node() detected — prefer @onready with $ or % syntax",
+				Severity: "warning",
+			})
+		}
+
+		// Check 5: Heavy operations in _process (file I/O, HTTP)
+		processFuncs := []string{"_process", "_physics_process"}
+		for _, fn := range processFuncs {
+			if idx := strings.Index(content, "func "+fn); idx >= 0 {
+				// Find end of function (rough heuristic: next 'func' or end of file)
+				funcBody := content[idx:]
+				if nextFunc := strings.Index(funcBody[10:], "func "); nextFunc > 0 {
+					funcBody = funcBody[:nextFunc+10]
+				}
+				heavyOps := []string{"FileAccess", "HTTPRequest.request", "load(", "ResourceLoader.load"}
+				for _, op := range heavyOps {
+					if strings.Contains(funcBody, op) {
+						result.Errors = append(result.Errors, models.BuildError{
+							Type:     models.GameErrorScript,
+							File:     path,
+							Message:  fmt.Sprintf("Heavy operation '%s' in %s — move to _ready() or background thread", op, fn),
+							Severity: "warning",
+						})
+					}
+				}
+			}
 		}
 
 		return nil
