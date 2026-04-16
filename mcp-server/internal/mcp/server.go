@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -22,6 +23,7 @@ import (
 	"github.com/thearchitectit/guardrail-mcp/internal/config"
 	"github.com/thearchitectit/guardrail-mcp/internal/database"
 	"github.com/thearchitectit/guardrail-mcp/internal/metrics"
+	"github.com/thearchitectit/guardrail-mcp/internal/validation"
 	"github.com/thearchitectit/guardrail-mcp/internal/models"
 )
 
@@ -213,6 +215,39 @@ func (s *MCPServer) registerTools() {
 						},
 					},
 				},
+				{
+					Name:        "guardrail_validate_game_build",
+					Description: "Validate a game engine project (Godot, Unity, Unreal) by running headless build checks and tests",
+					InputSchema: mcp.ToolInputSchema{
+						Type: "object",
+						Properties: mcp.ToolInputSchemaProperties{
+							"session_token": map[string]interface{}{
+								"type":        "string",
+								"description": "Session token",
+							},
+							"project_path": map[string]interface{}{
+								"type":        "string",
+								"description": "Path to the game project root (containing project.godot, etc.)",
+							},
+							"godot_path": map[string]interface{}{
+								"type":        "string",
+								"description": "Path to Godot binary (default: 'godot' from PATH)",
+							},
+							"check_scenes": map[string]interface{}{
+								"type":        "boolean",
+								"description": "Validate .tscn scene files (default: true)",
+							},
+							"check_scripts": map[string]interface{}{
+								"type":        "boolean",
+								"description": "Validate .gd script files (default: true)",
+							},
+							"run_tests": map[string]interface{}{
+								"type":        "boolean",
+								"description": "Run headless test scripts if available (default: true)",
+							},
+						},
+					},
+				},
 			},
 		}, nil
 	})
@@ -259,6 +294,8 @@ func (s *MCPServer) handleToolCall(ctx context.Context, name string, arguments m
 		return s.handlePreWorkCheck(ctx, arguments)
 	case "guardrail_get_context":
 		return s.handleGetContext(ctx, arguments)
+	case "guardrail_validate_game_build":
+		return s.handleValidateGameBuild(ctx, arguments)
 	default:
 		return &mcp.CallToolResult{
 			Content: []interface{}{
@@ -813,6 +850,117 @@ func (s *MCPServer) handleGetContext(ctx context.Context, args map[string]interf
 
 	return &mcp.CallToolResult{
 		Content: []interface{}{mcp.TextContent{Type: "text", Text: proj.GuardrailContext}},
+	}, nil
+}
+
+// handleValidateGameBuild validates a game engine project (Godot, Unity, Unreal)
+func (s *MCPServer) handleValidateGameBuild(ctx context.Context, args map[string]interface{}) (*mcp.CallToolResult, error) {
+	sessionToken, _ := args["session_token"].(string)
+	projectPath, _ := args["project_path"].(string)
+	godotPath, _ := args["godot_path"].(string)
+	checkScenes, _ := args["check_scenes"].(bool)
+	checkScripts, _ := args["check_scripts"].(bool)
+	runTests, _ := args["run_tests"].(bool)
+
+	// Defaults
+	if !checkScenes && args["check_scenes"] == nil {
+		checkScenes = true
+	}
+	if !checkScripts && args["check_scripts"] == nil {
+		checkScripts = true
+	}
+	if !runTests && args["run_tests"] == nil {
+		runTests = true
+	}
+
+	// Validate session if provided
+	if sessionToken != "" {
+		s.sessionsMu.RLock()
+		_, exists := s.sessions[sessionToken]
+		s.sessionsMu.RUnlock()
+		if !exists {
+			return &mcp.CallToolResult{
+				Content: []interface{}{mcp.TextContent{Type: "text", Text: `{"error":"Invalid session token"}`}},
+				IsError: true,
+			}, nil
+		}
+	}
+
+	// Auto-detect game engine if project_path provided
+	detector := &validation.GameEngineDetector{}
+	if projectPath == "" {
+		// Try to detect from common locations
+		wd, _ := os.Getwd()
+		result, err := detector.DetectGameEngine(wd)
+		if err != nil || result == nil {
+			return &mcp.CallToolResult{
+				Content: []interface{}{mcp.TextContent{Type: "text", Text: `{"error":"No game engine project detected. Provide project_path or run from a game project directory."}`}},
+				IsError: true,
+			}, nil
+		}
+		projectPath = result.ProjectPath
+	}
+
+	slog.Info("Validating game build", "path", projectPath, "engine", "godot")
+
+	// Run Godot validation
+	validator := validation.NewGodotValidator(godotPath)
+	result, err := validator.ValidateProject(ctx, projectPath)
+	if err != nil {
+		resultJSON, _ := json.Marshal(result)
+		return &mcp.CallToolResult{
+			Content: []interface{}{mcp.TextContent{Type: "text", Text: string(resultJSON)}},
+			IsError: true,
+		}, nil
+	}
+
+	// Optional: validate scene files
+	if checkScenes {
+		validator.ValidateSceneFiles(projectPath, result)
+	}
+
+	// Optional: validate GDScript files
+	if checkScripts {
+		validator.ValidateGDScripts(projectPath, result)
+	}
+
+	// Update status based on accumulated errors
+	if len(result.Errors) > 0 && result.Status == models.BuildPassed {
+		// Check if any errors are severity "error" vs "warning"
+		hasErrors := false
+		for _, e := range result.Errors {
+			if e.Severity == "error" {
+				hasErrors = true
+				break
+			}
+		}
+		if hasErrors {
+			result.Status = models.BuildFailed
+		}
+	}
+
+	// Audit the validation
+	if s.auditLogger != nil {
+		s.auditLogger.Log(ctx, audit.Event{
+				Type:     audit.EventValidation,
+				Severity: audit.SevInfo,
+				Actor:    "guardrail",
+				Action:   "game_build_validation",
+				Resource: projectPath,
+				Status:   string(result.Status),
+				Details: map[string]interface{}{
+					"tests_run":    result.TestsRun,
+					"tests_passed": result.TestsPassed,
+					"tests_failed": result.TestsFailed,
+					"errors_count": len(result.Errors),
+					"duration_ms":  result.DurationMs,
+				},
+			})
+	}
+
+	resultJSON, _ := json.Marshal(result)
+	return &mcp.CallToolResult{
+		Content: []interface{}{mcp.TextContent{Type: "text", Text: string(resultJSON)}},
 	}, nil
 }
 
