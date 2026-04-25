@@ -250,28 +250,14 @@ BSD-3-Clause — See [LICENSE](LICENSE)
 - **Maintainer:** [TheArchitectit](https://github.com/TheArchitectit)
 - **Built with:** Claude Code + Opus
 
-### Support This Project
+### ☕ Support This Project
 
+Help keep this project going — use a referral link below and both of us get credits!
 
-
-Help support development with a referral
-
-Neuralwatt :
-
-When they spend $10+, you get $20 and they get $10 in credits.
-Your referral link
-
-https://portal.neuralwatt.com/auth/register?ref=NW-ROGER-ET3Y
-
-Synthetic :
-
- [Synthetic referral](https://synthetic.new/?referral=UAWqkKQQLFkzMkY):
-
-> Invite your friends to Synthetic and both of you will receive **$10.00 in subscription credit** when they subscribe!
->
-> Each subscription pack is **$30/month** (aka $1/day). You can buy multiple subscription packs! Each pack gets you:
-> - **135 requests** per five hours
-> - **500 free tool calls** per day
+| Service | Your Bonus | Details |
+|---------|-----------|----------|
+| [**Neuralwatt**](https://portal.neuralwatt.com/auth/register?ref=NW-ROGER-ET3Y) | $10 in credits | Spend $10+ → you get $10, we get $20 |
+| [**Synthetic**](https://synthetic.new/?referral=UAWqkKQQLFkzMkY) | $10 in credits | Subscribe → both get $10 credit (135 req/5hr, 500 tool calls/day) |
 
 ---
 
