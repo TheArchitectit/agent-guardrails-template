@@ -252,7 +252,20 @@ BSD-3-Clause — See [LICENSE](LICENSE)
 
 ### Support This Project
 
-Help support development with a [Synthetic referral](https://synthetic.new/?referral=UAWqkKQQLFkzMkY):
+
+
+Help support development with a referral
+
+Neuralwatt :
+
+When they spend $10+, you get $20 and they get $10 in credits.
+Your referral link
+
+https://portal.neuralwatt.com/auth/register?ref=NW-ROGER-ET3Y
+
+Synthetic :
+
+ [Synthetic referral](https://synthetic.new/?referral=UAWqkKQQLFkzMkY):
 
 > Invite your friends to Synthetic and both of you will receive **$10.00 in subscription credit** when they subscribe!
 >
