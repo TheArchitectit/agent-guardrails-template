@@ -2,24 +2,53 @@
 
 A Model Context Protocol (MCP) server for enforcing guardrails across AI coding assistants and IDE extensions.
 
+[![Go Implementation](https://img.shields.io/badge/Implementation-Go-blue.svg?style=flat&logo=go)](https://golang.org)
+[![Version](https://img.shields.io/badge/version-v2.6.0-blue.svg)](./CHANGELOG.md)
+
+> **Go Implementation:** All code is written in Go. Package location: `mcp-server/internal/`
+> **Migration:** Python implementation deprecated as of v2.6.0. See [../docs/PYTHON_MIGRATION.md](../docs/PYTHON_MIGRATION.md).
+
+## 🚨 Critical Deployment Information
+
+**Deployment Status:** ✅ Successfully deployed to AI01 (0.0.0.0:8095/8096)
+
+**Schema Validation Error Fixed:**
+- Changed server name from `guardrail-mcp` to `guardrail_mcp` (line 101 in `internal/mcp/server.go`)
+- This fixes the MCP framework's schema validation error that was blocking Claude Code from using the guardrail tools
+
+**Postgres Permission Issues Fixed:**
+- Added `user: "70:70"` to postgres service configuration
+- Removed security constraints to allow proper container initialization
+
+**Configuration Requirements:**
+- MCP_API_KEY and IDE_API_KEY must be 32+ characters with mixed case and digits
+- JWT_SECRET must be at least 32 bytes long
+- JWT_ROTATION_HOURS must include 'h' unit (e.g., `168h`)
+- Use localhost for container communication within pod
+
+**Complete Deployment Guide:**
+See [DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md) for step-by-step deployment instructions.
+
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────┐
-│           Guardrail MCP Server Container            │
-│  ┌─────────────┐  ┌─────────────┐                  │
-│  │   MCP SSE   │  │   Web UI    │                  │
-│  │   :8080     │  │   :8081     │                  │
-│  └──────┬──────┘  └──────┬──────┘                  │
-│         │                │                          │
-│  ┌──────┴────────────────┴─────────────────┐        │
-│  │              Redis Cache                │        │
-│  └─────────────────────────────────────────┘        │
-│         │                                           │
-│  ┌──────┴────────────────┴─────────────────┐        │
-│  │              PostgreSQL                 │        │
-│  └─────────────────────────────────────────┘        │
-└─────────────────────────────────────────────────────┘
+Deployment host (or local VM)
+|
+|-- guardrail-mcp-server (app container)
+|   |-- :8080 MCP SSE + JSON-RPC message endpoint
+|   |-- :8081 Web UI + REST API + health + metrics
+|   |-- attached networks: frontend, backend
+|   |-- host bindings: 127.0.0.1:${MCP_PORT}->8080, 127.0.0.1:${WEB_PORT}->8081
+|
+|-- guardrail-postgres (state container)
+|   |-- :5432 backend network only
+|   |-- attached networks: backend
+|   |-- volume: pg_data
+|
+|-- guardrail-redis (cache/rate-limiting container)
+|   |-- :6379 backend network only
+|   |-- attached networks: backend
+|   |-- volume: redis_data
 ```
 
 ## Quick Start
@@ -28,8 +57,19 @@ A Model Context Protocol (MCP) server for enforcing guardrails across AI coding 
 
 - Go 1.23+
 - Podman or Docker
-- PostgreSQL 16 (or use podman-compose)
-- Redis 7 (or use podman-compose)
+- PostgreSQL 16 (if running without compose)
+- Redis 7 (if running without compose)
+
+### Important: Read Deployment Guide First
+
+**Before deploying, read [DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md)** - This contains critical fixes discovered during AI01 deployment that are required for the MCP server to work correctly.
+
+Key fixes include:
+- Server name must use underscores, not dashes (schema validation fix)
+- Postgres must run as user 70:70 (permission fix)
+- API keys must be 32+ characters with mixed case and digits
+- JWT_SECRET must be at least 32 bytes
+- Use pod networking for container communication
 
 ### Configuration
 
@@ -91,6 +131,10 @@ make vuln
 
 ### Deployment
 
+For detailed deployment instructions (recommended for production), see [DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md).
+
+**Quick Start:**
+
 ```bash
 # Build container
 make docker-build
@@ -103,6 +147,29 @@ make docker-logs
 
 # Stop services
 make docker-down
+```
+
+Docker-only equivalent (without Podman tooling):
+
+```bash
+# Build image
+docker build -t guardrail-mcp:latest -f deploy/Dockerfile .
+
+# Start all services from compose file
+docker compose -f deploy/podman-compose.yml up -d --build
+
+# View logs
+docker compose -f deploy/podman-compose.yml logs -f
+
+# Stop services
+docker compose -f deploy/podman-compose.yml down
+```
+
+Alternative Docker compose file used by testers:
+
+```bash
+docker compose -f deploy/docker-compose.example.yml up -d --build
+docker compose -f deploy/docker-compose.example.yml ps
 ```
 
 ## API Endpoints
@@ -119,7 +186,9 @@ make docker-down
 Server-Sent Events (SSE) endpoint for MCP clients.
 
 - `GET /mcp/v1/sse` - SSE event stream endpoint
-- `POST /mcp/v1/message` - JSON-RPC message endpoint
+- `POST /mcp/v1/message?session_id=<session_id>` - JSON-RPC message endpoint
+
+The `session_id` is provided by the initial SSE `endpoint` event.
 
 ### Web UI API (Port 8081)
 
@@ -160,7 +229,8 @@ Server-Sent Events (SSE) endpoint for MCP clients.
 ## Security Features
 
 ### Authentication & Authorization
-- **API Key Authentication** - All external endpoints require valid API key (MCP_API_KEY or IDE_API_KEY)
+- **API Key Authentication** - Write and IDE endpoints require valid API key (MCP_API_KEY or IDE_API_KEY)
+- **Public Read-Only Web Routes** - `/api/documents*`, `/api/rules*`, and `/version` are browsable without API key
 - **JWT Tokens** - Session tokens for MCP clients with 15-minute expiry
 - **Hashed Key Logging** - API keys are hashed in logs for audit purposes
 
@@ -206,11 +276,18 @@ The MCP server implements the Model Context Protocol for AI assistant integratio
 ### Connecting to MCP Server
 
 ```bash
-# SSE endpoint for MCP clients
-GET http://localhost:8080/mcp/v1/sse
+# 1) Open SSE stream and capture endpoint event
+curl -sN http://localhost:8080/mcp/v1/sse
+# event: endpoint
+# data: http://localhost:8080/mcp/v1/message?session_id=<session_id>
 
-# Send JSON-RPC messages
-POST http://localhost:8080/mcp/v1/message?session_id=<session_id>
+# 2) In another terminal, send JSON-RPC message to session-specific URL
+curl -i -X POST "http://localhost:8080/mcp/v1/message?session_id=<session_id>" \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test-client","version":"1.0"}}}'
+
+# Expected HTTP status: 202 Accepted
+# JSON-RPC response arrives on the SSE stream as: event: message
 ```
 
 See [API.md](API.md) for complete API documentation.
@@ -233,11 +310,18 @@ See [API.md](API.md) for complete API documentation.
 │   ├── mcp/             # MCP protocol implementation
 │   ├── models/          # Data models (Document, Rule, Project, Failure)
 │   ├── security/        # Secrets scanning and detection
+│   ├── team/            # Team management (migrated from Python v2.6.0)
+│   │   ├── manager.go   # Core team operations
+│   │   ├── encryption.go # Data encryption at rest
+│   │   ├── rules.go     # Team layout rules
+│   │   └── types.go     # Data structures
 │   ├── validation/      # Input validation utilities
 │   └── web/             # HTTP server, handlers, middleware
 ├── deploy/              # Deployment files (Dockerfile, compose)
 └── README.md            # This file
 ```
+
+**Note:** As of v2.6.0, all team management functionality has been migrated from Python (`scripts/team_manager.py`) to Go (`internal/team/`). See [../docs/PYTHON_TO_GO_MIGRATION.md](../docs/PYTHON_TO_GO_MIGRATION.md) for details.
 
 ### Adding New Features
 
@@ -273,9 +357,10 @@ See [API.md](API.md) for complete API documentation.
 **Problem:** EOF errors when connecting to `/mcp/v1/sse`
 
 **Solution:**
-- Verify MCP_API_KEY is set correctly in client headers
-- Check that `Authorization: Bearer <key>` header is included
+- Verify the client posts follow-up messages to the `endpoint` URL emitted by SSE
+- Ensure requests use `?session_id=<session_id>` from that endpoint event
 - Ensure no proxy is buffering SSE responses (check X-Accel-Buffering header)
+- If using custom clients, ensure they consume only `event: message` payloads as JSON-RPC
 
 ### API Key Authentication Failures
 
@@ -284,7 +369,44 @@ See [API.md](API.md) for complete API documentation.
 **Solution:**
 - Verify `Authorization: Bearer <api_key>` header format
 - Check that MCP_API_KEY or IDE_API_KEY environment variables are set
-- For Web UI access, no API key is required (publicly accessible)
+- For Web UI access and read-only browsing APIs, no API key is required
+
+### Guardrails Not Enforcing (`rules_evaluated=0` or dangerous commands allowed)
+
+**Problem:** MCP tool calls return permissive results even for dangerous commands.
+
+**Cause:** Runtime rule/project data is missing, or rule categories do not match validator categories.
+
+**Solution:**
+- Check data state:
+  - `curl -s http://localhost:8096/api/stats`
+  - If `rules_count` or `projects_count` is `0`, run rule sync and seed a project.
+- Trigger rule sync:
+  - `curl -X POST http://localhost:8096/api/rules/sync -H "Authorization: Bearer $MCP_API_KEY" -H "Content-Type: application/json" -d '{"force":true}'`
+  - `curl -s http://localhost:8096/api/rules/sync/status`
+- Ensure the project used by `guardrail_init_session` has `active_rules` populated.
+- Verify categories for command enforcement:
+  - `guardrail_validate_bash` evaluates `bash` (and compatible legacy categories) plus `all`.
+  - `guardrail_validate_git_operation` evaluates `git` (and compatible legacy categories) plus `all`.
+  - Rules intended to apply globally should use category `all`.
+- Re-test using MCP `initialize` -> `guardrail_init_session` -> `guardrail_validate_bash`/`guardrail_validate_git_operation` and confirm `rules_evaluated > 0`.
+
+### Schema Validation Error (Critical!)
+
+**Error:**
+```
+Invalid schema for function 'guardrails_guardrail_pre_work_check':
+In context=('properties', 'affected_files'), array schema missing items
+```
+
+**Cause:** Server name contains dashes/hyphens
+
+**Solution:** Change server name from "guardrail-mcp" to "guardrail_mcp" in `internal/mcp/server.go` line 101:
+```go
+s.mcpServer = server.NewDefaultServer("guardrail_mcp", "1.0.0")
+```
+
+See [DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md) for complete deployment instructions.
 
 ### Database Migration Failures
 
@@ -304,6 +426,7 @@ psql -U guardrails -d guardrails -c "CREATE SCHEMA IF NOT EXISTS public;"
 ```bash
 # Check logs
 make docker-logs
+# or: docker compose -f deploy/podman-compose.yml logs -f
 
 # Verify all required environment variables are set
 cat .env | grep -E "(API_KEY|PASSWORD|SECRET)"
@@ -314,3 +437,64 @@ cat .env | grep -E "(API_KEY|PASSWORD|SECRET)"
 ## License
 
 MIT
+
+---
+
+## Deployment Status
+
+**Version:** v2.6.0
+**Deployment Date:** 2026-02-15
+**Deployed To:** AI01 (0.0.0.0:8095/8096)
+**Status:** ✅ Successfully deployed and verified
+**Implementation:** Go (mcp-server/internal/)
+
+### What Was Fixed During Deployment
+
+1. **Schema Validation Error** ✅ FIXED
+   - Changed server name from `guardrail-mcp` to `guardrail_mcp` (line 101 in `internal/mcp/server.go`)
+   - This fixes the MCP framework's schema validation error that was blocking Claude Code from using the guardrail tools
+
+2. **Postgres Permission Issues** ✅ FIXED
+   - Added `user: "70:70"` to postgres service configuration
+   - Removed security constraints to allow proper container initialization
+
+3. **Configuration Requirements** ✅ UPDATED
+   - MCP_API_KEY and IDE_API_KEY must be 32+ characters with mixed case and digits
+   - JWT_SECRET must be at least 32 bytes long
+   - JWT_ROTATION_HOURS must include 'h' unit (e.g., `168h`)
+   - Use localhost for container communication within pod
+
+### Verification Checklist
+
+- ✅ Postgres running and healthy (localhost:5432)
+- ✅ Redis running and healthy (localhost:6379)
+- ✅ MCP server started successfully
+- ✅ Database connected
+- ✅ Redis connected
+- ✅ MCP endpoint responding (port 8095)
+- ✅ Web UI responding (port 8096)
+- ✅ Server name correctly set to `guardrail_mcp` (with underscore)
+
+### For Testers
+
+**AI01 Connection Info:**
+- **MCP Endpoint:** http://0.0.0.0:8095/mcp/v1/sse
+- **Web UI:** http://0.0.0.0:8096
+- **API Key:** DevKey123456789012345678901234567890 (example - use your own)
+
+**OpenCode Configuration:**
+```jsonc
+{
+  "mcpServers": {
+    "guardrails": {
+      "type": "remote",
+      "url": "http://0.0.0.0:8095/mcp/v1/sse",
+      "headers": {
+        "Authorization": "Bearer DevKey123456789012345678901234567890"
+      }
+    }
+  }
+}
+```
+
+See [DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md) for complete deployment instructions and troubleshooting.

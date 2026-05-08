@@ -9,6 +9,8 @@
 
 | Keyword | Document | Path | Purpose |
 |---------|----------|------|---------|
+| quick-setup | QUICK_SETUP.md | ./ | **5-minute setup guide** ⭐ |
+| prompting | PROMPTING_GUIDE.md | ./ | **Master prompting techniques** ⭐ |
 | toc | TOC.md | ./ | Complete template contents and file listing |
 | safety | AGENT_GUARDRAILS.md | docs/ | Mandatory safety protocols |
 | test-prod | TEST_PRODUCTION_SEPARATION.md | docs/standards/ | Test/production isolation (MANDATORY) |
@@ -29,6 +31,8 @@
 | api | API_SPECIFICATIONS.md | docs/standards/ | OpenAPI/OpenSpec guidance |
 | secrets | SECRETS_MANAGEMENT.md | .github/ | GitHub Secrets setup |
 | examples | examples/ | examples/ | Multi-language implementation examples |
+| scala-examples | examples/scala/functional-ui/ | Scala 3.4+ functional UI, type-safe CSS, DDA telemetry |
+| r-examples | examples/r/game-analytics/ | R ggplot2 4.0+, Shiny 2.0+, ethics auditing, retention analysis |
 | regression-examples | regression-prevention/ | examples/regression-prevention/ | Practical regression prevention examples |
 | sprint | SPRINT_TEMPLATE.md | docs/sprints/ | Sprint task template |
 | sprint-guide | SPRINT_GUIDE.md | docs/sprints/ | How to write sprints |
@@ -42,6 +46,10 @@
 | operational | OPERATIONAL_PATTERNS.md | docs/standards/ | Health checks, circuit breakers, retry |
 | retry | AGENT_EXECUTION.md | docs/workflows/ | Three Strikes Rule, retry limits |
 | scope-freeze | SPRINT_TEMPLATE.md | docs/sprints/ | Scope Freeze Protocol |
+| deployment | DEPLOYMENT_GUIDE.md | mcp-server/ | MCP server deployment instructions (critical fixes) |
+| schema-error | DEPLOYMENT_GUIDE.md | mcp-server/ | Fix schema validation error (guardrail-mcp → guardrail_mcp) |
+| postgres-perm | DEPLOYMENT_GUIDE.md | mcp-server/ | Fix postgres permission errors (user 70:70) |
+| container-networking | DEPLOYMENT_GUIDE.md | mcp-server/ | Pod networking for container communication |
 | skills | AGENTS_AND_SKILLS_SETUP.md | docs/ | Setup agents and skills for all platforms |
 | claude-code | CLCODE_INTEGRATION.md | docs/ | Claude Code skills and hooks integration |
 | opencode | OPCODE_INTEGRATION.md | docs/ | OpenCode agents and skills integration |
@@ -52,6 +60,12 @@
 | mcp-api | API.md | mcp-server/ | MCP server REST API documentation |
 | mcp-changelog | CHANGELOG.md | mcp-server/ | MCP server version history |
 | guardrail-platform | MCP_SERVER_PLAN.md | docs/plans/ | Guardrail enforcement platform |
+| team-tools | TEAM_TOOLS.md | docs/ | Team layout management MCP tools reference (Go implementation) |
+| team-structure | TEAM_STRUCTURE.md | docs/ | 12-team enterprise structure documentation |
+| python-migration | PYTHON_TO_GO_MIGRATION.md | docs/ | Python to Go migration guide for developers |
+| go-migration | PYTHON_TO_GO_MIGRATION.md | docs/ | Python to Go migration guide for developers |
+| team-cli | cmd/team-cli/README.md | cmd/team-cli/ | Team management CLI tool |
+| phase-gate | TEAM_TOOLS.md | docs/ | Phase transition requirements and deliverables |
 | aider | CLCODE_INTEGRATION.md | docs/ | Aider YAML configuration (see Claude Code) |
 | continue | CLCODE_INTEGRATION.md | docs/ | Continue IDE configuration (see Claude Code) |
 | windsurf | CLCODE_INTEGRATION.md | docs/ | Windsurf rules configuration (see Claude Code) |
@@ -63,9 +77,34 @@
 | log-failure | log_failure.py | scripts/ | CLI tool to log bugs to failure registry |
 | regression-check | regression_check.py | scripts/ | Pre-commit regression pattern scanner |
 | prevention-rules | pattern-rules.json | .guardrails/prevention-rules/ | Regex patterns to prevent regressions |
+| game-design | 2026_GAME_DESIGN.md | docs/game-design/ | Agent-GDUI-2026 game design guardrails, XR/VR comfort zones |
+| ui-ux | 2026_UI_UX_STANDARD.md | docs/ui-ux/ | UI/UX component standards, design tokens, interaction states |
+| accessibility | ACCESSIBILITY_GUIDE.md | docs/accessibility/ | WCAG 3.0+ compliance, conformance levels, testing methods |
+| spatial | SPATIAL_COMPUTING_UI.md | docs/spatial/ | XR/VR/AR UI patterns, comfort zones, latency requirements |
+| ethical | ETHICAL_ENGAGEMENT.md | docs/ethical/ | Dark pattern prevention, ethical design principles |
 | semantic-rules | semantic-rules.json | .guardrails/prevention-rules/ | AST-based prevention rules |
+| extracted-rules | extracted-rules.json | .guardrails/prevention-rules/ | Rules extracted from AGENT_GUARDRAILS.md |
 | bug-fix | REGRESSION_PREVENTION.md | docs/workflows/ | Requirements for bug fixes (regression tests) |
 | known-bugs | failure-registry.jsonl | .guardrails/ | Active/resolved/deprecated bug history |
+| four-laws | four-laws.md | skills/shared-prompts/ | Canonical Four Laws of Agent Safety |
+| halt-conditions | halt-conditions.md | skills/shared-prompts/ | When to stop and ask for help |
+| sprint-001 | SPRINT_001_MCP_GAP_IMPLEMENTATION.md | docs/sprints/ | Sprint: MCP Gap Implementation |
+| sprint-002 | SPRINT_002_WEB_UI_IMPLEMENTATION.md | docs/sprints/ | Sprint: Web UI Implementation |
+| sprint-003 | SPRINT_003_DOCUMENTATION_PARITY.md | docs/sprints/ | Sprint: Documentation Parity (this sprint) |
+| rules-from-md | RULES_FROM_MD.md | docs/ | Extracting prevention rules from markdown |
+| rules-index | RULES_INDEX_MAP.md | docs/ | Master index of all prevention rules |
+| mcp-tools | MCP_TOOLS_REFERENCE.md | docs/ | MCP validation tools documentation |
+| rule-patterns | RULE_PATTERNS_GUIDE.md | docs/ | Pattern authoring guide |
+| ai-dev | AI_ASSISTED_DEV.md | docs/ai-dev/ | AI-assisted development patterns, vibe coding, decision matrix |
+| state | STATE_MANAGEMENT.md | docs/state/ | State architecture patterns, client/server state, CRDTs |
+| generative | GENERATIVE_ASSET_SAFETY.md | docs/generative/ | Generative asset safety, C2PA metadata, content filtering |
+| monetization | MONETIZATION_GUARDRAILS.md | docs/monetization/ | IAP ethics, loot box transparency, virtual economy |
+| multiplayer | MULTIPLAYER_SAFETY.md | docs/multiplayer/ | Multiplayer safety, chat moderation, matchmaking fairness |
+| analytics | ANALYTICS_ETHICS.md | docs/analytics/ | Analytics ethics, consent tiers, A/B testing, data minimization |
+| deployment | CROSS_PLATFORM_DEPLOYMENT.md | docs/deployment/ | Cross-platform deployment, app store compliance, CI/CD |
+| vibe-coding | vibe-coding.md | skills/shared-prompts/ | Canonical vibe coding principles for rapid AI development |
+| flutter-examples | examples/flutter/cross-platform/ | examples/flutter/ | Flutter guardrails: ethical widgets, accessibility wrappers |
+| godot-examples | examples/gdscript/godot-game/ | examples/gdscript/ | Godot GDScript: comfort zones, ethical UI, accessibility |
 
 ---
 
@@ -75,6 +114,10 @@
 |----------|-------------------|-------------|
 | **TOC.md** | Complete template contents and file listing | When exploring full template |
 | **AGENT_GUARDRAILS.md** | Core safety protocols (mandatory) | Before ANY code changes |
+| **RULES_FROM_MD.md** | Extracting prevention rules from markdown | When working with MCP rules |
+| **RULES_INDEX_MAP.md** | Master index of all prevention rules | When searching for specific prevention rules |
+| **MCP_TOOLS_REFERENCE.md** | MCP validation tools documentation | When using MCP validation tools |
+| **RULE_PATTERNS_GUIDE.md** | Pattern authoring guide | When writing new prevention rules |
 | **TEST_PRODUCTION_SEPARATION.md** | Test/production isolation standards (MANDATORY) | Before ANY deployment |
 | **AGENT_EXECUTION.md** | Execution protocol and rollback procedures | During task execution |
 | **AGENT_ESCALATION.md** | Audit requirements and escalation procedures | When uncertain or errors occur |
@@ -108,6 +151,21 @@
 | **OPENCODE_INTEGRATION.md** | OpenCode agents and skills integration | When using OpenCode |
 | **CURSOR_INTEGRATION.md** | Cursor rules and guardrails integration | When using Cursor |
 | **GENERIC_LLM_INTEGRATION.md** | Generic/local LLM configuration (Ollama, vLLM, etc.) | When using custom LLMs |
+| **2026_GAME_DESIGN.md** | Game design guardrails, XR comfort zones, platform budgets | When building game interfaces or spatial UIs |
+| **2026_UI_UX_STANDARD.md** | UI/UX component patterns, design tokens, animation | When implementing UI components |
+| **ACCESSIBILITY_GUIDE.md** | WCAG 3.0+ compliance, perceptual/cognitive/physical a11y | When ensuring accessibility compliance |
+| **SPATIAL_COMPUTING_UI.md** | XR/VR/AR layout patterns, comfort zones, latency | When building spatial computing interfaces |
+| **ETHICAL_ENGAGEMENT.md** | Dark pattern taxonomy, ethical design principles | When reviewing engagement patterns |
+| **AI_ASSISTED_DEV.md** | AI development patterns, decision matrix, vibe coding workflow | When implementing AI-first rapid development |
+| **STATE_MANAGEMENT.md** | State architecture decision tree, client/server/offline/CRDT patterns | When designing state management |
+| **GENERATIVE_ASSET_SAFETY.md** | AI content disclosure, C2PA metadata, procedural generation safety | When handling AI-generated assets |
+| **MONETIZATION_GUARDRAILS.md** | IAP ethics, loot box transparency, virtual economy balance | When implementing monetization |
+| **MULTIPLAYER_SAFETY.md** | Social safety, chat moderation, matchmaking fairness, CSAM detection | When building multiplayer systems |
+| **ANALYTICS_ETHICS.md** | Consent tiers, data minimization, A/B testing ethics | When implementing analytics |
+| **CROSS_PLATFORM_DEPLOYMENT.md** | App store compliance matrix, CI/CD, feature flags, progressive rollout | When deploying across platforms |
+| **vibe-coding.md** | Canonical vibe coding principles (5 principles) | When establishing rapid development culture |
+| **examples/flutter/cross-platform/** | Flutter guardrails: config, ethical widgets, accessibility wrappers | When implementing Flutter guardrails |
+| **examples/gdscript/godot-game/** | Godot GDScript: comfort zones, ethical UI, accessibility manager | When implementing Godot GDScript guardrails |
 
 ---
 
@@ -133,6 +191,10 @@
 - `AGENT_REVIEW_PROTOCOL.md` - Post-work agent/LLM review
 - `ADVERSARIAL_TESTING.md` - Breaker agent and fuzz testing
 - `AGENTS_AND_SKILLS_SETUP.md` - Setup guide for Claude Code/OpenCode
+- `RULES_FROM_MD.md` - Extracting prevention rules from markdown
+- `RULES_INDEX_MAP.md` - Master index of all prevention rules
+- `MCP_TOOLS_REFERENCE.md` - MCP validation tools documentation
+- `RULE_PATTERNS_GUIDE.md` - Pattern authoring guide
 
 ### Logging & Monitoring
 - `LOGGING_PATTERNS.md` - Structured log format
@@ -153,6 +215,13 @@
 ### Infrastructure & Operations
 - `INFRASTRUCTURE_STANDARDS.md` - IaC and Terraform standards
 - `OPERATIONAL_PATTERNS.md` - Health checks, circuit breakers, retry
+
+### 2026 Game Design & UI/UX
+- `2026_GAME_DESIGN.md` - Game design guardrails, XR/VR comfort zones, platform rules
+- `2026_UI_UX_STANDARD.md` - UI/UX component standards, design tokens, responsive patterns
+- `ACCESSIBILITY_GUIDE.md` - WCAG 3.0+ conformance (Bronze/Silver/Gold), automated testing
+- `SPATIAL_COMPUTING_UI.md` - XR/VR/AR comfort zones, latency, depth layering, interaction
+- `ETHICAL_ENGAGEMENT.md` - Dark pattern taxonomy, ethical review capabilities
 
 ### Project Setup
 - `PROJECT_CONTEXT_TEMPLATE.md` - Project Bible template
@@ -205,11 +274,21 @@ agent-guardrails-template/
 │   │   ├── LOGGING_PATTERNS.md
 │   │   ├── LOGGING_INTEGRATION.md
 │   │   └── API_SPECIFICATIONS.md
-│   └── sprints/
+│   ├── sprints/
 │       ├── INDEX.md
 │       ├── SPRINT_TEMPLATE.md
 │       ├── SPRINT_GUIDE.md
 │       └── archive/
+│   ├── game-design/
+│   │   └── 2026_GAME_DESIGN.md      # Game design guardrails, XR comfort
+│   ├── ui-ux/
+│   │   └── 2026_UI_UX_STANDARD.md   # UI/UX components, design tokens
+│   ├── accessibility/
+│   │   └── ACCESSIBILITY_GUIDE.md   # WCAG 3.0+ compliance
+│   ├── spatial/
+│   │   └── SPATIAL_COMPUTING_UI.md  # XR/VR/AR patterns
+│   └── ethical/
+│       └── ETHICAL_ENGAGEMENT.md    # Dark pattern prevention
 ├── examples/               ← Multi-language implementation examples
 │   ├── go/
 │   ├── java/
@@ -268,11 +347,48 @@ agent-guardrails-template/
 | OpenCode integration | OPCODE_INTEGRATION.md |
 | Cursor integration | CURSOR_INTEGRATION.md |
 | Generic LLM integration | GENERIC_LLM_INTEGRATION.md |
+| MCP rule extraction | RULES_FROM_MD.md |
+| Prevention rules index | RULES_INDEX_MAP.md |
+| MCP tools reference | MCP_TOOLS_REFERENCE.md |
+| Pattern authoring | RULE_PATTERNS_GUIDE.md |
+| Game design guardrails | 2026_GAME_DESIGN.md |
+| UI/UX component standards | 2026_UI_UX_STANDARD.md |
+| Accessibility (WCAG 3.0+) | ACCESSIBILITY_GUIDE.md |
+| Spatial computing / XR / VR | SPATIAL_COMPUTING_UI.md |
+| Dark pattern prevention | ETHICAL_ENGAGEMENT.md |
 
 ---
 
 **Authored by:** TheArchitectit
 **Document Owner:** Project Maintainers
-**Last Updated:** 2026-02-07
-**Document Count:** 40 (excluding INDEX files)
-**Line Count:** ~255
+**Last Updated:** 2026-03-14
+**Document Count:** 79 (excluding INDEX files)
+**Line Count:** ~260
+
+---
+
+## Canonical Sources
+
+To avoid duplication, always reference these canonical sources:
+
+| Content | Canonical Location | Reference In |
+|---------|-------------------|--------------|
+| Four Laws | skills/shared-prompts/four-laws.md | docs/AGENT_GUARDRAILS.md |
+| Halt Conditions | skills/shared-prompts/halt-conditions.md | Workflows, integration docs |
+
+---
+
+## Oversized Documents
+
+The following files exceed the 500-line limit and should be split per MODULAR_DOCUMENTATION.md:
+
+| File | Lines | Action Needed |
+|------|-------|---------------|
+| docs/plans/MCP_SERVER_PLAN.md | 2093 | Split into multiple files |
+| docs/sprints/SPRINT_002_WEB_UI_IMPLEMENTATION.md | 768 | Split or archive |
+| docs/sprints/SPRINT_003_DOCUMENTATION_PARITY.md | 754 | Split or archive after completion |
+| HEADER_MAP.md | 822 | Navigation file - exempt |
+| docs/standards/OPERATIONAL_PATTERNS.md | 667 | Split |
+| docs/workflows/AGENT_REVIEW_PROTOCOL.md | 638 | Split |
+| docs/security/SECURITY_AUDIT_CONFIG.md | 597 | Split |
+| README.md | 565 | Landing page - exempt |

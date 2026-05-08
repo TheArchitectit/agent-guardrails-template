@@ -18,6 +18,8 @@
 | File | Lines | Required? | Purpose |
 |------|-------|-----------|---------|
 | **README.md** | ~150 | YES | Project overview and quick start |
+| **QUICK_SETUP.md** | ~270 | **YES** | **5-minute setup guide** ⭐ |
+| **PROMPTING_GUIDE.md** | ~500 | **YES** | **Master prompting techniques** ⭐ |
 | **INDEX_MAP.md** | 170 | YES | Master navigation - find docs by keyword |
 | **HEADER_MAP.md** | 408 | YES | Section headers with line numbers |
 | **CLAUDE.md** | 29 | Recommended | Optimized context for Claude Code CLI |
@@ -39,6 +41,7 @@
 | **AGENTS_AND_SKILLS_SETUP.md** | ~200 | 6 | Setup guide for Claude Code/OpenCode |
 | **CLCODE_INTEGRATION.md** | ~250 | 7 | Claude Code skills and hooks integration |
 | **OPENCODE_INTEGRATION.md** | ~300 | 8 | OpenCode agents and skills integration |
+| **PYTHON_TO_GO_MIGRATION.md** | ~350 | 11 | Python to Go migration guide (v2.6.0) |
 
 ### Workflows (`docs/workflows/`)
 
@@ -86,6 +89,32 @@
 
 **Total:** 3 sprint documents
 
+### 2026 Game Design & UI/UX (`docs/`)
+
+| File | Path | Purpose |
+|------|------|---------|
+| **2026_GAME_DESIGN.md** | `docs/game-design/` | Game design guardrails, XR/VR comfort zones, platform budgets |
+| **2026_UI_UX_STANDARD.md** | `docs/ui-ux/` | UI/UX component patterns, design tokens, responsive breakpoints |
+| **ACCESSIBILITY_GUIDE.md** | `docs/accessibility/` | WCAG 3.0+ conformance (Bronze/Silver/Gold), testing methods |
+| **SPATIAL_COMPUTING_UI.md** | `docs/spatial/` | XR/VR/AR layout patterns, comfort zones, latency requirements |
+| **ETHICAL_ENGAGEMENT.md** | `docs/ethical/` | Dark pattern taxonomy and prevention, ethical design principles |
+
+**Total:** 5 documents covering Agent-GDUI-2026 capabilities
+
+### AI-First Development & Safety (`docs/`)
+
+| File | Path | Lines | Purpose |
+|------|------|-------|---------|
+| **AI_ASSISTED_DEV.md** | `docs/ai-dev/` | 326 | AI development patterns, vibe coding, decision matrix |
+| **STATE_MANAGEMENT.md** | `docs/state/` | 303 | State architecture, client/server state, CRDTs |
+| **GENERATIVE_ASSET_SAFETY.md** | `docs/generative/` | 332 | AI content disclosure, procedural generation safety |
+| **MONETIZATION_GUARDRAILS.md** | `docs/monetization/` | 263 | IAP ethics, loot box transparency, virtual economy |
+| **MULTIPLAYER_SAFETY.md** | `docs/multiplayer/` | 276 | Social safety, chat moderation, matchmaking |
+| **ANALYTICS_ETHICS.md** | `docs/analytics/` | 302 | Analytics consent, data minimization, A/B testing |
+| **CROSS_PLATFORM_DEPLOYMENT.md** | `docs/deployment/` | 259 | App store compliance, CI/CD, feature flags |
+
+**Total:** 7 documents covering AI-first development guardrails
+
 ### Overall Documentation Summary
 
 | Category | Documents | Total Lines |
@@ -94,7 +123,9 @@
 | Workflows | 11 | ~3,500 |
 | Standards | 11 | ~4,400 |
 | Sprints | 3 | ~816 |
-| **TOTAL** | **32** | **~9,766** |
+| 2026 Game/UI/UX | 5 | ~2,500 |
+| AI-First Development | 7 | ~2,061 |
+| **TOTAL** | **44** | **~14,327** |
 
 ---
 
@@ -131,6 +162,10 @@
 | **ruby/** | 7 | ~300 | Ruby 3.0+ | BDD-style testing |
 | **rust/** | 4 | ~200 | Rust 1.70+ | Type-safe Serde config |
 | **typescript/** | 10 | ~350 | TypeScript 5+ | Modular logging hooks |
+| **scala/functional-ui/** | ~10 | ~400 | Scala 3.4+ | Functional composition, type-safe CSS, DDA telemetry |
+| **r/game-analytics/** | ~8 | ~350 | R 4.3+ | ggplot2 4.0+, Shiny 2.0+, ethics auditing |
+| **flutter/cross-platform/** | 4 | ~350 | Dart/Flutter | Ethical widgets, accessibility wrappers, guardrail config |
+| **gdscript/godot-game/** | 4 | ~300 | GDScript | XR comfort zones, ethical UI, accessibility manager |
 
 ### Examples Structure
 
@@ -219,6 +254,11 @@ All documents comply with the 500-line maximum rule:
 | Separate test/production | TEST_PRODUCTION_SEPARATION.md | CORE MANDATORY RULES (line 18) |
 | Create task document | SPRINT_TEMPLATE.md | STEP-BY-STEP EXECUTION (line 91) |
 | Write documentation | MODULAR_DOCUMENTATION.md | The 500-Line Rule (line 15) |
+| Build game interfaces | 2026_GAME_DESIGN.md | XR/VR Comfort, Platform Rules |
+| Design UI components | 2026_UI_UX_STANDARD.md | Components, Design Tokens |
+| Ensure accessibility | ACCESSIBILITY_GUIDE.md | WCAG 3.0+ Compliance |
+| Build XR/VR/AR UIs | SPATIAL_COMPUTING_UI.md | Comfort Zones, Latency |
+| Prevent dark patterns | ETHICAL_ENGAGEMENT.md | Dark Pattern Taxonomy |
 
 ---
 
@@ -237,6 +277,6 @@ All files follow these conventions:
 
 **Authored by:** TheArchitectit
 **Document Owner:** Project Maintainers
-**Last Updated:** 2026-01-21  
-**Total Files:** 91  
-**Total Lines:** ~10,000
+**Last Updated:** 2026-03-14
+**Total Files:** 96
+**Total Lines:** ~12,500

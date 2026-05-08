@@ -19,6 +19,8 @@
 | **C#** | `csharp/` | xUnit | ConfigLoader with IConfiguration |
 | **Swift** | `swift/` | XCTest | ConfigLoader with Codable |
 | **Elixir** | `elixir/` | ExUnit | Config loading with Mix environments |
+| **Scala** | `scala/functional-ui/` | scala-cli | Functional UI composition, type-safe CSS, DDA telemetry |
+| **R** | `r/game-analytics/` | Rscript | ggplot2 4.0+, Shiny 2.0+, ethics auditing, retention analysis |
 
 ---
 
@@ -107,6 +109,27 @@ swift test
 cd elixir
 mix deps.get
 mix test
+```
+
+### Scala
+```bash
+cd scala/functional-ui
+scala-cli run UI.scala
+scala-cli run data-pipeline-viz.scala
+scala-cli run procedural-gen.scala
+```
+
+### R
+```bash
+cd r/game-analytics
+Rscript shiny-dashboard.R
+Rscript retention-analysis.R
+Rscript ethics-auditor.R
+```
+
+### Shiny Dashboard (R Web Server)
+```bash
+Rscript -e "shiny::runApp('r/game-analytics')"
 ```
 
 ---

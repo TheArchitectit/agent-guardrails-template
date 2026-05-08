@@ -18,12 +18,13 @@ import (
 	"github.com/thearchitectit/guardrail-mcp/internal/config"
 	"github.com/thearchitectit/guardrail-mcp/internal/database"
 	mcpServer "github.com/thearchitectit/guardrail-mcp/internal/mcp"
+	"github.com/thearchitectit/guardrail-mcp/internal/validation"
 	"github.com/thearchitectit/guardrail-mcp/internal/web"
 )
 
 // Version information - set by ldflags during build
 var (
-	version   = "dev"
+	version   = "v2.6.0"
 	buildTime = "unknown"
 	gitCommit = "unknown"
 )
@@ -107,8 +108,18 @@ func main() {
 	// Create web server
 	webServer := web.NewServer(cfg, db, redisClient, auditLogger, version)
 
+	// Create validation engine
+	ruleStore := database.NewRuleStore(db)
+	fileReadStore := database.NewFileReadStore(db)
+	taskAttemptStore := database.NewTaskAttemptStore(db)
+	validationEngine := validation.NewValidationEngine(ruleStore, redisClient,
+		validation.WithFileReadStore(fileReadStore),
+		validation.WithTaskAttemptStore(taskAttemptStore),
+	)
+
 	// Create MCP server
-	mcpSrv := mcpServer.NewMCPServer(cfg, db, redisClient, auditLogger)
+	haltEventStore := database.NewHaltEventStore(db)
+	mcpSrv := mcpServer.NewMCPServer(cfg, db, redisClient, auditLogger, validationEngine, fileReadStore, taskAttemptStore, haltEventStore)
 
 	// Start servers
 	ctx, cancel := context.WithCancel(context.Background())

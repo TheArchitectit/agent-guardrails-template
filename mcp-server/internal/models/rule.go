@@ -13,7 +13,7 @@ type PreventionRule struct {
 	RuleID      string     `json:"rule_id" db:"rule_id"`
 	Name        string     `json:"name" db:"name"`
 	Pattern     string     `json:"pattern" db:"pattern"`
-	PatternHash string     `json:"pattern_hash" db:"pattern_hash"`
+	PatternHash *string    `json:"pattern_hash,omitempty" db:"pattern_hash"`
 	Message     string     `json:"message" db:"message"`
 	Severity    Severity   `json:"severity" db:"severity"`
 	Enabled     bool       `json:"enabled" db:"enabled"`
@@ -27,15 +27,16 @@ type PreventionRule struct {
 type Severity string
 
 const (
-	SeverityError   Severity = "error"
-	SeverityWarning Severity = "warning"
-	SeverityInfo    Severity = "info"
+	SeverityCritical Severity = "critical"
+	SeverityError    Severity = "error"
+	SeverityWarning  Severity = "warning"
+	SeverityInfo     Severity = "info"
 )
 
 // IsValidSeverity checks if a severity level is valid
 func IsValidSeverity(sev string) bool {
 	switch Severity(sev) {
-	case SeverityError, SeverityWarning, SeverityInfo:
+	case SeverityCritical, SeverityError, SeverityWarning, SeverityInfo:
 		return true
 	}
 	return false

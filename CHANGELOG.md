@@ -6,11 +6,270 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.8.0] - 2026-03-14
+
+### Major Release: AI-First Reframe & Gap Remediation
+
+**Type:** Major Version Bump (new documents + framework reframing)
+
+#### Philosophy Change
+
+- **Reframed entire framework** as AI-first rapid development enablement
+- Core message: "Guardrails are your license to move fast"
+- Vibe coding philosophy introduced across all documents
+- Constraints repositioned as speed enablers, not restrictions
+
+#### Added
+
+- **docs/ai-dev/AI_ASSISTED_DEV.md** - Centerpiece: AI development patterns, decision matrix, vibe coding workflow
+- **docs/state/STATE_MANAGEMENT.md** - State architecture decision tree, client/server/offline/CRDT patterns
+- **docs/generative/GENERATIVE_ASSET_SAFETY.md** - AI content disclosure, C2PA metadata, procedural generation safety
+- **docs/monetization/MONETIZATION_GUARDRAILS.md** - IAP ethics, loot box transparency, virtual economy balance
+- **docs/multiplayer/MULTIPLAYER_SAFETY.md** - Social safety, chat moderation, matchmaking fairness, CSAM detection
+- **docs/analytics/ANALYTICS_ETHICS.md** - Consent tiers, data minimization, A/B testing ethics
+- **docs/deployment/CROSS_PLATFORM_DEPLOYMENT.md** - App store compliance matrix, CI/CD, feature flags, progressive rollout
+- **skills/shared-prompts/vibe-coding.md** - Canonical vibe coding principles (5 principles)
+- **examples/flutter/cross-platform/** - Flutter guardrails: config, ethical widgets, accessibility wrappers
+- **examples/gdscript/godot-game/** - Godot GDScript: comfort zones, ethical UI, accessibility manager
+
+#### Changed
+
+- **README.md** - Repositioned as AI-first rapid development framework, added "The Paradox" section, vibe coding context
+- **CLAUDE.md** - Added Vibe Coding Philosophy, speed-first Token-Saving Rules framing
+- **QUICK_SETUP.md** - Added "What You Can Now Do" section, velocity-first subtitle
+- **docs/AGENT_GUARDRAILS.md** - Reframed Four Laws as speed enablers, added "How These Laws Enable Rapid Development"
+- **PROMPTING_GUIDE.md** - Added "Rapid Development Patterns (Vibe Coding)" section with 4 prompt patterns
+- **docs/game-design/2026_GAME_DESIGN.md** - Reframed as AI enablement, added "AI-Optimized Development"
+- **docs/ui-ux/2026_UI_UX_STANDARD.md** - Added "AI Generation Optimization" section
+- **docs/accessibility/ACCESSIBILITY_GUIDE.md** - Reframed for AI-generated components, Agent-GDUI-2026 enforcement
+- **docs/spatial/SPATIAL_COMPUTING_UI.md** - Added "AI-Driven Spatial Development" section
+- **docs/ethical/ETHICAL_ENGAGEMENT.md** - Added "Automated Ethical Review" section
+- **INDEX_MAP.md** - Added 10 new entries for new docs and examples
+- **HEADER_MAP.md** - Added section-level mappings for all 7 new docs
+- **TOC.md** - Added new document categories and updated totals
+
+---
+
+## [2.7.0] - 2026-03-14
+
+### Major Release: 2026 UI/UX & Game Design Update
+
+**Type:** Major Version Bump (breaking changes in documentation structure)
+
+#### Added
+
+- **Agent-GDUI-2026** role - Specialized agent for game design, spatial computing, UI/UX
+- **docs/game-design/2026_GAME_DESIGN.md** - Game design guardrails, XR/VR comfort zones, platform performance budgets
+- **docs/ui-ux/2026_UI_UX_STANDARD.md** - UI/UX component patterns, design tokens, animation, responsive breakpoints
+- **docs/accessibility/ACCESSIBILITY_GUIDE.md** - WCAG 3.0+ conformance (Bronze/Silver/Gold), perceptual/cognitive/physical accessibility
+- **docs/spatial/SPATIAL_COMPUTING_UI.md** - XR/VR/AR/MR layout patterns, comfort zones, latency requirements, depth layering
+- **docs/ethical/ETHICAL_ENGAGEMENT.md** - Dark pattern taxonomy and prevention, ethical design principles
+- **Four Laws of Spatial Safety** - Comfort First, Accessibility Required, Performance Bound, Ethical Engagement
+- **Scala examples** (`examples/scala/functional-ui/`) - Functional composition, type-safe CSS, DDA telemetry
+- **R examples** (`examples/r/game-analytics/`) - ggplot2 4.0+, Shiny 2.0+, ethics auditing, retention analysis
+
+#### Changed
+
+- **CLAUDE.md** - Added Agent-GDUI-2026 initialization context and quick links
+- **INDEX_MAP.md** - Added 2026 document entries, categories, and cross-references
+- **HEADER_MAP.md** - Added section-level mappings for all 2026 documents
+
+---
+
 ## [Unreleased]
 
 ### Added
 
+- **QUICK_SETUP.md** - 5-minute setup guide for getting started quickly
+  - TL;DR 3-step quick start
+  - Detailed setup instructions for all AI tools
+  - What happens automatically explanation
+  - Daily usage patterns
+  - Troubleshooting section
+  - Configuration examples
+
+- **PROMPTING_GUIDE.md** - Master guide for writing effective prompts
+  - Golden rules for prompting
+  - 5 prompt templates (Feature, Bug Fix, Code Review, Refactoring, Documentation)
+  - 5 common patterns with examples
+  - 5 advanced techniques
+  - Examples by use case (API, Frontend, Database, DevOps)
+  - Anti-patterns to avoid
+  - Troubleshooting section
+
 ### Changed
+
+- **README.md** - Updated with new guides in Documentation section
+  - Added QUICK_SETUP.md and PROMPTING_GUIDE.md to Core Documents table
+  - Updated "Start Here" section with links to new guides
+  - Added star indicators (⭐) for most important documents
+
+- **INDEX_MAP.md** - Added entries for new documents
+  - quick-setup → QUICK_SETUP.md
+  - prompting → PROMPTING_GUIDE.md
+
+- **TOC.md** - Added new files to Root Files section
+  - QUICK_SETUP.md: 5-minute setup guide
+  - PROMPTING_GUIDE.md: Master prompting techniques
+
+---
+
+## [2.6.0] - 2026-02-15
+
+### Migrated
+
+- **Python to Go Migration Complete** - All team management functionality migrated from Python to Go
+  - `scripts/team_manager.py` → `mcp-server/internal/team/` package
+  - `scripts/encryption.py` → `mcp-server/internal/team/encryption.go`
+  - `scripts/batch_operations.py` → Integrated into Go team package
+  - Container now uses `distroless/static` (no Python runtime needed)
+  - **Benefits:** 4x smaller container, 10x faster startup, no Python dependencies
+
+### Added
+
+- **Go Team Package** (`mcp-server/internal/team/`)
+  - `manager.go` - Core team management (init, assign, unassign, status)
+  - `encryption.go` - Fernet encryption at rest (ported from Python)
+  - `validation.go` - Input validation (project names, roles, persons)
+  - `rules.go` - Team layout rules and phase gates
+  - `metrics.go` - Team operation metrics collection
+  - `types.go` - Team data structures and interfaces
+  - `migrations.go` - Data migration utilities
+
+- **Migration Documentation**
+  - `docs/PYTHON_TO_GO_MIGRATION.md` - Complete migration guide for developers
+  - API compatibility matrix (Python → Go function mapping)
+  - Container deployment changes
+  - Troubleshooting guide
+
+### Changed
+
+- **Container Image** - Now uses `gcr.io/distroless/static:nonroot`
+  - Removed Python runtime requirement
+  - No `scripts/` volume needed
+  - Smaller attack surface
+
+- **Environment Variables**
+  - Removed: `PYTHONPATH`, `TEAM_MANAGER_SCRIPT`
+  - Kept: `TEAM_ENCRYPTION_KEY` (still used by Go implementation)
+
+### Deprecated
+
+- **Python Scripts** - `scripts/team_manager.py` and related Python files
+  - Deprecated as of v2.6.0
+  - Will be removed in v3.0.0
+  - Use Go `team` package instead
+
+### Compatibility
+
+- **MCP Tool API** - Fully backward compatible
+  - All tool names unchanged
+  - All parameters unchanged
+  - All responses identical format
+
+- **Data Format** - No migration needed
+  - `.teams/*.json` files remain compatible
+  - Existing projects work without changes
+
+---
+
+## [1.12.0] - 2026-02-12
+
+### Added
+
+- **OpenCode MCP Remote Configuration** - Complete setup documentation for remote MCP server connections
+  - Added port mapping clarification (internal vs external ports)
+  - Documented OpenCode `.opencode/oh-my-opencode.jsonc` MCP server configuration
+  - Added troubleshooting section for port confusion and authentication errors
+  - Provided working example with correct `Authorization: Bearer` header format
+
+- **Comprehensive README Documentation** - Added complete "How to Use This Platform" section
+  - Quick start guides for AI Agent Developers, DevOps teams, and Development Teams
+  - Detailed MCP tools documentation with practical examples
+  - Common use cases with real-world scenarios (preventing production accidents, code review, test/prod separation)
+  - Web UI walkthrough covering Dashboard, Documents, Rules, and Failure Registry
+  - Integration examples for GitHub Actions, VS Code, and custom Python client
+  - Enhanced troubleshooting section with MCP-specific issues
+
+### Changed
+
+- **README.md MCP Section** - Enhanced clarity for Docker/Podman deployment
+  - Added explicit port mapping table showing internal (8080/8081) vs external (8094/8095) ports
+  - Clarified which ports to use in different contexts
+  - Updated troubleshooting to include port confusion guidance
+
+- **OPENCODE_INTEGRATION.md** - Added comprehensive MCP server configuration section
+  - Documented `mcpServers` JSONC configuration format
+  - Clarified `type: "remote"` vs local MCP servers
+  - Added verification commands for testing MCP connectivity
+
+---
+
+## [1.10.0] - 2026-02-08
+
+### Added
+
+- **MCP Gap Implementation** - 5 new MCP tools for agent safety
+  - `guardrail_validate_scope` - Check if file path is within authorized scope
+  - `guardrail_validate_commit` - Validate conventional commit format
+  - `guardrail_prevent_regression` - Check failure registry for pattern matches
+  - `guardrail_check_test_prod_separation` - Verify test/production isolation
+  - `guardrail_validate_push` - Validate git push safety conditions
+
+- **MCP Documentation Resources** - 6 new MCP resources for documentation access
+  - `guardrail://docs/agent-guardrails` - Core safety protocols
+  - `guardrail://docs/four-laws` - Four Laws of Agent Safety
+  - `guardrail://docs/halt-conditions` - When to stop and ask
+  - `guardrail://docs/workflows` - Workflow documentation index
+  - `guardrail://docs/standards` - Standards documentation index
+  - `guardrail://docs/pre-work-checklist` - Pre-work regression checklist
+
+- **Web UI Management Interface** - Complete SPA for guardrail management
+  - Dashboard with system stats and health status
+  - Documents browser (CRUD + full-text search)
+  - Rules management (CRUD + toggle switches)
+  - Projects management with context editing
+  - Failure registry viewer with status updates
+  - IDE Tools validation interface
+  - 26 API endpoints implemented in JavaScript client
+
+- **Documentation Parity** - Organized 73 markdown files
+  - Consolidated "Four Laws" to canonical source
+  - Extracted 10 actionable prevention rules to JSON
+  - Created document ingestion script for full-text search
+  - Added MCP resource handlers for all critical docs
+
+### Changed
+
+- **INDEX_MAP.md** - Updated with new sprint documents and canonical sources
+- **docs/AGENT_GUARDRAILS.md** - Now references canonical Four Laws
+
+### Fixed
+
+- **MCP Server Build** - Fixed syntax errors in server.go
+  - Removed unsupported Required fields from ToolInputSchema
+  - Fixed missing closing brace for ListToolsResult struct
+
+---
+
+## [1.9.6] - 2026-02-08
+
+### Fixed
+
+- **MCP SSE Compatibility** - Restored compatibility with Crush and Go SDK clients
+  - SSE keepalive now uses comments (`: ping`) instead of custom event payloads
+  - Server now streams JSON-RPC responses as `event: message` over SSE
+  - Session-bound queueing prevents response loss on concurrent requests
+
+### Changed
+
+- **Container Build** - Runtime image now includes Web UI static assets (`/app/static`)
+- **Web API Access** - Read-only routes for documents/rules/version are publicly browsable
+
+### Documentation
+
+- Updated root README and MCP server README for session_id-based MCP message flow
+- Added release notes document: `docs/RELEASE_v1.9.6.md`
 
 ## [1.9.5] - 2026-02-08
 
