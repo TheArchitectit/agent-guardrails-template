@@ -114,6 +114,74 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.9.0] - 2026-05-08
+
+### Major Release: Core Skill Systems for All Coding Platforms
+
+**Type:** Minor Version Bump (new skills, MCP tool, install workflow)
+
+#### Added
+
+- **Pre-committed Skill Configs** — Skill files for Claude Code, Cursor, OpenCode, Windsurf, and GitHub Copilot now live in the repo root (`.claude/`, `.cursor/`, `.opencode/`, `.windsurfrules`, `.github/copilot-instructions.md`). No more generation at install time.
+
+- **Shared Skill Prompts** (`skills/shared-prompts/`) — 4 new canonical prompt files:
+  - `error-recovery.md` — Recovery protocol for failures without making things worse
+  - `three-strikes.md` — Track failure attempts, halt at 3 strikes
+  - `production-first.md` — Production code before test/infrastructure
+  - `scope-validation.md` — File scope authorization and scope creep detection
+
+- **Claude Code Skills** (`.claude/skills/`) — 7 JSON skills:
+  - `guardrails-enforcer.json`, `commit-validator.json`, `env-separator.json`
+  - `scope-validator.json`, `production-first.json`, `three-strikes.json`, `error-recovery.json`
+
+- **Claude Code Hooks** (`.claude/hooks/`) — 3 shell hooks:
+  - `pre-commit.sh` — AI attribution, no secrets, .env check
+  - `pre-execution.sh` — Guardrails preamble on operation start
+  - `post-execution.sh` — Post-modification secret/error validation
+
+- **Cursor Rules** (`.cursor/rules/`) — 3 markdown rules:
+  - `guardrails-enforcer.md`, `production-first.md`, `three-strikes.md`
+
+- **Windsurf Rules** (`.windsurfrules`) — Full guardrails preamble for Windsurf
+
+- **OpenCode Config** (`.opencode/`) — oh-my-opencode.jsonc + skills + 2 agents (`guardrails-auditor`, `doc-indexer`)
+
+- **GitHub Copilot Instructions** (`.github/copilot-instructions.md`) — Repo-level Copilot guidance
+
+- **`guardrail_install_skills` MCP Tool** — Headless setup via MCP with support for:
+  - Full platform install (`platforms` arg)
+  - Per-skill install (`skill` arg, `action=install`)
+  - Single-file clone from GitHub (`path` arg, `action=clone`)
+  - List skills/platforms (`list_skills`, `list_platforms`)
+
+#### Changed
+
+- **`scripts/setup_agents.py`** — Refactored from "generate" to "install":
+  - `--clone PATH` — Download single file from GitHub raw (branch-aware fallback)
+  - `--install-skill NAME` — Install one skill by name (23 skills registered)
+  - `--list-skills` — List all available skills with repo paths
+  - `--list-platforms` — List all available platforms
+  - `--dry-run` — Preview before installing
+  - `--mode copy|symlink` — Copy files or symlink to repo source
+  - Removed `--claude`, `--opencode`, `--minimal`, `--full` flags
+
+- **`docs/AGENTS_AND_SKILLS_SETUP.md`** — Rewritten for new pre-committed install workflow
+
+- **`docs/INDEX_MAP.md`** — Added AI TOOL INTEGRATION and SHARED SKILL PROMPTS sections
+
+- **`docs/HEADER_MAP.md`** — Added AGENTS_AND_SKILLS_SETUP.md and SHARED SKILL PROMPTS sections
+
+#### Merged from Main
+
+- PR #3: SSE timeout resilience fix
+- Sprint 005: Pre-Commit Safety Suite
+- Sprint 006: Custom Advisor Roles System
+- v2.0.0 / v2.7.0 / v2.8.0 releases
+- IDE extensions (VS Code, JetBrains, Neovim, Vim)
+- Team management tools (Python → Go migration)
+
+---
+
 ## [2.6.0] - 2026-02-15
 
 ### Migrated
