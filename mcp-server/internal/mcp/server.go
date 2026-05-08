@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"os/exec"
 	"strconv"
 	"strings"
 	"sync"
@@ -1020,9 +1021,35 @@ func (s *MCPServer) registerTools() {
 				},
 			},
 		},
+		{
+			Name:        "guardrail_install_skills",
+			Description: "Install pre-committed guardrails skill configs for AI coding platforms (Claude, Cursor, OpenCode, Windsurf, Copilot)",
+			InputSchema: mcp.ToolInputSchema{
+				Type: "object",
+				Properties: mcp.ToolInputSchemaProperties{
+					"target_path": map[string]interface{}{
+						"type":        "string",
+						"description": "Target project directory path (default: current working directory)",
+					},
+					"platforms": map[string]interface{}{
+						"type":        "string",
+						"description": "Comma-separated list of platforms: claude, cursor, opencode, windsurf, copilot (default: all)",
+					},
+					"mode": map[string]interface{}{
+						"type":        "string",
+						"description": "Installation mode: 'copy' or 'symlink' (default: copy)",
+						"enum":        []string{"copy", "symlink"},
+					},
+					"dry_run": map[string]interface{}{
+						"type":        "boolean",
+						"description": "Preview what would be installed without making changes (default: false)",
+					},
+				},
 			},
-		}, nil
-	})
+		},
+		},
+	}, nil
+})
 
 	// Handle tool calls
 	s.mcpServer.HandleCallTool(s.handleToolCall)
@@ -1160,6 +1187,8 @@ func (s *MCPServer) handleToolCall(ctx context.Context, name string, arguments m
 		return s.handleDetectFeatureCreep(ctx, arguments)
 	case "guardrail_verify_fixes_intact":
 		return s.handleVerifyFixesIntact(ctx, arguments)
+	case "guardrail_install_skills":
+		return s.handleInstallSkills(ctx, arguments)
 	// Team Layout Management Tools - TODO: implement handlers
 	case "guardrail_team_init", "guardrail_team_list", "guardrail_team_assign",
 		"guardrail_team_unassign", "guardrail_team_start", "guardrail_team_status",
@@ -2152,4 +2181,54 @@ func (s *MCPServer) deleteSessionsBatch(ids []string) {
 	for _, id := range ids {
 		delete(s.sessions, id)
 	}
+}
+
+// handleInstallSkills installs guardrails skill configs for AI coding platforms
+func (s *MCPServer) handleInstallSkills(ctx context.Context, args map[string]interface{}) (*mcp.CallToolResult, error) {
+	targetPath, _ := args["target_path"].(string)
+	platforms, _ := args["platforms"].(string)
+	mode, _ := args["mode"].(string)
+	dryRun, _ := args["dry_run"].(bool)
+
+	if mode == "" {
+		mode = "copy"
+	}
+	if platforms == "" {
+		platforms = "all"
+	}
+
+	// Build command arguments
+	cmdArgs := []string{"scripts/setup_agents.py", "--install", "--mode", mode}
+	if dryRun {
+		cmdArgs = append(cmdArgs, "--dry-run")
+	}
+	if targetPath != "" {
+		cmdArgs = append(cmdArgs, "--target", targetPath)
+	}
+	if platforms != "all" {
+		cmdArgs = append(cmdArgs, "--platform", platforms)
+	}
+
+	cmd := exec.Command("python3", cmdArgs...)
+	cmd.Dir = s.cfg.BaseDir
+	output, err := cmd.CombinedOutput()
+
+	result := map[string]interface{}{
+		"command": "python3 " + strings.Join(cmdArgs, " "),
+		"stdout":  string(output),
+	}
+	if err != nil {
+		result["error"] = err.Error()
+		resultJSON, _ := json.Marshal(result)
+		return &mcp.CallToolResult{
+			Content: []interface{}{mcp.TextContent{Type: "text", Text: string(resultJSON)}},
+			IsError: true,
+		}, nil
+	}
+
+	resultJSON, _ := json.Marshal(result)
+	return &mcp.CallToolResult{
+		Content: []interface{}{mcp.TextContent{Type: "text", Text: string(resultJSON)}},
+		IsError: false,
+	}, nil
 }
