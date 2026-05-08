@@ -1023,26 +1023,47 @@ func (s *MCPServer) registerTools() {
 		},
 		{
 			Name:        "guardrail_install_skills",
-			Description: "Install pre-committed guardrails skill configs for AI coding platforms (Claude, Cursor, OpenCode, Windsurf, Copilot)",
+			Description: "Install or clone guardrails skill configs. Use 'skill' for per-skill install/clone, 'platforms' for full platform install, or 'path' for single-file clone.",
 			InputSchema: mcp.ToolInputSchema{
 				Type: "object",
 				Properties: mcp.ToolInputSchemaProperties{
 					"target_path": map[string]interface{}{
 						"type":        "string",
-						"description": "Target project directory path (default: current working directory)",
+						"description": "Target project directory path (default: current directory)",
 					},
 					"platforms": map[string]interface{}{
 						"type":        "string",
-						"description": "Comma-separated list of platforms: claude, cursor, opencode, windsurf, copilot (default: all)",
+						"description": "Comma-separated list of platforms: claude, cursor, opencode, windsurf, copilot (default: all). Use with action=install.",
+					},
+					"skill": map[string]interface{}{
+						"type":        "string",
+						"description": "Install a single skill by name (e.g. 'guardrails-enforcer', 'commit-validator', 'four-laws'). Use action=install. Run list_skills=true to see all.",
+					},
+					"path": map[string]interface{}{
+						"type":        "string",
+						"description": "Clone a single file by repo path (e.g. '.claude/skills/guardrails-enforcer.json'). Downloads from GitHub raw. Use with action=clone.",
+					},
+					"action": map[string]interface{}{
+						"type":        "string",
+						"description": "Action to perform: 'install' (default), 'clone' (download from GitHub), 'list' (list skills/platforms)",
+						"enum":        []string{"install", "clone", "list"},
+					},
+					"list_skills": map[string]interface{}{
+						"type":        "boolean",
+						"description": "List all available skills and exit",
+					},
+					"list_platforms": map[string]interface{}{
+						"type":        "boolean",
+						"description": "List all available platforms and exit",
 					},
 					"mode": map[string]interface{}{
 						"type":        "string",
-						"description": "Installation mode: 'copy' or 'symlink' (default: copy)",
+						"description": "Installation mode: 'copy' or 'symlink' (default: copy). Applies to action=install.",
 						"enum":        []string{"copy", "symlink"},
 					},
 					"dry_run": map[string]interface{}{
 						"type":        "boolean",
-						"description": "Preview what would be installed without making changes (default: false)",
+						"description": "Preview what would be done without making changes (default: false)",
 					},
 				},
 			},
@@ -2189,24 +2210,52 @@ func (s *MCPServer) handleInstallSkills(ctx context.Context, args map[string]int
 	platforms, _ := args["platforms"].(string)
 	mode, _ := args["mode"].(string)
 	dryRun, _ := args["dry_run"].(bool)
+	action, _ := args["action"].(string)
+	skill, _ := args["skill"].(string)
+	path, _ := args["path"].(string)
+	listSkills, _ := args["list_skills"].(bool)
+	listPlatforms, _ := args["list_platforms"].(bool)
 
 	if mode == "" {
 		mode = "copy"
 	}
-	if platforms == "" {
-		platforms = "all"
-	}
 
 	// Build command arguments
-	cmdArgs := []string{"scripts/setup_agents.py", "--install", "--mode", mode}
-	if dryRun {
-		cmdArgs = append(cmdArgs, "--dry-run")
-	}
-	if targetPath != "" {
-		cmdArgs = append(cmdArgs, "--target", targetPath)
-	}
-	if platforms != "all" {
-		cmdArgs = append(cmdArgs, "--platform", platforms)
+	var cmdArgs []string
+	if listSkills {
+		cmdArgs = []string{"scripts/setup_agents.py", "--list-skills"}
+	} else if listPlatforms {
+		cmdArgs = []string{"scripts/setup_agents.py", "--list-platforms"}
+	} else if path != "" {
+		// Clone a single file by repo path
+		cmdArgs = []string{"scripts/setup_agents.py", "--clone", path}
+		if dryRun {
+			cmdArgs = append(cmdArgs, "--dry-run")
+		}
+		if targetPath != "" {
+			cmdArgs = append(cmdArgs, "--target", targetPath)
+		}
+	} else if skill != "" {
+		// Install a single skill by name
+		cmdArgs = []string{"scripts/setup_agents.py", "--install-skill", skill, "--mode", mode}
+		if dryRun {
+			cmdArgs = append(cmdArgs, "--dry-run")
+		}
+		if targetPath != "" {
+			cmdArgs = append(cmdArgs, "--target", targetPath)
+		}
+	} else {
+		// Full platform install
+		cmdArgs = []string{"scripts/setup_agents.py", "--install", "--mode", mode}
+		if dryRun {
+			cmdArgs = append(cmdArgs, "--dry-run")
+		}
+		if targetPath != "" {
+			cmdArgs = append(cmdArgs, "--target", targetPath)
+		}
+		if platforms != "" {
+			cmdArgs = append(cmdArgs, "--platform", platforms)
+		}
 	}
 
 	cmd := exec.Command("python3", cmdArgs...)
