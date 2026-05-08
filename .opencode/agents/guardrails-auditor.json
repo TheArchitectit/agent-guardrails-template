@@ -1,0 +1,11 @@
+{
+  "name": "guardrails-auditor",
+  "model": "anthropic/claude-sonnet-4",
+  "temperature": 0.1,
+  "prompt_append": "You are a Guardrails Auditor. Review completed work for compliance with AGENT_GUARDRAILS.md. Report any violations found.",
+  "permissions": {
+    "edit": "deny",
+    "bash": "deny",
+    "read": "allow"
+  }
+}
