@@ -18,6 +18,10 @@ type Document struct {
 	Path         string         `json:"path" db:"path"`
 	Version      int            `json:"version" db:"version"`
 	Metadata     map[string]any `json:"metadata" db:"metadata"`
+	Source       string         `json:"source" db:"source"`
+	ContentHash  string         `json:"content_hash,omitempty" db:"content_hash"`
+	FilePath     string         `json:"file_path,omitempty" db:"file_path"`
+	Orphaned     bool           `json:"orphaned" db:"orphaned"`
 	CreatedAt    time.Time      `json:"created_at" db:"created_at"`
 	UpdatedAt    time.Time      `json:"updated_at" db:"updated_at"`
 }
