@@ -28,11 +28,22 @@ This document is **MANDATORY** for:
 
 This document defines mandatory safety protocols, guardrails, and behavioral constraints for ALL automated systems performing tasks on this repository. These rules exist to:
 
-1. **Prevent data loss** - Avoid destructive operations
-2. **Maintain code quality** - Ensure changes are correct and tested
-3. **Preserve history** - Keep git history clean and reversible
-4. **Enable collaboration** - Allow humans and agents to work together safely
-5. **Limit blast radius** - Contain errors to minimal scope
+1. **Prevent data loss** — enabling safe rapid iteration without backup anxiety
+2. **Maintain code quality** — so AI-generated code ships without manual review overhead
+3. **Preserve history** — keeping git history clean and reversible
+4. **Enable collaboration** — allowing humans and agents to work together safely
+5. **Limit blast radius** — containing errors to minimal scope
+
+### How These Laws Enable Rapid Development
+
+The Four Laws aren't restrictions — they're accelerators. Here's why:
+
+- **Read Before Editing** eliminates rework. One read costs fewer tokens than fixing a blind edit.
+- **Stay in Scope** prevents cascade failures. Agents move faster when they're not untangling unintended side effects.
+- **Verify Before Committing** catches errors at the cheapest point. A failed test in development costs minutes; in production, it costs hours.
+- **Halt When Uncertain** prevents wasted effort. Asking one question is cheaper than building the wrong thing.
+
+When agents follow these laws, they don't need to pause for safety checks — safety is built into every step. The result: full-velocity development with production-grade reliability.
 
 ---
 
@@ -40,25 +51,13 @@ This document defines mandatory safety protocols, guardrails, and behavioral con
 
 ### The Four Laws of Agent Safety
 
-```
-1. AN AGENT SHALL NOT MODIFY CODE IT HAS NOT READ
-   - Always read target files before editing
-   - Understand context before making changes
+See [skills/shared-prompts/four-laws.md](../skills/shared-prompts/four-laws.md) for the complete Four Laws documentation.
 
-2. AN AGENT SHALL NOT EXCEED ITS DECLARED SCOPE
-   - Only touch files explicitly in scope
-   - Never "improve" or "clean up" adjacent code
-
-3. AN AGENT SHALL VERIFY BEFORE COMMITTING
-   - Syntax check must pass
-   - Tests must pass
-   - Manual verification must confirm fix
-
-4. AN AGENT SHALL HALT WHEN UNCERTAIN
-   - Stop and report if conditions don't match
-   - Never guess or assume
-   - Ask for clarification
-```
+**Quick Reference:**
+1. **Read Before Editing** - Never modify code without reading first
+2. **Stay in Scope** - Only touch authorized files
+3. **Verify Before Committing** - Test all changes
+4. **Halt When Uncertain** - Ask instead of guessing
 
 ---
 
