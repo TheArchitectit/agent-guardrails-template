@@ -254,6 +254,34 @@
 |---------|------|--------|
 | OpenCode Integration | 1 | 0 |
 
+### AGENTS_AND_SKILLS_SETUP.md (docs/AGENTS_AND_SKILLS_SETUP.md)
+
+| Section | Line | Offset |
+|---------|------|--------|
+| Quick Start | 1 | 0 |
+| Available Platforms | 23 | 22 |
+| MCP Tool | 37 | 36 |
+| What Gets Created | 44 | 43 |
+| Platform-Specific Guides | 57 | 56 |
+| Available Skills | 61 | 60 |
+| Customization | 91 | 90 |
+| Troubleshooting | 145 | 144 |
+| Script-Based Workflows | 164 | 163 |
+
+---
+
+## SHARED SKILL PROMPTS (skills/shared-prompts/)
+
+| File | Purpose |
+|------|---------|
+| four-laws.md | Four Laws of Agent Safety |
+| halt-conditions.md | When to stop and escalate |
+| vibe-coding.md | Vibe coding principles |
+| error-recovery.md | How to recover from failures |
+| three-strikes.md | Failure attempt tracking |
+| production-first.md | Production before test |
+| scope-validation.md | File scope authorization |
+
 ---
 
 ## LANGUAGE-SPECIFIC EXAMPLES

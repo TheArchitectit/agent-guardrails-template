@@ -1,18 +1,49 @@
 # Agent Guardrails - Agents and Skills Setup
 
-This guide explains how to set up custom agents, skills, and hooks for Claude Code and OpenCode.
+This guide explains how to install pre-committed guardrails configurations for Claude Code, Cursor, OpenCode, Windsurf, and GitHub Copilot.
 
 ## Quick Start
 
-Run the setup script to generate configuration files:
+The setup script **installs** (copies or symlinks) pre-committed configs from this repository:
 
 ```bash
-# Minimal setup (guardrails-enforcer only)
-python scripts/setup_agents.py --claude --minimal
-python scripts/setup_agents.py --opencode --minimal
+# Preview what would be installed
+python scripts/setup_agents.py --install --dry-run
 
-# Full setup (all skills, agents, and hooks)
-python scripts/setup_agents.py --claude --opencode --full
+# Install all platforms to current directory
+python scripts/setup_agents.py --install
+
+# Install specific platforms
+python scripts/setup_agents.py --install --platform claude,cursor,windsurf
+
+# Install to a different project directory
+python scripts/setup_agents.py --install --platform claude --target ~/myproject
+
+# Symlink instead of copy (updates track the repo)
+python scripts/setup_agents.py --install --platform claude,cursor --mode symlink
+```
+
+### Available Platforms
+
+| Platform | Config Location | Description |
+|----------|----------------|-------------|
+| claude | `.claude/` | Claude Code skills and hooks |
+| cursor | `.cursor/rules/` | Cursor rules |
+| opencode | `.opencode/` | OpenCode agents and skills |
+| windsurf | `.windsurfrules` | Windsurf rules |
+| copilot | `.github/copilot-instructions.md` | GitHub Copilot instructions |
+
+### MCP Tool
+
+The `guardrail_install_skills` MCP tool wraps the install script:
+
+```
+guardrail_install_skills({
+  target_path: "/path/to/project",
+  platforms: "claude,cursor,windsurf",
+  mode: "copy",
+  dry_run: false
+})
 ```
 
 ## What Gets Created
