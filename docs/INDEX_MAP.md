@@ -99,6 +99,7 @@
 | team structure | [TEAM_STRUCTURE.md](TEAM_STRUCTURE.md) | docs/ |
 | deployment | [DEPLOYMENT_GUIDE.md](../mcp-server/DEPLOYMENT_GUIDE.md) | mcp-server/ |
 | API | [API.md](../mcp-server/API.md) | mcp-server/ |
+| clean architecture, CQRS, vertical slices, SOLID, DDD | [ARCHITECTURE_CLEAN_CQRS.md](ARCHITECTURE_CLEAN_CQRS.md) | docs/ |
 
 ---
 
@@ -109,12 +110,12 @@
 | Claude Code | [CLCODE_INTEGRATION.md](CLCODE_INTEGRATION.md) | docs/ |
 | OpenCode | [OPCODE_INTEGRATION.md](OPCODE_INTEGRATION.md) | docs/ |
 | Cursor | [CURSOR_INTEGRATION.md](CURSOR_INTEGRATION.md) | docs/ |
-| agents and skills setup | [AGENTS_AND_SKILLS_SETUP.md](AGENTS_AND_SKILLS_SETUP.md) | docs/ |
-| Windsurf | [.windsurfrules](../.windsurfrules) | / (root) |
-| Copilot | [.github/copilot-instructions.md](../.github/copilot-instructions.md) | / (root) |
-| skill configs | [.claude/skills/](.claude/skills/) | / (root) |
-| Cursor rules | [.cursor/rules/](.cursor/rules/) | / (root) |
-| OpenCode skills | [.opencode/](.opencode/) | / (root) |
+| Windsurf | [WINDSURF_INTEGRATION.md](WINDSURF_INTEGRATION.md) | docs/ |
+| GitHub Copilot | [COPILOT_INTEGRATION.md](COPILOT_INTEGRATION.md) | docs/ |
+| agents, skills, setup, install, MCP tool, platform comparison | [AGENTS_AND_SKILLS_SETUP.md](AGENTS_AND_SKILLS_SETUP.md) | docs/ |
+| skill configs | [.claude/skills/](../.claude/skills/) | / (root) |
+| Cursor rules | [.cursor/rules/](../.cursor/rules/) | / (root) |
+| OpenCode skills | [.opencode/](../.opencode/) | / (root) |
 
 ---
 
@@ -129,6 +130,8 @@
 | three strikes | [skills/shared-prompts/three-strikes.md](../skills/shared-prompts/three-strikes.md) | / (root) |
 | production-first | [skills/shared-prompts/production-first.md](../skills/shared-prompts/production-first.md) | / (root) |
 | scope validation | [skills/shared-prompts/scope-validation.md](../skills/shared-prompts/scope-validation.md) | / (root) |
+| clean architecture | [skills/shared-prompts/clean-architecture.md](../skills/shared-prompts/clean-architecture.md) | / (root) |
+| CQRS | [skills/shared-prompts/cqrs.md](../skills/shared-prompts/cqrs.md) | / (root) |
 | shared-prompt-install | [AGENTS_AND_SKILLS_SETUP.md](AGENTS_AND_SKILLS_SETUP.md) | docs/ |
 
 ---
@@ -193,6 +196,6 @@
 
 ---
 
-**Last Updated:** 2026-03-14
+**Last Updated:** 2026-05-09
 **Document Owner:** Documentation Team
 **Token Savings:** 60-80% vs full document reads

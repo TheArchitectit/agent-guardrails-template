@@ -1,22 +1,22 @@
 # OpenCode Integration
 
-This guide explains how to integrate Agent Guardrails with OpenCode using custom agents, skills, and hooks.
+This guide explains how to integrate Agent Guardrails with OpenCode using agents, skills, and hooks.
 
 ## Overview
 
 OpenCode supports:
-- **Agents** - JSON files that define specialized agent behaviors
-- **Skills** - Markdown files with tool definitions and prompts
-- **Hooks** - Shell scripts that run at specific points
+- **Agents** - JSON configurations that define specialized agent behaviors, model selection, and permissions
+- **Skills** - Markdown files with structured tool definitions and instructions
+- **Hooks** - Shell scripts that run at specific lifecycle points
 
-The setup script generates these configurations for you.
+The setup script installs these configurations for you.
 
 ## Setup
 
-### 1. Run Setup Script
+### 1. Install All Configs
 
 ```bash
-python scripts/setup_agents.py --opencode --full
+python scripts/setup_agents.py --install --platform opencode
 ```
 
 This creates:
@@ -25,12 +25,16 @@ This creates:
 ├── oh-my-opencode.jsonc
 ├── agents/
 │   ├── guardrails-enforcer.json
-│   ├── commit-validator.json
-│   └── env-separator.json
+│   ├── guardrails-auditor.json
+│   └── doc-indexer.json
 ├── skills/
 │   ├── guardrails-enforcer.md
 │   ├── commit-validator.md
-│   └── env-separator.md
+│   ├── env-separator.md
+│   ├── scope-validator.md
+│   ├── production-first.md
+│   ├── three-strikes.md
+│   └── error-recovery.md
 └── hooks/
     ├── pre-execution.sh
     ├── post-execution.sh
@@ -54,31 +58,75 @@ Check that hooks are executable:
 ls -la .opencode/hooks/
 ```
 
-## How It Works
+Validate the main config:
+```bash
+python -m json.tool .opencode/oh-my-opencode.jsonc
+```
 
-### Agents
+## Agent JSON Format
 
-Agents are JSON files with:
-- `name` - Unique identifier
-- `description` - What the agent does
-- `tools` - Allowed tools for this agent
-- `prompt` - Instructions injected into context
+Agents are defined in `oh-my-opencode.jsonc` (JSON with comments). Each agent has four fields:
 
-**Example: guardrails-enforcer.json**
-```json
+| Field | Type | Description |
+|-------|------|-------------|
+| `model` | string | Model identifier (e.g., `anthropic/claude-sonnet-4`) |
+| `temperature` | number | Sampling temperature (0.0 = deterministic, 1.0 = creative) |
+| `prompt_append` | string | Instructions appended to the agent's system prompt |
+| `permissions` | object | Tool permissions (`allow`, `ask`, `deny`) |
+
+### Example: oh-my-opencode.jsonc
+
+```jsonc
 {
-  "name": "guardrails-enforcer",
-  "description": "Enforces the Four Laws of Agent Safety",
-  "tools": ["Read", "Grep", "Glob"],
-  "prompt": "You MUST enforce these rules..."
+  "$schema": "https://raw.githubusercontent.com/code-yeongyu/oh-my-opencode/master/assets/oh-my-opencode.schema.json",
+  "agents": {
+    "guardrails-enforcer": {
+      "model": "anthropic/claude-sonnet-4",
+      "temperature": 0.1,
+      "prompt_append": "You are the Guardrails Enforcement Agent. Before ANY operation verify: 1) File has been read, 2) Scope is authorized, 3) Rollback is known, 4) No forbidden patterns. HALT and ask if uncertain.",
+      "permissions": {
+        "edit": "ask",
+        "bash": "ask",
+        "webfetch": "allow",
+        "read": "allow"
+      }
+    },
+    "guardrails-auditor": {
+      "model": "anthropic/claude-sonnet-4",
+      "temperature": 0.1,
+      "prompt_append": "You are a Guardrails Auditor. Review completed work for compliance...",
+      "permissions": {
+        "edit": "deny",
+        "bash": "deny",
+        "read": "allow"
+      }
+    }
+  },
+  "skills": {
+    "sources": [
+      {"path": "./.opencode/skills", "recursive": true}
+    ],
+    "enable": [
+      "guardrails-enforcer",
+      "commit-validator",
+      "env-separator"
+    ]
+  }
 }
 ```
 
-### Skills
+### Permission Levels
 
-Skills are Markdown files with structured prompts:
+| Level | Behavior |
+|-------|----------|
+| `allow` | Always permitted without prompting |
+| `ask` | Prompt the user before executing |
+| `deny` | Never permitted |
 
-**Example: guardrails-enforcer.md**
+## Skill Markdown Format
+
+Skills are markdown files in `.opencode/skills/` with structured sections:
+
 ```markdown
 # Guardrails Enforcer
 
@@ -98,7 +146,12 @@ You MUST enforce these rules:
 4. Halt when uncertain
 ```
 
-### Hooks
+Sections are parsed as follows:
+- **Description** - One-line summary of the skill
+- **Tools** - Allowed tools for this skill
+- **Instructions** - Detailed prompt injected into context
+
+## Hook Details
 
 Hooks are shell scripts that run automatically:
 
@@ -108,125 +161,11 @@ Hooks are shell scripts that run automatically:
 | `post-execution.sh` | After file modifications | Validate changes |
 | `pre-commit.sh` | Before git commit | Validate commit message |
 
-## Skill Details
-
-### guardrails-enforcer
-
-**Purpose:** Enforces the Four Laws of Agent Safety
-
-**Rules Enforced:**
-1. Read before editing
-2. Stay in scope
-3. Verify before committing
-4. Halt when uncertain
-
-**Halt Conditions:**
-- Modifying unread code
-- Unclear scope boundaries
-- No rollback procedure
-- Test/production mix
-- Three failed attempts
-
-### commit-validator
-
-**Purpose:** Validates git commits
-
-**Checks:**
-- AI attribution present (`Co-Authored-By:`)
-- Single focus per commit
-- No secrets in diff
-- Tests pass
-
-**Commit Format:**
-```
-<type>: <description>
-
-Co-Authored-By: Claude <noreply@anthropic.com>
-```
-
-### env-separator
-
-**Purpose:** Enforces test/production separation
-
-**Rules:**
-- Production code before tests
-- Separate service instances
-- No test data in production
-
-**Detection:**
-- Production DB connections in tests
-- Shared instances
-- Hardcoded production credentials
-
-## Customization
-
-### Adding a Custom Agent
-
-1. Create a new JSON file in `.opencode/agents/`:
-
-```json
-{
-  "name": "my-agent",
-  "description": "What it does",
-  "tools": ["Read", "Bash"],
-  "prompt": "Your instructions here..."
-}
-```
-
-2. Create corresponding skill in `.opencode/skills/`:
-
-```markdown
-# My Agent
-
-## Description
-What it does
-
-## Tools
-- Read
-- Bash
-
-## Instructions
-Your detailed instructions here...
-```
-
-3. Update `oh-my-opencode.jsonc` to include the new agent
-
-### Modifying Hooks
-
-Edit the shell scripts in `.opencode/hooks/`:
+### Custom Hook Example
 
 ```bash
 #!/bin/bash
-# Custom pre-execution logic
-echo "Running custom checks..."
-# Add your validation here
-```
-
-Make sure hooks remain executable:
-```bash
-chmod +x .opencode/hooks/*.sh
-```
-
-## Advanced Configuration
-
-### Agent Selection
-
-By default, all agents are active. To disable an agent temporarily:
-
-1. Move it out of the agents directory:
-```bash
-mv .opencode/agents/commit-validator.json .opencode/agents/disabled/
-```
-
-2. Update `oh-my-opencode.jsonc` to remove from active agents list
-
-### Hook Chaining
-
-Hooks can call other tools:
-
-```bash
-#!/bin/bash
-# pre-commit.sh
+# .opencode/hooks/pre-commit.sh
 
 # Run linter
 npm run lint
@@ -238,45 +177,108 @@ npm test
 trufflehog git file://. --since-commit HEAD
 ```
 
+## Shared Prompts Reference
+
+All agent prompts and skill instructions incorporate rules from the shared prompts directory:
+
+| Shared Prompt | Used By |
+|---------------|---------|
+| `skills/shared-prompts/four-laws.md` | guardrails-enforcer agent/skill |
+| `skills/shared-prompts/halt-conditions.md` | guardrails-enforcer agent/skill |
+| `skills/shared-prompts/three-strikes.md` | three-strikes skill |
+| `skills/shared-prompts/production-first.md` | production-first skill |
+| `skills/shared-prompts/clean-architecture.md` | guardrails-enforcer agent |
+| `skills/shared-prompts/cqrs.md` | guardrails-enforcer agent |
+| `skills/shared-prompts/scope-validation.md` | scope-validator skill |
+| `skills/shared-prompts/error-recovery.md` | error-recovery skill |
+
+When shared prompts are updated, re-run the setup script:
+
+```bash
+python scripts/setup_agents.py --install --platform opencode
+```
+
+## Customization
+
+### Adding a Custom Agent
+
+1. Add an entry to the `agents` object in `oh-my-opencode.jsonc`:
+
+```jsonc
+{
+  "agents": {
+    "my-agent": {
+      "model": "anthropic/claude-haiku-4",
+      "temperature": 0.0,
+      "prompt_append": "Your instructions here...",
+      "permissions": {
+        "edit": "ask",
+        "bash": "deny",
+        "read": "allow"
+      }
+    }
+  }
+}
+```
+
+2. Create a corresponding skill in `.opencode/skills/my-agent.md`.
+3. Add the skill name to the `skills.enable` array.
+
+### Disabling an Agent
+
+1. Remove it from the `agents` object in `oh-my-opencode.jsonc`.
+2. Remove its skill from the `skills.enable` array.
+3. Optionally move agent/skill files to a `disabled/` subdirectory.
+
+### Cloning a Single Skill
+
+```bash
+python scripts/setup_agents.py --install-skill guardrails-enforcer --platform opencode
+```
+
+## Installation Modes
+
+| Mode | Command | Behavior |
+|------|---------|----------|
+| Copy | `--mode copy` (default) | Writes standalone copies to the project |
+| Symlink | `--mode symlink` | Creates symlinks back to this repo |
+
 ## Troubleshooting
 
 ### Agents Not Loading
 
-**Check:**
-- JSON syntax is valid: `python -m json.tool .opencode/agents/*.json`
-- Files are in correct directory
-- `oh-my-opencode.jsonc` references the agents correctly
+- JSON syntax: `python -m json.tool .opencode/oh-my-opencode.jsonc`
+- Agent entries exist in the `agents` object
+- `oh-my-opencode.jsonc` is in `.opencode/` directory
 
 ### Skills Not Loading
 
-**Check:**
-- Markdown files have proper frontmatter headers
+- Markdown files have proper `## Description`, `## Tools`, `## Instructions` sections
 - Files are in `.opencode/skills/` directory
-- Agent configs reference correct skill names
+- Skill names appear in `skills.enable` array
 
 ### Hooks Not Running
 
-**Check:**
-- Hooks are executable: `chmod +x .opencode/hooks/*.sh`
-- Shell syntax is valid: `bash -n .opencode/hooks/pre-execution.sh`
+- Check executable bit: `chmod +x .opencode/hooks/*.sh`
+- Validate shell syntax: `bash -n .opencode/hooks/pre-execution.sh`
 - Hook names match expected patterns in config
 
 ### Permission Denied
 
-**Fix:**
 ```bash
 chmod +x .opencode/hooks/*.sh
 ```
 
 ## Best Practices
 
-1. **Keep agents focused** - One agent = One responsibility
-2. **Test hooks independently** - Run scripts manually to verify
-3. **Document customizations** - Add comments to modified files
-4. **Version control** - Commit `.opencode/` to share with team
+1. **One agent = one responsibility** - Keep agents focused and composable
+2. **Use low temperature for guardrails** - Deterministic enforcement (0.0-0.1)
+3. **Test hooks manually** - Run scripts directly to verify behavior
+4. **Regenerate after shared prompt updates** - Re-run setup to sync
+5. **Commit `.opencode/` to version control** - Team shares the same guardrails
 
 ## References
 
-- [OpenCode Documentation](https://docs.opencode.ai)
+- [AGENTS_AND_SKILLS_SETUP.md](AGENTS_AND_SKILLS_SETUP.md) - Unified setup guide
 - [AGENT_GUARDRAILS.md](AGENT_GUARDRAILS.md) - Core safety protocols
-- [AGENTS_AND_SKILLS_SETUP.md](AGENTS_AND_SKILLS_SETUP.md) - General setup guide
+- [skills/shared-prompts/](../skills/shared-prompts/) - Canonical prompt definitions
