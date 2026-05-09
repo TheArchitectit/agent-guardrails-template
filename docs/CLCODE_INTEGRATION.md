@@ -1,21 +1,21 @@
 # Claude Code Integration
 
-This guide explains how to integrate Agent Guardrails with Claude Code using custom skills and hooks.
+This guide explains how to integrate Agent Guardrails with Claude Code using skills and hooks.
 
 ## Overview
 
 Claude Code supports:
-- **Skills** - JSON files that define specialized behaviors
-- **Hooks** - Shell scripts that run at specific points
+- **Skills** - JSON files that define specialized behaviors and constraints
+- **Hooks** - Shell scripts that run at specific lifecycle points
 
-The setup script generates these configurations for you.
+The setup script installs these configurations for you.
 
 ## Setup
 
-### 1. Run Setup Script
+### 1. Install All Skills and Hooks
 
 ```bash
-python scripts/setup_agents.py --claude --full
+python scripts/setup_agents.py --install --platform claude
 ```
 
 This creates:
@@ -24,18 +24,41 @@ This creates:
 ├── skills/
 │   ├── guardrails-enforcer.json
 │   ├── commit-validator.json
-│   └── env-separator.json
+│   ├── env-separator.json
+│   ├── scope-validator.json
+│   ├── production-first.json
+│   ├── three-strikes.json
+│   └── error-recovery.json
 └── hooks/
     ├── pre-execution.sh
     ├── post-execution.sh
     └── pre-commit.sh
 ```
 
-### 2. Verify Installation
+### 2. Install a Single Skill
+
+To install just one skill by name:
+
+```bash
+python scripts/setup_agents.py --install-skill guardrails-enforcer
+```
+
+Use `--list-skills` to see all available skill names:
+
+```bash
+python scripts/setup_agents.py --list-skills
+```
+
+### 3. Verify Installation
 
 Check that skills are loaded:
 ```bash
 ls -la .claude/skills/
+```
+
+Validate JSON syntax:
+```bash
+python -m json.tool .claude/skills/guardrails-enforcer.json
 ```
 
 Check that hooks are executable:
@@ -43,29 +66,33 @@ Check that hooks are executable:
 ls -la .claude/hooks/
 ```
 
-## How It Works
+## Skill File Format
 
-### Skills
+Skills are JSON files in `.claude/skills/`. Each file has four fields:
 
-Skills are JSON files with:
-- `name` - Unique identifier
-- `description` - What the skill does
-- `tools` - Allowed tools for this skill
-- `prompt` - Instructions injected into context
+| Field | Type | Description |
+|-------|------|-------------|
+| `name` | string | Unique identifier for the skill |
+| `description` | string | What the skill does (shown in skill list) |
+| `tools` | array | Allowed tools for this skill |
+| `prompt` | string | Instructions injected into the session context |
 
-**Example: guardrails-enforcer.json**
+### Example: guardrails-enforcer.json
+
 ```json
 {
   "name": "guardrails-enforcer",
-  "description": "Enforces the Four Laws of Agent Safety",
-  "tools": ["Read", "Grep", "Glob"],
-  "prompt": "You MUST enforce these rules..."
+  "description": "Enforces the Four Laws of Agent Safety: read-before-edit, stay-in-scope, verify-before-commit, halt-when-uncertain",
+  "tools": ["Read", "Grep", "Glob", "AskUserQuestion"],
+  "prompt": "# Guardrails Enforcement Agent\n\nYou are the Guardrails Enforcement Agent. You MUST enforce these rules on EVERY operation.\n\n## The Four Laws of Agent Safety\n\n1. **Read Before Editing** - Never modify code without reading it first\n2. **Stay in Scope** - Only touch files explicitly authorized\n3. **Verify Before Committing** - Test and check all changes\n4. **Halt When Uncertain** - Ask for clarification instead of guessing\n..."
 }
 ```
 
-### Hooks
+The `prompt` field contains markdown-formatted instructions. Claude Code injects this into the session context when the skill is active.
 
-Hooks are shell scripts that run automatically:
+## Hook Details
+
+Hooks are shell scripts that run automatically at specific points:
 
 | Hook | When It Runs | Purpose |
 |------|--------------|---------|
@@ -73,55 +100,77 @@ Hooks are shell scripts that run automatically:
 | `post-execution.sh` | After file modifications | Validate changes |
 | `pre-commit.sh` | Before git commit | Validate commit message |
 
-## Skill Details
+### Custom Hook Example
+
+```bash
+#!/bin/bash
+# .claude/hooks/pre-commit.sh
+
+# Run linter
+npm run lint
+
+# Run tests
+npm test
+
+# Check for secrets
+trufflehog git file://. --since-commit HEAD
+```
+
+Make sure hooks remain executable:
+```bash
+chmod +x .claude/hooks/*.sh
+```
+
+## Skill Reference
 
 ### guardrails-enforcer
 
-**Purpose:** Enforces the Four Laws of Agent Safety
-
-**Rules Enforced:**
-1. Read before editing
-2. Stay in scope
-3. Verify before committing
-4. Halt when uncertain
-
-**Halt Conditions:**
-- Modifying unread code
-- Unclear scope boundaries
-- No rollback procedure
-- Test/production mix
-- Three failed attempts
+Enforces the Four Laws of Agent Safety. Halts on: unread code, scope violations, missing rollback, test/production mix, three consecutive failures.
 
 ### commit-validator
 
-**Purpose:** Validates git commits
-
-**Checks:**
-- AI attribution present (`Co-Authored-By:`)
-- Single focus per commit
-- No secrets in diff
-- Tests pass
-
-**Commit Format:**
-```
-<type>: <description>
-
-Co-Authored-By: Claude <noreply@anthropic.com>
-```
+Validates git commits. Checks: AI attribution (`Co-Authored-By:`), single focus per commit, no secrets in diff, tests pass.
 
 ### env-separator
 
-**Purpose:** Enforces test/production separation
+Enforces test/production separation. Detects: production DB connections in tests, shared instances, hardcoded production credentials.
 
-**Rules:**
-- Production code before tests
-- Separate service instances
-- No test data in production
+### scope-validator
 
-**Detection:**
-- Production DB connections in tests
-- Shared instances
-- Hardcoded production credentials
+Enforces scope boundaries. Only files explicitly authorized by the user or task description may be modified.
+
+### production-first
+
+Requires production code before tests. Order: implementation, validation, tests, infrastructure.
+
+### three-strikes
+
+Failure recovery protocol. After three consecutive failures, halts and escalates to user.
+
+### error-recovery
+
+Error handling and recovery procedures. Provides structured guidance when operations fail.
+
+## Shared Prompts Reference
+
+All skill prompts incorporate rules from the shared prompts directory:
+
+| Shared Prompt | Used By Skills |
+|---------------|---------------|
+| `skills/shared-prompts/four-laws.md` | guardrails-enforcer |
+| `skills/shared-prompts/halt-conditions.md` | guardrails-enforcer |
+| `skills/shared-prompts/three-strikes.md` | three-strikes |
+| `skills/shared-prompts/production-first.md` | production-first |
+| `skills/shared-prompts/clean-architecture.md` | guardrails-enforcer |
+| `skills/shared-prompts/cqrs.md` | guardrails-enforcer |
+| `skills/shared-prompts/scope-validation.md` | scope-validator |
+| `skills/shared-prompts/error-recovery.md` | error-recovery |
+
+When shared prompts are updated, re-run the setup script to regenerate skill prompts:
+
+```bash
+python scripts/setup_agents.py --install --platform claude
+```
 
 ## Customization
 
@@ -138,87 +187,62 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 }
 ```
 
-2. Restart Claude Code to load the skill
+2. Restart Claude Code to load the skill.
 
-### Modifying Hooks
+### Disabling a Skill
 
-Edit the shell scripts in `.claude/hooks/`:
-
+Move it out of the skills directory:
 ```bash
-#!/bin/bash
-# Custom pre-execution logic
-echo "Running custom checks..."
-# Add your validation here
-```
-
-Make sure hooks remain executable:
-```bash
-chmod +x .claude/hooks/*.sh
-```
-
-## Advanced Configuration
-
-### Skill Selection
-
-By default, all skills are active. To disable a skill temporarily:
-
-1. Move it out of the skills directory:
-```bash
+mkdir -p .claude/skills/disabled
 mv .claude/skills/commit-validator.json .claude/skills/disabled/
 ```
 
-2. Restart Claude Code
+Restart Claude Code to apply.
 
-### Hook Chaining
-
-Hooks can call other tools:
+### Cloning a Single Skill from Another Repo
 
 ```bash
-#!/bin/bash
-# pre-commit.sh
-
-# Run linter
-npm run lint
-
-# Run tests
-npm test
-
-# Check for secrets
-trufflehog git file://. --since-commit HEAD
+python scripts/setup_agents.py --clone .claude/skills/guardrails-enforcer.json
 ```
+
+This copies a specific skill file by its repo path into the current project.
+
+## Installation Modes
+
+| Mode | Command | Behavior |
+|------|---------|----------|
+| Copy | `--mode copy` (default) | Writes standalone copies to the project |
+| Symlink | `--mode symlink` | Creates symlinks back to this repo |
 
 ## Troubleshooting
 
 ### Skills Not Loading
 
-**Check:**
-- JSON syntax is valid: `python -m json.tool .claude/skills/*.json`
-- Files are in correct directory
-- Claude Code has been restarted
+- JSON syntax: `python -m json.tool .claude/skills/*.json`
+- Files in correct directory: `ls .claude/skills/`
+- Restart Claude Code after changes
 
 ### Hooks Not Running
 
-**Check:**
-- Hooks are executable: `chmod +x .claude/hooks/*.sh`
-- Shell syntax is valid: `bash -n .claude/hooks/pre-execution.sh`
-- Hook names match expected patterns
+- Check executable bit: `chmod +x .claude/hooks/*.sh`
+- Validate shell syntax: `bash -n .claude/hooks/pre-execution.sh`
+- Check hook names match expected patterns
 
 ### Permission Denied
 
-**Fix:**
 ```bash
 chmod +x .claude/hooks/*.sh
 ```
 
 ## Best Practices
 
-1. **Keep skills focused** - One skill = One responsibility
-2. **Test hooks independently** - Run scripts manually to verify
-3. **Document customizations** - Add comments to modified files
-4. **Version control** - Commit `.claude/` to share with team
+1. **One skill = one responsibility** - Keep skills focused and composable
+2. **Test hooks manually** - Run scripts directly to verify behavior
+3. **Regenerate after shared prompt updates** - Re-run setup to sync skills
+4. **Commit `.claude/` to version control** - Team shares the same guardrails
 
 ## References
 
-- [Claude Code Documentation](https://docs.anthropic.com/en/docs/agents-and-tools/claude-code)
+- [AGENTS_AND_SKILLS_SETUP.md](AGENTS_AND_SKILLS_SETUP.md) - Unified setup guide
 - [AGENT_GUARDRAILS.md](AGENT_GUARDRAILS.md) - Core safety protocols
-- [AGENTS_AND_SKILLS_SETUP.md](AGENTS_AND_SKILLS_SETUP.md) - General setup guide
+- [skills/shared-prompts/](../skills/shared-prompts/) - Canonical prompt definitions

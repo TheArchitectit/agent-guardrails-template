@@ -1,72 +1,41 @@
-# Agent Guardrails - Agents and Skills Setup
+# Agents & Skills Setup Guide
 
-This guide explains how to install pre-committed guardrails configurations for Claude Code, Cursor, OpenCode, Windsurf, and GitHub Copilot — full platforms or individual skills.
+Install guardrails skills, agents, and hooks across all supported AI coding platforms.
 
 ## Quick Start
 
-```bash
-# Install all platforms (copy mode)
-python scripts/setup_agents.py --install
+| Platform | Setup Time | Install Command |
+|----------|-----------|-----------------|
+| Claude Code | 30s | `python scripts/setup_agents.py --install --platform claude` |
+| Cursor | 30s | `python scripts/setup_agents.py --install --platform cursor` |
+| Windsurf | 10s | `python scripts/setup_agents.py --install --platform windsurf` |
+| OpenCode | 30s | `python scripts/setup_agents.py --install --platform opencode` |
+| GitHub Copilot | 10s | `python scripts/setup_agents.py --install --platform copilot` |
+| All platforms | 1min | `python scripts/setup_agents.py --install` |
 
-# Install specific platforms
-python scripts/setup_agents.py --install --platform claude,cursor,windsurf
+## Platform Comparison
 
-# Preview what would be installed
-python scripts/setup_agents.py --install --dry-run
+| Feature | Claude Code | Cursor | Windsurf | OpenCode | GitHub Copilot |
+|---------|-------------|--------|----------|----------|----------------|
+| Config location | `.claude/skills/` | `.cursor/rules/` | `.windsurfrules` | `.opencode/` | `.github/copilot-instructions.md` |
+| Format | JSON | Markdown + YAML frontmatter | Single markdown | JSON + markdown | Markdown |
+| Skills | 7 JSON files | 4 rule files | Single file | 3 skill dirs | None (repo-level) |
+| Agents | No | No | No | 2 JSON files | No |
+| Hooks | 3 shell scripts | No | No | No | No |
+| Granular control | Per-skill install | Per-rule apply | All-or-nothing | Per-skill enable | All-or-nothing |
+| Auto-install | Yes | Yes | Yes | Yes | Yes |
 
-# Install to a different project directory
-python scripts/setup_agents.py --install --platform claude --target ~/myproject
+## Installation Methods
 
-# Symlink instead of copy (updates track the repo)
-python scripts/setup_agents.py --install --platform claude,cursor --mode symlink
-```
+### 1. MCP Tool (Automated)
 
-### Clone Individual Skill Files (No Repo Clone)
-
-Download any single skill file directly from GitHub — no git clone needed:
-
-```bash
-# Clone a skill file by repo path
-python scripts/setup_agents.py --clone .claude/skills/guardrails-enforcer.json
-
-# Clone to a specific project
-python scripts/setup_agents.py --clone .cursor/rules/guardrails-enforcer.md --target ~/myproject
-```
-
-### Install Per-Skill (Named Install)
-
-Install one specific skill at a time by name:
-
-```bash
-# List all available skills
-python scripts/setup_agents.py --list-skills
-
-# Install a single Claude Code skill
-python scripts/setup_agents.py --install-skill guardrails-enforcer
-
-# Install a shared prompt to any project
-python scripts/setup_agents.py --install-skill four-laws --target ~/myproject
-```
-
-### Available Platforms
-
-| Platform | Config Location | Description |
-|----------|----------------|-------------|
-| claude | `.claude/` | Claude Code skills and hooks |
-| cursor | `.cursor/rules/` | Cursor rules |
-| opencode | `.opencode/` | OpenCode agents and skills |
-| windsurf | `.windsurfrules` | Windsurf rules |
-| copilot | `.github/copilot-instructions.md` | GitHub Copilot instructions |
-
-### MCP Tool
-
-The `guardrail_install_skills` MCP tool wraps the install script with all three modes:
+Use the `guardrail_install_skills` MCP tool from any AI session:
 
 ```javascript
 // Full platform install
 guardrail_install_skills({ platforms: "claude,cursor", target_path: "/path/to/project" })
 
-// Clone a single file (downloads from GitHub)
+// Clone a single file from GitHub
 guardrail_install_skills({ action: "clone", path: ".claude/skills/guardrails-enforcer.json" })
 
 // Install a single skill by name
@@ -79,94 +48,375 @@ guardrail_install_skills({ list_skills: true })
 guardrail_install_skills({ list_platforms: true })
 ```
 
-## What Gets Created
+### 2. Python Script (CLI)
 
-### Claude Code Configuration (`.claude/`)
+```bash
+# Install all platforms (copy mode)
+python scripts/setup_agents.py --install
 
-**Minimal:**
-- `.claude/skills/guardrails-enforcer.json` - Core safety enforcement
+# Install specific platforms
+python scripts/setup_agents.py --install --platform claude,cursor
 
-**Full:**
-- `.claude/skills/guardrails-enforcer.json` - Four Laws enforcement
-- `.claude/skills/commit-validator.json` - Commit message validation
-- `.claude/skills/env-separator.json` - Test/production separation
-- `.claude/hooks/pre-execution.sh` - Pre-operation checks
-- `.claude/hooks/post-execution.sh` - Post-operation validation
-- `.claude/hooks/pre-commit.sh` - Pre-commit validation
+# Symlink mode (live updates when repo changes)
+python scripts/setup_agents.py --install --platform claude --mode symlink
 
-### OpenCode Configuration (`.opencode/`)
+# Dry run (preview without writing)
+python scripts/setup_agents.py --install --dry-run
 
-**Minimal:**
-- `.opencode/oh-my-opencode.jsonc` - Main configuration
-- `.opencode/skills/guardrails-enforcer/SKILL.md` - Core safety skill
+# Install to a different project directory
+python scripts/setup_agents.py --install --platform claude --target ~/myproject
 
-**Full:**
-- `.opencode/oh-my-opencode.jsonc` - Main configuration with all agents
-- `.opencode/skills/guardrails-enforcer/SKILL.md` - Four Laws enforcement
-- `.opencode/skills/commit-validator/SKILL.md` - Commit validation
-- `.opencode/skills/env-separator/SKILL.md` - Environment separation
-- `.opencode/agents/guardrails-auditor.json` - Post-work auditor
-- `.opencode/agents/doc-indexer.json` - Documentation indexer
+# Install a single skill by name
+python scripts/setup_agents.py --install-skill guardrails-enforcer
 
-## Platform-Specific Guides
+# Clone a single file from GitHub (no local repo needed)
+python scripts/setup_agents.py --clone .claude/skills/guardrails-enforcer.json
+python scripts/setup_agents.py --clone .cursor/rules/guardrails-enforcer.md --target ~/myproject
 
-- [Claude Code Integration](CLCODE_INTEGRATION.md) - Detailed Claude Code setup
-- [OpenCode Integration](OPENCODE_INTEGRATION.md) - Detailed OpenCode setup
+# List available skills and platforms
+python scripts/setup_agents.py --list-skills
+python scripts/setup_agents.py --list-platforms
+```
 
-## Available Skills
+### 3. Manual Copy
 
-### guardrails-enforcer
+Copy the config directories directly to your project:
 
-Enforces the **Four Laws of Agent Safety**:
-1. Read before editing
-2. Stay in scope
-3. Verify before committing
-4. Halt when uncertain
+```bash
+# Claude Code
+cp -r .claude/skills/ /path/to/project/.claude/skills/
+cp -r .claude/hooks/ /path/to/project/.claude/hooks/
 
-**Activates:** Automatically on all operations
+# Cursor
+cp -r .cursor/rules/ /path/to/project/.cursor/rules/
 
-### commit-validator
+# Windsurf
+cp .windsurfrules /path/to/project/.windsurfrules
 
-Validates commits against `COMMIT_WORKFLOW.md`:
-- AI attribution required
-- Single focus per commit
-- No secrets in diff
-- Tests pass before commit
+# OpenCode
+cp -r .opencode/ /path/to/project/.opencode/
 
-**Activates:** Before git commit operations
+# GitHub Copilot
+mkdir -p /path/to/project/.github/
+cp .github/copilot-instructions.md /path/to/project/.github/copilot-instructions.md
+```
 
-### env-separator
+### 4. Symlink (Live Updates)
 
-Enforces `TEST_PRODUCTION_SEPARATION.md`:
-- Production code before test code
-- Separate service instances
-- No test data in production
+```bash
+# Claude Code (tracks repo changes)
+ln -s "$(pwd)/.claude/skills" /path/to/project/.claude/skills
+ln -s "$(pwd)/.claude/hooks" /path/to/project/.claude/hooks
 
-**Activates:** When creating test code or modifying environments
+# OpenCode
+ln -s "$(pwd)/.opencode" /path/to/project/.opencode
+```
+
+## Per-Platform Guides
+
+### Claude Code
+
+**Config files:** `.claude/skills/*.json`, `.claude/hooks/*.sh`
+
+**Skills (7):**
+
+| Skill | File | Purpose |
+|-------|------|---------|
+| guardrails-enforcer | `guardrails-enforcer.json` | Four Laws enforcement on all operations |
+| commit-validator | `commit-validator.json` | Commit message format and safety checks |
+| env-separator | `env-separator.json` | Test/production environment isolation |
+| scope-validator | `scope-validator.json` | File scope authorization checks |
+| production-first | `production-first.json` | Production code before tests/infra |
+| three-strikes | `three-strikes.json` | Retry limit and halt escalation |
+| error-recovery | `error-recovery.json` | Structured error handling |
+
+**Hooks (3):**
+
+| Hook | File | Trigger |
+|------|------|---------|
+| Pre-execution | `pre-execution.sh` | Before every tool call |
+| Post-execution | `post-execution.sh` | After every tool call |
+| Pre-commit | `pre-commit.sh` | Before git commit |
+
+**Skill format (JSON):**
+
+```json
+{
+  "name": "guardrails-enforcer",
+  "description": "Enforces the Four Laws of Agent Safety",
+  "tools": ["Read", "Grep", "Glob", "AskUserQuestion"],
+  "prompt": "Your skill instructions here..."
+}
+```
+
+**Install:**
+
+```bash
+python scripts/setup_agents.py --install-skill guardrails-enforcer
+```
+
+**Verify:**
+
+```bash
+ls .claude/skills/          # Should show 7 JSON files
+ls .claude/hooks/           # Should show 3 shell scripts
+```
+
+### Cursor
+
+**Config files:** `.cursor/rules/*.md`
+
+**Rules (4):**
+
+| Rule | File | Always Apply |
+|------|------|-------------|
+| guardrails-enforcer | `guardrails-enforcer.md` | Yes |
+| production-first | `production-first.md` | Yes |
+| three-strikes | `three-strikes.md` | Yes |
+| clean-architecture | `clean-architecture.md` | Yes |
+
+**Rule format (Markdown + YAML frontmatter):**
+
+```markdown
+---
+description: Enforces the Four Laws of Agent Safety on all code generation
+globs: "**/*"
+alwaysApply: true
+---
+
+# Guardrails Enforcement
+
+Your rule instructions here...
+```
+
+Frontmatter fields:
+- `description` — Shows in Cursor rules panel
+- `globs` — File patterns where rule applies
+- `alwaysApply` — `true` to auto-attach, `false` for manual
+
+**Install:**
+
+```bash
+python scripts/setup_agents.py --install --platform cursor
+```
+
+**Verify:**
+
+```bash
+ls .cursor/rules/           # Should show 4 markdown files
+```
+
+### Windsurf
+
+**Config file:** `.windsurfrules` (single file)
+
+**Format:** Single markdown file containing all rules. Windsurf does not support per-skill granularity or agent configuration.
+
+The file includes:
+- Four Laws of Agent Safety
+- Pre-operation checklist and forbidden actions
+- Three Strikes Rule
+- Production-First Rule
+- Scope Rules
+- Architecture patterns (Clean Architecture, CQRS, Vertical Slices, SOLID)
+- References to shared prompts
+
+**Install:**
+
+```bash
+python scripts/setup_agents.py --install --platform windsurf
+# Or manually:
+cp .windsurfrules /path/to/project/.windsurfrules
+```
+
+**Verify:**
+
+```bash
+test -f .windsurfrules && echo "Installed" || echo "Missing"
+```
+
+### OpenCode
+
+**Config files:** `.opencode/oh-my-opencode.jsonc`, `.opencode/agents/*.json`, `.opencode/skills/<name>/SKILL.md`
+
+**Agents (2):**
+
+| Agent | File | Permissions |
+|-------|------|------------|
+| guardrails-auditor | `guardrails-auditor.json` | Read-only (edit: deny, bash: deny) |
+| doc-indexer | `doc-indexer.json` | Read + edit (bash: deny) |
+
+**Skills (3):**
+
+| Skill | Directory |
+|-------|-----------|
+| guardrails-enforcer | `skills/guardrails-enforcer/SKILL.md` |
+| commit-validator | `skills/commit-validator/SKILL.md` |
+| env-separator | `skills/env-separator/SKILL.md` |
+
+**Config format (JSONC):**
+
+```jsonc
+{
+  "agents": {
+    "guardrails-auditor": {
+      "model": "anthropic/claude-sonnet-4",
+      "temperature": 0.1,
+      "prompt_append": "You are a Guardrails Auditor...",
+      "permissions": { "edit": "deny", "bash": "deny", "read": "allow" }
+    }
+  },
+  "skills": {
+    "sources": [{"path": "./.opencode/skills", "recursive": true}],
+    "enable": ["guardrails-enforcer", "commit-validator", "env-separator"]
+  }
+}
+```
+
+**Skill format (Markdown + YAML frontmatter):**
+
+```markdown
+---
+name: guardrails-enforcer
+description: "Enforces the Four Laws of Agent Safety"
+---
+
+# Guardrails Enforcement
+
+Your skill instructions here...
+```
+
+Agent format (JSON):
+
+```json
+{
+  "name": "guardrails-auditor",
+  "model": "anthropic/claude-sonnet-4",
+  "temperature": 0.1,
+  "prompt_append": "You are a Guardrails Auditor...",
+  "permissions": { "edit": "deny", "bash": "deny", "read": "allow" }
+}
+```
+
+**Install:**
+
+```bash
+python scripts/setup_agents.py --install --platform opencode
+```
+
+**Verify:**
+
+```bash
+test -f .opencode/oh-my-opencode.jsonc && echo "Config OK"
+ls .opencode/agents/        # Should show 2 JSON files
+ls .opencode/skills/        # Should show 3 skill directories
+```
+
+### GitHub Copilot
+
+**Config file:** `.github/copilot-instructions.md`
+
+**Format:** Markdown repo-level instructions. Copilot does not support per-skill configuration, agent definitions, or hooks. All rules are merged into a single file.
+
+The file includes:
+- Four Laws of Agent Safety (adapted for autocomplete/chat)
+- Code generation rules (scope, production-first, error handling, security)
+- Forbidden patterns
+- Three Strikes Rule
+- File header conventions
+- Architecture patterns for the MCP server
+- References to shared prompts
+
+**Install:**
+
+```bash
+python scripts/setup_agents.py --install --platform copilot
+# Or manually:
+mkdir -p /path/to/project/.github/
+cp .github/copilot-instructions.md /path/to/project/.github/copilot-instructions.md
+```
+
+**Verify:**
+
+```bash
+test -f .github/copilot-instructions.md && echo "Installed" || echo "Missing"
+```
+
+## Shared Prompts
+
+All platform configs derive from canonical prompt files in `skills/shared-prompts/`. These are the source of truth — when rules change, update the shared prompt first, then regenerate platform configs.
+
+| Prompt | File | Description |
+|--------|------|-------------|
+| Four Laws | `four-laws.md` | Read-before-edit, stay-in-scope, verify-before-commit, halt-when-uncertain |
+| Halt Conditions | `halt-conditions.md` | When and how to stop and escalate to user |
+| Vibe Coding | `vibe-coding.md` | Flow-state development under constraints |
+| Error Recovery | `error-recovery.md` | Structured error handling and retry patterns |
+| Three Strikes | `three-strikes.md` | Three-attempt limit with escalating escalation |
+| Production First | `production-first.md` | Production code before tests and infrastructure |
+| Scope Validation | `scope-validation.md` | File and operation scope authorization |
+| Clean Architecture | `clean-architecture.md` | Domain-first layering, dependency inversion |
+| CQRS | `cqrs.md` | Command/query separation for write/read operations |
+
+## MCP Tool Usage
+
+The `guardrail_install_skills` MCP tool wraps the setup script. Use it from any AI coding session.
+
+**Full install:**
+
+```javascript
+guardrail_install_skills({
+  platforms: "claude,cursor",
+  target_path: "/path/to/project"
+})
+```
+
+**Per-skill install:**
+
+```javascript
+guardrail_install_skills({
+  action: "install",
+  skill: "guardrails-enforcer",
+  platform: "claude",
+  target_path: "/path/to/project"
+})
+```
+
+**Clone from GitHub:**
+
+```javascript
+guardrail_install_skills({
+  action: "clone",
+  path: ".claude/skills/guardrails-enforcer.json",
+  target_path: "/path/to/project"
+})
+```
+
+**List skills:**
+
+```javascript
+guardrail_install_skills({ list_skills: true })
+```
+
+**List platforms:**
+
+```javascript
+guardrail_install_skills({ list_platforms: true })
+```
+
+## Architecture Reference
+
+For the MCP server codebase that underpins these guardrails:
+
+- [ARCHITECTURE_CLEAN_CQRS.md](ARCHITECTURE_CLEAN_CQRS.md) — Full Clean Architecture + CQRS design
+- [skills/shared-prompts/clean-architecture.md](../skills/shared-prompts/clean-architecture.md) — Domain-first layering patterns
+- [skills/shared-prompts/cqrs.md](../skills/shared-prompts/cqrs.md) — Command/query separation patterns
 
 ## Customization
 
-### Modifying Skills
+Edit generated files directly in your project, or create new ones:
 
-After setup, edit the generated files:
-
-**Claude Code:**
-```bash
-# Edit a skill
-.claude/skills/<skill-name>.json
-```
-
-**OpenCode:**
-```bash
-# Edit a skill
-.opencode/skills/<skill-name>/SKILL.md
-```
-
-### Creating Custom Skills
-
-**For Claude Code:**
-
-Create a new JSON file in `.claude/skills/`:
+**Claude Code** — add a JSON file to `.claude/skills/`:
 
 ```json
 {
@@ -177,345 +427,66 @@ Create a new JSON file in `.claude/skills/`:
 }
 ```
 
-**For OpenCode:**
-
-Create a new directory in `.opencode/skills/` with a `SKILL.md`:
+**OpenCode** — add a `SKILL.md` under `.opencode/skills/<name>/`:
 
 ```markdown
 ---
 name: my-custom-skill
 description: "What this skill does"
 ---
-
-# Skill Title
-
+# My Custom Skill
 Your skill instructions here...
 ```
 
-## Removing Configuration
+**Cursor** — add a markdown file to `.cursor/rules/`:
 
-To remove the setup:
+```markdown
+---
+description: What this rule does
+globs: "**/*.go"
+alwaysApply: false
+---
+# My Custom Rule
+Your rule instructions here...
+```
+
+**Remove all configuration:**
 
 ```bash
-# Remove Claude Code configuration
-rm -rf .claude/
-
-# Remove OpenCode configuration
-rm -rf .opencode/
-
-# Remove both
-rm -rf .claude/ .opencode/
+rm -rf .claude/ .cursor/ .opencode/ .windsurfrules .github/copilot-instructions.md
 ```
 
 ## Troubleshooting
 
 ### Skills Not Loading
 
-**Claude Code:**
-- Ensure `.claude/skills/` directory exists
-- Check JSON syntax in skill files
-- Restart Claude Code
+- **Claude Code:** Verify `.claude/skills/` has JSON files. Check syntax: `python -m json.tool .claude/skills/guardrails-enforcer.json`. Restart after adding skills.
+- **Cursor:** Verify `.cursor/rules/` has `.md` files. Check YAML frontmatter has `description`, `globs`, `alwaysApply`. Check settings > Rules.
+- **OpenCode:** Verify `oh-my-opencode.jsonc` syntax. Check skills are listed in `skills.enable`. Confirm `SKILL.md` exists in each skill dir. Restart.
+- **Hooks not running:** Ensure executable (`chmod +x .claude/hooks/*.sh`). Check syntax: `bash -n .claude/hooks/pre-commit.sh`.
 
-**OpenCode:**
-- Verify `.opencode/oh-my-opencode.jsonc` syntax
-- Check that skills are listed in the `enable` array
-- Restart OpenCode
+### MCP Tool Not Found
 
-### Hooks Not Running
+- Ensure the guardrails MCP server is configured in your AI tool's MCP settings
+- Check the server process is running: the server provides `guardrail_install_skills`
+- Verify connection in your platform's MCP panel
 
-- Ensure hooks are executable: `chmod +x .claude/hooks/*.sh`
-- Check hook syntax with `bash -n <hook-file>`
-- Verify hook paths in your configuration
+### Install Script Errors
 
-## Script-Based Workflows
+```bash
+# Check Python version (3.8+ required)
+python --version
 
-For large-scale operations, scripts are more efficient than interactive AI sessions. The guardrails framework supports scripted execution.
+# Run with verbose output
+python scripts/setup_agents.py --install --dry-run
 
-### When to Use Scripts
-
-| Scenario | Interactive AI | Script |
-|----------|---------------|--------|
-| Single file changes | ✓ Efficient | ✗ Overhead |
-| Multi-file refactoring | △ Token-heavy | ✓ Better |
-| Large code review | △ Slow | ✓ Parallelizable |
-| Batch migrations | ✗ Impractical | ✓ Essential |
-| Repo-wide analysis | △ Expensive | ✓ Scalable |
-
-### Large Code Review Script
-
-Create `scripts/large_code_review.py`:
-
-```python
-#!/usr/bin/env python3
-"""
-Large Code Review Script
-
-Performs guardrails-compliant code review across multiple files.
-Uses parallel processing for efficiency.
-"""
-
-import argparse
-import json
-import subprocess
-from concurrent.futures import ThreadPoolExecutor
-from pathlib import Path
-
-
-def review_file(file_path: Path, guardrails_config: dict) -> dict:
-    """Review a single file against guardrails."""
-    result = {
-        "file": str(file_path),
-        "violations": [],
-        "passed": True
-    }
-
-    # Check: File was read (simulated - in real use, track reads)
-    # Check: Scope compliance
-    if not is_in_scope(file_path, guardrails_config.get("scope", [])):
-        result["violations"].append("File outside authorized scope")
-        result["passed"] = False
-
-    # Check: No secrets
-    if contains_secrets(file_path):
-        result["violations"].append("Potential secrets detected")
-        result["passed"] = False
-
-    # Check: Test/Production separation
-    if mixes_environments(file_path):
-        result["violations"].append("Test/Production environment mix detected")
-        result["passed"] = False
-
-    return result
-
-
-def is_in_scope(file_path: Path, scope_patterns: list) -> bool:
-    """Check if file is within authorized scope."""
-    for pattern in scope_patterns:
-        if file_path.match(pattern):
-            return True
-    return len(scope_patterns) == 0  # No scope = all allowed
-
-
-def contains_secrets(file_path: Path) -> bool:
-    """Scan for common secret patterns."""
-    secret_patterns = [
-        r"password\s*=\s*['\"][^'\"]+['\"]",
-        r"api_key\s*=\s*['\"][^'\"]+['\"]",
-        r"secret\s*=\s*['\"][^'\"]+['\"]",
-        r"sk-[a-zA-Z0-9]{48}",  # OpenAI key pattern
-    ]
-    # Implementation would scan file content
-    return False
-
-
-def mixes_environments(file_path: Path) -> bool:
-    """Check for test/production environment mixing."""
-    content = file_path.read_text()
-    # Check for production URLs in test files
-    if "test" in file_path.name.lower():
-        if "production.com" in content or "prod-db" in content:
-            return True
-    return False
-
-
-def main():
-    parser = argparse.ArgumentParser(description="Large-scale guardrails review")
-    parser.add_argument("--files", nargs="+", required=True, help="Files to review")
-    parser.add_argument("--config", default=".guardrails.json", help="Guardrails config")
-    parser.add_argument("--parallel", type=int, default=4, help="Parallel workers")
-    args = parser.parse_args()
-
-    # Load guardrails config
-    config = json.loads(Path(args.config).read_text())
-
-    # Review files in parallel
-    files = [Path(f) for f in args.files]
-    with ThreadPoolExecutor(max_workers=args.parallel) as executor:
-        results = list(executor.map(lambda f: review_file(f, config), files))
-
-    # Output results
-    violations = [r for r in results if not r["passed"]]
-    if violations:
-        print(f"\n❌ {len(violations)} files failed guardrails check:")
-        for v in violations:
-            print(f"  - {v['file']}: {', '.join(v['violations'])}")
-        return 1
-    else:
-        print(f"\n✅ All {len(results)} files passed guardrails check")
-        return 0
-
-
-if __name__ == "__main__":
-    exit(main())
+# Verify write permissions on target
+touch /path/to/project/.claude/test && rm /path/to/project/.claude/test
 ```
-
-### Batch Execution Script
-
-Create `scripts/batch_execute.py`:
-
-```python
-#!/usr/bin/env python3
-"""
-Batch Execution Script with Guardrails
-
-Executes operations across multiple files with full guardrails compliance.
-Implements Three Strikes Rule and halt conditions.
-"""
-
-import json
-import sys
-from dataclasses import dataclass
-from pathlib import Path
-from typing import List, Optional
-
-
-@dataclass
-class Operation:
-    """Single operation with guardrails tracking."""
-    file: Path
-    operation_type: str  # 'read', 'edit', 'delete'
-    attempts: int = 0
-    max_attempts: int = 3
-    completed: bool = False
-
-
-class GuardrailsExecutor:
-    """Executes operations with guardrails enforcement."""
-
-    def __init__(self, config_path: Path):
-        self.config = json.loads(config_path.read_text())
-        self.read_files: set = set()
-        self.failed_operations: List[Operation] = []
-
-    def pre_flight_check(self, op: Operation) -> bool:
-        """Verify operation is safe to proceed."""
-        # Law 1: Read before editing
-        if op.operation_type == "edit" and op.file not in self.read_files:
-            print(f"❌ HALT: Attempting to edit unread file: {op.file}")
-            return False
-
-        # Law 2: Stay in scope
-        if not self._is_in_scope(op.file):
-            print(f"❌ HALT: File outside scope: {op.file}")
-            return False
-
-        # Law 4: Halt when uncertain (simulated)
-        if self._is_uncertain(op):
-            print(f"❌ HALT: Uncertain about operation on: {op.file}")
-            return False
-
-        return True
-
-    def _is_in_scope(self, file: Path) -> bool:
-        """Check if file is within authorized scope."""
-        scope = self.config.get("scope", [])
-        if not scope:
-            return True
-        return any(file.match(pattern) for pattern in scope)
-
-    def _is_uncertain(self, op: Operation) -> bool:
-        """Determine if we should halt due to uncertainty."""
-        # Three Strikes Rule
-        if op.attempts >= op.max_attempts:
-            return True
-        return False
-
-    def execute(self, operations: List[Operation]) -> bool:
-        """Execute operations with guardrails."""
-        for op in operations:
-            print(f"Processing: {op.file}")
-
-            # Pre-flight check
-            if not self.pre_flight_check(op):
-                self.failed_operations.append(op)
-                continue
-
-            # Track reads
-            if op.operation_type == "read":
-                self.read_files.add(op.file)
-
-            # Execute (simulated)
-            try:
-                self._do_operation(op)
-                op.completed = True
-                print(f"  ✅ Completed")
-            except Exception as e:
-                op.attempts += 1
-                print(f"  ⚠️  Failed (attempt {op.attempts}/{op.max_attempts}): {e}")
-                if op.attempts >= op.max_attempts:
-                    print(f"  ❌ Three strikes - halting")
-                    self.failed_operations.append(op)
-
-        # Summary
-        success = len(self.failed_operations) == 0
-        if not success:
-            print(f"\n❌ {len(self.failed_operations)} operations failed")
-        return success
-
-    def _do_operation(self, op: Operation):
-        """Actually perform the operation."""
-        # Implementation would do the actual work
-        pass
-
-
-def main():
-    # Example usage
-    config = Path(".guardrails.json")
-    executor = GuardrailsExecutor(config)
-
-    operations = [
-        Operation(Path("src/main.py"), "read"),
-        Operation(Path("src/main.py"), "edit"),
-        Operation(Path("src/utils.py"), "read"),
-        Operation(Path("src/utils.py"), "edit"),
-    ]
-
-    success = executor.execute(operations)
-    return 0 if success else 1
-
-
-if __name__ == "__main__":
-    sys.exit(main())
-```
-
-### Integration with CI/CD
-
-Add to `.github/workflows/guardrails-batch.yml`:
-
-```yaml
-name: Batch Guardrails Check
-
-on:
-  pull_request:
-    paths:
-      - "src/**"
-      - "tests/**"
-
-jobs:
-  guardrails:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Run batch guardrails review
-        run: |
-          python scripts/large_code_review.py \
-            --files $(git diff --name-only HEAD^) \
-            --config .guardrails.json \
-            --parallel 8
-```
-
-### Best Practices
-
-1. **Track reads**: Maintain a log of files that have been read
-2. **Batch by scope**: Group operations by scope boundaries
-3. **Parallelize safely**: Only parallelize independent operations
-4. **Halt on failure**: Stop the batch if critical violations found
-5. **Generate reports**: Output machine-readable results for CI integration
 
 ## References
 
-- [AGENT_GUARDRAILS.md](AGENT_GUARDRAILS.md) - Core safety protocols
-- [TEST_PRODUCTION_SEPARATION.md](standards/TEST_PRODUCTION_SEPARATION.md) - Environment rules
-- [COMMIT_WORKFLOW.md](workflows/COMMIT_WORKFLOW.md) - Commit standards
-- [AGENT_EXECUTION.md](workflows/AGENT_EXECUTION.md) - Execution protocols
+- [AGENT_GUARDRAILS.md](AGENT_GUARDRAILS.md) — Core safety protocols
+- [COMMIT_WORKFLOW.md](workflows/COMMIT_WORKFLOW.md) — Commit standards
+- [TEST_PRODUCTION_SEPARATION.md](standards/TEST_PRODUCTION_SEPARATION.md) — Environment isolation
+- [AGENT_EXECUTION.md](workflows/AGENT_EXECUTION.md) — Execution protocols
