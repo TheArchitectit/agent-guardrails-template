@@ -104,7 +104,7 @@ func (h *GuardrailHandlers) ValidateGit(ctx context.Context, command string, isF
 		result.Violations = append(result.Violations, domain.Violation{
 			RuleID:   "PREVENT-FORCE-001",
 			RuleName: "No Force Operation",
-			Severity: domain.SeverityError,
+			Severity: domain.SeverityCritical,
 			Message:  "Force operations are not allowed. Use --force-with-lease or standard push instead.",
 			Category: "git",
 			Timestamp: time.Now(),
@@ -279,30 +279,43 @@ func errorResult(msg string) *mcp.CallToolResult {
 
 // SessionHandlers provides CQRS-backed session management
 type SessionHandlers struct {
-	ruleRepo domain.RuleRepository
-	audit    domain.AuditLogger
+	ruleRepo   domain.RuleRepository
+	projectSvc ProjectService
+	audit      domain.AuditLogger
+}
+
+// ProjectService abstracts project lookup for session context
+type ProjectService interface {
+	GetBySlug(ctx context.Context, slug string) (*ProjectContext, error)
+}
+
+// ProjectContext holds project-specific guardrail context
+type ProjectContext struct {
+	Slug            string
+	GuardrailContext string
 }
 
 // NewSessionHandlers creates session handlers
-func NewSessionHandlers(ruleRepo domain.RuleRepository, audit domain.AuditLogger) *SessionHandlers {
+func NewSessionHandlers(ruleRepo domain.RuleRepository, projectSvc ProjectService, audit domain.AuditLogger) *SessionHandlers {
 	return &SessionHandlers{
-		ruleRepo: ruleRepo,
-		audit:    audit,
+		ruleRepo:   ruleRepo,
+		projectSvc: projectSvc,
+		audit:      audit,
 	}
 }
 
 // InitSession initializes a session and returns context
 func (h *SessionHandlers) InitSession(ctx context.Context, projectSlug, agentType, clientVersion string) (map[string]interface{}, error) {
-	// Get project context
-	projStore := database.NewProjectStore(s.db)
-	proj, err := projStore.GetBySlug(ctx, projectSlug)
-	if err != nil {
-		slog.Warn("Failed to get project context", "project_slug", projectSlug, "error", err)
-	}
-
+	// Get project context (via domain service, not infrastructure directly)
 	contextStr := ""
-	if proj != nil {
-		contextStr = proj.GuardrailContext
+	if h.projectSvc != nil {
+		proj, err := h.projectSvc.GetBySlug(ctx, projectSlug)
+		if err != nil {
+			slog.Warn("Failed to get project context", "project_slug", projectSlug, "error", err)
+		}
+		if proj != nil {
+			contextStr = proj.GuardrailContext
+		}
 	}
 
 	// Get active rules

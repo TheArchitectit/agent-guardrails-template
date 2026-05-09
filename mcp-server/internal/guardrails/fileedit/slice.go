@@ -1,12 +1,5 @@
 package fileedit
 
-/*
-Vertical Slice: File Edit Guardrail
-
-Self-contained file edit validation with path traversal detection,
-secret scanning, and file-read verification.
-*/
-
 import (
 	"context"
 	"log/slog"
@@ -22,8 +15,9 @@ type Rule struct {
 	Name     string `json:"name"`
 	Pattern  string `json:"pattern"`
 	Message  string `json:"message"`
-	Severity string `json:"severity"` // "error", "warning", "info"
+	Severity string `json:"severity"` // "critical", "high", "medium", "low"
 	Enabled  bool   `json:"enabled"`
+	Category string `json:"category"`
 }
 
 // Evaluator performs pattern matching for file edits
@@ -45,12 +39,8 @@ func (e *Evaluator) Evaluate(ctx context.Context, filePath, content, sessionID s
 	var violations []domain.Violation
 
 	// Check file path first
-	pathViolations, err := e.evaluatePath(filePath)
-	if err != nil {
-		slog.Warn("Path validation error", "error", err)
-	} else {
-		violations = append(violations, pathViolations...)
-	}
+	pathViolations := e.evaluatePath(filePath)
+	violations = append(violations, pathViolations...)
 
 	// Check content against rules
 	for _, rule := range e.rules {
@@ -58,7 +48,6 @@ func (e *Evaluator) Evaluate(ctx context.Context, filePath, content, sessionID s
 			continue
 		}
 
-		// Evaluate against content
 		matched, err := e.patternFn(rule.Pattern, content)
 		if err != nil {
 			slog.Warn("Pattern matching error", "rule_id", rule.ID, "error", err)
@@ -83,13 +72,11 @@ func (e *Evaluator) Evaluate(ctx context.Context, filePath, content, sessionID s
 }
 
 // evaluatePath checks for path traversal and sensitive locations
-func (e *Evaluator) evaluatePath(filePath string) ([]domain.Violation, error) {
+func (e *Evaluator) evaluatePath(filePath string) []domain.Violation {
 	var violations []domain.Violation
 
 	// Path traversal patterns
-	traversalPatterns := []string{
-		"../", ".../", "//", "/..", "\\..",
-	}
+	traversalPatterns := []string{"../", ".../", "//", "/..", "\\.."}
 
 	for _, pattern := range traversalPatterns {
 		if strings.Contains(filePath, pattern) {
@@ -132,7 +119,7 @@ func (e *Evaluator) evaluatePath(filePath string) ([]domain.Violation, error) {
 		}
 	}
 
-	return violations, nil
+	return violations
 }
 
 // Store handles data access for file edit rules
@@ -153,10 +140,10 @@ type FileReadChecker interface {
 
 // Handler is the MCP handler for file edit guardrail evaluation
 type Handler struct {
-	evaluator  *Evaluator
 	store      Store
 	cache      Cache
 	fileReader FileReadChecker
+	patternFn  func(string, string) (bool, error)
 	cacheTTL   time.Duration
 }
 
@@ -166,27 +153,19 @@ func NewHandler(store Store, cache Cache, fileReader FileReadChecker, patternFn 
 		store:      store,
 		cache:      cache,
 		fileReader: fileReader,
-		cacheTTL:   30 * time.Second,
-		evaluator: &Evaluator{
-			rules:     nil,
-			patternFn: patternFn,
-		},
+		patternFn:  patternFn,
+		cacheTTL:  30 * time.Second,
 	}
 }
 
 // HandleEvaluate processes a file edit evaluation request
 func (h *Handler) HandleEvaluate(ctx context.Context, filePath, content, sessionID string) (*domain.ValidationResult, error) {
-	// Load rules from cache or store
-	rules, err := h.cache.GetFileEditRules(ctx)
-	if err != nil || rules == nil {
-		rules, err = h.store.GetActiveRules(ctx)
-		if err != nil {
-			return nil, err
-		}
-		h.cache.SetFileEditRules(ctx, rules, h.cacheTTL)
+	rules, err := h.loadRules(ctx)
+	if err != nil {
+		return nil, err
 	}
 
-	evaluator := NewEvaluator(rules, h.evaluator.patternFn)
+	evaluator := NewEvaluator(rules, h.patternFn)
 	violations, err := evaluator.Evaluate(ctx, filePath, content, sessionID)
 	if err != nil {
 		return nil, err
@@ -202,7 +181,6 @@ func (h *Handler) HandleWithFileReadCheck(ctx context.Context, filePath, content
 		return nil, err
 	}
 
-	// Verify file was read before editing (Read-before-edit guardrail)
 	if h.fileReader != nil && sessionID != "" {
 		verification, err := h.fileReader.CheckFileRead(ctx, sessionID, filePath)
 		if err != nil {
@@ -222,13 +200,30 @@ func (h *Handler) HandleWithFileReadCheck(ctx context.Context, filePath, content
 	return result, nil
 }
 
+func (h *Handler) loadRules(ctx context.Context) ([]Rule, error) {
+	rules, err := h.cache.GetFileEditRules(ctx)
+	if err == nil && len(rules) > 0 {
+		return rules, nil
+	}
+
+	rules, err = h.store.GetActiveRules(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	h.cache.SetFileEditRules(ctx, rules, h.cacheTTL)
+	return rules, nil
+}
+
 func toSeverity(s string) domain.Severity {
 	switch s {
-	case "error":
+	case "critical":
 		return domain.SeverityCritical
-	case "warning":
+	case "high":
+		return domain.SeverityHigh
+	case "medium":
 		return domain.SeverityMedium
-	case "info":
+	case "low":
 		return domain.SeverityLow
 	default:
 		return domain.SeverityMedium

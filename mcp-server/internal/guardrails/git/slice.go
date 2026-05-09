@@ -1,15 +1,9 @@
 package git
 
-/*
-Vertical Slice: Git Guardrail
-
-Self-contained git command validation with pattern matching,
-force-push detection, and audit logging.
-*/
-
 import (
 	"context"
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/thearchitectit/guardrail-mcp/internal/domain"
@@ -21,7 +15,7 @@ type Rule struct {
 	Name     string `json:"name"`
 	Pattern  string `json:"pattern"`
 	Message  string `json:"message"`
-	Severity string `json:"severity"` // "error", "warning", "info"
+	Severity string `json:"severity"` // "critical", "high", "medium", "low"
 	Enabled  bool   `json:"enabled"`
 }
 
@@ -73,26 +67,9 @@ func (e *Evaluator) Evaluate(ctx context.Context, command string) ([]domain.Viol
 
 // DetectForcePush detects force push operations
 func (e *Evaluator) DetectForcePush(command string) bool {
-	return containsForceFlag(command)
-}
-
-func containsForceFlag(cmd string) bool {
 	forceFlags := []string{"--force", "-f", "--force-with-lease", "-ff"}
 	for _, flag := range forceFlags {
-		if contains(cmd, flag) {
-			return true
-		}
-	}
-	return false
-}
-
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(s) > 0 && containsSubstring(s, substr))
-}
-
-func containsSubstring(s, substr string) bool {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
+		if strings.Contains(command, flag) {
 			return true
 		}
 	}
@@ -112,38 +89,30 @@ type Cache interface {
 
 // Handler is the MCP handler for git guardrail evaluation
 type Handler struct {
-	evaluator *Evaluator
 	store     Store
 	cache     Cache
+	patternFn func(string, string) (bool, error)
 	cacheTTL  time.Duration
 }
 
 // NewHandler creates a new git guardrail handler
 func NewHandler(store Store, cache Cache, patternFn func(string, string) (bool, error)) *Handler {
 	return &Handler{
-		store:    store,
-		cache:    cache,
-		cacheTTL: 30 * time.Second,
-		evaluator: &Evaluator{
-			rules:     nil, // loaded lazily
-			patternFn: patternFn,
-		},
+		store:     store,
+		cache:     cache,
+		patternFn: patternFn,
+		cacheTTL:  30 * time.Second,
 	}
 }
 
 // HandleEvaluate processes a git command evaluation request
 func (h *Handler) HandleEvaluate(ctx context.Context, command string) (*domain.ValidationResult, error) {
-	// Try cache first
-	rules, err := h.cache.GetGitRules(ctx)
-	if err != nil || rules == nil {
-		rules, err = h.store.GetActiveRules(ctx)
-		if err != nil {
-			return nil, err
-		}
-		h.cache.SetGitRules(ctx, rules, h.cacheTTL)
+	rules, err := h.loadRules(ctx)
+	if err != nil {
+		return nil, err
 	}
 
-	evaluator := NewEvaluator(rules, h.evaluator.patternFn)
+	evaluator := NewEvaluator(rules, h.patternFn)
 	violations, err := evaluator.Evaluate(ctx, command)
 	if err != nil {
 		return nil, err
@@ -160,13 +129,12 @@ func (h *Handler) HandleWithForceCheck(ctx context.Context, command string, isFo
 	}
 
 	// Auto-detect force flag if not explicitly provided
-	shouldCheck := isForceFlag || h.evaluator.DetectForcePush(command)
-	if shouldCheck && !containsForceFlag(command) {
-		// Only add violation if the command doesn't already have force flag in pattern
+	shouldCheck := isForceFlag || h.hasForceFlag(command)
+	if shouldCheck {
 		result.Violations = append(result.Violations, domain.Violation{
 			RuleID:   "PREVENT-FORCE-001",
 			RuleName: "No Force Operation",
-			Severity: domain.SeverityError,
+			Severity: domain.SeverityCritical,
 			Message:  "Force operations are not allowed. Use --force-with-lease or standard push instead.",
 			Category: "git",
 			Timestamp: time.Now(),
@@ -176,13 +144,40 @@ func (h *Handler) HandleWithForceCheck(ctx context.Context, command string, isFo
 	return result, nil
 }
 
+func (h *Handler) hasForceFlag(command string) bool {
+	forceFlags := []string{"--force", "-f", "--force-with-lease", "-ff"}
+	for _, flag := range forceFlags {
+		if strings.Contains(command, flag) {
+			return true
+		}
+	}
+	return false
+}
+
+func (h *Handler) loadRules(ctx context.Context) ([]Rule, error) {
+	rules, err := h.cache.GetGitRules(ctx)
+	if err == nil && len(rules) > 0 {
+		return rules, nil
+	}
+
+	rules, err = h.store.GetActiveRules(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	h.cache.SetGitRules(ctx, rules, h.cacheTTL)
+	return rules, nil
+}
+
 func toSeverity(s string) domain.Severity {
 	switch s {
-	case "error":
+	case "critical":
 		return domain.SeverityCritical
-	case "warning":
+	case "high":
+		return domain.SeverityHigh
+	case "medium":
 		return domain.SeverityMedium
-	case "info":
+	case "low":
 		return domain.SeverityLow
 	default:
 		return domain.SeverityMedium
