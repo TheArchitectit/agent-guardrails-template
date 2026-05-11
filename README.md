@@ -2,7 +2,7 @@
 
 > AI-first safety framework for agents building software at high velocity. Guardrails don't slow you down — they're your license to move fast.
 
-[![Version](https://img.shields.io/badge/version-v2.8.0-blue.svg)](./CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-v2.9.0-blue.svg)](./CHANGELOG.md)
 [![Go Implementation](https://img.shields.io/badge/Implementation-Go-blue.svg?style=flat&logo=go)](https://golang.org)
 [![WCAG 3.0+](https://img.shields.io/badge/Accessibility-WCAG_3.0+_Silver-green.svg)](docs/accessibility/ACCESSIBILITY_GUIDE.md)
 [![Spatial Computing](https://img.shields.io/badge/Spatial-XR/VR/AR-blue.svg)](docs/spatial/SPATIAL_COMPUTING_UI.md)
@@ -63,6 +63,19 @@ Then see [QUICK_SETUP.md](QUICK_SETUP.md) for the 5-minute setup, or [HOW_TO_APP
 | [STATE_MANAGEMENT.md](docs/state/STATE_MANAGEMENT.md) | State architecture decision tree, client/server/offline/CRDT patterns |
 | [GENERATIVE_ASSET_SAFETY.md](docs/generative/GENERATIVE_ASSET_SAFETY.md) | AI content disclosure, C2PA metadata, procedural generation safety |
 | [vibe-coding.md](skills/shared-prompts/vibe-coding.md) | Canonical vibe coding principles |
+
+### AI Tool Integration (v2.9.0)
+
+| Document | Purpose |
+|----------|---------|
+| [AGENTS_AND_SKILLS_SETUP.md](docs/AGENTS_AND_SKILLS_SETUP.md) | Setup guide for Claude Code, Cursor, OpenCode, Windsurf, Copilot |
+| [.claude/skills/](.claude/skills/) | 7 Claude Code skill files (guardrails-enforcer, commit-validator, etc.) |
+| [.claude/hooks/](.claude/hooks/) | Pre/post execution shell hooks |
+| [.cursor/rules/](.cursor/rules/) | 3 Cursor rules files |
+| [.windsurfrules](.windsurfrules) | Windsurf rules preamble |
+| [.opencode/](.opencode/) | OpenCode agents and skills |
+| [.github/copilot-instructions.md](.github/copilot-instructions.md) | GitHub Copilot repo-level instructions |
+| [skills/shared-prompts/](skills/shared-prompts/) | 7 canonical shared prompts (error-recovery, three-strikes, production-first, scope-validation + existing) |
 
 ### Game Design & UI/UX (Agent-GDUI-2026)
 

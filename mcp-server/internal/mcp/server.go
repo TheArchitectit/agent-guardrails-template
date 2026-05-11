@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"os"
+	"os/exec"
 	"strconv"
 	"strings"
 	"sync"
@@ -22,6 +24,7 @@ import (
 	"github.com/thearchitectit/guardrail-mcp/internal/config"
 	"github.com/thearchitectit/guardrail-mcp/internal/database"
 	"github.com/thearchitectit/guardrail-mcp/internal/metrics"
+	"github.com/thearchitectit/guardrail-mcp/internal/validation"
 	"github.com/thearchitectit/guardrail-mcp/internal/models"
 	"github.com/thearchitectit/guardrail-mcp/internal/validation"
 )
@@ -234,6 +237,8 @@ func (s *MCPServer) registerTools() {
 					},
 				},
 				{
+					Name:        "guardrail_validate_game_build",
+					Description: "Validate a game engine project (Godot, Unity, Unreal) by running headless build checks and tests",
 					Name:        "guardrail_validate_scope",
 					Description: "Check if a file path is within authorized scope",
 					InputSchema: mcp.ToolInputSchema{
@@ -330,6 +335,82 @@ func (s *MCPServer) registerTools() {
 						Properties: mcp.ToolInputSchemaProperties{
 							"session_token": map[string]interface{}{
 								"type":        "string",
+								"description": "Session token",
+							},
+							"project_path": map[string]interface{}{
+								"type":        "string",
+								"description": "Path to the game project root (containing project.godot, etc.)",
+							},
+							"godot_path": map[string]interface{}{
+								"type":        "string",
+								"description": "Path to Godot binary (default: 'godot' from PATH)",
+							},
+							"check_scenes": map[string]interface{}{
+								"type":        "boolean",
+								"description": "Validate .tscn scene files (default: true)",
+							},
+							"check_scripts": map[string]interface{}{
+								"type":        "boolean",
+								"description": "Validate .gd script files (default: true)",
+							},
+							"run_tests": map[string]interface{}{
+								"type":        "boolean",
+								"description": "Run headless test scripts if available (default: true)",
+							},
+						},
+					},
+				},
+				{
+					Name:        "guardrail_detect_language",
+					Description: "Auto-detect the project language from the repository root",
+					InputSchema: mcp.ToolInputSchema{
+						Type: "object",
+						Properties: mcp.ToolInputSchemaProperties{
+							"project_path": map[string]interface{}{
+								"type":        "string",
+								"description": "Path to the project root",
+							},
+						},
+					},
+				},
+				{
+					Name:        "guardrail_get_language_profile",
+					Description: "Get the guardrail profile rules for a specific programming language",
+					InputSchema: mcp.ToolInputSchema{
+						Type: "object",
+						Properties: mcp.ToolInputSchemaProperties{
+							"language": map[string]interface{}{
+								"type":        "string",
+								"description": "Programming language (go, python, typescript, rust, godot, etc.)",
+							},
+						},
+					},
+				},
+				{
+					Name:        "guardrail_list_languages",
+					Description: "List all supported language profiles with detection info",
+					InputSchema: mcp.ToolInputSchema{
+						Type:       "object",
+						Properties: mcp.ToolInputSchemaProperties{},
+					},
+				},
+				{
+					Name:        "guardrail_validate_language_rules",
+					Description: "Run language-specific guardrail checks on file content",
+					InputSchema: mcp.ToolInputSchema{
+						Type: "object",
+						Properties: mcp.ToolInputSchemaProperties{
+							"language": map[string]interface{}{
+								"type":        "string",
+								"description": "Programming language",
+							},
+							"file_path": map[string]interface{}{
+								"type":        "string",
+								"description": "File path being validated",
+							},
+							"content": map[string]interface{}{
+								"type":        "string",
+								"description": "File content to validate",
 								"description": "Session token from init_session",
 							},
 							"file_path": map[string]interface{}{
@@ -340,6 +421,99 @@ func (s *MCPServer) registerTools() {
 					},
 				},
 				{
+					Name:        "guardrail_get_standard",
+					Description: "Fetch a standards document by name (e.g. GAME_BUILD_VALIDATION, CROSS_CUTTING_2026)",
+					InputSchema: mcp.ToolInputSchema{
+						Type: "object",
+						Properties: mcp.ToolInputSchemaProperties{
+							"name": map[string]interface{}{
+								"type":        "string",
+								"description": "Name of the standards document",
+							},
+						},
+					},
+				},
+				{
+					Name:        "guardrail_get_workflow",
+					Description: "Fetch a workflow document by name",
+					InputSchema: mcp.ToolInputSchema{
+						Type: "object",
+						Properties: mcp.ToolInputSchemaProperties{
+							"name": map[string]interface{}{
+								"type":        "string",
+								"description": "Name of the workflow document",
+							},
+						},
+					},
+				},
+				{
+					Name:        "guardrail_search_docs",
+					Description: "Search all guardrail documentation for a query string",
+					InputSchema: mcp.ToolInputSchema{
+						Type: "object",
+					Properties: mcp.ToolInputSchemaProperties{
+							"query": map[string]interface{}{
+								"type":        "string",
+								"description": "Search query",
+							},
+						},
+					},
+				},
+				{
+					Name:        "guardrail_get_prevention_rules",
+					Description: "Get pattern rules for a file type, or all rules if no glob specified",
+					InputSchema: mcp.ToolInputSchema{
+						Type: "object",
+						Properties: mcp.ToolInputSchemaProperties{
+							"file_glob": map[string]interface{}{
+								"type":        "string",
+								"description": "File glob to filter rules (optional)",
+							},
+						},
+					},
+				},
+				{
+					Name:        "guardrail_check_pattern",
+					Description: "Check code content against pattern rules for violations",
+					InputSchema: mcp.ToolInputSchema{
+						Type: "object",
+						Properties: mcp.ToolInputSchemaProperties{
+							"content": map[string]interface{}{
+								"type":        "string",
+								"description": "Code content to check",
+							},
+							"file_path": map[string]interface{}{
+								"type":        "string",
+								"description": "File path (for glob matching rules)",
+							},
+						},
+					},
+				},
+				{
+					Name:        "guardrail_log_violation",
+					Description: "Log a guardrail violation to the failure registry",
+					InputSchema: mcp.ToolInputSchema{
+						Type: "object",
+					Properties: mcp.ToolInputSchemaProperties{
+							"session_token": map[string]interface{}{
+								"type":        "string",
+								"description": "Session token",
+							},
+							"rule_id": map[string]interface{}{
+								"type":        "string",
+								"description": "Rule ID that was violated",
+							},
+							"severity": map[string]interface{}{
+								"type":        "string",
+								"description": "Severity level (error, warning, info)",
+							},
+							"message": map[string]interface{}{
+								"type":        "string",
+								"description": "Violation message",
+							},
+							"file_path": map[string]interface{}{
+								"type":        "string",
+								"description": "File path where violation occurred (optional)",
 					Name:        "guardrail_record_attempt",
 					Description: "Record a failed task attempt for three strikes tracking",
 					InputSchema: mcp.ToolInputSchema{
@@ -847,9 +1021,56 @@ func (s *MCPServer) registerTools() {
 				},
 			},
 		},
+		{
+			Name:        "guardrail_install_skills",
+			Description: "Install or clone guardrails skill configs. Use 'skill' for per-skill install/clone, 'platforms' for full platform install, or 'path' for single-file clone.",
+			InputSchema: mcp.ToolInputSchema{
+				Type: "object",
+				Properties: mcp.ToolInputSchemaProperties{
+					"target_path": map[string]interface{}{
+						"type":        "string",
+						"description": "Target project directory path (default: current directory)",
+					},
+					"platforms": map[string]interface{}{
+						"type":        "string",
+						"description": "Comma-separated list of platforms: claude, cursor, opencode, windsurf, copilot (default: all). Use with action=install.",
+					},
+					"skill": map[string]interface{}{
+						"type":        "string",
+						"description": "Install a single skill by name (e.g. 'guardrails-enforcer', 'commit-validator', 'four-laws'). Use action=install. Run list_skills=true to see all.",
+					},
+					"path": map[string]interface{}{
+						"type":        "string",
+						"description": "Clone a single file by repo path (e.g. '.claude/skills/guardrails-enforcer.json'). Downloads from GitHub raw. Use with action=clone.",
+					},
+					"action": map[string]interface{}{
+						"type":        "string",
+						"description": "Action to perform: 'install' (default), 'clone' (download from GitHub), 'list' (list skills/platforms)",
+						"enum":        []string{"install", "clone", "list"},
+					},
+					"list_skills": map[string]interface{}{
+						"type":        "boolean",
+						"description": "List all available skills and exit",
+					},
+					"list_platforms": map[string]interface{}{
+						"type":        "boolean",
+						"description": "List all available platforms and exit",
+					},
+					"mode": map[string]interface{}{
+						"type":        "string",
+						"description": "Installation mode: 'copy' or 'symlink' (default: copy). Applies to action=install.",
+						"enum":        []string{"copy", "symlink"},
+					},
+					"dry_run": map[string]interface{}{
+						"type":        "boolean",
+						"description": "Preview what would be done without making changes (default: false)",
+					},
+				},
 			},
-		}, nil
-	})
+		},
+		},
+	}, nil
+})
 
 	// Handle tool calls
 	s.mcpServer.HandleCallTool(s.handleToolCall)
@@ -929,6 +1150,28 @@ func (s *MCPServer) handleToolCall(ctx context.Context, name string, arguments m
 		return s.handlePreWorkCheck(ctx, arguments)
 	case "guardrail_get_context":
 		return s.handleGetContext(ctx, arguments)
+	case "guardrail_validate_game_build":
+		return s.handleValidateGameBuild(ctx, arguments)
+	case "guardrail_detect_language":
+		return s.handleDetectLanguage(ctx, arguments)
+	case "guardrail_get_language_profile":
+		return s.handleGetLanguageProfile(ctx, arguments)
+	case "guardrail_list_languages":
+		return s.handleListLanguages(ctx, arguments)
+	case "guardrail_validate_language_rules":
+		return s.handleValidateLanguageRules(ctx, arguments)
+	case "guardrail_get_standard":
+		return s.handleGetStandard(ctx, arguments)
+	case "guardrail_get_workflow":
+		return s.handleGetWorkflow(ctx, arguments)
+	case "guardrail_search_docs":
+		return s.handleSearchDocs(ctx, arguments)
+	case "guardrail_get_prevention_rules":
+		return s.handleGetPreventionRules(ctx, arguments)
+	case "guardrail_check_pattern":
+		return s.handleCheckPattern(ctx, arguments)
+	case "guardrail_log_violation":
+		return s.handleLogViolation(ctx, arguments)
 	case "guardrail_validate_scope":
 		return s.handleValidateScope(ctx, arguments)
 	case "guardrail_validate_commit":
@@ -965,6 +1208,8 @@ func (s *MCPServer) handleToolCall(ctx context.Context, name string, arguments m
 		return s.handleDetectFeatureCreep(ctx, arguments)
 	case "guardrail_verify_fixes_intact":
 		return s.handleVerifyFixesIntact(ctx, arguments)
+	case "guardrail_install_skills":
+		return s.handleInstallSkills(ctx, arguments)
 	// Team Layout Management Tools - TODO: implement handlers
 	case "guardrail_team_init", "guardrail_team_list", "guardrail_team_assign",
 		"guardrail_team_unassign", "guardrail_team_start", "guardrail_team_status",
@@ -1783,6 +2028,117 @@ func (s *MCPServer) handleGetContext(ctx context.Context, args map[string]interf
 	}, nil
 }
 
+// handleValidateGameBuild validates a game engine project (Godot, Unity, Unreal)
+func (s *MCPServer) handleValidateGameBuild(ctx context.Context, args map[string]interface{}) (*mcp.CallToolResult, error) {
+	sessionToken, _ := args["session_token"].(string)
+	projectPath, _ := args["project_path"].(string)
+	godotPath, _ := args["godot_path"].(string)
+	checkScenes, _ := args["check_scenes"].(bool)
+	checkScripts, _ := args["check_scripts"].(bool)
+	runTests, _ := args["run_tests"].(bool)
+
+	// Defaults
+	if !checkScenes && args["check_scenes"] == nil {
+		checkScenes = true
+	}
+	if !checkScripts && args["check_scripts"] == nil {
+		checkScripts = true
+	}
+	if !runTests && args["run_tests"] == nil {
+		runTests = true
+	}
+
+	// Validate session if provided
+	if sessionToken != "" {
+		s.sessionsMu.RLock()
+		_, exists := s.sessions[sessionToken]
+		s.sessionsMu.RUnlock()
+		if !exists {
+			return &mcp.CallToolResult{
+				Content: []interface{}{mcp.TextContent{Type: "text", Text: `{"error":"Invalid session token"}`}},
+				IsError: true,
+			}, nil
+		}
+	}
+
+	// Auto-detect game engine if project_path provided
+	detector := &validation.GameEngineDetector{}
+	if projectPath == "" {
+		// Try to detect from common locations
+		wd, _ := os.Getwd()
+		result, err := detector.DetectGameEngine(wd)
+		if err != nil || result == nil {
+			return &mcp.CallToolResult{
+				Content: []interface{}{mcp.TextContent{Type: "text", Text: `{"error":"No game engine project detected. Provide project_path or run from a game project directory."}`}},
+				IsError: true,
+			}, nil
+		}
+		projectPath = result.ProjectPath
+	}
+
+	slog.Info("Validating game build", "path", projectPath, "engine", "godot")
+
+	// Run Godot validation
+	validator := validation.NewGodotValidator(godotPath)
+	result, err := validator.ValidateProject(ctx, projectPath)
+	if err != nil {
+		resultJSON, _ := json.Marshal(result)
+		return &mcp.CallToolResult{
+			Content: []interface{}{mcp.TextContent{Type: "text", Text: string(resultJSON)}},
+			IsError: true,
+		}, nil
+	}
+
+	// Optional: validate scene files
+	if checkScenes {
+		validator.ValidateSceneFiles(projectPath, result)
+	}
+
+	// Optional: validate GDScript files
+	if checkScripts {
+		validator.ValidateGDScripts(projectPath, result)
+	}
+
+	// Update status based on accumulated errors
+	if len(result.Errors) > 0 && result.Status == models.BuildPassed {
+		// Check if any errors are severity "error" vs "warning"
+		hasErrors := false
+		for _, e := range result.Errors {
+			if e.Severity == "error" {
+				hasErrors = true
+				break
+			}
+		}
+		if hasErrors {
+			result.Status = models.BuildFailed
+		}
+	}
+
+	// Audit the validation
+	if s.auditLogger != nil {
+		s.auditLogger.Log(ctx, audit.Event{
+				Type:     audit.EventValidation,
+				Severity: audit.SevInfo,
+				Actor:    "guardrail",
+				Action:   "game_build_validation",
+				Resource: projectPath,
+				Status:   string(result.Status),
+				Details: map[string]interface{}{
+					"tests_run":    result.TestsRun,
+					"tests_passed": result.TestsPassed,
+					"tests_failed": result.TestsFailed,
+					"errors_count": len(result.Errors),
+					"duration_ms":  result.DurationMs,
+				},
+			})
+	}
+
+	resultJSON, _ := json.Marshal(result)
+	return &mcp.CallToolResult{
+		Content: []interface{}{mcp.TextContent{Type: "text", Text: string(resultJSON)}},
+	}, nil
+}
+
 // generateSessionID creates a cryptographically secure session ID
 func generateSessionID() string {
 	// Use crypto/rand for secure random generation instead of timestamp
@@ -1846,4 +2202,82 @@ func (s *MCPServer) deleteSessionsBatch(ids []string) {
 	for _, id := range ids {
 		delete(s.sessions, id)
 	}
+}
+
+// handleInstallSkills installs guardrails skill configs for AI coding platforms
+func (s *MCPServer) handleInstallSkills(ctx context.Context, args map[string]interface{}) (*mcp.CallToolResult, error) {
+	targetPath, _ := args["target_path"].(string)
+	platforms, _ := args["platforms"].(string)
+	mode, _ := args["mode"].(string)
+	dryRun, _ := args["dry_run"].(bool)
+	action, _ := args["action"].(string)
+	skill, _ := args["skill"].(string)
+	path, _ := args["path"].(string)
+	listSkills, _ := args["list_skills"].(bool)
+	listPlatforms, _ := args["list_platforms"].(bool)
+
+	if mode == "" {
+		mode = "copy"
+	}
+
+	// Build command arguments
+	var cmdArgs []string
+	if listSkills {
+		cmdArgs = []string{"scripts/setup_agents.py", "--list-skills"}
+	} else if listPlatforms {
+		cmdArgs = []string{"scripts/setup_agents.py", "--list-platforms"}
+	} else if path != "" {
+		// Clone a single file by repo path
+		cmdArgs = []string{"scripts/setup_agents.py", "--clone", path}
+		if dryRun {
+			cmdArgs = append(cmdArgs, "--dry-run")
+		}
+		if targetPath != "" {
+			cmdArgs = append(cmdArgs, "--target", targetPath)
+		}
+	} else if skill != "" {
+		// Install a single skill by name
+		cmdArgs = []string{"scripts/setup_agents.py", "--install-skill", skill, "--mode", mode}
+		if dryRun {
+			cmdArgs = append(cmdArgs, "--dry-run")
+		}
+		if targetPath != "" {
+			cmdArgs = append(cmdArgs, "--target", targetPath)
+		}
+	} else {
+		// Full platform install
+		cmdArgs = []string{"scripts/setup_agents.py", "--install", "--mode", mode}
+		if dryRun {
+			cmdArgs = append(cmdArgs, "--dry-run")
+		}
+		if targetPath != "" {
+			cmdArgs = append(cmdArgs, "--target", targetPath)
+		}
+		if platforms != "" {
+			cmdArgs = append(cmdArgs, "--platform", platforms)
+		}
+	}
+
+	cmd := exec.Command("python3", cmdArgs...)
+	cmd.Dir = s.cfg.BaseDir
+	output, err := cmd.CombinedOutput()
+
+	result := map[string]interface{}{
+		"command": "python3 " + strings.Join(cmdArgs, " "),
+		"stdout":  string(output),
+	}
+	if err != nil {
+		result["error"] = err.Error()
+		resultJSON, _ := json.Marshal(result)
+		return &mcp.CallToolResult{
+			Content: []interface{}{mcp.TextContent{Type: "text", Text: string(resultJSON)}},
+			IsError: true,
+		}, nil
+	}
+
+	resultJSON, _ := json.Marshal(result)
+	return &mcp.CallToolResult{
+		Content: []interface{}{mcp.TextContent{Type: "text", Text: string(resultJSON)}},
+		IsError: false,
+	}, nil
 }
