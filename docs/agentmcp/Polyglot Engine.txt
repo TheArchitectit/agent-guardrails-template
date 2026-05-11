@@ -114,6 +114,19 @@ func (tm *ToolchainManager) DetectLanguage() (*LanguageProfile, error) {
 		}, nil
 	}
 
+	// Godot / GDScript Detection
+	if _, err := os.Stat(filepath.Join(tm.Root, "project.godot")); err == nil {
+		return &LanguageProfile{
+			Name:       "godot",
+			TestCmd:    []string{"godot", "--headless", "--path", tm.Root, "--script", "test_runner.gd"},
+			BuildCmd:   []string{"godot", "--headless", "--path", tm.Root, "--export-debug", "Linux/X11"},
+			LintCmd:    []string{"gdformat", "--check", tm.Root},
+			InstallCmd: []string{}, // Godot is self-contained
+			LockFile:   "",           // Godot doesn't use lockfiles
+			PackageFile: "project.godot",
+		}, nil
+	}
+
 	return nil, fmt.Errorf("language auto-detection failed. Please configure sentinel.toml manually")
 }
 
