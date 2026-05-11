@@ -72,10 +72,14 @@ Then see [QUICK_SETUP.md](QUICK_SETUP.md) for the 5-minute setup, or [HOW_TO_APP
 | [.claude/skills/](.claude/skills/) | 7 Claude Code skill files (guardrails-enforcer, commit-validator, etc.) |
 | [.claude/hooks/](.claude/hooks/) | Pre/post execution shell hooks |
 | [.cursor/rules/](.cursor/rules/) | 3 Cursor rules files |
+| [.cursor/rules-3d/](.cursor/rules-3d/) | 3D game dev Cursor rules |
 | [.windsurfrules](.windsurfrules) | Windsurf rules preamble |
 | [.opencode/](.opencode/) | OpenCode agents and skills |
+| [.opencode/skills/3d-game-dev/](.opencode/skills/3d-game-dev/) | 3D game dev OpenCode skill |
+| [.claude/skills/](.claude/skills/) | 7 Claude Code skill files |
+| [.claude/skills-3d/](.claude/skills-3d/) | 3D game dev Claude skill |
 | [.github/copilot-instructions.md](.github/copilot-instructions.md) | GitHub Copilot repo-level instructions |
-| [skills/shared-prompts/](skills/shared-prompts/) | 7 canonical shared prompts (error-recovery, three-strikes, production-first, scope-validation + existing) |
+| [skills/shared-prompts/](skills/shared-prompts/) | 8 canonical shared prompts (3d-game-dev, error-recovery, three-strikes, production-first, scope-validation + existing) |
 
 ### Game Design & UI/UX (Agent-GDUI-2026)
 
@@ -83,6 +87,12 @@ Then see [QUICK_SETUP.md](QUICK_SETUP.md) for the 5-minute setup, or [HOW_TO_APP
 |----------|---------|
 | [2026_GAME_DESIGN.md](docs/game-design/2026_GAME_DESIGN.md) | Game design guardrails, XR/VR comfort zones, performance budgets |
 | [3D_GAME_DEVELOPMENT.md](docs/game-design/3D_GAME_DEVELOPMENT.md) | 3D game dev pipeline: assets, Godot conventions, AI workflow, scope, budgets |
+| [3D_MATHEMATICAL_FOUNDATIONS.md](docs/game-design/3D_MATHEMATICAL_FOUNDATIONS.md) | Linear algebra, quaternions, MVP pipeline, physics math for 3D |
+| [3D_MODULE_ARCHITECTURE.md](docs/game-design/3D_MODULE_ARCHITECTURE.md) | .guardrails/ expansion, MCP tools, CI/CD, asset validation |
+| [AI_DEBUGGABLE_3D_ARCHITECTURE.md](docs/game-design/AI_DEBUGGABLE_3D_ARCHITECTURE.md) | ECS architecture, headless debugging, semantic telemetry, modular shaders |
+| [3D_GUARDREL_PROPOSALS_V1.2.md](docs/game-design/3D_GUARDREL_PROPOSALS_V1.2.md) | 40+ new guardrail rules from 2026 AI Dossier analysis |
+| [HERMES_2026_AI_DOSSIER.md](docs/game-design/HERMES_2026_AI_DOSSIER.md) | Full 2026 AI game dev research dossier |
+| [AI_DEV_2026_COMPLETE_GUIDE.md](docs/game-design/AI_DEV_2026_COMPLETE_GUIDE.md) | 45,000-word guide: tools, prompts, agents, MoA, security |
 | [2026_UI_UX_STANDARD.md](docs/ui-ux/2026_UI_UX_STANDARD.md) | UI component patterns, design tokens, responsive breakpoints |
 | [ACCESSIBILITY_GUIDE.md](docs/accessibility/ACCESSIBILITY_GUIDE.md) | WCAG 3.0+ compliance (Bronze/Silver/Gold) |
 | [SPATIAL_COMPUTING_UI.md](docs/spatial/SPATIAL_COMPUTING_UI.md) | XR/VR/AR UI patterns, comfort zones, latency requirements |
@@ -174,6 +184,7 @@ Multi-language implementation examples demonstrating guardrails patterns:
 ## Who Should Use This
 
 - **AI-First Development Teams** — Practicing vibe coding where agents generate most of the code. Guardrails let agents build at full velocity without human bottlenecks.
+- **3D Game Development Teams** — Building with Godot, Unity, Unreal, or custom engines. Mathematical correctness, asset safety, shader constraints, and AI-debuggable architecture.
 - **Engineering Teams** — Deploying AI coding assistants safely across projects.
 - **DevOps & Platform Teams** — Enforcing infrastructure guardrails and preventing configuration drift.
 - **AI Agent Developers** — Building safer autonomous agents with real-time validation.
@@ -241,10 +252,12 @@ agent-guardrails-template/
 
 ## Version History
 
-**Current:** v2.8.0 (2026-03-14)
+**Current:** v3.0.0 (2026-05-11)
 
 | Version | Date | Highlights |
 |---------|------|------------|
+| **v3.0.0** | 2026-05-11 | 3D game development suite: mathematical foundations, AI-debuggable architecture, 40+ guardrail rules, 45k-word AI dev guide, skills for all platforms |
+| **v2.9.0** | 2026-04-26 | Multi-agent skills, Claude/Cursor/OpenCode/Windsurf/Copilot integration, game build validation, cross-cutting standards |
 | **v2.8.0** | 2026-03-14 | AI-first reframe, 7 new guardrail docs, vibe coding, Flutter/Godot examples |
 | **v2.7.0** | 2026-03-14 | Agent-GDUI-2026, game design suite, WCAG 3.0+, spatial computing |
 | **v2.6.0** | 2026-02-15 | Python → Go migration complete |
@@ -274,4 +287,4 @@ Help keep this project going — use a referral link below and both of us get cr
 | [**Synthetic**](https://synthetic.new/?referral=UAWqkKQQLFkzMkY) | $10 in credits | Subscribe → both get $10 credit | `UAWqkKQQLFkzMkY` |
 ---
 
-**v2.8.0** · AI-First Rapid Development Framework · [Get Started →](QUICK_SETUP.md)
+**v3.0.0** · AI-First Rapid Development Framework · [Get Started →](QUICK_SETUP.md)
