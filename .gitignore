@@ -45,3 +45,9 @@ mcp-server/bin/guardrail-mcp
 
 # Ignore test artifacts
 mcp-server/internal/mcp/*_test.go
+
+# Vision pipeline (NEVER commit real config or DBs)
+mcp-server/config/vision.yaml
+*.db
+screenshots/
+vision_data/
