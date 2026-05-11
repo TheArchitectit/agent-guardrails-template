@@ -3,8 +3,8 @@ FROM golang:1.23-alpine AS builder
 
 WORKDIR /app
 
-# Install build dependencies
-RUN apk add --no-cache git ca-certificates tzdata
+# Install build dependencies (gcc/g++/musl-dev required for CGO + SQLite)
+RUN apk add --no-cache git ca-certificates tzdata gcc g++ musl-dev
 
 # Copy go mod files
 COPY go.mod go.sum ./
@@ -19,9 +19,11 @@ ARG BUILD_TIME
 ARG GIT_COMMIT
 
 # Build the server with ldflags for version info
-RUN CGO_ENABLED=0 GOOS=linux go build \
+# CGO_ENABLED=1 required for SQLite; static linking keeps the binary self-contained
+RUN CGO_ENABLED=1 GOOS=linux go build \
     -a -installsuffix cgo \
-    -ldflags "-w -s \
+    -tags "sqlite_omit_load_extension" \
+    -ldflags "-w -s -linkmode external -extldflags \"-static\" \
         -X main.version=${VERSION} \
         -X main.buildTime=${BUILD_TIME} \
         -X main.gitCommit=${GIT_COMMIT}" \

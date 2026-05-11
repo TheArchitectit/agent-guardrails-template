@@ -63,6 +63,7 @@ type MCPServer struct {
 	productionCodeStore  *database.ProductionCodeStore
 	fixVerificationStore *database.FixVerificationStore
 	uncertaintyStore     *database.UncertaintyStore
+	visionTools          *VisionToolSet
 	mcpServer            server.MCPServer
 	sessions             map[string]*Session
 	sessionsMu           sync.RWMutex
@@ -100,6 +101,14 @@ func NewMCPServer(cfg *config.Config, db *database.DB, cacheClient *cache.Client
 	// Create MCP server using the default server
 	s.mcpServer = server.NewDefaultServer("guardrail-mcp", "1.0.0")
 
+	// Initialize vision tools (optional, based on env)
+	vt, err := NewVisionToolSet()
+	if err != nil {
+		slog.Default().Error("vision tools init failed", "error", err)
+	} else {
+		s.visionTools = vt
+	}
+
 	// Register tool handlers
 	s.registerTools()
 
@@ -110,8 +119,7 @@ func NewMCPServer(cfg *config.Config, db *database.DB, cacheClient *cache.Client
 func (s *MCPServer) registerTools() {
 	// Handle tool list requests
 	s.mcpServer.HandleListTools(func(ctx context.Context, cursor *string) (*mcp.ListToolsResult, error) {
-		return &mcp.ListToolsResult{
-			Tools: []mcp.Tool{
+		tools := []mcp.Tool{
 				{
 					Name:        "guardrail_init_session",
 					Description: "Initialize a validation session for a project",
@@ -847,12 +855,26 @@ func (s *MCPServer) registerTools() {
 				},
 			},
 		},
-			},
+	}
+	if s.visionTools != nil {
+			tools = append(tools, s.visionTools.visionToolList()...)
+		}
+		return &mcp.ListToolsResult{
+			Tools: tools,
 		}, nil
 	})
 
 	// Handle tool calls
-	s.mcpServer.HandleCallTool(s.handleToolCall)
+	s.mcpServer.HandleCallTool(func(ctx context.Context, name string, arguments map[string]interface{}) (*mcp.CallToolResult, error) {
+		// Try vision tools first if enabled
+		if s.visionTools != nil {
+			result, err := s.visionTools.dispatch(ctx, name, arguments)
+			if err == nil {
+				return result, nil
+			}
+		}
+		return s.handleToolCall(ctx, name, arguments)
+	})
 
 	// Handle resource list requests
 	s.mcpServer.HandleListResources(func(ctx context.Context, cursor *string) (*mcp.ListResourcesResult, error) {
@@ -1043,6 +1065,11 @@ func (s *MCPServer) handleReadResource(ctx context.Context, uri string) (*mcp.Re
 	default:
 		return nil, fmt.Errorf("unknown resource: %s", uri)
 	}
+}
+
+// VisionTools exposes the vision tool set (may be nil if vision is not enabled).
+func (s *MCPServer) VisionTools() *VisionToolSet {
+	return s.visionTools
 }
 
 // Start starts the MCP server
