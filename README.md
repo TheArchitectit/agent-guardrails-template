@@ -69,6 +69,7 @@ Then see [QUICK_SETUP.md](QUICK_SETUP.md) for the 5-minute setup, or [HOW_TO_APP
 | Document | Purpose |
 |----------|---------|
 | [2026_GAME_DESIGN.md](docs/game-design/2026_GAME_DESIGN.md) | Game design guardrails, XR/VR comfort zones, performance budgets |
+| [3D_GAME_DEVELOPMENT.md](docs/game-design/3D_GAME_DEVELOPMENT.md) | 3D game dev pipeline: assets, Godot conventions, AI workflow, scope, budgets |
 | [2026_UI_UX_STANDARD.md](docs/ui-ux/2026_UI_UX_STANDARD.md) | UI component patterns, design tokens, responsive breakpoints |
 | [ACCESSIBILITY_GUIDE.md](docs/accessibility/ACCESSIBILITY_GUIDE.md) | WCAG 3.0+ compliance (Bronze/Silver/Gold) |
 | [SPATIAL_COMPUTING_UI.md](docs/spatial/SPATIAL_COMPUTING_UI.md) | XR/VR/AR UI patterns, comfort zones, latency requirements |
