@@ -287,4 +287,130 @@ func _on_hitbox_body_entered(body: Node3D) -> void:
 
 ---
 
-*Version 1.0.0 · 3D Game Development Guardrails · Part of Agent Guardrails Template v2.8.0*
+## AI TOOL MATRIX 2026
+
+Based on 2026 market intelligence. Agents must use these tools within their designated roles.
+
+### 3D Asset Generation Tools
+
+| Tool | Best For | AI Role | Human Review | Export | Cost | Commercial Rights |
+|------|----------|---------|--------------|--------|------|-------------------|
+| **Meshy.ai** | End-to-end pipeline (gen → texture → rig) | Primary | Final cleanup | FBX/GLB/USDZ | $20/mo | ✅ Full on all tiers |
+| **Tripo 3.0** | Fast base mesh generation | Blockout | Retopo + rigging | GLB/OBJ | $19.9/mo | ✅ Paid tiers only |
+| **Rodin Gen-2** | API-first, clean topology | Pipeline integration | Rigging | GLB/FBX/BLEND | $30/mo | ✅ Full on all tiers |
+| **Luma AI** | Photorealistic NeRF capture | Environment scan | Retopology | GLB/OBJ | $29.9/mo | ✅ Paid plans |
+| **Sloyd** | Parametric + generative hybrid | Prop generation | Style review | GLB/FBX | $15/mo | ✅ Full |
+| **Scenario** | Style-consistent IP assets | Concept → 3D | IP compliance | GLB/FBX | $15/mo | ⚠️ Varies by plan |
+
+**Agent Rule:** Always verify commercial rights before using AI-generated assets in commercial projects. When in doubt, use Meshy.ai or Rodin (full rights on all tiers).
+
+### AI Code & Editor Assistants
+
+| Tool | Engine | Best For | AI Role |
+|------|--------|----------|---------|
+| **Claude Code** | Any | GDScript, C#, HLSL | Primary author |
+| **GitHub Copilot X** | Unity/UE | C#, C++, HLSL | Assisted |
+| **Unity Muse Code** | Unity | ECS/Burst/Shader Graph | Primary |
+| **Cursor** | Any | Multi-file refactoring | Assisted |
+| **Godot AI (Ollama)** | Godot | Local GDScript RAG | Primary |
+
+### Neural Rendering & Runtime
+
+| Technology | Platform | Use Case | Status |
+|------------|----------|----------|--------|
+| **DLSS 4+** | NVIDIA PC | Upscaling, frame gen | Production |
+| **FSR 4** | AMD PC | ML upscaling | 2026 (RDNA 4) |
+| **3D Gaussian Splatting** | All | Photogrammetry backgrounds | Production |
+| **NeRF** | PC/Console | Cutscene environments | Limited |
+| **NVIDIA ACE** | PC/Cloud | Real-time NPCs | Production |
+
+---
+
+## LEGAL & ETHICAL GUARDRAILS
+
+### Commercial Rights Checklist
+
+**BEFORE using any AI-generated asset in a commercial game:**
+
+| # | Check | Tool | Verify |
+|---|-------|------|--------|
+| 1 | Platform grants commercial rights | Tool docs/TOS | [ ] |
+| 2 | No training data lawsuits pending | Legal research | [ ] |
+| 3 | Asset is not obviously "AI slop" | Human review | [ ] |
+| 4 | Disclosure plan exists if required | Project plan | [ ] |
+| 5 | Hero assets have human refinement | Art review | [ ] |
+
+### AI Disclosure Rules
+
+| Scenario | Action Required |
+|----------|-----------------|
+| **Premium game ($20+)** | Disclose AI usage in credits |
+| **Indie/AA game** | Disclose if asked; transparency preferred |
+| **Game jam / prototype** | Optional disclosure |
+| **Hero characters / story-critical assets** | Human-crafted or heavily refined |
+| **Background props / filler** | AI generation acceptable |
+
+### Prohibited Uses
+
+**NEVER use AI to generate:**
+- Copyrighted character likenesses without license
+- Real person's likeness without consent
+- Hateful, violent, or sexual content involving minors
+- Assets directly competing with training data sources
+
+---
+
+## 2026 TECHNOLOGY LANDSCAPE
+
+### Key Trends Agents Should Know
+
+1. **Text-to-3D is production-ready** for props, environments, and stylized characters
+2. **Hero assets still need human artists** — AI handles 80%, humans the final 20%
+3. **Neural rendering** (DLSS 4, 3DGS) is now standard on PC
+4. **Runtime AI NPCs** are viable but require cloud or high-end hardware
+5. **AI code generation** excels at GDScript, C#, and shaders
+
+### Quality Benchmarks
+
+| Asset Type | AI-Ready? | Post-Processing Needed |
+|------------|-----------|------------------------|
+| Hard-surface props | ✅ Yes | Minimal |
+| Stylized characters | ✅ Yes | Retopo + rigging (40%) |
+| Organic terrain | ✅ Yes | Minimal |
+| Hero characters | ⚠️ Partial | Full human pass required |
+| Complex mechanical rigs | ❌ No | Human-only |
+| PBR materials | ✅ Yes | Review metallic/roughness |
+
+### Engine AI Feature Maturity (2026)
+
+| Feature | Unity 6 | UE 5.5+ | Godot 4.4 |
+|---------|---------|---------|-------------|
+| Runtime ONNX | Sentis 2.0 | NNI Plugin | GDExtension |
+| LLM NPCs | Muse (cloud) | ACE + Plugins | Community |
+| AI Code Assist | Muse Code | Verse + Copilot | Ollama/local |
+| Neural Upscaling | DLSS/FSR | DLSS/FSR | Community |
+| Auto-Asset Gen | Muse Texture | Editor scripts | HTTP APIs |
+
+---
+
+## UPDATED AI RESPONSIBILITY MATRIX (2026)
+
+| Task | AI Role | Human Review | 2026 Tool | Notes |
+|------|---------|--------------|-----------|-------|
+| **GDScript code** | Primary | Spot | Claude Code | ✅ Excellent |
+| **Shader code** | Assisted | Required | Claude/Cursor | Visual check mandatory |
+| **3D models (props)** | Primary | Review | Meshy/Tripo | Production-ready |
+| **3D models (characters)** | Blockout | Required | Meshy + human | Retopo + rigging |
+| **Textures/PBR** | Primary | Review | SD + Material Maker | Quality varies |
+| **Level design** | Assisted | Lead | LLM + manual | AI blockout, human curation |
+| **Animation** | Retarget | Required | Mixamo → Godot | AI motion gen emerging |
+| **Audio (SFX)** | Primary | Review | AI generators | Decent quality |
+| **Audio (Music)** | Assisted | Lead | Suno/UDIO | Arrange + polish |
+| **Game design doc** | Drafted | Final | Claude | Human decides scope |
+| **UI/UX** | Primary | Review | Claude | Godot UI is AI-friendly |
+| **NPC dialogue** | Assisted | Lead | Local LLM | Godot + Ollama viable |
+| **Performance analysis** | Primary | Review | Godot Profiler | AI interprets data |
+
+---
+
+*Version 1.1.0 · 3D Game Development Guardrails · Updated with 2026 AI Dossier Intelligence · Part of Agent Guardrails Template v2.8.0*
