@@ -1,18 +1,82 @@
 # Agent Guardrails - Agents and Skills Setup
 
-This guide explains how to set up custom agents, skills, and hooks for Claude Code and OpenCode.
+This guide explains how to install pre-committed guardrails configurations for Claude Code, Cursor, OpenCode, Windsurf, and GitHub Copilot — full platforms or individual skills.
 
 ## Quick Start
 
-Run the setup script to generate configuration files:
+```bash
+# Install all platforms (copy mode)
+python scripts/setup_agents.py --install
+
+# Install specific platforms
+python scripts/setup_agents.py --install --platform claude,cursor,windsurf
+
+# Preview what would be installed
+python scripts/setup_agents.py --install --dry-run
+
+# Install to a different project directory
+python scripts/setup_agents.py --install --platform claude --target ~/myproject
+
+# Symlink instead of copy (updates track the repo)
+python scripts/setup_agents.py --install --platform claude,cursor --mode symlink
+```
+
+### Clone Individual Skill Files (No Repo Clone)
+
+Download any single skill file directly from GitHub — no git clone needed:
 
 ```bash
-# Minimal setup (guardrails-enforcer only)
-python scripts/setup_agents.py --claude --minimal
-python scripts/setup_agents.py --opencode --minimal
+# Clone a skill file by repo path
+python scripts/setup_agents.py --clone .claude/skills/guardrails-enforcer.json
 
-# Full setup (all skills, agents, and hooks)
-python scripts/setup_agents.py --claude --opencode --full
+# Clone to a specific project
+python scripts/setup_agents.py --clone .cursor/rules/guardrails-enforcer.md --target ~/myproject
+```
+
+### Install Per-Skill (Named Install)
+
+Install one specific skill at a time by name:
+
+```bash
+# List all available skills
+python scripts/setup_agents.py --list-skills
+
+# Install a single Claude Code skill
+python scripts/setup_agents.py --install-skill guardrails-enforcer
+
+# Install a shared prompt to any project
+python scripts/setup_agents.py --install-skill four-laws --target ~/myproject
+```
+
+### Available Platforms
+
+| Platform | Config Location | Description |
+|----------|----------------|-------------|
+| claude | `.claude/` | Claude Code skills and hooks |
+| cursor | `.cursor/rules/` | Cursor rules |
+| opencode | `.opencode/` | OpenCode agents and skills |
+| windsurf | `.windsurfrules` | Windsurf rules |
+| copilot | `.github/copilot-instructions.md` | GitHub Copilot instructions |
+
+### MCP Tool
+
+The `guardrail_install_skills` MCP tool wraps the install script with all three modes:
+
+```javascript
+// Full platform install
+guardrail_install_skills({ platforms: "claude,cursor", target_path: "/path/to/project" })
+
+// Clone a single file (downloads from GitHub)
+guardrail_install_skills({ action: "clone", path: ".claude/skills/guardrails-enforcer.json" })
+
+// Install a single skill by name
+guardrail_install_skills({ action: "install", skill: "guardrails-enforcer" })
+
+// List available skills
+guardrail_install_skills({ list_skills: true })
+
+// List available platforms
+guardrail_install_skills({ list_platforms: true })
 ```
 
 ## What Gets Created
