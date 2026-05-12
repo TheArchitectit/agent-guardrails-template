@@ -16,6 +16,8 @@ exec /home/user001/llama.cpp/build/bin/llama-server \
     -m "${LLAMA_MODEL}" \
     --mmproj "${LLAMA_MMPROJ}" \
     -c "${LLAMA_CTX_SIZE}" \
+    -ctk "${LLAMA_CACHE_TYPE_K}" \
+    -ctv "${LLAMA_CACHE_TYPE_V}" \
     --flash-attn "${LLAMA_FLASH_ATTN}" \
     --port "${LLAMA_PORT}" \
     --host "${LLAMA_HOST}"
