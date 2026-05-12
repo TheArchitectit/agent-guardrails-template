@@ -72,10 +72,14 @@ Then see [QUICK_SETUP.md](QUICK_SETUP.md) for the 5-minute setup, or [HOW_TO_APP
 | [.claude/skills/](.claude/skills/) | 7 Claude Code skill files (guardrails-enforcer, commit-validator, etc.) |
 | [.claude/hooks/](.claude/hooks/) | Pre/post execution shell hooks |
 | [.cursor/rules/](.cursor/rules/) | 3 Cursor rules files |
+| [.cursor/rules-3d/](.cursor/rules-3d/) | 3D game dev Cursor rules |
 | [.windsurfrules](.windsurfrules) | Windsurf rules preamble |
 | [.opencode/](.opencode/) | OpenCode agents and skills |
+| [.opencode/skills/3d-game-dev/](.opencode/skills/3d-game-dev/) | 3D game dev OpenCode skill |
+| [.claude/skills/](.claude/skills/) | 7 Claude Code skill files |
+| [.claude/skills-3d/](.claude/skills-3d/) | 3D game dev Claude skill |
 | [.github/copilot-instructions.md](.github/copilot-instructions.md) | GitHub Copilot repo-level instructions |
-| [skills/shared-prompts/](skills/shared-prompts/) | 7 canonical shared prompts (error-recovery, three-strikes, production-first, scope-validation + existing) |
+| [skills/shared-prompts/](skills/shared-prompts/) | 8 canonical shared prompts (3d-game-dev, error-recovery, three-strikes, production-first, scope-validation + existing) |
 
 ### Game Design & UI/UX (Agent-GDUI-2026)
 
@@ -207,6 +211,7 @@ Multi-language implementation examples demonstrating guardrails patterns:
 ## Who Should Use This
 
 - **AI-First Development Teams** — Practicing vibe coding where agents generate most of the code. Guardrails let agents build at full velocity without human bottlenecks.
+- **3D Game Development Teams** — Building with Godot, Unity, Unreal, or custom engines. Mathematical correctness, asset safety, shader constraints, and AI-debuggable architecture.
 - **Engineering Teams** — Deploying AI coding assistants safely across projects.
 - **DevOps & Platform Teams** — Enforcing infrastructure guardrails and preventing configuration drift.
 - **AI Agent Developers** — Building safer autonomous agents with real-time validation.
@@ -311,4 +316,4 @@ Help keep this project going — use a referral link below and both of us get cr
 | [**Synthetic**](https://synthetic.new/?referral=UAWqkKQQLFkzMkY) | $10 in credits | Subscribe → both get $10 credit | `UAWqkKQQLFkzMkY` |
 ---
 
-**v2.8.0** · AI-First Rapid Development Framework · [Get Started →](QUICK_SETUP.md)
+**v3.0.0** · AI-First Rapid Development Framework · [Get Started →](QUICK_SETUP.md)
