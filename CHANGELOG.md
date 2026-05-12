@@ -24,16 +24,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   - Performance budgets for 3D: draw calls, poly counts, texture memory
   - XR/VR 3D specific: comfort zones, locomotion safety, spatial audio
 
-- **docs/game-design/AI_DEV_2026_COMPLETE_GUIDE.md** (~3,023 lines) - AI-Powered Development 2026: From Intro to Master
-  - ~45,000 word comprehensive guide covering the modern AI development landscape
-  - Agent ecosystems, neural engine integration, generative asset pipelines
-  - Vibe coding mastery, decision matrices, rapid prototyping workflows
-  - Ethics, safety, and production readiness for AI-first teams
+- **AI-Powered Development 2026: 10-Part Guide Series** (~3,023 lines total) - From Intro to Master
+  - Split into modular 500-line-compliant parts for agent-friendly navigation
+  - Part 1: Introduction & Foundations (Ch 1–2) | Part 2: Prompt Engineering | Part 3: Context & Iteration
+  - Part 4: Quality & Architecture | Part 5: Legacy & Agents | Part 6: Building Agents & Tool Use
+  - Part 7: Multi-Agent Systems | Part 8: Security, Ethics & Future | Part 9: Appendices A–C | Part 10: Appendix D (MoA)
+  - Covers agent ecosystems, neural engines, vibe coding, MoA, swarm intelligence, responsible AI
 
-- **docs/game-design/HERMES_2026_AI_DOSSIER.md** (~1,015 lines) - AI in 3D Game Development: The 2026 Dossier
-  - Intelligence report on generative AI and neural engines in interactive entertainment
-  - Live research synthesis: Ollama Search API + parallel agent analysis
-  - Market landscape, technology deep-dives, case studies, and strategic forecasts
+- **AI in 3D Game Development 2026: 9-Part Dossier Series** (~1,015 lines total) - The 2026 Dossier
+  - Split into modular 500-line-compliant parts for agent-friendly navigation
+  - Part 1: Introduction & Executive Summary | Part 2: Asset Generation & Engine Integration
+  - Part 3: World Generation & Neural Rendering | Part 4: NPCs, Dialogue & Animation
+  - Part 5: Code Generation & Neural Physics | Part 6: QA, Testing & Business Landscape
+  - Part 7: Legal, Ethics & Case Studies | Part 8: Technology Deep-Dives & Future Outlook | Part 9: Appendices
+  - Live research synthesis: Ollama Search API + parallel agent analysis + domain expertise
 
 - **docs/game-design/3D_MATHEMATICAL_FOUNDATIONS.md** (290 lines) - 3D Mathematical Foundations for Game Development
   - Linear algebra, trigonometry, spatial geometry reference for AI agents
@@ -57,9 +61,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 #### Changed
 
 - **README.md** - Version badge updated to v3.0.0, added 3D game development references
-- **INDEX_MAP.md** - Added 7 new entries for 3D and AI 2026 documents, updated counts
-- **HEADER_MAP.md** - Added section-level mappings for all 7 new game design documents
-- **TOC.md** - Added new 3D game design category, updated file totals (44 → 51 docs)
+- **INDEX_MAP.md** - Added 19 new entries for split AI 2026 and Hermes dossier parts, updated counts (86 → 103 docs)
+- **HEADER_MAP.md** - Added section-level mappings for all 19 split document parts; removed monolithic entries
+- **TOC.md** - Added split document parts, updated file totals (51 → 68 docs, 103 → 120 total files)
 
 ---
 
