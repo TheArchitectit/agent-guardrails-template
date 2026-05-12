@@ -2,7 +2,7 @@
 
 > AI-first safety framework for agents building software at high velocity. Guardrails don't slow you down — they're your license to move fast.
 
-[![Version](https://img.shields.io/badge/version-v3.0.0-blue.svg)](./CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-v3.1.0-blue.svg)](./CHANGELOG.md)
 [![Go Implementation](https://img.shields.io/badge/Implementation-Go-blue.svg?style=flat&logo=go)](https://golang.org)
 [![WCAG 3.0+](https://img.shields.io/badge/Accessibility-WCAG_3.0+_Silver-green.svg)](docs/accessibility/ACCESSIBILITY_GUIDE.md)
 [![Spatial Computing](https://img.shields.io/badge/Spatial-XR/VR/AR-blue.svg)](docs/spatial/SPATIAL_COMPUTING_UI.md)
@@ -69,11 +69,44 @@ Then see [QUICK_SETUP.md](QUICK_SETUP.md) for the 5-minute setup, or [HOW_TO_APP
 | Document | Purpose |
 |----------|---------|
 | [2026_GAME_DESIGN.md](docs/game-design/2026_GAME_DESIGN.md) | Game design guardrails, XR/VR comfort zones, performance budgets |
-| [3D_GAME_DEVELOPMENT.md](docs/game-design/3D_GAME_DEVELOPMENT.md) | 3D game dev pipeline: assets, Godot conventions, AI workflow, scope, budgets |
+| [3D_GAME_DEVELOPMENT.md](docs/game-design/3d/3D_GAME_DEVELOPMENT.md) | 3D game dev pipeline: assets, Godot conventions, AI workflow, scope, budgets |
+| [3D_MATHEMATICAL_FOUNDATIONS.md](docs/game-design/3d/3D_MATHEMATICAL_FOUNDATIONS.md) | Linear algebra, quaternions, collision math reference |
+| [3D_MODULE_ARCHITECTURE.md](docs/game-design/3d/3D_MODULE_ARCHITECTURE.md) | LLM-to-3D-engine bridging architecture |
+| [AI_DEBUGGABLE_3D_ARCHITECTURE.md](docs/game-design/3d/AI_DEBUGGABLE_3D_ARCHITECTURE.md) | Autonomous 3D troubleshooting patterns |
+| [3D_GUARDREL_PROPOSALS_V1.2.md](docs/game-design/3d/3D_GUARDREL_PROPOSALS_V1.2.md) | v1.2 proposed guardrails (neural radiance fields, AI NPCs) |
 | [2026_UI_UX_STANDARD.md](docs/ui-ux/2026_UI_UX_STANDARD.md) | UI component patterns, design tokens, responsive breakpoints |
 | [ACCESSIBILITY_GUIDE.md](docs/accessibility/ACCESSIBILITY_GUIDE.md) | WCAG 3.0+ compliance (Bronze/Silver/Gold) |
 | [SPATIAL_COMPUTING_UI.md](docs/spatial/SPATIAL_COMPUTING_UI.md) | XR/VR/AR UI patterns, comfort zones, latency requirements |
 | [ETHICAL_ENGAGEMENT.md](docs/ethical/ETHICAL_ENGAGEMENT.md) | Dark pattern taxonomy and automated prevention |
+
+### AI-Powered Development 2026
+
+| Document | Purpose |
+|----------|---------|
+| [AI_DEV_2026_PART01_INTRO_AND_FOUNDATIONS.md](docs/game-design/AI_DEV_2026_PART01_INTRO_AND_FOUNDATIONS.md) | Introduction & Foundations (Ch 1–2) |
+| [AI_DEV_2026_PART02_PROMPTING.md](docs/game-design/AI_DEV_2026_PART02_PROMPTING.md) | Prompt Engineering for Code |
+| [AI_DEV_2026_PART03_CONTEXT_AND_ITERATION.md](docs/game-design/AI_DEV_2026_PART03_CONTEXT_AND_ITERATION.md) | Context & Iterative Development |
+| [AI_DEV_2026_PART04_QUALITY_AND_ARCHITECTURE.md](docs/game-design/AI_DEV_2026_PART04_QUALITY_AND_ARCHITECTURE.md) | Quality & Architecture |
+| [AI_DEV_2026_PART05_LEGACY_AND_AGENTS.md](docs/game-design/AI_DEV_2026_PART05_LEGACY_AND_AGENTS.md) | Legacy Refactoring & Agent Paradigm |
+| [AI_DEV_2026_PART06_BUILDING_AGENTS.md](docs/game-design/AI_DEV_2026_PART06_BUILDING_AGENTS.md) | Building Agents & Tool Use |
+| [AI_DEV_2026_PART07_MULTI_AGENT_SYSTEMS.md](docs/game-design/AI_DEV_2026_PART07_MULTI_AGENT_SYSTEMS.md) | Multi-Agent Systems |
+| [AI_DEV_2026_PART08_SECURITY_ETHICS_FUTURE.md](docs/game-design/AI_DEV_2026_PART08_SECURITY_ETHICS_FUTURE.md) | Security, Ethics & Future |
+| [AI_DEV_2026_PART09_APPENDICES_ABC.md](docs/game-design/AI_DEV_2026_PART09_APPENDICES_ABC.md) | Appendices A, B & C |
+| [AI_DEV_2026_PART10_APPENDIX_D.md](docs/game-design/AI_DEV_2026_PART10_APPENDIX_D.md) | Appendix D: Complete MoA Reference |
+
+### Hermes 2026: AI in 3D Game Development
+
+| Document | Purpose |
+|----------|---------|
+| [HERMES_2026_PART01_INTRO_AND_EXECUTIVE.md](docs/game-design/3d/HERMES_2026_PART01_INTRO_AND_EXECUTIVE.md) | Introduction & Executive Summary |
+| [HERMES_2026_PART02_ASSETS_AND_ENGINES.md](docs/game-design/3d/HERMES_2026_PART02_ASSETS_AND_ENGINES.md) | 3D Asset Generation & Engine Integration |
+| [HERMES_2026_PART03_WORLD_AND_RENDERING.md](docs/game-design/3d/HERMES_2026_PART03_WORLD_AND_RENDERING.md) | World Generation & Neural Rendering |
+| [HERMES_2026_PART04_NPCS_AND_ANIMATION.md](docs/game-design/3d/HERMES_2026_PART04_NPCS_AND_ANIMATION.md) | NPCs, Dialogue & Animation |
+| [HERMES_2026_PART05_CODE_AND_PHYSICS.md](docs/game-design/3d/HERMES_2026_PART05_CODE_AND_PHYSICS.md) | Code Generation & Neural Physics |
+| [HERMES_2026_PART06_QA_AND_BUSINESS.md](docs/game-design/3d/HERMES_2026_PART06_QA_AND_BUSINESS.md) | QA, Testing & Business Landscape |
+| [HERMES_2026_PART07_LEGAL_AND_CASES.md](docs/game-design/3d/HERMES_2026_PART07_LEGAL_AND_CASES.md) | Legal, Ethics & Case Studies |
+| [HERMES_2026_PART08_DEEP_DIVES_AND_FUTURE.md](docs/game-design/3d/HERMES_2026_PART08_DEEP_DIVES_AND_FUTURE.md) | Technology Deep-Dives & Future Outlook |
+| [HERMES_2026_PART09_APPENDICES.md](docs/game-design/3d/HERMES_2026_PART09_APPENDICES.md) | Appendices |
 
 ### Commerce & Social Safety (v2.8.0)
 
@@ -190,6 +223,7 @@ agent-guardrails-template/
 │   ├── analytics/               # Analytics ethics (v2.8.0)
 │   ├── deployment/              # Cross-platform deployment (v2.8.0)
 │   ├── game-design/             # 2026 game design guardrails
+│   │   └── 3d/                  # 3D game development docs (v3.0.0)
 │   ├── ui-ux/                   # UI/UX component standards
 │   ├── accessibility/           # WCAG 3.0+ compliance
 │   ├── spatial/                 # XR/VR/AR patterns
@@ -213,7 +247,7 @@ agent-guardrails-template/
 
 | Metric | Count |
 |--------|-------|
-| **Documentation Files** | 44+ |
+| **Documentation Files** | 68+ |
 | **Guardrail Categories** | 7 (safety, game design, commerce, social, analytics, deployment, generative) |
 | **Workflows** | 10 documents |
 | **Standards** | 11 documents |
@@ -228,10 +262,12 @@ agent-guardrails-template/
 
 ## Version History
 
-**Current:** v2.8.0 (2026-03-14)
+**Current:** v3.1.0 (2026-05-12)
 
 | Version | Date | Highlights |
 |---------|------|------------|
+| **v3.1.0** | 2026-05-12 | Structural reorganization: split docs into 3d/ subfolder, README link fixes, stats update |
+| **v3.0.0** | 2026-05-12 | 3D game development suite, AI-Powered Development 2026 guide, Hermes 2026 dossier |
 | **v2.8.0** | 2026-03-14 | AI-first reframe, 7 new guardrail docs, vibe coding, Flutter/Godot examples |
 | **v2.7.0** | 2026-03-14 | Agent-GDUI-2026, game design suite, WCAG 3.0+, spatial computing |
 | **v2.6.0** | 2026-02-15 | Python → Go migration complete |
