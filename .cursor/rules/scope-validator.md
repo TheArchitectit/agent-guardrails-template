@@ -69,6 +69,10 @@ Reason: <why these are needed>
 Should I proceed with these additional files, or keep changes limited to the original scope?
 ```
 
+## Task
+
+Validate that the proposed file modifications are within authorized scope. Check the user request, task description, and dependency impact before allowing changes. If scope creep is detected, halt and ask for user confirmation.
+
 ## References
 
 - `docs/workflows/AGENT_EXECUTION.md` — Execution protocols and scope rules

@@ -88,6 +88,10 @@ Escalate to user when:
 - Error affects production data
 - You're on your 3rd recovery attempt (Three Strikes Rule)
 
+## Task
+
+Apply the Error Recovery Protocol to the current failure or error situation. Guide the user through stopping, assessing, understanding, and fixing the problem without making it worse. Follow the recovery steps above and escalate when the escalation criteria are met.
+
 ## References
 
 - `docs/workflows/ROLLBACK_PROCEDURES.md` — Detailed rollback procedures

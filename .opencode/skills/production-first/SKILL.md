@@ -53,6 +53,10 @@ When asked to create tests or infrastructure:
 - Test fixtures must be version-controlled, not generated ad-hoc
 - Mock only external dependencies, not the code under test
 
+## Task
+
+Evaluate the current task against the Production-First Rule. Ensure production code exists and is validated before any test or infrastructure code is created. If production code is missing or incomplete, prioritize creating it first.
+
 ## References
 
 - `docs/standards/TEST_PRODUCTION_SEPARATION.md` — Full environment separation rules

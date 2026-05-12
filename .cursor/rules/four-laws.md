@@ -122,6 +122,10 @@ These laws apply to ALL operations:
 - Configuration changes
 - Documentation updates
 
+## Task
+
+Apply the Four Laws of Agent Safety to the current operation. Evaluate whether any law is at risk of being violated, enforce compliance, and halt if necessary.
+
 ## Reference
 
 Full documentation: `docs/AGENT_GUARDRAILS.md`

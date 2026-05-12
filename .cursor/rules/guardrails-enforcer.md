@@ -54,6 +54,10 @@ If an operation fails 3 times:
 
 Never continue beyond 3 failures.
 
+## Task
+
+Enforce the guardrails on the current operation. Verify compliance with all safety rules above, check for halt conditions, and stop the operation if any violation is detected.
+
 ## References
 
 - `skills/shared-prompts/four-laws.md` - Canonical Four Laws (source of truth)

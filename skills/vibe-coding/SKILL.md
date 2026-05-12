@@ -99,6 +99,10 @@ These principles are MANDATORY for all AI-driven rapid development sessions.
 
 ---
 
+## Task
+
+Apply these Vibe Coding Principles to answer the user's request or guide their current rapid development session. Use the principles above to provide actionable, safety-aware advice.
+
 ## Reference
 
 Full documentation: `docs/ai-dev/AI_ASSISTED_DEV.md`
