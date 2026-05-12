@@ -1027,7 +1027,7 @@
 
 ---
 
-## docs/game-design/3D_GAME_DEVELOPMENT.md
+## docs/game-design/3d/3D_GAME_DEVELOPMENT.md
 
 | Line | Header |
 |------|--------|
@@ -1049,7 +1049,7 @@
 
 ---
 
-## docs/game-design/3D_GUARDREL_PROPOSALS_V1.2.md
+## docs/game-design/3d/3D_GUARDREL_PROPOSALS_V1.2.md
 
 | Line | Header |
 |------|--------|
@@ -1071,7 +1071,7 @@
 
 ---
 
-## docs/game-design/3D_MATHEMATICAL_FOUNDATIONS.md
+## docs/game-design/3d/3D_MATHEMATICAL_FOUNDATIONS.md
 
 | Line | Header |
 |------|--------|
@@ -1093,7 +1093,7 @@
 
 ---
 
-## docs/game-design/3D_MODULE_ARCHITECTURE.md
+## docs/game-design/3d/3D_MODULE_ARCHITECTURE.md
 
 | Line | Header |
 |------|--------|
@@ -1115,7 +1115,7 @@
 
 ---
 
-## docs/game-design/AI_DEBUGGABLE_3D_ARCHITECTURE.md
+## docs/game-design/3d/AI_DEBUGGABLE_3D_ARCHITECTURE.md
 
 | Line | Header |
 |------|--------|
@@ -1421,7 +1421,7 @@
 
 ---
 
-## docs/game-design/HERMES_2026_PART01_INTRO_AND_EXECUTIVE.md
+## docs/game-design/3d/HERMES_2026_PART01_INTRO_AND_EXECUTIVE.md
 
 | Line | Header |
 |------|--------|
@@ -1432,7 +1432,7 @@
 
 ---
 
-## docs/game-design/HERMES_2026_PART02_ASSETS_AND_ENGINES.md
+## docs/game-design/3d/HERMES_2026_PART02_ASSETS_AND_ENGINES.md
 
 | Line | Header |
 |------|--------|
@@ -1452,7 +1452,7 @@
 
 ---
 
-## docs/game-design/HERMES_2026_PART03_WORLD_AND_RENDERING.md
+## docs/game-design/3d/HERMES_2026_PART03_WORLD_AND_RENDERING.md
 
 | Line | Header |
 |------|--------|
@@ -1471,7 +1471,7 @@
 
 ---
 
-## docs/game-design/HERMES_2026_PART04_NPCS_AND_ANIMATION.md
+## docs/game-design/3d/HERMES_2026_PART04_NPCS_AND_ANIMATION.md
 
 | Line | Header |
 |------|--------|
@@ -1488,7 +1488,7 @@
 
 ---
 
-## docs/game-design/HERMES_2026_PART05_CODE_AND_PHYSICS.md
+## docs/game-design/3d/HERMES_2026_PART05_CODE_AND_PHYSICS.md
 
 | Line | Header |
 |------|--------|
@@ -1504,7 +1504,7 @@
 
 ---
 
-## docs/game-design/HERMES_2026_PART06_QA_AND_BUSINESS.md
+## docs/game-design/3d/HERMES_2026_PART06_QA_AND_BUSINESS.md
 
 | Line | Header |
 |------|--------|
@@ -1521,7 +1521,7 @@
 
 ---
 
-## docs/game-design/HERMES_2026_PART07_LEGAL_AND_CASES.md
+## docs/game-design/3d/HERMES_2026_PART07_LEGAL_AND_CASES.md
 
 | Line | Header |
 |------|--------|
@@ -1538,7 +1538,7 @@
 
 ---
 
-## docs/game-design/HERMES_2026_PART08_DEEP_DIVES_AND_FUTURE.md
+## docs/game-design/3d/HERMES_2026_PART08_DEEP_DIVES_AND_FUTURE.md
 
 | Line | Header |
 |------|--------|
@@ -1556,7 +1556,7 @@
 
 ---
 
-## docs/game-design/HERMES_2026_PART09_APPENDICES.md
+## docs/game-design/3d/HERMES_2026_PART09_APPENDICES.md
 
 | Line | Header |
 |------|--------|
