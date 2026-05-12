@@ -103,5 +103,5 @@ Run `python scripts/build_skills.py` to generate native formats.
 
 ## References
 
-- [Superpowers Architecture](SUPERPOWERS_ARCHITECTURE.md) - Build script and CI/CD details
+- [Skills Architecture](SKILLS_ARCHITECTURE.md) - Build script and CI/CD details
 - [AGENTS_AND_SKILLS_SETUP.md](AGENTS_AND_SKILLS_SETUP.md) - Installation quick start

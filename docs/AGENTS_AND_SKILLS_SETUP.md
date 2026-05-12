@@ -151,7 +151,7 @@ rm -rf .claude/ .opencode/
 ## References
 
 - [Skill Registry](SKILL_REGISTRY.md) - All available skills and customization
-- [Superpowers Architecture](SUPERPOWERS_ARCHITECTURE.md) - Build script, CI/CD, and advanced workflows
+- [Skills Architecture](SKILLS_ARCHITECTURE.md) - Build script, CI/CD, and advanced workflows
 - [AGENT_GUARDRAILS.md](AGENT_GUARDRAILS.md) - Core safety protocols
 - [TEST_PRODUCTION_SEPARATION.md](standards/TEST_PRODUCTION_SEPARATION.md) - Environment rules
 - [COMMIT_WORKFLOW.md](workflows/COMMIT_WORKFLOW.md) - Commit standards
