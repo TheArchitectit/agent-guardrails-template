@@ -1027,7 +1027,161 @@
 
 ---
 
+## docs/game-design/3D_GAME_DEVELOPMENT.md
+
+| Line | Header |
+|------|--------|
+| 1 | # 3D Game Development Guardrails |
+| 9 | ## Purpose |
+| 21 | ## Agent-3DDev-2026 Role Definition |
+| 33 | ### AI-Optimized Development |
+| 42 | ## CORE PRINCIPLES |
+| 44 | ### The Four Laws of 3D Development |
+| 53 | ## SAFETY PROTOCOLS (MANDATORY) |
+| 55 | ### Pre-Implementation Checklist |
+| 69 | ### Scope Enforcement Rules |
+| 80 | ### Asset Pipeline Rules |
+| 91 | ### LOD Thresholds |
+| 100 | ### Texture Size Budgets |
+| 110 | ## ENGINE CONVENTIONS (Godot 4.x) |
+| 112 | ### Scene Architecture |
+| 129 | ### Node Naming Conventions |
+
+---
+
+## docs/game-design/3D_GUARDREL_PROPOSALS_V1.2.md
+
+| Line | Header |
+|------|--------|
+| 1 | # 3D Game Development Guardrails — v1.2 Proposed Additions |
+| 9 | ## SUMMARY OF GAPS IDENTIFIED |
+| 29 | ## NEW GUARDRAIL PROPOSALS |
+| 31 | ### 1. NEURAL RENDERING GUARDRAILS |
+| 45 | ### 2. AI ANIMATION & MOTION GUARDRAILS |
+| 61 | ### 3. AI CODE GENERATION GUARDRAILS (CRITICAL) |
+| 77 | ### 4. NEURAL PHYSICS GUARDRAILS (CRITICAL) |
+| 93 | ### 5. AI QA/TESTING/BALANCE GUARDRAILS |
+| 109 | ### 6. RUNTIME INFERENCE GUARDRAILS (CRITICAL) |
+| 125 | ### 7. AI NPC & DIALOGUE GUARDRAILS (CRITICAL) |
+| 141 | ### 8. WORLD/LEVEL GENERATION GUARDRAILS |
+| 151 | ### 9. BUSINESS & VENDOR GUARDRAILS |
+| 161 | ### 10. LEGAL/ETHICAL ENHANCEMENTS |
+| 173 | ### 11. SOCIAL/ETHICAL GUARDRAILS |
+| 183 | ## INTEGRATION PLAN |
+
+---
+
+## docs/game-design/3D_MATHEMATICAL_FOUNDATIONS.md
+
+| Line | Header |
+|------|--------|
+| 1 | # 3D Mathematical Foundations for Game Development |
+| 9 | ## 1. Coordinate Systems and Points |
+| 13 | ### Handedness |
+| 25 | ### Points vs. Vectors |
+| 32 | ### Homogeneous Coordinates |
+| 41 | ## 2. Vectors: The Engine of Movement |
+| 45 | ### Vector Normalization |
+| 65 | ### The Dot Product |
+| 87 | ### The Cross Product |
+| 107 | ## 3. Transformations: Matrix Mathematics |
+| 113 | ### The Identity Matrix |
+| 124 | ### Translation Matrix |
+| 135 | ### Scaling Matrix |
+| 146 | ### Rotation Matrix |
+| 157 | ### Matrix Concatenation |
+
+---
+
+## docs/game-design/3D_MODULE_ARCHITECTURE.md
+
+| Line | Header |
+|------|--------|
+| 1 | # 3D Game Design Module Architecture |
+| 9 | ## Overview |
+| 15 | ## 1. Architectural Expansion of .guardrails/ for 3D Environments |
+| 19 | ### A. 3D Asset and Geometry Generation |
+| 36 | ### B. Material and Shader Constraints |
+| 51 | ### C. Physics and Spatial Logic Safety |
+| 71 | ## 2. Extending the Go MCP Server |
+| 75 | ### A. Spatial Analysis Tools |
+| 90 | ### B. Scene Graph Traversal |
+| 103 | ## 3. Engine-Specific Engineering Standards |
+| 107 | ### A. Unity (C#) Standards |
+| 120 | ### B. Unreal Engine (C++) Standards |
+| 131 | ### C. Godot 4 (GDScript / C++) Standards |
+| 143 | ## 4. 3D Accessibility Standards |
+| 164 | ## 5. "Vibe Coding" & Shared Prompts |
+
+---
+
+## docs/game-design/AI_DEBUGGABLE_3D_ARCHITECTURE.md
+
+| Line | Header |
+|------|--------|
+| 1 | # AI-Debuggable 3D Game Architecture |
+| 9 | ## The Core Problem |
+| 19 | ## 1. The Death of Deep Inheritance: Embracing ECS |
+| 29 | ### Composition Over Inheritance: Entity Component System |
+| 46 | ### The AI Debugging Advantage |
+| 58 | ## 2. Decoupled State and Dependency Injection |
+| 64 | ### Implementing Dependency Injection (DI) |
+| 101 | ## 3. Designing for AI Observability (Semantic Telemetry) |
+| 105 | ### Headless Execution and State Dumping |
+| 137 | ## 4. The Spatial Query API (MCP Integration) |
+| 141 | ### Required MCP Endpoints |
+| 168 | ## 5. Deterministic Execution |
+| 172 | ### Fixed Time Steps |
+| 182 | ### Seeded Randomness |
+| 194 | ## 6. Defensive Coding and Assertions |
+
+---
+
+## docs/game-design/AI_DEV_2026_COMPLETE_GUIDE.md
+
+| Line | Header |
+|------|--------|
+| 1 | # AI-Powered Development in 2026: From Intro to Master |
+| 3 | ## A Comprehensive Guide for the Modern Developer |
+| 10 | # Chapter 1: The AI Development Landscape in 2026 |
+| 12 | ## The Transformation Is Complete |
+| 20 | ## The Three-Year Revolution: 2023 to 2026 |
+| 22 | ### 2023: The Copilot Era |
+| 28 | ### 2024: The Context Window Wars |
+| 36 | ### 2025: The Agentic Breakthrough |
+| 44 | ### 2026: The Orchestration Layer |
+| 50 | ## The 2026 Tool Ecosystem |
+| 54 | ### AI-Native IDEs |
+| 64 | ### Agent-First Interfaces |
+| 74 | ### Orchestration and Multi-Agent Platforms |
+| 86 | ### Specialized Tools |
+| 96 | ## The New Developer Role |
+
+---
+
+## docs/game-design/HERMES_2026_AI_DOSSIER.md
+
+| Line | Header |
+|------|--------|
+| 1 | # AI IN 3D GAME DEVELOPMENT: THE 2026 DOSSIER |
+| 2 | ## A Comprehensive Intelligence Report |
+| 11 | ## TABLE OF CONTENTS |
+| 32 | ## 1. EXECUTIVE SUMMARY |
+| 60 | ## 2. AI-POWERED 3D ASSET GENERATION |
+| 62 | ### 2.1 The State of the Art in Text-to-3D |
+| 90 | ### 2.2 Architecture of Modern Text-to-3D Systems |
+| 116 | ### 2.3 Photogrammetry and Neural Capture |
+| 134 | ### 2.4 Commercial Rights and Licensing |
+| 144 | ### 2.5 Quality Benchmarks and Limitations |
+| 169 | ## 3. GAME ENGINE AI INTEGRATION |
+| 171 | ### 3.1 Unity 6 and the Sentis/Muse Stack |
+| 194 | ### 3.2 Unreal Engine 5.5/6 and Epic's AI Trajectory |
+| 224 | ### 3.3 Godot 4.x and Open-Source AI Integration |
+| 241 | ### 3.4 NVIDIA Omniverse and the OpenUSD Ecosystem |
+
+---
+
 **Authored by:** TheArchitectit
 **Document Owner:** Project Maintainers
-**Last Updated:** 2026-03-14
+**Last Updated:** 2026-05-12
 **Status:** Complete - all documents and headers accurately mapped
