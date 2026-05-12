@@ -52,9 +52,8 @@ func (c *OpenAIClient) ReviewImage(ctx context.Context, imageBase64 string, prom
 	}
 
 	body := map[string]interface{}{
-		"model":      c.model,
-		"messages":   messages,
-		"max_tokens": 4096,
+		"model":    c.model,
+		"messages": messages,
 	}
 
 	bodyJSON, err := json.Marshal(body)

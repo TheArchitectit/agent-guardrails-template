@@ -66,7 +66,6 @@ func (c *LocalLlamaClient) ReviewImage(ctx context.Context, imageBase64 string, 
 	body := map[string]interface{}{
 		"model":    c.model,
 		"messages": messages,
-		"max_tokens": 4096,
 	}
 
 	bodyJSON, err := json.Marshal(body)
