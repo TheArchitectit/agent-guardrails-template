@@ -413,4 +413,4 @@ Based on 2026 market intelligence. Agents must use these tools within their desi
 
 ---
 
-*Version 1.1.0 · 3D Game Development Guardrails · Updated with 2026 AI Dossier Intelligence · Part of Agent Guardrails Template v2.8.0*
+*Version 1.1.0 · 3D Game Development Guardrails · Updated with 2026 AI Dossier Intelligence · Part of Agent Guardrails Template v3.1.0*

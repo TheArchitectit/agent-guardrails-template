@@ -55,7 +55,7 @@ Then see [QUICK_SETUP.md](QUICK_SETUP.md) for the 5-minute setup, or [HOW_TO_APP
 | [four-laws.md](skills/shared-prompts/four-laws.md) | Canonical Four Laws prompt |
 | [halt-conditions.md](skills/shared-prompts/halt-conditions.md) | When to stop and ask |
 
-### AI-First Development (v2.8.0)
+### AI-First Development 
 
 | Document | Purpose |
 |----------|---------|
@@ -64,7 +64,7 @@ Then see [QUICK_SETUP.md](QUICK_SETUP.md) for the 5-minute setup, or [HOW_TO_APP
 | [GENERATIVE_ASSET_SAFETY.md](docs/generative/GENERATIVE_ASSET_SAFETY.md) | AI content disclosure, C2PA metadata, procedural generation safety |
 | [vibe-coding.md](skills/shared-prompts/vibe-coding.md) | Canonical vibe coding principles |
 
-### AI Tool Integration (v2.9.0)
+### AI Tool Integration 
 
 | Document | Purpose |
 |----------|---------|
@@ -125,7 +125,7 @@ Then see [QUICK_SETUP.md](QUICK_SETUP.md) for the 5-minute setup, or [HOW_TO_APP
 | [HERMES_2026_PART08_DEEP_DIVES_AND_FUTURE.md](docs/game-design/3d/HERMES_2026_PART08_DEEP_DIVES_AND_FUTURE.md) | Technology Deep-Dives & Future Outlook |
 | [HERMES_2026_PART09_APPENDICES.md](docs/game-design/3d/HERMES_2026_PART09_APPENDICES.md) | Appendices |
 
-### Commerce & Social Safety (v2.8.0)
+### Commerce & Social Safety 
 
 | Document | Purpose |
 |----------|---------|
@@ -233,13 +233,13 @@ agent-guardrails-template/
 ├── docs/
 │   ├── AGENT_GUARDRAILS.md      # Core safety protocols (MANDATORY)
 │   ├── HOW_TO_APPLY.md          # Apply template to your repo
-│   ├── ai-dev/                  # AI-assisted development patterns (v2.8.0)
-│   ├── state/                   # State management patterns (v2.8.0)
-│   ├── generative/              # Generative asset safety (v2.8.0)
-│   ├── monetization/            # Monetization guardrails (v2.8.0)
-│   ├── multiplayer/             # Multiplayer safety (v2.8.0)
-│   ├── analytics/               # Analytics ethics (v2.8.0)
-│   ├── deployment/              # Cross-platform deployment (v2.8.0)
+│   ├── ai-dev/                  # AI-assisted development patterns 
+│   ├── state/                   # State management patterns 
+│   ├── generative/              # Generative asset safety 
+│   ├── monetization/            # Monetization guardrails 
+│   ├── multiplayer/             # Multiplayer safety 
+│   ├── analytics/               # Analytics ethics 
+│   ├── deployment/              # Cross-platform deployment 
 │   ├── game-design/             # 2026 game design guardrails
 │   │   └── 3d/                  # 3D game development docs (v3.0.0)
 │   ├── ui-ux/                   # UI/UX component standards
@@ -316,4 +316,4 @@ Help keep this project going — use a referral link below and both of us get cr
 | [**Synthetic**](https://synthetic.new/?referral=UAWqkKQQLFkzMkY) | $10 in credits | Subscribe → both get $10 credit | `UAWqkKQQLFkzMkY` |
 ---
 
-**v3.0.0** · AI-First Rapid Development Framework · [Get Started →](QUICK_SETUP.md)
+**v3.1.0** · AI-First Rapid Development Framework · [Get Started →](QUICK_SETUP.md)
