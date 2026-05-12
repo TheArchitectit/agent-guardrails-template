@@ -94,6 +94,9 @@ func (c *LocalLlamaClient) ReviewImage(ctx context.Context, imageBase64 string, 
 	}
 
 	raw := resp.Choices[0].Message.Content
+	if raw == "" {
+		raw = resp.Choices[0].Message.ReasoningContent
+	}
 	findings, confidence := parseFindings(raw)
 
 	return &ReviewResponse{
@@ -173,7 +176,8 @@ func (c *LocalLlamaClient) HealthCheck(ctx context.Context) (HealthStatus, error
 type openAIChatResponse struct {
 	Choices []struct {
 		Message struct {
-			Content string `json:"content"`
+			Content          string `json:"content"`
+			ReasoningContent string `json:"reasoning_content"`
 		} `json:"message"`
 	} `json:"choices"`
 }
