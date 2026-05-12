@@ -149,6 +149,21 @@ curl http://127.0.0.1:8081/v1/vision/health \
   -H "Authorization: Bearer $MCP_API_KEY"
 ```
 
+## MCP Tool Verification
+
+The vision tools are registered and accessible through the MCP SSE transport. Verified tools:
+
+| Tool | Status |
+|------|--------|
+| `vision_capture_screenshot` | Registered |
+| `vision_analyze_screenshot` | Registered |
+| `vision_iterate_review` | Registered |
+| `vision_get_report` | Registered |
+| `vision_check_health` | Working — returns backend health and loaded model |
+| `vision_guardrail_check` | Registered |
+
+**Claude Code registration:** The server is configured at `http://127.0.0.1:8080/mcp/v1/sse` with Bearer token auth.
+
 ## Performance & Timeouts
 
 With a 30B parameter vision model, a single screenshot review can take **2–3 minutes** depending on GPU load and image complexity. Configure your clients accordingly:
@@ -158,6 +173,7 @@ With a 30B parameter vision model, a single screenshot review can take **2–3 m
 | `curl` / HTTP client | — | Use `--max-time 300` or higher |
 | Go `local_llama.go` client | 120s | Sufficient for most requests |
 | Echo web timeout | skips `/v1/vision/*` | Vision endpoints are exempt |
+| MCP tool call | — | Depends on client timeout; allow 3–5 min |
 
 Avoid submitting multiple concurrent vision reviews to the same llama-server instance — a 30B model typically processes one request at a time and will queue or 503-load additional requests.
 
