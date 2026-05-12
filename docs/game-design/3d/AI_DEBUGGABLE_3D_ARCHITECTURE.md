@@ -299,4 +299,4 @@ The seven pillars:
 
 ---
 
-*Part of Agent Guardrails Template v2.8.0 — AI-Debuggable 3D Architecture*
+*Part of Agent Guardrails Template v3.1.0 — AI-Debuggable 3D Architecture*
