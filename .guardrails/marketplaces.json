@@ -1,0 +1,12 @@
+{
+  "version": "1.0.0",
+  "marketplaces": [
+    {
+      "id": "official",
+      "name": "agent-guardrails-official",
+      "url": "https://github.com/TheArchitectit/agent-guardrails-template",
+      "marketplace_json_url": "https://raw.githubusercontent.com/TheArchitectit/agent-guardrails-template/main/marketplace.json",
+      "added_at": "2026-05-12T18:25:25.622131+00:00"
+    }
+  ]
+}
