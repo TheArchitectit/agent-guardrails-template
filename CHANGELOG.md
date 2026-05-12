@@ -18,7 +18,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 #### Added
 
-- **docs/game-design/3D_GAME_DEVELOPMENT.md** (416 lines) - Comprehensive 3D game development guardrails v1.0
+- **docs/game-design/3d/3D_GAME_DEVELOPMENT.md** (416 lines) - Comprehensive 3D game development guardrails v1.0
   - AI-assisted 3D workflow guardrails, engine-agnostic patterns (Godot, Unity, Unreal)
   - Asset pipeline safety, shader generation constraints, physics deterministic rules
   - Performance budgets for 3D: draw calls, poly counts, texture memory
@@ -39,22 +39,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   - Part 7: Legal, Ethics & Case Studies | Part 8: Technology Deep-Dives & Future Outlook | Part 9: Appendices
   - Live research synthesis: Ollama Search API + parallel agent analysis + domain expertise
 
-- **docs/game-design/3D_MATHEMATICAL_FOUNDATIONS.md** (290 lines) - 3D Mathematical Foundations for Game Development
+- **docs/game-design/3d/3D_MATHEMATICAL_FOUNDATIONS.md** (290 lines) - 3D Mathematical Foundations for Game Development
   - Linear algebra, trigonometry, spatial geometry reference for AI agents
   - Matrix operations, quaternion math, vector geometry, collision math
   - Pre-validated formulas agents can apply without derivation
 
-- **docs/game-design/3D_MODULE_ARCHITECTURE.md** (237 lines) - 3D Game Design Module Architecture
+- **docs/game-design/3d/3D_MODULE_ARCHITECTURE.md** (237 lines) - 3D Game Design Module Architecture
   - Blueprint bridging LLM capabilities with deterministic 3D rendering/physics
   - Module boundaries, data flow, state management for 3D engines
   - Agent-safe architecture patterns for autonomous 3D code generation
 
-- **docs/game-design/AI_DEBUGGABLE_3D_ARCHITECTURE.md** (302 lines) - AI-Debuggable 3D Game Architecture
+- **docs/game-design/3d/AI_DEBUGGABLE_3D_ARCHITECTURE.md** (302 lines) - AI-Debuggable 3D Game Architecture
   - Patterns enabling AI agents to troubleshoot 3D game features autonomously
   - Constraint-aware design: AI is blind to visual feedback, limited by context window
   - Debug instrumentation, assertion patterns, self-validating 3D systems
 
-- **docs/game-design/3D_GUARDREL_PROPOSALS_V1.2.md** (201 lines) - v1.2 Proposed Additions
+- **docs/game-design/3d/3D_GUARDREL_PROPOSALS_V1.2.md** (201 lines) - v1.2 Proposed Additions
   - Draft proposals from Hermes 2026 AI Dossier review by parallel subagents
   - Experimental guardrails for neural radiance fields, procedural geometry, AI NPCs
 
