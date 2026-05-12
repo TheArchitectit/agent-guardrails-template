@@ -78,11 +78,11 @@
 | regression-check | regression_check.py | scripts/ | Pre-commit regression pattern scanner |
 | prevention-rules | pattern-rules.json | .guardrails/prevention-rules/ | Regex patterns to prevent regressions |
 | game-design | 2026_GAME_DESIGN.md | docs/game-design/ | Agent-GDUI-2026 game design guardrails, XR/VR comfort zones |
-| 3d-guardrails | 3D_GAME_DEVELOPMENT.md | docs/game-design/ | 3D game development guardrails v1.0, engine-agnostic |
-| 3d-proposals | 3D_GUARDREL_PROPOSALS_V1.2.md | docs/game-design/ | Proposed v1.2 additions from Hermes 2026 AI Dossier |
-| 3d-math | 3D_MATHEMATICAL_FOUNDATIONS.md | docs/game-design/ | Linear algebra, quaternions, collision math reference |
-| 3d-architecture | 3D_MODULE_ARCHITECTURE.md | docs/game-design/ | Module architecture for LLM-to-3D-engine bridging |
-| ai-debuggable | AI_DEBUGGABLE_3D_ARCHITECTURE.md | docs/game-design/ | AI-debuggable 3D patterns for autonomous troubleshooting |
+| 3d-guardrails | 3D_GAME_DEVELOPMENT.md | docs/game-design/3d/ | 3D game development guardrails v1.0, engine-agnostic |
+| 3d-proposals | 3D_GUARDREL_PROPOSALS_V1.2.md | docs/game-design/3d/ | Proposed v1.2 additions from Hermes 2026 AI Dossier |
+| 3d-math | 3D_MATHEMATICAL_FOUNDATIONS.md | docs/game-design/3d/ | Linear algebra, quaternions, collision math reference |
+| 3d-architecture | 3D_MODULE_ARCHITECTURE.md | docs/game-design/3d/ | Module architecture for LLM-to-3D-engine bridging |
+| ai-debuggable | AI_DEBUGGABLE_3D_ARCHITECTURE.md | docs/game-design/3d/ | AI-debuggable 3D patterns for autonomous troubleshooting |
 | ai-2026-guide | AI_DEV_2026_PART01_INTRO_AND_FOUNDATIONS.md | docs/game-design/ | AI-Powered Development 2026: 10-part comprehensive guide series |
 | ai-2026-prompting | AI_DEV_2026_PART02_PROMPTING.md | docs/game-design/ | Part 2 — Prompt Engineering for Code |
 | ai-2026-context | AI_DEV_2026_PART03_CONTEXT_AND_ITERATION.md | docs/game-design/ | Part 3 — Context & Iterative Development |
@@ -93,15 +93,15 @@
 | ai-2026-security | AI_DEV_2026_PART08_SECURITY_ETHICS_FUTURE.md | docs/game-design/ | Part 8 — Security, Ethics & Future |
 | ai-2026-appendices | AI_DEV_2026_PART09_APPENDICES_ABC.md | docs/game-design/ | Part 9 — Appendices A, B & C |
 | ai-2026-moa | AI_DEV_2026_PART10_APPENDIX_D.md | docs/game-design/ | Part 10 — Appendix D: Complete MoA Reference |
-| hermes-dossier | HERMES_2026_PART01_INTRO_AND_EXECUTIVE.md | docs/game-design/ | AI in 3D Game Development 2026: 9-part intelligence dossier |
-| hermes-assets | HERMES_2026_PART02_ASSETS_AND_ENGINES.md | docs/game-design/ | Part 2 — 3D Asset Generation & Engine Integration |
-| hermes-world | HERMES_2026_PART03_WORLD_AND_RENDERING.md | docs/game-design/ | Part 3 — World Generation & Neural Rendering |
-| hermes-npcs | HERMES_2026_PART04_NPCS_AND_ANIMATION.md | docs/game-design/ | Part 4 — NPCs, Dialogue & Animation |
-| hermes-code | HERMES_2026_PART05_CODE_AND_PHYSICS.md | docs/game-design/ | Part 5 — Code Generation & Neural Physics |
-| hermes-qa | HERMES_2026_PART06_QA_AND_BUSINESS.md | docs/game-design/ | Part 6 — QA, Testing & Business Landscape |
-| hermes-legal | HERMES_2026_PART07_LEGAL_AND_CASES.md | docs/game-design/ | Part 7 — Legal, Ethics & Case Studies |
-| hermes-future | HERMES_2026_PART08_DEEP_DIVES_AND_FUTURE.md | docs/game-design/ | Part 8 — Technology Deep-Dives & Future Outlook |
-| hermes-appendices | HERMES_2026_PART09_APPENDICES.md | docs/game-design/ | Part 9 — Appendices |
+| hermes-dossier | HERMES_2026_PART01_INTRO_AND_EXECUTIVE.md | docs/game-design/3d/ | AI in 3D Game Development 2026: 9-part intelligence dossier |
+| hermes-assets | HERMES_2026_PART02_ASSETS_AND_ENGINES.md | docs/game-design/3d/ | Part 2 — 3D Asset Generation & Engine Integration |
+| hermes-world | HERMES_2026_PART03_WORLD_AND_RENDERING.md | docs/game-design/3d/ | Part 3 — World Generation & Neural Rendering |
+| hermes-npcs | HERMES_2026_PART04_NPCS_AND_ANIMATION.md | docs/game-design/3d/ | Part 4 — NPCs, Dialogue & Animation |
+| hermes-code | HERMES_2026_PART05_CODE_AND_PHYSICS.md | docs/game-design/3d/ | Part 5 — Code Generation & Neural Physics |
+| hermes-qa | HERMES_2026_PART06_QA_AND_BUSINESS.md | docs/game-design/3d/ | Part 6 — QA, Testing & Business Landscape |
+| hermes-legal | HERMES_2026_PART07_LEGAL_AND_CASES.md | docs/game-design/3d/ | Part 7 — Legal, Ethics & Case Studies |
+| hermes-future | HERMES_2026_PART08_DEEP_DIVES_AND_FUTURE.md | docs/game-design/3d/ | Part 8 — Technology Deep-Dives & Future Outlook |
+| hermes-appendices | HERMES_2026_PART09_APPENDICES.md | docs/game-design/3d/ | Part 9 — Appendices |
 | ui-ux | 2026_UI_UX_STANDARD.md | docs/ui-ux/ | UI/UX component standards, design tokens, interaction states |
 | accessibility | ACCESSIBILITY_GUIDE.md | docs/accessibility/ | WCAG 3.0+ compliance, conformance levels, testing methods |
 | spatial | SPATIAL_COMPUTING_UI.md | docs/spatial/ | XR/VR/AR UI patterns, comfort zones, latency requirements |
