@@ -99,8 +99,25 @@
 | **3D_MATHEMATICAL_FOUNDATIONS.md** | `docs/game-design/` | 290 | Linear algebra, quaternions, collision math reference |
 | **3D_MODULE_ARCHITECTURE.md** | `docs/game-design/` | 237 | Module architecture for LLM-to-3D-engine bridging |
 | **AI_DEBUGGABLE_3D_ARCHITECTURE.md** | `docs/game-design/` | 302 | AI-debuggable patterns for autonomous 3D troubleshooting |
-| **AI_DEV_2026_COMPLETE_GUIDE.md** | `docs/game-design/` | 3023 | AI-Powered Development 2026: ~45k word comprehensive guide |
-| **HERMES_2026_AI_DOSSIER.md** | `docs/game-design/` | 1015 | 2026 intelligence report on AI in 3D game development |
+| **AI_DEV_2026_PART01_INTRO_AND_FOUNDATIONS.md** | `docs/game-design/` | 294 | Part 1 — Introduction & Foundations |
+| **AI_DEV_2026_PART02_PROMPTING.md** | `docs/game-design/` | 216 | Part 2 — Prompt Engineering for Code |
+| **AI_DEV_2026_PART03_CONTEXT_AND_ITERATION.md** | `docs/game-design/` | 239 | Part 3 — Context & Iterative Development |
+| **AI_DEV_2026_PART04_QUALITY_AND_ARCHITECTURE.md** | `docs/game-design/` | 214 | Part 4 — Quality & Architecture |
+| **AI_DEV_2026_PART05_LEGACY_AND_AGENTS.md** | `docs/game-design/` | 235 | Part 5 — Legacy Refactoring & Agent Paradigm |
+| **AI_DEV_2026_PART06_BUILDING_AGENTS.md** | `docs/game-design/` | 254 | Part 6 — Building Agents & Tool Use |
+| **AI_DEV_2026_PART07_MULTI_AGENT_SYSTEMS.md** | `docs/game-design/` | 388 | Part 7 — Multi-Agent Systems |
+| **AI_DEV_2026_PART08_SECURITY_ETHICS_FUTURE.md** | `docs/game-design/` | 340 | Part 8 — Security, Ethics & Future |
+| **AI_DEV_2026_PART09_APPENDICES_ABC.md** | `docs/game-design/` | 432 | Part 9 — Appendices A, B & C |
+| **AI_DEV_2026_PART10_APPENDIX_D.md** | `docs/game-design/` | 411 | Part 10 — Appendix D: Complete MoA Reference |
+| **HERMES_2026_PART01_INTRO_AND_EXECUTIVE.md** | `docs/game-design/` | 59 | Part 1 — Introduction & Executive Summary |
+| **HERMES_2026_PART02_ASSETS_AND_ENGINES.md** | `docs/game-design/` | 213 | Part 2 — 3D Asset Generation & Engine Integration |
+| **HERMES_2026_PART03_WORLD_AND_RENDERING.md** | `docs/game-design/` | 102 | Part 3 — World Generation & Neural Rendering |
+| **HERMES_2026_PART04_NPCS_AND_ANIMATION.md** | `docs/game-design/` | 96 | Part 4 — NPCs, Dialogue & Animation |
+| **HERMES_2026_PART05_CODE_AND_PHYSICS.md** | `docs/game-design/` | 96 | Part 5 — Code Generation & Neural Physics |
+| **HERMES_2026_PART06_QA_AND_BUSINESS.md** | `docs/game-design/` | 122 | Part 6 — QA, Testing & Business Landscape |
+| **HERMES_2026_PART07_LEGAL_AND_CASES.md** | `docs/game-design/` | 127 | Part 7 — Legal, Ethics & Case Studies |
+| **HERMES_2026_PART08_DEEP_DIVES_AND_FUTURE.md** | `docs/game-design/` | 133 | Part 8 — Technology Deep-Dives & Future Outlook |
+| **HERMES_2026_PART09_APPENDICES.md** | `docs/game-design/` | 83 | Part 9 — Appendices |
 | **2026_UI_UX_STANDARD.md** | `docs/ui-ux/` | ~350 | UI/UX component patterns, design tokens, responsive breakpoints |
 | **ACCESSIBILITY_GUIDE.md** | `docs/accessibility/` | ~300 | WCAG 3.0+ conformance (Bronze/Silver/Gold), testing methods |
 | **SPATIAL_COMPUTING_UI.md** | `docs/spatial/` | ~400 | XR/VR/AR layout patterns, comfort zones, latency requirements |
@@ -130,9 +147,9 @@
 | Workflows | 11 | ~3,500 |
 | Standards | 11 | ~4,400 |
 | Sprints | 3 | ~816 |
-| 2026 Game/UI/UX | 12 | ~6,564 |
+| 2026 Game/UI/UX | 29 | ~7,150 |
 | AI-First Development | 7 | ~2,061 |
-| **TOTAL** | **51** | **~17,391** |
+| **TOTAL** | **68** | **~18,977** |
 
 ---
 
@@ -285,5 +302,5 @@ All files follow these conventions:
 **Authored by:** TheArchitectit
 **Document Owner:** Project Maintainers
 **Last Updated:** 2026-05-12
-**Total Files:** 103
-**Total Lines:** ~16,500
+**Total Files:** 120
+**Total Lines:** ~17,000
