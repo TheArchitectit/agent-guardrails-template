@@ -91,6 +91,8 @@ One canonical skill definition → generated native formats for every IDE.
 | **Canonical Skills** | YAML frontmatter + markdown body. Source of truth for all 11 skills | `skills/<id>/SKILL.md` |
 | **Build Script** | Generates all native formats from canonical sources. Supports `--check`, `--dry-run`, `--platform`, `--skill` | `scripts/build_skills.py` |
 | **Plugin Manifests** | Per-IDE wrappers pointing to `./skills/` | `.claude-plugin/`, `.cursor-plugin/`, `.codex-plugin/`, `.gemini-extension/` |
+| **Claude Code Plugin** | Native plugin: install via `/plugin install` or `claude --plugin-dir ./` | `.claude-plugin/plugin.json` + `skills/<id>/SKILL.md` |
+| **Cross-Platform Marketplace** | Install any skill for any platform from any GitHub repo | `marketplace.json` + `scripts/marketplace.py` |
 | **Generated: Claude Code** | JSON skill files | `.claude/skills/*.json` |
 | **Generated: Cursor** | Markdown rule files | `.cursor/rules/*.md` |
 | **Generated: OpenCode** | SKILL.md per skill | `.opencode/skills/*/SKILL.md` |
@@ -99,7 +101,7 @@ One canonical skill definition → generated native formats for every IDE.
 | **Generated: Windsurf** | Monolithic rules | `.windsurfrules` |
 | **Hooks** | Pre/post execution shell hooks | `.claude/hooks/*.sh` |
 
-**Installation:** See [AGENTS_AND_SKILLS_SETUP.md](docs/AGENTS_AND_SKILLS_SETUP.md) for quick start, [SKILL_REGISTRY.md](docs/SKILL_REGISTRY.md) for per-skill details, and [SKILLS_ARCHITECTURE.md](docs/SKILLS_ARCHITECTURE.md) for build script and CI/CD integration.
+**Installation:** See [AGENTS_AND_SKILLS_SETUP.md](docs/AGENTS_AND_SKILLS_SETUP.md) for quick start, [SKILL_REGISTRY.md](docs/SKILL_REGISTRY.md) for per-skill details, [SKILLS_ARCHITECTURE.md](docs/SKILLS_ARCHITECTURE.md) for build script and CI/CD integration, [MARKETPLACE.md](docs/MARKETPLACE.md) for cross-platform marketplace CLI, and [CLAUDE_CODE_PLUGIN.md](docs/CLAUDE_CODE_PLUGIN.md) for Claude Code native plugin testing and submission.
 
 ### Game Design & UI/UX (Agent-GDUI-2026)
 
@@ -299,10 +301,11 @@ agent-guardrails-template/
 ├── .claude/                     ← GENERATED (Claude Code native)
 │   ├── skills/*.json            # 11 JSON skill files
 │   └── hooks/*.sh               # Pre/post execution hooks
-├── .claude-plugin/plugin.json   # Plugin manifest
+├── .claude-plugin/plugin.json   # Plugin manifest (Claude Code native)
 ├── .cursor-plugin/plugin.json   # Plugin manifest
 ├── .codex-plugin/plugin.json    # Plugin manifest
 ├── .gemini-extension/           # Plugin manifest
+├── marketplace.json             # Cross-platform skill catalog
 ├── .cursor/rules/*.md           # GENERATED (Cursor native)
 ├── .opencode/skills/*/SKILL.md  # GENERATED (OpenCode native)
 ├── .openclaw/skills/*/SKILL.md  # GENERATED (OpenClaw native)
