@@ -1,18 +1,12 @@
 {
   "name": "agent-guardrails",
-  "displayName": "Agent Guardrails",
   "description": "Core safety skills for AI-assisted development: Four Laws, Three Strikes, production-first, scope validation, and environment separation",
-  "version": "3.1.0",
+  "version": "3.2.0",
   "author": {
-    "name": "TheArchitectit",
-    "email": ""
+    "name": "TheArchitectit"
   },
   "homepage": "https://github.com/TheArchitectit/agent-guardrails-template",
   "repository": "https://github.com/TheArchitectit/agent-guardrails-template",
   "license": "MIT",
-  "keywords": ["skills", "guardrails", "safety", "ai-agents", "workflows"],
-  "skills": "./skills/",
-  "agents": "./docs/",
-  "commands": "./scripts/",
-  "hooks": "./.claude/hooks/"
+  "keywords": ["skills", "guardrails", "safety", "ai-agents", "workflows"]
 }
