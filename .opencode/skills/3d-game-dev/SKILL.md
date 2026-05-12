@@ -133,6 +133,10 @@ Use when generating, modifying, or reviewing code/assets for a 3D game project.
 - Run `scripts/validate_math.py` on transform/rotation code
 - CI: 600-frame headless test must pass (FPS >30, memory stable)
 
+## Task
+
+Apply these 3D Game Development Guardrails to the user's request. When generating, modifying, or reviewing 3D game code or assets, enforce the mandatory guardrails above and provide safety-aware guidance.
+
 ## References
 
 - `docs/game-design/3D_GAME_DEVELOPMENT.md` — Full guardrails

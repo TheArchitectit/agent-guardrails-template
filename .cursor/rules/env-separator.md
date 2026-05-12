@@ -40,6 +40,10 @@ If you cannot verify environment separation:
 2. Ask the user to confirm environment boundaries
 3. Do NOT proceed until separation is guaranteed
 
+## Task
+
+Verify that test and production environments are properly separated for the current operation. Check environment boundaries, credentials, and data flows. Halt if separation cannot be guaranteed.
+
 ## References
 
 - `docs/standards/TEST_PRODUCTION_SEPARATION.md` - Full environment rules

@@ -84,6 +84,10 @@ The Three Strikes Rule can be overridden ONLY by explicit user instruction:
 
 Without explicit override, HALT at 3 strikes every time.
 
+## Task
+
+Track failure attempts on the current task. If this is the first or second failure, adjust and retry. If this is the third strike, halt immediately and escalate to the user with a summary of attempts and current state.
+
 ## References
 
 - `docs/workflows/AGENT_ESCALATION.md` — When to halt and escalate

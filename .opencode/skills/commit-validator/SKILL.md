@@ -49,6 +49,10 @@ If validation fails:
 3. Provide specific fix instructions
 4. Require user confirmation before proceeding
 
+## Task
+
+Validate the current git state against the commit standards above. Check staged changes, commit messages, and diffs for violations. If issues are found, explain the violations and provide specific fix instructions. Require user confirmation before allowing the commit to proceed.
+
 ## References
 
 - `docs/workflows/COMMIT_WORKFLOW.md` - Commit standards

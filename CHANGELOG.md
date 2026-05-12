@@ -50,6 +50,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   - `GEMINI.md` — Gemini agent context with skills pointer
   - `AGENTS.md` — Cross-platform agent setup index
 
+- **Claude Code Marketplace Submission Package**
+  - `docs/CLAUDE_CODE_PLUGIN.md` — Submission guide for `claude.ai/settings/plugins/submit`
+  - `docs/MARKETPLACE.md` — Cross-platform marketplace CLI guide
+  - `.claude-plugin/plugin.json` — Official Anthropic schema (name, description, version, author, homepage, repository, license, keywords)
+
+- **Cross-Platform Marketplace**
+  - `marketplace.json` — Catalog of all 11 skills with platform-aware metadata and GitHub source pointers
+  - `scripts/marketplace.py` — CLI for marketplace operations: `add`, `remove`, `list`, `search`, `install`, `refresh`
+  - `MarketplaceRegistry` — `.guardrails/marketplaces.json` local registry
+  - `MarketplaceClient` — Fetch marketplace.json from GitHub raw URLs
+  - `MarketplaceInstaller` — Download SKILL.md → parse → generate native format → write to target
+
+- **MCP Server Marketplace Integration**
+  - `guardrail_install_skills` extended with `marketplace` and `platform` parameters
+  - 4 new MCP tools: `guardrail_marketplace_add`, `guardrail_marketplace_list`, `guardrail_marketplace_search`, `guardrail_marketplace_remove`
+  - Shells out to `scripts/marketplace.py` for operations
+
+- **Test Coverage**
+  - `tests/scripts/test_marketplace.py` — Marketplace registry CRUD, skill search, install flow
+  - `tests/scripts/test_claude_plugin.py` — Plugin manifest validation, skill directory structure
+
 #### Changed
 
 - **`scripts/setup_agents.py`** — Added `ensure_skill_exists()` wrapper
@@ -81,6 +102,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - **Content drift eliminated** — `guardrails-enforcer` previously varied ~30% between Claude JSON and Cursor MD; now generated from identical canonical source
 - **Missing skill coverage** — Cursor previously lacked `commit-validator`, `env-separator`, `error-recovery`; OpenCode lacked `three-strikes`, `production-first`. Build script now generates all 11 skills for all applicable platforms
 - **500-line doc limit compliance** — `AGENTS_AND_SKILLS_SETUP.md` (521 lines) split into 3 docs under the limit
+
+- **Missing `## Task` sections** — 7 skills (`four-laws`, `halt-conditions`, `guardrails-enforcer`, `production-first`, `scope-validator`, `three-strikes`, `env-separator`) lacked explicit `## Task` instructions, causing Claude Code to dump reference content without synthesizing actionable responses when manually invoked. All 11 skills now have explicit Task sections instructing the model how to apply the skill to the user's request.
 
 ---
 
