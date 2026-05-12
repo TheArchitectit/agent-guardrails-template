@@ -6,6 +6,63 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [Unreleased]
+
+---
+
+## [3.0.0] - 2026-05-12
+
+### Major Release: 3D Game Development & AI-Powered Development 2026
+
+**Type:** Major Version Bump (new domain + comprehensive guide)
+
+#### Added
+
+- **docs/game-design/3D_GAME_DEVELOPMENT.md** (416 lines) - Comprehensive 3D game development guardrails v1.0
+  - AI-assisted 3D workflow guardrails, engine-agnostic patterns (Godot, Unity, Unreal)
+  - Asset pipeline safety, shader generation constraints, physics deterministic rules
+  - Performance budgets for 3D: draw calls, poly counts, texture memory
+  - XR/VR 3D specific: comfort zones, locomotion safety, spatial audio
+
+- **docs/game-design/AI_DEV_2026_COMPLETE_GUIDE.md** (~3,023 lines) - AI-Powered Development 2026: From Intro to Master
+  - ~45,000 word comprehensive guide covering the modern AI development landscape
+  - Agent ecosystems, neural engine integration, generative asset pipelines
+  - Vibe coding mastery, decision matrices, rapid prototyping workflows
+  - Ethics, safety, and production readiness for AI-first teams
+
+- **docs/game-design/HERMES_2026_AI_DOSSIER.md** (~1,015 lines) - AI in 3D Game Development: The 2026 Dossier
+  - Intelligence report on generative AI and neural engines in interactive entertainment
+  - Live research synthesis: Ollama Search API + parallel agent analysis
+  - Market landscape, technology deep-dives, case studies, and strategic forecasts
+
+- **docs/game-design/3D_MATHEMATICAL_FOUNDATIONS.md** (290 lines) - 3D Mathematical Foundations for Game Development
+  - Linear algebra, trigonometry, spatial geometry reference for AI agents
+  - Matrix operations, quaternion math, vector geometry, collision math
+  - Pre-validated formulas agents can apply without derivation
+
+- **docs/game-design/3D_MODULE_ARCHITECTURE.md** (237 lines) - 3D Game Design Module Architecture
+  - Blueprint bridging LLM capabilities with deterministic 3D rendering/physics
+  - Module boundaries, data flow, state management for 3D engines
+  - Agent-safe architecture patterns for autonomous 3D code generation
+
+- **docs/game-design/AI_DEBUGGABLE_3D_ARCHITECTURE.md** (302 lines) - AI-Debuggable 3D Game Architecture
+  - Patterns enabling AI agents to troubleshoot 3D game features autonomously
+  - Constraint-aware design: AI is blind to visual feedback, limited by context window
+  - Debug instrumentation, assertion patterns, self-validating 3D systems
+
+- **docs/game-design/3D_GUARDREL_PROPOSALS_V1.2.md** (201 lines) - v1.2 Proposed Additions
+  - Draft proposals from Hermes 2026 AI Dossier review by parallel subagents
+  - Experimental guardrails for neural radiance fields, procedural geometry, AI NPCs
+
+#### Changed
+
+- **README.md** - Version badge updated to v3.0.0, added 3D game development references
+- **INDEX_MAP.md** - Added 7 new entries for 3D and AI 2026 documents, updated counts
+- **HEADER_MAP.md** - Added section-level mappings for all 7 new game design documents
+- **TOC.md** - Added new 3D game design category, updated file totals (44 → 51 docs)
+
+---
+
 ## [2.8.0] - 2026-03-14
 
 ### Major Release: AI-First Reframe & Gap Remediation
