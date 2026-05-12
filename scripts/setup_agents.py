@@ -532,8 +532,64 @@ def create_claude_config(repo_root: Path, minimal: bool = False) -> None:
 
     # Create hooks (only for full setup)
     if not minimal:
-        hooks = {
-            "pre-execution.sh": """#!/bin/bash
+        is_windows = sys.platform.startswith("win")
+        if is_windows:
+            hooks = {
+                "pre-execution.ps1": """# Pre-Execution Hook - Runs before file modifications
+# Enforces: read-before-edit, scope verification
+
+Write-Host "[GUARDRAILS] Pre-execution checks running..."
+
+# Check if CLAUDE.md exists
+if (-not (Test-Path "CLAUDE.md")) {
+    Write-Warning "[GUARDRAILS] CLAUDE.md not found in repository root"
+}
+
+# Log operation start
+Write-Host "[GUARDRAILS] Operation started at $(Get-Date)"
+Write-Host "[GUARDRAILS] Remember: Read before editing, stay in scope"
+""",
+                "post-execution.ps1": """# Post-Execution Hook - Runs after file modifications
+# Validates: no forbidden patterns, changes are correct
+
+Write-Host "[GUARDRAILS] Post-execution validation running..."
+
+# Check for common issues
+$envModified = git diff --name-only | Select-String -Pattern "\\.env"
+if ($envModified) {
+    Write-Error "[GUARDRAILS] .env file modified! Potential secret exposure."
+    exit 1
+}
+
+Write-Host "[GUARDRAILS] Post-execution checks passed"
+""",
+                "pre-commit.ps1": """# Pre-Commit Hook - Runs before git commit
+# Validates: AI attribution, no secrets, tests pass
+
+param([string]$messageFile)
+
+Write-Host "[GUARDRAILS] Pre-commit validation running..."
+
+# Check for AI attribution in commit message
+$commitMsg = Get-Content $messageFile -Raw
+if ($commitMsg -notmatch "Co-Authored-By:") {
+    Write-Error "[GUARDRAILS] Commit message missing AI attribution (Co-Authored-By)"
+    Write-Host "[GUARDRAILS] Please add: Co-Authored-By: Claude <noreply@anthropic.com>"
+    exit 1
+}
+
+# Check for secrets in staged files (optional)
+$trufflehog = Get-Command trufflehog -ErrorAction SilentlyContinue
+if ($trufflehog) {
+    trufflehog git file://. --since-commit HEAD --only-verified --fail
+}
+
+Write-Host "[GUARDRAILS] Pre-commit validation passed"
+"""
+            }
+        else:
+            hooks = {
+                "pre-execution.sh": """#!/bin/bash
 # Pre-Execution Hook - Runs before file modifications
 # Enforces: read-before-edit, scope verification
 
@@ -548,7 +604,7 @@ fi
 echo "[GUARDRAILS] Operation started at $(date)"
 echo "[GUARDRAILS] Remember: Read before editing, stay in scope"
 """,
-            "post-execution.sh": """#!/bin/bash
+                "post-execution.sh": """#!/bin/bash
 # Post-Execution Hook - Runs after file modifications
 # Validates: no forbidden patterns, changes are correct
 
@@ -562,7 +618,7 @@ fi
 
 echo "[GUARDRAILS] Post-execution checks passed"
 """,
-            "pre-commit.sh": """#!/bin/bash
+                "pre-commit.sh": """#!/bin/bash
 # Pre-Commit Hook - Runs before git commit
 # Validates: AI attribution, no secrets, tests pass
 
@@ -582,13 +638,16 @@ fi
 
 echo "[GUARDRAILS] Pre-commit validation passed"
 """
-        }
+            }
 
         for hook_name, hook_content in hooks.items():
             hook_path = hooks_dir / hook_name
             with open(hook_path, "w") as f:
                 f.write(hook_content)
-            os.chmod(hook_path, 0o755)  # Make executable
+            try:
+                os.chmod(hook_path, 0o755)  # Make executable (no-op on Windows)
+            except OSError:
+                pass
             print(f"  Created: {hook_path.relative_to(repo_root)}")
 
     print(f"Claude Code configuration complete: {claude_dir.relative_to(repo_root)}/")

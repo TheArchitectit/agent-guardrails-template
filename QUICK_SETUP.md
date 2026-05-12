@@ -19,6 +19,8 @@ python scripts/setup_agents.py --claude --full
 
 **Step 3:** Done! 🎉
 
+> **Windows users:** See [docs/WINDOWS_SETUP.md](docs/WINDOWS_SETUP.md) for Windows-specific prerequisites and troubleshooting.
+
 Your AI agent now has guardrails. Every time it edits code, it will:
 - ✅ Read files before editing them
 - ✅ Validate bash commands before running them

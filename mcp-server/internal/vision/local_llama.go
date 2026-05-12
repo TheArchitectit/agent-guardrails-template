@@ -16,17 +16,24 @@ import (
 type LocalLlamaClient struct {
 	baseURL string
 	model   string
+	apiKey  string
 	client  *http.Client
 }
 
 // NewLocalLlamaClient creates a client for the local llama-server.
 func NewLocalLlamaClient(baseURL, model string, timeout time.Duration) *LocalLlamaClient {
+	return NewLocalLlamaClientWithKey(baseURL, model, "", timeout)
+}
+
+// NewLocalLlamaClientWithKey creates a client for a custom OpenAI-compatible endpoint that may require an API key.
+func NewLocalLlamaClientWithKey(baseURL, model, apiKey string, timeout time.Duration) *LocalLlamaClient {
 	if timeout == 0 {
 		timeout = 120 * time.Second
 	}
 	return &LocalLlamaClient{
 		baseURL: baseURL,
 		model:   model,
+		apiKey:  apiKey,
 		client: &http.Client{
 			Timeout: timeout,
 		},
@@ -105,6 +112,9 @@ func (c *LocalLlamaClient) doRequest(ctx context.Context, bodyJSON []byte) (*ope
 		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/json")
+	if c.apiKey != "" {
+		req.Header.Set("Authorization", "Bearer "+c.apiKey)
+	}
 
 	r, err := c.client.Do(req)
 	if err != nil {

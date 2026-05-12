@@ -7,10 +7,14 @@ inference:
   local_model: "nemotron-vision-local"
 
   # Hosted fallback — used when local fails or confidence is too low
-  fallback_provider: "anthropic"           # or "openai"
+  fallback_provider: "anthropic"           # or "openai" or "custom"
   fallback_model: "claude-3-5-sonnet"
   fallback_api_key: "${FALLBACK_API_KEY}"  # loaded from env
   fallback_max_tokens: 4096
+
+  # Custom fallback endpoint (only used when fallback_provider is "custom")
+  # Any OpenAI-compatible endpoint: local proxy, self-hosted model, third-party API
+  fallback_url: "${FALLBACK_URL}"          # e.g. http://my-proxy.internal:8080/v1
 
   # llama-server tuning (for documentation/reference)
   mmproj_path: "/mnt/data/models/nemotron-30b-a3b/mmproj-F16.gguf"

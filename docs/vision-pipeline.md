@@ -66,16 +66,36 @@ Mounted at `/v1/vision` on the web server port:
 
 ## Configuration
 
+### Quick Setup (Wizard)
+
+Run the interactive wizard to generate your `vision.yaml`:
+
+```bash
+python scripts/setup_vision_wizard.py
+```
+
+The wizard will ask:
+1. Do you have a local llama-server running?
+2. If not, do you have a remote/network endpoint?
+3. Which fallback provider to use (**Anthropic**, **OpenAI**, or **Custom**) when the primary endpoint is unavailable.
+
+> **Note:** The Go server reads `LOCAL_LLAMA_URL` as its primary endpoint. The wizard places both local and network URLs into `local_url` so the server actually uses them. Network endpoints work exactly the same — just point `LOCAL_LLAMA_URL` to the remote machine.
+
+> **Custom fallback** lets you point to any OpenAI-compatible endpoint (e.g., a self-hosted model, a proxy, or another provider).
+
+### Manual Setup
+
 Copy `mcp-server/config/vision.example.yaml` to `vision.yaml` and fill values, or use environment variables:
 
 | Variable | Purpose | Default |
 |----------|---------|---------|
 | `VISION_ENABLED` | Enable vision tools | `false` |
-| `LOCAL_LLAMA_URL` | llama-server endpoint | `http://localhost:8080/v1` |
+| `LOCAL_LLAMA_URL` | Primary llama-server endpoint (can be local or network) | `http://localhost:8080/v1` |
 | `LOCAL_LLAMA_MODEL` | Model name | `nemotron-vision-local` |
-| `FALLBACK_PROVIDER` | `anthropic` or `openai` | (none) |
+| `FALLBACK_PROVIDER` | `anthropic`, `openai`, or `custom` | (none) |
 | `FALLBACK_MODEL` | Hosted model name | (none) |
 | `FALLBACK_API_KEY` | API key for fallback | (none) |
+| `FALLBACK_URL` | Custom OpenAI-compatible endpoint URL (when provider is `custom`) | (none) |
 | `SCREENSHOT_DIR` | Watch directory | `./screenshots` |
 | `VISION_DB_PATH` | SQLite DB path | `./vision_reviews.db` |
 
