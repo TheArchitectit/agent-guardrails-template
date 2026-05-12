@@ -1137,11 +1137,11 @@
 
 ---
 
-## docs/game-design/AI_DEV_2026_COMPLETE_GUIDE.md
+## docs/game-design/AI_DEV_2026_PART01_INTRO_AND_FOUNDATIONS.md
 
 | Line | Header |
 |------|--------|
-| 1 | # AI-Powered Development in 2026: From Intro to Master |
+| 1 | # AI-Powered Development 2026: Part 1 — Introduction & Foundations |
 | 3 | ## A Comprehensive Guide for the Modern Developer |
 | 10 | # Chapter 1: The AI Development Landscape in 2026 |
 | 12 | ## The Transformation Is Complete |
@@ -1156,28 +1156,417 @@
 | 74 | ### Orchestration and Multi-Agent Platforms |
 | 86 | ### Specialized Tools |
 | 96 | ## The New Developer Role |
+| 100 | ### The AI-Native Junior Developer |
+| 104 | ### The Orchestrator |
+| 108 | ### The Agent Architect |
+| 112 | ### The Skeptical Craftsman |
+| 116 | ## The Economics of AI Development |
+| 124 | ## What This Guide Will Teach You |
+| 140 | ## The Economics of AI Development |
+| 148 | ## What This Guide Will Teach You |
+| 169 | # Chapter 2: Your First AI Pair Programmer |
+| 171 | ## Choosing Your Stack |
+| 185 | ## The Core Interaction Loop |
+| 201 | ## Project Rules: Teaching the AI Your Conventions |
+| 228 | ## File Context and Codebase Awareness |
+| 240 | ## The Trust Spectrum |
+| 254 | ## Setting Boundaries |
+| 266 | ## Practical Onboarding Workflow |
+| 282 | ## Actionable Takeaways |
 
 ---
 
-## docs/game-design/HERMES_2026_AI_DOSSIER.md
+## docs/game-design/AI_DEV_2026_PART02_PROMPTING.md
 
 | Line | Header |
 |------|--------|
-| 1 | # AI IN 3D GAME DEVELOPMENT: THE 2026 DOSSIER |
+| 1 | # AI-Powered Development 2026: Part 2 — Prompt Engineering for Code |
+| 3 | ## Why Generic Prompts Fail |
+| 11 | ## The P-C-T-C Framework |
+| 55 | ## Chain-of-Thought for Complex Logic |
+| 81 | ## Few-Shot Prompting with Examples |
+| 117 | ## Prompt Templates for Common Tasks |
+| 163 | ## Anti-Patterns: What Not to Do |
+| 179 | ## Advanced Techniques |
+| 189 | ## Understanding Model Capabilities and Limitations |
+| 201 | ## Actionable Takeaways |
+
+---
+
+## docs/game-design/AI_DEV_2026_PART03_CONTEXT_AND_ITERATION.md
+
+| Line | Header |
+|------|--------|
+| 1 | # AI-Powered Development 2026: Part 3 — Context & Iterative Development |
+| 3 | ## The Token Economy |
+| 11 | ## Context Window Management Strategies |
+| 25 | ## Retrieval-Augmented Generation for Code |
+| 41 | ## Project-Specific Knowledge Injection |
+| 53 | ## Keeping Context Fresh Across Sessions |
+| 65 | ## Strategies for Monorepos and Massive Codebases |
+| 77 | ## Context Compression and Summarization Techniques |
+| 89 | ## The Future: Infinite Context vs. Intelligent Retrieval |
+| 99 | ## Actionable Takeaways |
+| 116 | # Chapter 5: The Iterative Development Loop with AI |
+| 118 | ## Planning Before Generating |
+| 135 | ## Breaking Work into Atomic, Verifiable Tasks |
+| 151 | ## Test-Driven Development with AI |
+| 167 | ## Incremental Commits and Rollbacks |
+| 185 | ## Working with AI-Generated Code at Scale |
+| 202 | ## Collaborative Iteration: The Pair Programming Model |
+| 214 | ## When to Stop Iterating |
+| 224 | ## Actionable Takeaways |
+
+---
+
+## docs/game-design/AI_DEV_2026_PART04_QUALITY_AND_ARCHITECTURE.md
+
+| Line | Header |
+|------|--------|
+| 1 | # AI-Powered Development 2026: Part 4 — Quality & Architecture |
+| 3 | ## AI-Assisted Debugging Strategies |
+| 17 | ## Generating Comprehensive Test Suites |
+| 31 | ## Fuzzing and Edge Case Discovery |
+| 41 | ## Automated Code Review |
+| 51 | ## Regression Testing and Snapshots |
+| 61 | ## Performance Profiling with AI |
+| 71 | ## Continuous Quality Monitoring |
+| 83 | ## The Limits of AI QA |
+| 95 | ## Actionable Takeaways |
+| 110 | # Chapter 7: Architecture and Design with AI |
+| 112 | ## Using AI for System Design |
+| 124 | ## Generating and Maintaining Architecture Decision Records |
+| 134 | ## API Design and Contract Generation |
+| 146 | ## Database Design and Migration Planning |
+| 156 | ## Microservices and Modular Architecture |
+| 166 | ## Technology Selection and Stack Decisions |
+| 178 | ## Diagram Generation |
+| 188 | ## When to Ignore AI Architecture Suggestions |
+| 200 | ## Actionable Takeaways |
+
+---
+
+## docs/game-design/AI_DEV_2026_PART05_LEGACY_AND_AGENTS.md
+
+| Line | Header |
+|------|--------|
+| 1 | # AI-Powered Development 2026: Part 5 — Legacy Refactoring & Agent Paradigm |
+| 3 | ## The Archaeology Problem |
+| 15 | ## Safe Refactoring Patterns with AI |
+| 34 | ## Incremental Modernization Strategies |
+| 44 | ## Generating Documentation for Legacy Systems |
+| 54 | ## Dealing with Technical Debt at Scale |
+| 66 | ## The Psychological Dimension of Legacy Work |
+| 76 | ## Case Study: Modernizing a 100K Line Codebase |
+| 94 | ## Actionable Takeaways |
+| 109 | # Chapter 9: From Copilot to Agent — The Paradigm Shift |
+| 111 | ## What Makes an Agent |
+| 125 | ## The ReAct Pattern: Reasoning and Acting |
+| 151 | ## Plan-and-Execute Frameworks |
+| 163 | ## The Spectrum: Copilot to Agent to Swarm to Autonomous System |
+| 177 | ## Evaluating Agent Effectiveness |
+| 191 | ## When Agents Fail and Why |
+| 207 | ## Human-Agent Collaboration Patterns |
+| 221 | ## Actionable Takeaways |
+
+---
+
+## docs/game-design/AI_DEV_2026_PART06_BUILDING_AGENTS.md
+
+| Line | Header |
+|------|--------|
+| 1 | # AI-Powered Development 2026: Part 6 — Building Agents & Tool Use |
+| 3 | ## Core Architecture: Planner, Executor, Memory, Evaluator |
+| 17 | ## Tool Integration: Filesystem, Shell, Web, Browser |
+| 31 | ## Building with Frameworks vs. Custom Solutions |
+| 45 | ## State Management and Memory |
+| 57 | ## Error Recovery and Resilience |
+| 69 | ## Agent Extensibility and Plugin Architecture |
+| 79 | ## A Complete Example: Feature Implementation Agent |
+| 117 | ## Actionable Takeaways |
+| 131 | # Chapter 11: Tool Use and Function Calling Deep Dive |
+| 133 | ## How Function Calling Works Under the Hood |
+| 152 | ## Designing Effective Tool Schemas |
+| 166 | ## Compositional Tool Design |
+| 185 | ## Error Handling and Retry Strategies |
+| 199 | ## Building Custom Tools for Your Stack |
+| 216 | ## Security Boundaries |
+| 230 | ## Tool Evaluation: Measuring Tool Selection Accuracy |
+| 242 | ## Actionable Takeaways |
+
+---
+
+## docs/game-design/AI_DEV_2026_PART07_MULTI_AGENT_SYSTEMS.md
+
+| Line | Header |
+|------|--------|
+| 1 | # AI-Powered Development 2026: Part 7 — Multi-Agent Systems |
+| 3 | ## Self-Healing CI/CD |
+| 19 | ## Automated Dependency Management |
+| 33 | ## Documentation and Changelog Generation |
+| 45 | ## Deployment Agents and Rollback Strategies |
+| 57 | ## Infrastructure as Code Agents |
+| 69 | ## Monitoring and Alerting Agents |
+| 81 | ## The Fully Autonomous Repo: Dream vs. Reality |
+| 103 | ## Actionable Takeaways |
+| 119 | # Chapter 13: Mixture of Agents — Theory and Architecture |
+| 121 | ## Why One Model Is Not Enough |
+| 129 | ## The MoA Architecture: Proposers and Aggregators |
+| 151 | ## Layered Reasoning and Consensus Mechanisms |
+| 163 | ## Cost, Latency, and Quality Tradeoffs |
+| 175 | ## The Cognitive Analogy |
+| 187 | ## Comparing MoA to Other Ensembling Techniques |
+| 205 | ## The Evolution of MoA in 2025-2026 |
+| 221 | ## Actionable Takeaways |
+| 236 | # Chapter 14: Implementing MoA for Complex Development Tasks |
+| 238 | ## Reference Implementations in Python |
+| 288 | ## Routing Tasks to Specialist Agents |
+| 302 | ## Aggregating Outputs: Voting, Synthesis, Critique |
+| 314 | ## Building a Local MoA Pipeline |
+| 331 | ## MoA for Specific Development Tasks |
+| 343 | ## Deploying MoA in Production Environments |
+| 357 | ## Evaluating MoA Systems |
+| 373 | ## Actionable Takeaways |
+
+---
+
+## docs/game-design/AI_DEV_2026_PART08_SECURITY_ETHICS_FUTURE.md
+
+| Line | Header |
+|------|--------|
+| 1 | # AI-Powered Development 2026: Part 8 — Security, Ethics & Future |
+| 3 | ## Distributed Cognition Models |
+| 11 | ## Communication Protocols Between Agents |
+| 29 | ## Conflict Resolution and Consensus |
+| 41 | ## Case Study: Multi-Agent Code Review |
+| 67 | ## Scaling Swarms: From Tens to Hundreds |
+| 79 | ## The Limits of Swarm Intelligence |
+| 93 | ## Designing Effective Swarm Behaviors |
+| 105 | ## Actionable Takeaways |
+| 121 | # Chapter 16: Security, Ethics, and Responsible AI Development |
+| 125 | ## Prompt Injection and Code Security |
+| 139 | ## Hallucinations and How to Catch Them |
+| 154 | ## Licensing and Copyright Considerations |
+| 168 | ## Responsible AI Development Practices |
+| 182 | ## Regulatory Landscape in 2026 |
+| 197 | ## Building a Security-First AI Workflow |
+| 214 | ## Actionable Takeaways |
+| 230 | # Chapter 17: The Future of AI-Native Development |
+| 232 | ## Predictions for 2027-2030 |
+| 244 | ## The Fully Autonomous Developer |
+| 252 | ## Human-AI Collaboration Models |
+| 266 | ## Staying Current in a Changing Landscape |
+| 280 | ## The Transformation of Developer Education |
+| 292 | ## Building Resilient AI-Native Teams |
+| 306 | ## Industry Verticals: Where AI Development Varies |
+| 322 | ## The Enduring Role of the Human Developer |
+
+---
+
+## docs/game-design/AI_DEV_2026_PART09_APPENDICES_ABC.md
+
+| Line | Header |
+|------|--------|
+| 1 | # AI-Powered Development 2026: Part 9 — Appendices A, B & C |
+| 3 | ## The Meta-Prompt Pattern |
+| 17 | ## Chain-of-Verification |
+| 41 | ## The Socratic Prompt |
+| 55 | ## Prompt Chaining for Complex Workflows |
+| 73 | ## Few-Shot Prompt Libraries |
+| 90 | ## Prompt Compression Techniques |
+| 104 | ## Anti-Pattern: The Prompt Arms Race |
+| 120 | ## Actionable Takeaways |
+| 135 | # Appendix B: Building Local AI Development Environments |
+| 137 | ## Why Local Matters |
+| 143 | ## Hardware Selection |
+| 157 | ## Model Selection for Local Development |
+| 177 | ## Software Stack |
+| 205 | ## Client Integration |
+| 219 | ## The Hybrid Workflow |
+| 231 | ## Performance Tuning |
+| 247 | ## Cost Analysis |
+| 259 | ## Actionable Takeaways |
+| 274 | # Appendix C: Case Studies in Multi-Agent Development |
+| 276 | ## Case Study 1: The E-Commerce Platform Refactoring |
+| 299 | ## Case Study 2: The Security Audit of a Fintech API |
+| 328 | ## Case Study 3: The Game Engine Documentation Project |
+| 353 | ## Case Study 4: The Startup's First AI-Native Product |
+| 377 | ## Common Patterns Across Case Studies |
+| 395 | ## Failure Modes: When Multi-Agent Systems Go Wrong |
+| 407 | ## Scaling Lessons from the Field |
+| 417 | ## Actionable Takeaways |
+
+---
+
+## docs/game-design/AI_DEV_2026_PART10_APPENDIX_D.md
+
+| Line | Header |
+|------|--------|
+| 1 | # AI-Powered Development 2026: Part 10 — Appendix D: Complete MoA Implementation Reference |
+| 3 | ## The Reference Architecture |
+| 9 | ## The Task Router |
+| 42 | ## The Proposer Layer |
+| 99 | ## The Critic Layer |
+| 140 | ## The Aggregator |
+| 194 | ## The Full Pipeline |
+| 242 | ## Error Handling and Resilience |
+| 254 | ## Monitoring and Observability |
+| 274 | ## Scaling Considerations |
+| 284 | ## Proposer Diversity Metrics |
+| 296 | ## Cost-Benefit Analysis Framework |
+| 315 | ## Load Balancing and Queuing |
+| 327 | ## Security Considerations in MoA |
+| 341 | ## Configuration Template |
+| 395 | ## Actionable Takeaways |
+
+---
+
+## docs/game-design/HERMES_2026_PART01_INTRO_AND_EXECUTIVE.md
+
+| Line | Header |
+|------|--------|
+| 1 | # AI in 3D Game Development 2026: Part 1 — Introduction & Executive Summary |
 | 2 | ## A Comprehensive Intelligence Report |
 | 11 | ## TABLE OF CONTENTS |
 | 32 | ## 1. EXECUTIVE SUMMARY |
-| 60 | ## 2. AI-POWERED 3D ASSET GENERATION |
-| 62 | ### 2.1 The State of the Art in Text-to-3D |
-| 90 | ### 2.2 Architecture of Modern Text-to-3D Systems |
-| 116 | ### 2.3 Photogrammetry and Neural Capture |
-| 134 | ### 2.4 Commercial Rights and Licensing |
-| 144 | ### 2.5 Quality Benchmarks and Limitations |
-| 169 | ## 3. GAME ENGINE AI INTEGRATION |
-| 171 | ### 3.1 Unity 6 and the Sentis/Muse Stack |
-| 194 | ### 3.2 Unreal Engine 5.5/6 and Epic's AI Trajectory |
-| 224 | ### 3.3 Godot 4.x and Open-Source AI Integration |
-| 241 | ### 3.4 NVIDIA Omniverse and the OpenUSD Ecosystem |
+
+---
+
+## docs/game-design/HERMES_2026_PART02_ASSETS_AND_ENGINES.md
+
+| Line | Header |
+|------|--------|
+| 1 | # AI in 3D Game Development 2026: Part 2 — 3D Asset Generation & Engine Integration |
+| 3 | ## 2. AI-POWERED 3D ASSET GENERATION |
+| 5 | ### 2.1 The State of the Art in Text-to-3D |
+| 33 | ### 2.2 Architecture of Modern Text-to-3D Systems |
+| 59 | ### 2.3 Photogrammetry and Neural Capture |
+| 77 | ### 2.4 Commercial Rights and Licensing |
+| 87 | ### 2.5 Quality Benchmarks and Limitations |
+| 112 | ## 3. GAME ENGINE AI INTEGRATION |
+| 114 | ### 3.1 Unity 6 and the Sentis/Muse Stack |
+| 137 | ### 3.2 Unreal Engine 5.5/6 and Epic's AI Trajectory |
+| 167 | ### 3.3 Godot 4.x and Open-Source AI Integration |
+| 184 | ### 3.4 NVIDIA Omniverse and the OpenUSD Ecosystem |
+| 203 | ### 3.5 Roblox and UGC Platform AI |
+
+---
+
+## docs/game-design/HERMES_2026_PART03_WORLD_AND_RENDERING.md
+
+| Line | Header |
+|------|--------|
+| 1 | # AI in 3D Game Development 2026: Part 3 — World Generation & Neural Rendering |
+| 3 | ## 4. AI-DRIVEN WORLD AND LEVEL GENERATION |
+| 5 | ### 4.1 Diffusion-Based 3D Environment Synthesis |
+| 17 | ### 4.2 LLM-Driven Level Layout |
+| 29 | ### 4.3 Neural Scene Representation in Games |
+| 43 | ### 4.4 Procedural Narrative Spaces |
+| 53 | ## 5. NEURAL RENDERING AND REAL-TIME GRAPHICS |
+| 55 | ### 5.1 NVIDIA DLSS 4+ and the Transformer Revolution |
+| 69 | ### 5.2 AMD FSR 4 and Open Standards |
+| 79 | ### 5.3 Neural LOD and Geometry |
+| 85 | ### 5.4 Real-Time Denoisers |
+| 95 | ### 5.5 Neural Shading and Lighting |
+
+---
+
+## docs/game-design/HERMES_2026_PART04_NPCS_AND_ANIMATION.md
+
+| Line | Header |
+|------|--------|
+| 1 | # AI in 3D Game Development 2026: Part 4 — NPCs, Dialogue & Animation |
+| 3 | ## 6. AI NPCs, DIALOGUE, AND EMERGENT STORYTELLING |
+| 5 | ### 6.1 NVIDIA ACE and the Digital Human Pipeline |
+| 20 | ### 6.2 Inworld AI and Convai |
+| 34 | ### 6.3 Emergent Storytelling Systems |
+| 49 | ## 7. AI ANIMATION AND MOTION SYSTEMS |
+| 51 | ### 7.1 Motion Matching 2.0 |
+| 63 | ### 7.2 Generative Motion |
+| 76 | ### 7.3 Neural Animation Compression |
+| 83 | ### 7.4 Facial Animation |
+
+---
+
+## docs/game-design/HERMES_2026_PART05_CODE_AND_PHYSICS.md
+
+| Line | Header |
+|------|--------|
+| 1 | # AI in 3D Game Development 2026: Part 5 — Code Generation & Neural Physics |
+| 3 | ## 8. AI CODE GENERATION FOR GAMES |
+| 5 | ### 8.1 Editor-Integrated Assistants |
+| 28 | ### 8.2 Runtime Code Synthesis |
+| 40 | ### 8.3 Shader and VFX Generation |
+| 54 | ## 9. NEURAL PHYSICS AND SIMULATION |
+| 56 | ### 9.1 Differentiable and Neural Physics |
+| 73 | ### 9.2 Neural Fluids and Volumes |
+| 85 | ### 9.3 Hair, Fur, and Strand Simulation |
+
+---
+
+## docs/game-design/HERMES_2026_PART06_QA_AND_BUSINESS.md
+
+| Line | Header |
+|------|--------|
+| 1 | # AI in 3D Game Development 2026: Part 6 — QA, Testing & Business Landscape |
+| 3 | ## 10. AI QA, TESTING, AND BALANCE |
+| 5 | ### 10.1 Agentic Playtesting |
+| 23 | ### 10.2 Visual Regression and Crash Analysis |
+| 36 | ### 10.3 Performance and Balance |
+| 51 | ## 11. BUSINESS AND MARKET LANDSCAPE |
+| 53 | ### 11.1 Market Size and Growth |
+| 76 | ### 11.2 Major Players and Acquisitions |
+| 96 | ### 11.3 Indie vs. AAA Adoption Curves |
+| 111 | ### 11.4 Platform-Specific Trends |
+
+---
+
+## docs/game-design/HERMES_2026_PART07_LEGAL_AND_CASES.md
+
+| Line | Header |
+|------|--------|
+| 1 | # AI in 3D Game Development 2026: Part 7 — Legal, Ethics & Case Studies |
+| 3 | ## 12. LEGAL, ETHICAL, AND IP LANDSCAPE |
+| 5 | ### 12.1 Copyright and Training Data |
+| 26 | ### 12.2 Commercial Use and Licensing |
+| 39 | ### 12.3 Artist Displacement and Labor |
+| 57 | ### 12.4 Consumer Sentiment |
+| 73 | ## 13. NOTABLE GAMES AND CASE STUDIES |
+| 75 | ### 13.1 Games Openly Using AI-Generated 3D Assets |
+| 101 | ### 13.2 Cautionary Tales |
+| 113 | ### 13.3 Platform Case Studies |
+
+---
+
+## docs/game-design/HERMES_2026_PART08_DEEP_DIVES_AND_FUTURE.md
+
+| Line | Header |
+|------|--------|
+| 1 | # AI in 3D Game Development 2026: Part 8 — Technology Deep-Dives & Future Outlook |
+| 3 | ## 14. TECHNOLOGY DEEP-DIVES |
+| 5 | ### 14.1 Rodin Gen-2 Architecture |
+| 20 | ### 14.2 Meshy.ai Full Pipeline |
+| 34 | ### 14.3 NVIDIA ACE Technical Stack |
+| 48 | ### 14.4 DLSS 4 Transformer Architecture |
+| 60 | ### 14.5 3D Gaussian Splatting Rendering |
+| 74 | ## 15. FUTURE OUTLOOK: 2027-2028 |
+| 76 | ### 15.1 Predicted Technical Milestones |
+| 95 | ### 15.2 Market Predictions |
+| 115 | ### 15.3 Risks and Challenges |
+
+---
+
+## docs/game-design/HERMES_2026_PART09_APPENDICES.md
+
+| Line | Header |
+|------|--------|
+| 1 | # AI in 3D Game Development 2026: Part 9 — Appendices |
+| 3 | ## 16. APPENDICES |
+| 5 | ### Appendix A: Glossary of Terms |
+| 22 | ### Appendix B: Tool Comparison Matrix |
+| 34 | ### Appendix C: Engine AI Feature Matrix |
+| 45 | ### Appendix D: Regulatory Timeline |
+| 57 | ### Appendix E: Sources and Methodology |
 
 ---
 
