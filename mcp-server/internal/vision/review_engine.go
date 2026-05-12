@@ -85,13 +85,15 @@ func (e *ReviewEngine) Run(ctx context.Context, screenshotPath string) (*Report,
 		iter := &Iteration{
 			ID:         genID(),
 			ReviewID:   reviewID,
-			BackendUsed: resp.BackendUsed,
-			ModelUsed:   resp.ModelUsed,
 			PromptType:  promptType,
-			RawResponse: resp.RawText,
-			Confidence:  resp.Confidence,
 			LatencyMs:   latency,
 			CreatedAt:   time.Now(),
+		}
+		if resp != nil {
+			iter.BackendUsed = resp.BackendUsed
+			iter.ModelUsed = resp.ModelUsed
+			iter.RawResponse = resp.RawText
+			iter.Confidence = resp.Confidence
 		}
 		if err != nil {
 			iter.RawResponse = err.Error()
@@ -160,28 +162,34 @@ func (e *ReviewEngine) Iterate(ctx context.Context, reviewID string) (*Report, e
 	iter := &Iteration{
 		ID:         genID(),
 		ReviewID:   reviewID,
-		BackendUsed: resp.BackendUsed,
-		ModelUsed:   resp.ModelUsed,
 		PromptType:  "manual_iterate",
-		RawResponse: resp.RawText,
-		Confidence:  resp.Confidence,
 		LatencyMs:   latency,
 		CreatedAt:   time.Now(),
+	}
+	if resp != nil {
+		iter.BackendUsed = resp.BackendUsed
+		iter.ModelUsed = resp.ModelUsed
+		iter.RawResponse = resp.RawText
+		iter.Confidence = resp.Confidence
 	}
 	if err != nil {
 		iter.RawResponse = err.Error()
 		iter.Confidence = 0
 	}
-	findingsJSON, _ := json.Marshal(resp.Findings)
-	iter.FindingsJSON = findingsJSON
+	if resp != nil {
+		findingsJSON, _ := json.Marshal(resp.Findings)
+		iter.FindingsJSON = findingsJSON
+	}
 	_ = e.storage.CreateIteration(iter)
 
-	for _, f := range resp.Findings {
-		if !findingExists(findings, f.Description) {
-			f.ID = genID()
-			f.ReviewID = reviewID
-			_ = e.storage.CreateFinding(&f)
-			findings = append(findings, f)
+	if resp != nil {
+		for _, f := range resp.Findings {
+			if !findingExists(findings, f.Description) {
+				f.ID = genID()
+				f.ReviewID = reviewID
+				_ = e.storage.CreateFinding(&f)
+				findings = append(findings, f)
+			}
 		}
 	}
 

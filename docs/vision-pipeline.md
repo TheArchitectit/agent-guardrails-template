@@ -106,10 +106,12 @@ The docker-compose includes vision environment variables and volumes:
 ```yaml
 volumes:
   - ${SCREENSHOT_DIR:-./screenshots}:/app/screenshots
-  - vision_db:/app/vision_data
+  - ./vision_data:/app/vision_data
 ```
 
 The Dockerfile uses `CGO_ENABLED=1` with static linking to support SQLite in the distroless final image.
+
+> **Note:** When using a `custom` fallback provider, ensure `FALLBACK_URL` is passed through in `docker-compose.yml` (or your `.env` file). Without it, the container will default to `http://localhost:8080/v1`, which resolves to the container itself rather than your external endpoint.
 
 ## Godot Integration
 
