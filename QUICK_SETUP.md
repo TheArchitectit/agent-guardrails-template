@@ -168,6 +168,57 @@ The setup script created:
 
 ---
 
+## Windows Setup
+
+### Option 1: WSL2 (Recommended)
+
+WSL2 provides the best compatibility with all guardrails features:
+
+```powershell
+# Install WSL2 with Ubuntu
+wsl --install -d Ubuntu
+
+# Then follow the Linux instructions inside WSL2
+wsl
+cd /mnt/c/Users/YourName/agent-guardrails-template
+python3 scripts/setup_agents.py --claude --full
+```
+
+### Option 2: Native Windows (PowerShell)
+
+```powershell
+# Install Python from https://python.org or Microsoft Store
+python --version
+
+# Run setup
+python scripts/setup_agents.py --claude --full
+
+# Or for Cursor / VS Code
+python scripts/setup_agents.py --cursor --full
+```
+
+### Option 3: Docker Desktop (Windows)
+
+For the MCP server on Windows:
+
+```powershell
+# Install Docker Desktop: https://www.docker.com/products/docker-desktop
+# Ensure WSL2 backend is enabled in Docker Desktop settings
+
+# Deploy MCP server
+cd mcp-server
+# Use the Docker Compose instructions in DEPLOYMENT_GUIDE.md
+```
+
+### Windows-Specific Notes
+
+- **Line endings:** Git may convert LF to CRLF. Configure with `git config --global core.autocrlf input`
+- **Make:** Not installed by default. Use WSL2 or install via `choco install make`
+- **Docker:** Docker Desktop with WSL2 backend is required for containerized MCP server
+- **IDE Integration:** Cursor, VS Code, and Windsurf all support Windows natively
+
+---
+
 ## Troubleshooting
 
 ### "Command not found: python"
@@ -177,6 +228,11 @@ Use `python3` instead:
 python3 scripts/setup_agents.py --claude --full
 ```
 
+On Windows PowerShell:
+```powershell
+python scripts/setup_agents.py --claude --full
+```
+
 ### "Permission denied"
 
 Make the script executable:
@@ -184,6 +240,8 @@ Make the script executable:
 chmod +x scripts/setup_agents.py
 python scripts/setup_agents.py --claude --full
 ```
+
+On Windows, run PowerShell as Administrator if needed.
 
 ### "Nothing happened"
 
