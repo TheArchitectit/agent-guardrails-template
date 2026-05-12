@@ -67,6 +67,10 @@ If an operation fails 3 times:
 
 Never continue beyond 3 failures.
 
+## Task
+
+Enforce the guardrails on the current operation. Verify compliance with all safety rules above, check for halt conditions, and stop the operation if any violation is detected.
+
 ## References
 
 - `#four-laws` - Canonical Four Laws (source of truth)
@@ -198,6 +202,10 @@ These laws apply to ALL operations:
 - Configuration changes
 - Documentation updates
 
+## Task
+
+Apply the Four Laws of Agent Safety to the current operation. Evaluate whether any law is at risk of being violated, enforce compliance, and halt if necessary.
+
 ## Reference
 
 Full documentation: `docs/AGENT_GUARDRAILS.md`
@@ -309,6 +317,10 @@ Continuing beyond 3 attempts:
 
 When in doubt, HALT.
 
+## Task
+
+Evaluate the current situation against the halt conditions above. If any condition is met, issue a halt and escalate to the user with a clear explanation of the triggered condition and the risk of proceeding.
+
 ## References
 
 - `docs/AGENT_GUARDRAILS.md` - Core safety protocols
@@ -399,6 +411,10 @@ The Three Strikes Rule can be overridden ONLY by explicit user instruction:
 
 Without explicit override, HALT at 3 strikes every time.
 
+## Task
+
+Track failure attempts on the current task. If this is the first or second failure, adjust and retry. If this is the third strike, halt immediately and escalate to the user with a summary of attempts and current state.
+
 ## References
 
 - `docs/workflows/AGENT_ESCALATION.md` — When to halt and escalate
@@ -457,6 +473,10 @@ When asked to create tests or infrastructure:
 - Never use production data in tests without sanitization
 - Test fixtures must be version-controlled, not generated ad-hoc
 - Mock only external dependencies, not the code under test
+
+## Task
+
+Evaluate the current task against the Production-First Rule. Ensure production code exists and is validated before any test or infrastructure code is created. If production code is missing or incomplete, prioritize creating it first.
 
 ## References
 
@@ -532,6 +552,10 @@ Reason: <why these are needed>
 Should I proceed with these additional files, or keep changes limited to the original scope?
 ```
 
+## Task
+
+Validate that the proposed file modifications are within authorized scope. Check the user request, task description, and dependency impact before allowing changes. If scope creep is detected, halt and ask for user confirmation.
+
 ## References
 
 - `docs/workflows/AGENT_EXECUTION.md` — Execution protocols and scope rules
@@ -587,6 +611,10 @@ If validation fails:
 3. Provide specific fix instructions
 4. Require user confirmation before proceeding
 
+## Task
+
+Validate the current git state against the commit standards above. Check staged changes, commit messages, and diffs for violations. If issues are found, explain the violations and provide specific fix instructions. Require user confirmation before allowing the commit to proceed.
+
 ## References
 
 - `docs/workflows/COMMIT_WORKFLOW.md` - Commit standards
@@ -631,6 +659,10 @@ If you cannot verify environment separation:
 1. HALT the operation immediately
 2. Ask the user to confirm environment boundaries
 3. Do NOT proceed until separation is guaranteed
+
+## Task
+
+Verify that test and production environments are properly separated for the current operation. Check environment boundaries, credentials, and data flows. Halt if separation cannot be guaranteed.
 
 ## References
 
@@ -722,6 +754,10 @@ Escalate to user when:
 - Recovery requires destructive operations (delete, reset, restore from backup)
 - Error affects production data
 - You're on your 3rd recovery attempt (Three Strikes Rule)
+
+## Task
+
+Apply the Error Recovery Protocol to the current failure or error situation. Guide the user through stopping, assessing, understanding, and fixing the problem without making it worse. Follow the recovery steps above and escalate when the escalation criteria are met.
 
 ## References
 
@@ -863,6 +899,10 @@ Use when generating, modifying, or reviewing code/assets for a 3D game project.
 - Run `scripts/validate_math.py` on transform/rotation code
 - CI: 600-frame headless test must pass (FPS >30, memory stable)
 
+## Task
+
+Apply these 3D Game Development Guardrails to the user's request. When generating, modifying, or reviewing 3D game code or assets, enforce the mandatory guardrails above and provide safety-aware guidance.
+
 ## References
 
 - `docs/game-design/3D_GAME_DEVELOPMENT.md` — Full guardrails
@@ -965,6 +1005,10 @@ These principles are MANDATORY for all AI-driven rapid development sessions.
 - If three iterations haven't worked, HALT and rethink the approach
 
 ---
+
+## Task
+
+Apply these Vibe Coding Principles to answer the user's request or guide their current rapid development session. Use the principles above to provide actionable, safety-aware advice.
 
 ## Reference
 

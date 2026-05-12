@@ -21,6 +21,7 @@ type Config struct {
 	MCPPort        int           `env:"MCP_PORT" envDefault:"8080"`
 	LogLevel       string        `env:"LOG_LEVEL" envDefault:"info"`
 	RequestTimeout time.Duration `env:"REQUEST_TIMEOUT" envDefault:"30s"`
+	BaseDir        string        `env:"BASE_DIR" envDefault:"."`
 
 	// Graceful Shutdown Configuration
 	ShutdownTimeout time.Duration `env:"SHUTDOWN_TIMEOUT" envDefault:"30s"`

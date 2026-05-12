@@ -109,6 +109,10 @@ Continuing beyond 3 attempts:
 
 When in doubt, HALT.
 
+## Task
+
+Evaluate the current situation against the halt conditions above. If any condition is met, issue a halt and escalate to the user with a clear explanation of the triggered condition and the risk of proceeding.
+
 ## References
 
 - `docs/AGENT_GUARDRAILS.md` - Core safety protocols
