@@ -12,9 +12,10 @@ Usage:
     python scripts/setup_agents.py --clone .claude/skills/guardrails-enforcer.json
     python scripts/setup_agents.py --clone .claude/skills/guardrails-enforcer.json --target ~/myproject
 
-    # Install a single skill by name
+    # Install a single skill by name (from built-in registry or marketplace)
     python scripts/setup_agents.py --install-skill guardrails-enforcer
     python scripts/setup_agents.py --install-skill commit-validator --target ~/myproject --platform claude
+    python scripts/setup_agents.py --install-skill guardrails-enforcer@official --platform cursor
 
     # List available skills
     python scripts/setup_agents.py --list-skills
@@ -27,6 +28,7 @@ import argparse
 import json
 import os
 import shutil
+import subprocess
 import sys
 import urllib.request
 import urllib.error
@@ -124,6 +126,28 @@ def ensure_parent_dirs(path: Path) -> None:
     parent = path.parent
     if parent != path:
         parent.mkdir(parents=True, exist_ok=True)
+
+
+def ensure_skill_exists(source: Path) -> bool:
+    """Ensure a generated skill file exists by delegating to build_skills.py if missing."""
+    if source.exists():
+        return True
+
+    build_script = SCRIPT_DIR / "build_skills.py"
+    if not build_script.exists():
+        return False
+
+    try:
+        import subprocess
+        result = subprocess.run(
+            [sys.executable, str(build_script)],
+            cwd=REPO_ROOT,
+            capture_output=True,
+            text=True,
+        )
+        return source.exists()
+    except Exception:
+        return False
 
 
 def get_current_branch() -> str:
@@ -241,7 +265,7 @@ def install_skill(name: str, target_root: Optional[str], mode: str, dry_run: boo
         print(f"[DRY-RUN] Would {action}: {source} -> {target}")
         return True
 
-    if not source.exists():
+    if not ensure_skill_exists(source):
         print(f"[ERROR] Source not found: {source}")
         return False
 
@@ -292,7 +316,7 @@ def install_platform(target_root: Optional[str], platform: str, mode: str, dry_r
         print(f"[DRY-RUN] Would {action}: {source} -> {target}")
         return True
 
-    if not source.exists():
+    if not ensure_skill_exists(source):
         print(f"[ERROR] Source not found: {source}")
         return False
 
@@ -401,6 +425,12 @@ def main() -> int:
         help="List available platforms and exit",
     )
     parser.add_argument(
+        "--marketplace",
+        type=str,
+        default=None,
+        help="Marketplace ID for skill install (e.g. official). Also supports skill@marketplace syntax in --install-skill.",
+    )
+    parser.add_argument(
         "--list-skills",
         action="store_true",
         help="List all available skills and exit",
@@ -426,7 +456,29 @@ def main() -> int:
 
     # Install a single skill by name (e.g. --install-skill guardrails-enforcer)
     if args.install_skill:
-        ok = install_skill(args.install_skill, args.target, args.mode, args.dry_run)
+        skill_name = args.install_skill
+        marketplace_id = args.marketplace
+        # Support skill@marketplace syntax
+        if "@" in skill_name:
+            skill_name, marketplace_id = skill_name.split("@", 1)
+        # If marketplace is specified, delegate to marketplace.py
+        if marketplace_id:
+            platform = args.platform if args.platform != "all" else None
+            cmd = [
+                sys.executable,
+                str(SCRIPT_DIR / "marketplace.py"),
+                "install",
+                f"{skill_name}@{marketplace_id}",
+            ]
+            if platform:
+                cmd.extend(["--platform", platform])
+            if args.target:
+                cmd.extend(["--target", args.target])
+            if args.dry_run:
+                cmd.append("--dry-run")
+            result = subprocess.run(cmd)
+            return result.returncode
+        ok = install_skill(skill_name, args.target, args.mode, args.dry_run)
         return 0 if ok else 1
 
     # Install full platform(s)

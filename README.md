@@ -2,7 +2,7 @@
 
 > AI-first safety framework for agents building software at high velocity. Guardrails don't slow you down — they're your license to move fast.
 
-[![Version](https://img.shields.io/badge/version-v3.1.0-blue.svg)](./CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-v3.2.0-blue.svg)](./CHANGELOG.md)
 [![Go Implementation](https://img.shields.io/badge/Implementation-Go-blue.svg?style=flat&logo=go)](https://golang.org)
 [![WCAG 3.0+](https://img.shields.io/badge/Accessibility-WCAG_3.0+_Silver-green.svg)](docs/accessibility/ACCESSIBILITY_GUIDE.md)
 [![Spatial Computing](https://img.shields.io/badge/Spatial-XR/VR/AR-blue.svg)](docs/spatial/SPATIAL_COMPUTING_UI.md)
@@ -19,7 +19,7 @@
 |-----------|-------------|
 | **Real-Time Guardrail Enforcement** | Go MCP server validates every bash command, file edit, git operation, and commit before execution |
 | **Multi-Agent Orchestration** | 10-part AI-Powered Development 2026 guide covering MoA (Mixture of Agents), swarm intelligence, and autonomous tool use |
-| **Cross-Platform IDE Integration** | Native skills and rules for Claude Code, Cursor, OpenCode, Windsurf, and GitHub Copilot — not generic prompts |
+| **Skills Architecture** | One canonical skill definition (`skills/<id>/SKILL.md`) generates native formats for Claude Code, Cursor, OpenCode, Windsurf, Copilot, OpenClaw — no duplication drift |
 | **3D Game Development Suite** | Engine-agnostic guardrails (Godot, Unity, Unreal), XR/VR/AR comfort zones, mathematical foundations, AI-debuggable architecture |
 | **Token-Efficient Documentation** | 68+ modular docs (500-line max), INDEX_MAP keyword lookup, HEADER_MAP section navigation, `.claudeignore` for context savings |
 | **Production Infrastructure** | PostgreSQL 16 + Redis 7, CI/CD validation, secret scanning, regression prevention, test/production separation |
@@ -70,8 +70,8 @@ Then see [QUICK_SETUP.md](QUICK_SETUP.md) for the 5-minute setup, or [HOW_TO_APP
 |----------|---------|
 | [AGENT_GUARDRAILS.md](docs/AGENT_GUARDRAILS.md) | The Four Laws, forbidden actions, halt conditions |
 | [TEST_PRODUCTION_SEPARATION.md](docs/standards/TEST_PRODUCTION_SEPARATION.md) | Mandatory test/production isolation |
-| [four-laws.md](skills/shared-prompts/four-laws.md) | Canonical Four Laws prompt |
-| [halt-conditions.md](skills/shared-prompts/halt-conditions.md) | When to stop and ask |
+| [four-laws](skills/four-laws/SKILL.md) | Canonical Four Laws prompt |
+| [halt-conditions](skills/halt-conditions/SKILL.md) | When to stop and ask |
 
 ### AI-First Development 
 
@@ -80,24 +80,28 @@ Then see [QUICK_SETUP.md](QUICK_SETUP.md) for the 5-minute setup, or [HOW_TO_APP
 | [AI_ASSISTED_DEV.md](docs/ai-dev/AI_ASSISTED_DEV.md) | Vibe coding workflow, decision matrix (ask/decide/halt), design-intent preservation |
 | [STATE_MANAGEMENT.md](docs/state/STATE_MANAGEMENT.md) | State architecture decision tree, client/server/offline/CRDT patterns |
 | [GENERATIVE_ASSET_SAFETY.md](docs/generative/GENERATIVE_ASSET_SAFETY.md) | AI content disclosure, C2PA metadata, procedural generation safety |
-| [vibe-coding.md](skills/shared-prompts/vibe-coding.md) | Canonical vibe coding principles |
+| [vibe-coding](skills/vibe-coding/SKILL.md) | Canonical vibe coding principles |
 
-### AI Tool Integration 
+### Skills Architecture
 
-| Document | Purpose |
-|----------|---------|
-| [AGENTS_AND_SKILLS_SETUP.md](docs/AGENTS_AND_SKILLS_SETUP.md) | Setup guide for Claude Code, Cursor, OpenCode, Windsurf, Copilot |
-| [.claude/skills/](.claude/skills/) | 7 Claude Code skill files (guardrails-enforcer, commit-validator, etc.) |
-| [.claude/hooks/](.claude/hooks/) | Pre/post execution shell hooks |
-| [.cursor/rules/](.cursor/rules/) | 3 Cursor rules files |
-| [.cursor/rules-3d/](.cursor/rules-3d/) | 3D game dev Cursor rules |
-| [.windsurfrules](.windsurfrules) | Windsurf rules preamble |
-| [.opencode/](.opencode/) | OpenCode agents and skills |
-| [.opencode/skills/3d-game-dev/](.opencode/skills/3d-game-dev/) | 3D game dev OpenCode skill |
-| [.claude/skills/](.claude/skills/) | 7 Claude Code skill files |
-| [.claude/skills-3d/](.claude/skills-3d/) | 3D game dev Claude skill |
-| [.github/copilot-instructions.md](.github/copilot-instructions.md) | GitHub Copilot repo-level instructions |
-| [skills/shared-prompts/](skills/shared-prompts/) | 8 canonical shared prompts (3d-game-dev, error-recovery, three-strikes, production-first, scope-validation + existing) |
+One canonical skill definition → generated native formats for every IDE.
+
+| Layer | What It Is | Path |
+|-------|-----------|------|
+| **Canonical Skills** | YAML frontmatter + markdown body. Source of truth for all 11 skills | `skills/<id>/SKILL.md` |
+| **Build Script** | Generates all native formats from canonical sources. Supports `--check`, `--dry-run`, `--platform`, `--skill` | `scripts/build_skills.py` |
+| **Plugin Manifests** | Per-IDE wrappers pointing to `./skills/` | `.claude-plugin/`, `.cursor-plugin/`, `.codex-plugin/`, `.gemini-extension/` |
+| **Claude Code Plugin** | Native plugin: install via `/plugin install` or `claude --plugin-dir ./` | `.claude-plugin/plugin.json` + `skills/<id>/SKILL.md` |
+| **Cross-Platform Marketplace** | Install any skill for any platform from any GitHub repo | `marketplace.json` + `scripts/marketplace.py` |
+| **Generated: Claude Code** | JSON skill files | `.claude/skills/*.json` |
+| **Generated: Cursor** | Markdown rule files | `.cursor/rules/*.md` |
+| **Generated: OpenCode** | SKILL.md per skill | `.opencode/skills/*/SKILL.md` |
+| **Generated: OpenClaw** | SKILL.md per skill | `.openclaw/skills/*/SKILL.md` |
+| **Generated: Copilot** | Monolithic instructions | `.github/copilot-instructions.md` |
+| **Generated: Windsurf** | Monolithic rules | `.windsurfrules` |
+| **Hooks** | Pre/post execution shell hooks | `.claude/hooks/*.sh` |
+
+**Installation:** See [AGENTS_AND_SKILLS_SETUP.md](docs/AGENTS_AND_SKILLS_SETUP.md) for quick start, [SKILL_REGISTRY.md](docs/SKILL_REGISTRY.md) for per-skill details, [SKILLS_ARCHITECTURE.md](docs/SKILLS_ARCHITECTURE.md) for build script and CI/CD integration, [MARKETPLACE.md](docs/MARKETPLACE.md) for cross-platform marketplace CLI, and [CLAUDE_CODE_PLUGIN.md](docs/CLAUDE_CODE_PLUGIN.md) for Claude Code native plugin testing and submission.
 
 ### Game Design & UI/UX (Agent-GDUI-2026)
 
@@ -243,37 +247,71 @@ Multi-language implementation examples demonstrating guardrails patterns:
 agent-guardrails-template/
 ├── README.md                    ← You are here
 ├── QUICK_SETUP.md               ← 5-minute setup guide
-├── PROMPTING_GUIDE.md           ← Effective prompting for AI development
-├── INDEX_MAP.md / HEADER_MAP.md ← Token-efficient navigation
-├── CLAUDE.md                    ← Claude Code CLI context
+├── CLAUDE.md                    ← Claude Code CLI context (auto-loaded)
+├── GEMINI.md                    ← Gemini CLI context (auto-loaded)
+├── AGENTS.md                    ← Generic agents context (auto-loaded)
 ├── CHANGELOG.md                 ← Release notes
+│
+├── skills/                      ← CANONICAL SKILL SOURCE (one truth)
+│   ├── guardrails-enforcer/     # Four Laws enforcement
+│   ├── commit-validator/        # Commit message validation
+│   ├── env-separator/           # Test/production separation
+│   ├── scope-validator/         # File modification scope checking
+│   ├── production-first/        # Production before test code
+│   ├── three-strikes/           # 3 failure attempts → halt
+│   ├── error-recovery/          # Recovery without escalation
+│   ├── four-laws/               # Shared Four Laws prompt
+│   ├── halt-conditions/         # Shared halt conditions prompt
+│   ├── vibe-coding/             # Shared vibe coding principles
+│   └── 3d-game-dev/             # 3D game development guardrails
+│
+├── scripts/                     ← Build tooling
+│   ├── build_skills.py          # Canonical → native format generator
+│   ├── setup_agents.py          # Platform install (copy/symlink/clone/named)
+│   ├── skill_lib/               # Core logic: parser, generator, assembler, rewriter
+│   └── ...
 │
 ├── docs/
 │   ├── AGENT_GUARDRAILS.md      # Core safety protocols (MANDATORY)
+│   ├── AGENTS_AND_SKILLS_SETUP.md  # Quick start: platform install
+│   ├── SKILL_REGISTRY.md        # All skills, customization guide
+│   ├── SKILLS_ARCHITECTURE.md   # Build script, CI/CD, batch workflows
 │   ├── HOW_TO_APPLY.md          # Apply template to your repo
-│   ├── ai-dev/                  # AI-assisted development patterns 
-│   ├── state/                   # State management patterns 
-│   ├── generative/              # Generative asset safety 
-│   ├── monetization/            # Monetization guardrails 
-│   ├── multiplayer/             # Multiplayer safety 
-│   ├── analytics/               # Analytics ethics 
-│   ├── deployment/              # Cross-platform deployment 
+│   ├── ai-dev/                  # AI-assisted development patterns
+│   ├── state/                   # State management patterns
+│   ├── generative/              # Generative asset safety
+│   ├── monetization/            # Monetization guardrails
+│   ├── multiplayer/             # Multiplayer safety
+│   ├── analytics/               # Analytics ethics
+│   ├── deployment/              # Cross-platform deployment
 │   ├── game-design/             # 2026 game design guardrails
-│   │   └── 3d/                  # 3D game development docs (v3.0.0)
+│   │   └── 3d/                  # 3D game development docs
 │   ├── ui-ux/                   # UI/UX component standards
 │   ├── accessibility/           # WCAG 3.0+ compliance
 │   ├── spatial/                 # XR/VR/AR patterns
 │   ├── ethical/                 # Dark pattern prevention
 │   ├── security/                # Security audit guides
-│   ├── advisors/                # Cost, privacy, resilience advisors
 │   ├── workflows/               # 10 operational procedure docs
-│   ├── standards/               # 11 engineering standards docs
-│   └── sprints/                 # Task framework and templates
+│   └── standards/               # 11 engineering standards docs
 │
+├── tests/scripts/               ← Build script tests (44 pytest tests)
 ├── mcp-server/                  ← Go MCP server (PostgreSQL + Redis)
 ├── examples/                    ← 14 language implementations
-├── skills/shared-prompts/       ← Four Laws, halt conditions, vibe coding
-├── scripts/                     ← Setup and utility tools
+│
+├── .claude/                     ← GENERATED (Claude Code native)
+│   ├── skills/*.json            # 11 JSON skill files
+│   └── hooks/*.sh               # Pre/post execution hooks
+├── .claude-plugin/plugin.json   # Plugin manifest (Claude Code native)
+├── .cursor-plugin/plugin.json   # Plugin manifest
+├── .codex-plugin/plugin.json    # Plugin manifest
+├── .gemini-extension/           # Plugin manifest
+├── marketplace.json             # Cross-platform skill catalog
+├── .cursor/rules/*.md           # GENERATED (Cursor native)
+├── .opencode/skills/*/SKILL.md  # GENERATED (OpenCode native)
+├── .openclaw/skills/*/SKILL.md  # GENERATED (OpenClaw native)
+├── .github/copilot-instructions.md  # GENERATED (Copilot, monolithic)
+├── .windsurfrules               # GENERATED (Windsurf, monolithic)
+│
 └── .github/                     ← CI/CD, templates, secrets management
 ```
 
@@ -283,6 +321,7 @@ agent-guardrails-template/
 
 | Metric | Count |
 |--------|-------|
+| **Canonical Skills** | 11 (auto-generated to 6 native formats) |
 | **Documentation Files** | 68+ |
 | **Guardrail Categories** | 7 (safety, game design, commerce, social, analytics, deployment, generative) |
 | **Workflows** | 10 documents |
@@ -291,17 +330,20 @@ agent-guardrails-template/
 | **MCP Tools** | 17 |
 | **MCP Resources** | 8 |
 | **Supported AI Models** | 30+ LLM families |
-| **Implementation** | Go 1.23+ |
+| **Build Script Tests** | 44 (pytest) |
+| **Supported IDEs** | 6 (Claude Code, Cursor, OpenCode, OpenClaw, Windsurf, Copilot) |
+| **Implementation** | Go 1.23+, Python 3.10+ |
 | **Infrastructure** | PostgreSQL 16, Redis 7, Docker/Podman |
 
 ---
 
 ## Version History
 
-**Current:** v3.1.0 (2026-05-12)
+**Current:** v3.2.0 (2026-05-12)
 
 | Version | Date | Highlights |
 |---------|------|------------|
+| **v3.2.0** | 2026-05-12 | Skills Architecture: canonical `skills/<id>/SKILL.md` → 6 native IDE formats via `scripts/build_skills.py`. 44 tests, drift-check CI, plugin manifests. Eliminates duplication drift. |
 | **v3.1.0** | 2026-05-12 | Structural reorganization: split docs into 3d/ subfolder, README link fixes, stats update |
 | **v3.0.0** | 2026-05-12 | 3D game development suite, AI-Powered Development 2026 guide, Hermes 2026 dossier |
 | **v2.9.0** | 2026-05-08 | AI tool integration suite (Claude Code, Cursor, Windsurf, Copilot, OpenCode) |
@@ -334,4 +376,4 @@ Help keep this project going — use a referral link below and both of us get cr
 | [**Synthetic**](https://synthetic.new/?referral=UAWqkKQQLFkzMkY) | $10 in credits | Subscribe → both get $10 credit | `UAWqkKQQLFkzMkY` |
 ---
 
-**v3.1.0** · AI-First Rapid Development Framework · [Get Started →](QUICK_SETUP.md)
+**v3.2.0** · AI-First Rapid Development Framework · [Get Started →](QUICK_SETUP.md)

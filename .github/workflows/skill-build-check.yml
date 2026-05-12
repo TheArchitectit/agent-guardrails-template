@@ -1,0 +1,46 @@
+name: Skill Build Check
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'skills/**'
+      - 'scripts/build_skills.py'
+      - 'scripts/skill_lib/**'
+      - 'tests/scripts/**'
+  pull_request:
+    paths:
+      - 'skills/**'
+      - 'scripts/build_skills.py'
+      - 'scripts/skill_lib/**'
+      - 'tests/scripts/**'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - run: pip install pytest pyyaml
+      - run: pytest tests/scripts/ -v
+
+  drift-check:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - run: pip install pyyaml
+      - run: python scripts/build_skills.py --check
+      - name: Fail if drift detected
+        run: |
+          python scripts/build_skills.py --check
+          if [ $? -ne 0 ]; then
+            echo "::error::Generated skills are out of sync with canonical sources."
+            echo "Run 'python scripts/build_skills.py' locally and commit the results."
+            exit 1
+          fi

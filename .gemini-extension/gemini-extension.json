@@ -1,0 +1,6 @@
+{
+  "name": "agent-guardrails",
+  "description": "Core safety skills library: Four Laws, Three Strikes, production-first, scope validation, and environment separation",
+  "version": "3.1.0",
+  "contextFileName": "GEMINI.md"
+}

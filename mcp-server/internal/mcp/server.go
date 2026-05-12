@@ -24,7 +24,6 @@ import (
 	"github.com/thearchitectit/guardrail-mcp/internal/config"
 	"github.com/thearchitectit/guardrail-mcp/internal/database"
 	"github.com/thearchitectit/guardrail-mcp/internal/metrics"
-	"github.com/thearchitectit/guardrail-mcp/internal/validation"
 	"github.com/thearchitectit/guardrail-mcp/internal/models"
 	"github.com/thearchitectit/guardrail-mcp/internal/validation"
 )
@@ -239,6 +238,37 @@ func (s *MCPServer) registerTools() {
 				{
 					Name:        "guardrail_validate_game_build",
 					Description: "Validate a game engine project (Godot, Unity, Unreal) by running headless build checks and tests",
+					InputSchema: mcp.ToolInputSchema{
+						Type: "object",
+						Properties: mcp.ToolInputSchemaProperties{
+							"session_token": map[string]interface{}{
+								"type":        "string",
+								"description": "Session token",
+							},
+							"project_path": map[string]interface{}{
+								"type":        "string",
+								"description": "Path to the game project root (containing project.godot, etc.)",
+							},
+							"godot_path": map[string]interface{}{
+								"type":        "string",
+								"description": "Path to Godot binary (default: 'godot' from PATH)",
+							},
+							"check_scenes": map[string]interface{}{
+								"type":        "boolean",
+								"description": "Validate .tscn scene files (default: true)",
+							},
+							"check_scripts": map[string]interface{}{
+								"type":        "boolean",
+								"description": "Validate .gd script files (default: true)",
+							},
+							"run_tests": map[string]interface{}{
+								"type":        "boolean",
+								"description": "Run headless test scripts if available (default: true)",
+							},
+						},
+					},
+				},
+				{
 					Name:        "guardrail_validate_scope",
 					Description: "Check if a file path is within authorized scope",
 					InputSchema: mcp.ToolInputSchema{
@@ -277,9 +307,9 @@ func (s *MCPServer) registerTools() {
 							"file_paths": map[string]interface{}{
 								"type":        "array",
 								"description": "Array of file paths that will be modified",
-							"items": map[string]interface{}{
-								"type": "string",
-							},
+								"items": map[string]interface{}{
+									"type": "string",
+								},
 							},
 							"code_content": map[string]interface{}{
 								"type":        "string",
@@ -411,11 +441,6 @@ func (s *MCPServer) registerTools() {
 							"content": map[string]interface{}{
 								"type":        "string",
 								"description": "File content to validate",
-								"description": "Session token from init_session",
-							},
-							"file_path": map[string]interface{}{
-								"type":        "string",
-								"description": "Absolute path of the file that was read",
 							},
 						},
 					},
@@ -451,7 +476,7 @@ func (s *MCPServer) registerTools() {
 					Description: "Search all guardrail documentation for a query string",
 					InputSchema: mcp.ToolInputSchema{
 						Type: "object",
-					Properties: mcp.ToolInputSchemaProperties{
+						Properties: mcp.ToolInputSchemaProperties{
 							"query": map[string]interface{}{
 								"type":        "string",
 								"description": "Search query",
@@ -494,7 +519,7 @@ func (s *MCPServer) registerTools() {
 					Description: "Log a guardrail violation to the failure registry",
 					InputSchema: mcp.ToolInputSchema{
 						Type: "object",
-					Properties: mcp.ToolInputSchemaProperties{
+						Properties: mcp.ToolInputSchemaProperties{
 							"session_token": map[string]interface{}{
 								"type":        "string",
 								"description": "Session token",
@@ -514,6 +539,11 @@ func (s *MCPServer) registerTools() {
 							"file_path": map[string]interface{}{
 								"type":        "string",
 								"description": "File path where violation occurred (optional)",
+							},
+						},
+					},
+				},
+				{
 					Name:        "guardrail_record_attempt",
 					Description: "Record a failed task attempt for three strikes tracking",
 					InputSchema: mcp.ToolInputSchema{
@@ -970,107 +1000,170 @@ func (s *MCPServer) registerTools() {
 						},
 					},
 				},
-		{
-			Name:        "guardrail_team_delete",
-			Description: "Delete a specific team from a project. Requires confirmation.",
-			InputSchema: mcp.ToolInputSchema{
-				Type: "object",
-				Properties: mcp.ToolInputSchemaProperties{
-					"project_name": map[string]interface{}{
-						"type":        "string",
-						"description": "Name of the project",
+				{
+					Name:        "guardrail_team_delete",
+					Description: "Delete a specific team from a project. Requires confirmation.",
+					InputSchema: mcp.ToolInputSchema{
+						Type: "object",
+						Properties: mcp.ToolInputSchemaProperties{
+							"project_name": map[string]interface{}{
+								"type":        "string",
+								"description": "Name of the project",
+							},
+							"team_id": map[string]interface{}{
+								"type":        "number",
+								"description": "Team ID to delete (1-12)",
+							},
+							"confirmed": map[string]interface{}{
+								"type":        "boolean",
+								"description": "Set to true to confirm deletion. First call without this to see confirmation prompt.",
+							},
+						},
 					},
-					"team_id": map[string]interface{}{
-						"type":        "number",
-						"description": "Team ID to delete (1-12)",
+				},
+				{
+					Name:        "guardrail_project_delete",
+					Description: "Delete an entire project and all its teams. Requires confirmation.",
+					InputSchema: mcp.ToolInputSchema{
+						Type: "object",
+						Properties: mcp.ToolInputSchemaProperties{
+							"project_name": map[string]interface{}{
+								"type":        "string",
+								"description": "Name of the project to delete",
+							},
+							"confirmed": map[string]interface{}{
+								"type":        "boolean",
+								"description": "Set to true to confirm deletion. First call without this to see confirmation prompt.",
+							},
+						},
 					},
-					"confirmed": map[string]interface{}{
-						"type":        "boolean",
-						"description": "Set to true to confirm deletion. First call without this to see confirmation prompt.",
+				},
+				{
+					Name:        "guardrail_team_health",
+					Description: "Check team_manager.py health status - validates Python backend and file system access",
+					InputSchema: mcp.ToolInputSchema{
+						Type: "object",
+						Properties: mcp.ToolInputSchemaProperties{
+							"project_name": map[string]interface{}{
+								"type":        "string",
+								"description": "Optional: Project name for config directory check",
+							},
+						},
+					},
+				},
+				{
+					Name:        "guardrail_install_skills",
+					Description: "Install or clone guardrails skill configs. Use 'skill' for per-skill install/clone, 'platforms' for full platform install, or 'path' for single-file clone.",
+					InputSchema: mcp.ToolInputSchema{
+						Type: "object",
+						Properties: mcp.ToolInputSchemaProperties{
+							"target_path": map[string]interface{}{
+								"type":        "string",
+								"description": "Target project directory path (default: current directory)",
+							},
+							"platforms": map[string]interface{}{
+								"type":        "string",
+								"description": "Comma-separated list of platforms: claude, cursor, opencode, windsurf, copilot (default: all). Use with action=install.",
+							},
+							"skill": map[string]interface{}{
+								"type":        "string",
+								"description": "Install a single skill by name (e.g. 'guardrails-enforcer', 'commit-validator', 'four-laws'). Use action=install. Run list_skills=true to see all.",
+							},
+							"path": map[string]interface{}{
+								"type":        "string",
+								"description": "Clone a single file by repo path (e.g. '.claude/skills/guardrails-enforcer.json'). Downloads from GitHub raw. Use with action=clone.",
+							},
+							"action": map[string]interface{}{
+								"type":        "string",
+								"description": "Action to perform: 'install' (default), 'clone' (download from GitHub), 'list' (list skills/platforms)",
+								"enum":        []string{"install", "clone", "list"},
+							},
+							"list_skills": map[string]interface{}{
+								"type":        "boolean",
+								"description": "List all available skills and exit",
+							},
+							"list_platforms": map[string]interface{}{
+								"type":        "boolean",
+								"description": "List all available platforms and exit",
+							},
+							"mode": map[string]interface{}{
+								"type":        "string",
+								"description": "Installation mode: 'copy' or 'symlink' (default: copy). Applies to action=install.",
+								"enum":        []string{"copy", "symlink"},
+							},
+							"dry_run": map[string]interface{}{
+								"type":        "boolean",
+								"description": "Preview what would be done without making changes (default: false)",
+							},
+							"marketplace": map[string]interface{}{
+								"type":        "string",
+								"description": "Marketplace ID for skill install (e.g. 'official'). Use skill@marketplace syntax or this field. Only used with action=install and skill specified.",
+							},
+							"platform": map[string]interface{}{
+								"type":        "string",
+								"description": "Target platform for skill install: claude, cursor, opencode, windsurf, copilot. Used with marketplace or skill install.",
+							},
+						},
+					},
+				},
+				{
+					Name:        "guardrail_marketplace_add",
+					Description: "Register a new marketplace repository for skill discovery",
+					InputSchema: mcp.ToolInputSchema{
+						Type: "object",
+						Properties: mcp.ToolInputSchemaProperties{
+							"repo_spec": map[string]interface{}{
+								"type":        "string",
+								"description": "GitHub repo as owner/repo or full URL (e.g. TheArchitectit/agent-guardrails-template)",
+							},
+							"marketplace_id": map[string]interface{}{
+								"type":        "string",
+								"description": "Custom marketplace ID (default: repo name)",
+							},
+						},
+					},
+				},
+				{
+					Name:        "guardrail_marketplace_list",
+					Description: "List all registered marketplaces",
+					InputSchema: mcp.ToolInputSchema{
+						Type:       "object",
+						Properties: mcp.ToolInputSchemaProperties{},
+					},
+				},
+				{
+					Name:        "guardrail_marketplace_search",
+					Description: "Search skills across all registered marketplaces",
+					InputSchema: mcp.ToolInputSchema{
+						Type: "object",
+						Properties: mcp.ToolInputSchemaProperties{
+							"term": map[string]interface{}{
+								"type":        "string",
+								"description": "Search term (optional, searches all if empty)",
+							},
+							"platform": map[string]interface{}{
+								"type":        "string",
+								"description": "Filter by platform: claude, cursor, opencode, windsurf, copilot",
+							},
+						},
+					},
+				},
+				{
+					Name:        "guardrail_marketplace_remove",
+					Description: "Remove a registered marketplace",
+					InputSchema: mcp.ToolInputSchema{
+						Type: "object",
+						Properties: mcp.ToolInputSchemaProperties{
+							"marketplace_id": map[string]interface{}{
+								"type":        "string",
+								"description": "Marketplace ID to remove",
+							},
+						},
 					},
 				},
 			},
-		},
-		{
-			Name:        "guardrail_project_delete",
-			Description: "Delete an entire project and all its teams. Requires confirmation.",
-			InputSchema: mcp.ToolInputSchema{
-				Type: "object",
-				Properties: mcp.ToolInputSchemaProperties{
-					"project_name": map[string]interface{}{
-						"type":        "string",
-						"description": "Name of the project to delete",
-					},
-					"confirmed": map[string]interface{}{
-						"type":        "boolean",
-						"description": "Set to true to confirm deletion. First call without this to see confirmation prompt.",
-					},
-				},
-			},
-		},
-		{
-			Name:        "guardrail_team_health",
-			Description: "Check team_manager.py health status - validates Python backend and file system access",
-			InputSchema: mcp.ToolInputSchema{
-				Type: "object",
-				Properties: mcp.ToolInputSchemaProperties{
-					"project_name": map[string]interface{}{
-						"type":        "string",
-						"description": "Optional: Project name for config directory check",
-					},
-				},
-			},
-		},
-		{
-			Name:        "guardrail_install_skills",
-			Description: "Install or clone guardrails skill configs. Use 'skill' for per-skill install/clone, 'platforms' for full platform install, or 'path' for single-file clone.",
-			InputSchema: mcp.ToolInputSchema{
-				Type: "object",
-				Properties: mcp.ToolInputSchemaProperties{
-					"target_path": map[string]interface{}{
-						"type":        "string",
-						"description": "Target project directory path (default: current directory)",
-					},
-					"platforms": map[string]interface{}{
-						"type":        "string",
-						"description": "Comma-separated list of platforms: claude, cursor, opencode, windsurf, copilot (default: all). Use with action=install.",
-					},
-					"skill": map[string]interface{}{
-						"type":        "string",
-						"description": "Install a single skill by name (e.g. 'guardrails-enforcer', 'commit-validator', 'four-laws'). Use action=install. Run list_skills=true to see all.",
-					},
-					"path": map[string]interface{}{
-						"type":        "string",
-						"description": "Clone a single file by repo path (e.g. '.claude/skills/guardrails-enforcer.json'). Downloads from GitHub raw. Use with action=clone.",
-					},
-					"action": map[string]interface{}{
-						"type":        "string",
-						"description": "Action to perform: 'install' (default), 'clone' (download from GitHub), 'list' (list skills/platforms)",
-						"enum":        []string{"install", "clone", "list"},
-					},
-					"list_skills": map[string]interface{}{
-						"type":        "boolean",
-						"description": "List all available skills and exit",
-					},
-					"list_platforms": map[string]interface{}{
-						"type":        "boolean",
-						"description": "List all available platforms and exit",
-					},
-					"mode": map[string]interface{}{
-						"type":        "string",
-						"description": "Installation mode: 'copy' or 'symlink' (default: copy). Applies to action=install.",
-						"enum":        []string{"copy", "symlink"},
-					},
-					"dry_run": map[string]interface{}{
-						"type":        "boolean",
-						"description": "Preview what would be done without making changes (default: false)",
-					},
-				},
-			},
-		},
-		},
-	}, nil
-})
+		}, nil
+	})
 
 	// Handle tool calls
 	s.mcpServer.HandleCallTool(s.handleToolCall)
@@ -1210,6 +1303,14 @@ func (s *MCPServer) handleToolCall(ctx context.Context, name string, arguments m
 		return s.handleVerifyFixesIntact(ctx, arguments)
 	case "guardrail_install_skills":
 		return s.handleInstallSkills(ctx, arguments)
+	case "guardrail_marketplace_add":
+		return s.handleMarketplaceAdd(ctx, arguments)
+	case "guardrail_marketplace_list":
+		return s.handleMarketplaceList(ctx, arguments)
+	case "guardrail_marketplace_search":
+		return s.handleMarketplaceSearch(ctx, arguments)
+	case "guardrail_marketplace_remove":
+		return s.handleMarketplaceRemove(ctx, arguments)
 	// Team Layout Management Tools - TODO: implement handlers
 	case "guardrail_team_init", "guardrail_team_list", "guardrail_team_assign",
 		"guardrail_team_unassign", "guardrail_team_start", "guardrail_team_status",
@@ -2117,20 +2218,20 @@ func (s *MCPServer) handleValidateGameBuild(ctx context.Context, args map[string
 	// Audit the validation
 	if s.auditLogger != nil {
 		s.auditLogger.Log(ctx, audit.Event{
-				Type:     audit.EventValidation,
-				Severity: audit.SevInfo,
-				Actor:    "guardrail",
-				Action:   "game_build_validation",
-				Resource: projectPath,
-				Status:   string(result.Status),
-				Details: map[string]interface{}{
-					"tests_run":    result.TestsRun,
-					"tests_passed": result.TestsPassed,
-					"tests_failed": result.TestsFailed,
-					"errors_count": len(result.Errors),
-					"duration_ms":  result.DurationMs,
-				},
-			})
+			Type:     audit.EventValidation,
+			Severity: audit.SevInfo,
+			Actor:    "guardrail",
+			Action:   "game_build_validation",
+			Resource: projectPath,
+			Status:   string(result.Status),
+			Details: map[string]interface{}{
+				"tests_run":    result.TestsRun,
+				"tests_passed": result.TestsPassed,
+				"tests_failed": result.TestsFailed,
+				"errors_count": len(result.Errors),
+				"duration_ms":  result.DurationMs,
+			},
+		})
 	}
 
 	resultJSON, _ := json.Marshal(result)
@@ -2210,9 +2311,10 @@ func (s *MCPServer) handleInstallSkills(ctx context.Context, args map[string]int
 	platforms, _ := args["platforms"].(string)
 	mode, _ := args["mode"].(string)
 	dryRun, _ := args["dry_run"].(bool)
-	action, _ := args["action"].(string)
 	skill, _ := args["skill"].(string)
 	path, _ := args["path"].(string)
+	marketplace, _ := args["marketplace"].(string)
+	platform, _ := args["platform"].(string)
 	listSkills, _ := args["list_skills"].(bool)
 	listPlatforms, _ := args["list_platforms"].(bool)
 
@@ -2238,6 +2340,12 @@ func (s *MCPServer) handleInstallSkills(ctx context.Context, args map[string]int
 	} else if skill != "" {
 		// Install a single skill by name
 		cmdArgs = []string{"scripts/setup_agents.py", "--install-skill", skill, "--mode", mode}
+		if marketplace != "" {
+			cmdArgs = append(cmdArgs, "--marketplace", marketplace)
+		}
+		if platform != "" {
+			cmdArgs = append(cmdArgs, "--platform", platform)
+		}
 		if dryRun {
 			cmdArgs = append(cmdArgs, "--dry-run")
 		}
@@ -2275,6 +2383,116 @@ func (s *MCPServer) handleInstallSkills(ctx context.Context, args map[string]int
 		}, nil
 	}
 
+	resultJSON, _ := json.Marshal(result)
+	return &mcp.CallToolResult{
+		Content: []interface{}{mcp.TextContent{Type: "text", Text: string(resultJSON)}},
+		IsError: false,
+	}, nil
+}
+
+func (s *MCPServer) handleMarketplaceAdd(ctx context.Context, args map[string]interface{}) (*mcp.CallToolResult, error) {
+	repoSpec, _ := args["repo_spec"].(string)
+	marketplaceID, _ := args["marketplace_id"].(string)
+	cmdArgs := []string{"scripts/marketplace.py", "add", repoSpec}
+	if marketplaceID != "" {
+		cmdArgs = append(cmdArgs, "--id", marketplaceID)
+	}
+	cmd := exec.Command("python3", cmdArgs...)
+	cmd.Dir = s.cfg.BaseDir
+	output, err := cmd.CombinedOutput()
+	result := map[string]interface{}{
+		"command": "python3 " + strings.Join(cmdArgs, " "),
+		"stdout":  string(output),
+	}
+	if err != nil {
+		result["error"] = err.Error()
+		resultJSON, _ := json.Marshal(result)
+		return &mcp.CallToolResult{
+			Content: []interface{}{mcp.TextContent{Type: "text", Text: string(resultJSON)}},
+			IsError: true,
+		}, nil
+	}
+	resultJSON, _ := json.Marshal(result)
+	return &mcp.CallToolResult{
+		Content: []interface{}{mcp.TextContent{Type: "text", Text: string(resultJSON)}},
+		IsError: false,
+	}, nil
+}
+
+func (s *MCPServer) handleMarketplaceList(ctx context.Context, args map[string]interface{}) (*mcp.CallToolResult, error) {
+	cmdArgs := []string{"scripts/marketplace.py", "list"}
+	cmd := exec.Command("python3", cmdArgs...)
+	cmd.Dir = s.cfg.BaseDir
+	output, err := cmd.CombinedOutput()
+	result := map[string]interface{}{
+		"command": "python3 " + strings.Join(cmdArgs, " "),
+		"stdout":  string(output),
+	}
+	if err != nil {
+		result["error"] = err.Error()
+		resultJSON, _ := json.Marshal(result)
+		return &mcp.CallToolResult{
+			Content: []interface{}{mcp.TextContent{Type: "text", Text: string(resultJSON)}},
+			IsError: true,
+		}, nil
+	}
+	resultJSON, _ := json.Marshal(result)
+	return &mcp.CallToolResult{
+		Content: []interface{}{mcp.TextContent{Type: "text", Text: string(resultJSON)}},
+		IsError: false,
+	}, nil
+}
+
+func (s *MCPServer) handleMarketplaceSearch(ctx context.Context, args map[string]interface{}) (*mcp.CallToolResult, error) {
+	term, _ := args["term"].(string)
+	platform, _ := args["platform"].(string)
+	cmdArgs := []string{"scripts/marketplace.py", "search"}
+	if term != "" {
+		cmdArgs = append(cmdArgs, term)
+	}
+	if platform != "" {
+		cmdArgs = append(cmdArgs, "--platform", platform)
+	}
+	cmd := exec.Command("python3", cmdArgs...)
+	cmd.Dir = s.cfg.BaseDir
+	output, err := cmd.CombinedOutput()
+	result := map[string]interface{}{
+		"command": "python3 " + strings.Join(cmdArgs, " "),
+		"stdout":  string(output),
+	}
+	if err != nil {
+		result["error"] = err.Error()
+		resultJSON, _ := json.Marshal(result)
+		return &mcp.CallToolResult{
+			Content: []interface{}{mcp.TextContent{Type: "text", Text: string(resultJSON)}},
+			IsError: true,
+		}, nil
+	}
+	resultJSON, _ := json.Marshal(result)
+	return &mcp.CallToolResult{
+		Content: []interface{}{mcp.TextContent{Type: "text", Text: string(resultJSON)}},
+		IsError: false,
+	}, nil
+}
+
+func (s *MCPServer) handleMarketplaceRemove(ctx context.Context, args map[string]interface{}) (*mcp.CallToolResult, error) {
+	marketplaceID, _ := args["marketplace_id"].(string)
+	cmdArgs := []string{"scripts/marketplace.py", "remove", marketplaceID}
+	cmd := exec.Command("python3", cmdArgs...)
+	cmd.Dir = s.cfg.BaseDir
+	output, err := cmd.CombinedOutput()
+	result := map[string]interface{}{
+		"command": "python3 " + strings.Join(cmdArgs, " "),
+		"stdout":  string(output),
+	}
+	if err != nil {
+		result["error"] = err.Error()
+		resultJSON, _ := json.Marshal(result)
+		return &mcp.CallToolResult{
+			Content: []interface{}{mcp.TextContent{Type: "text", Text: string(resultJSON)}},
+			IsError: true,
+		}, nil
+	}
 	resultJSON, _ := json.Marshal(result)
 	return &mcp.CallToolResult{
 		Content: []interface{}{mcp.TextContent{Type: "text", Text: string(resultJSON)}},
