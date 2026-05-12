@@ -11,9 +11,27 @@
 
 ## What Is This?
 
-**The Agent Guardrails Template** is a framework that enables AI agents to develop software at full velocity with built-in safety. Whether you're vibe coding a game prototype or building production infrastructure, guardrails let agents spend tokens on building instead of second-guessing safety.
+**The Agent Guardrails Template** is a production-grade operating system for AI-assisted development. It turns "vibe coding" chaos into shipping software — giving AI agents explicit boundaries so they spend 100% of their context window on building, not on safety-checking.
 
-It works with any AI system — Claude, GPT, Gemini, LLaMA, and 30+ other model families.
+### What You Actually Get
+
+| Capability | What It Does |
+|-----------|-------------|
+| **Real-Time Guardrail Enforcement** | Go MCP server validates every bash command, file edit, git operation, and commit before execution |
+| **Multi-Agent Orchestration** | 10-part AI-Powered Development 2026 guide covering MoA (Mixture of Agents), swarm intelligence, and autonomous tool use |
+| **Cross-Platform IDE Integration** | Native skills and rules for Claude Code, Cursor, OpenCode, Windsurf, and GitHub Copilot — not generic prompts |
+| **3D Game Development Suite** | Engine-agnostic guardrails (Godot, Unity, Unreal), XR/VR/AR comfort zones, mathematical foundations, AI-debuggable architecture |
+| **Token-Efficient Documentation** | 68+ modular docs (500-line max), INDEX_MAP keyword lookup, HEADER_MAP section navigation, `.claudeignore` for context savings |
+| **Production Infrastructure** | PostgreSQL 16 + Redis 7, CI/CD validation, secret scanning, regression prevention, test/production separation |
+| **14 Language Examples** | Go, Rust, TypeScript, Python, Java, GDScript, Scala, R, C#, C++, PHP, Ruby, Swift, Dart/Flutter |
+| **Ethical & Accessible by Default** | WCAG 3.0+ Silver compliance, dark pattern prevention, XR comfort zones, monetization ethics, multiplayer safety |
+
+### Who This Is For
+
+- **AI-First Teams** — Agents generate 80%+ of your code. You need them to move fast without breaking prod.
+- **3D Game Developers** — AI-generated shaders, physics, NPCs, and assets need mathematical correctness and comfort-zone enforcement.
+- **Platform Engineers** — Enforce infrastructure guardrails, prevent config drift, and maintain separation across environments.
+- **Compliance & Security** — Documented safety processes that satisfy regulatory requirements.
 
 ### The Paradox: Constraints Enable Speed
 
