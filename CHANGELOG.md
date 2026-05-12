@@ -10,6 +10,36 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [3.1.0] - 2026-05-12
+
+### Release: Structural Reorganization & README Update
+
+**Type:** Minor Version Bump (documentation organization + bug fixes)
+
+#### Changed
+
+- **README.md** - Comprehensive review and update for v3.1.0
+  - Fixed broken 3D_GAME_DEVELOPMENT.md link (now points to `docs/game-design/3d/`)
+  - Added missing 3D documents: 3D_MATHEMATICAL_FOUNDATIONS.md, 3D_MODULE_ARCHITECTURE.md, AI_DEBUGGABLE_3D_ARCHITECTURE.md, 3D_GUARDREL_PROPOSALS_V1.2.md
+  - Added AI-Powered Development 2026 10-part guide series to "What's Included"
+  - Added Hermes 2026: AI in 3D Game Development 9-part dossier series
+  - Updated project structure to include `docs/game-design/3d/` subdirectory
+  - Updated documentation file count: 44+ → 68+
+  - Updated version badge: v3.0.0 → v3.1.0
+  - Updated version history with v3.1.0 and v3.0.0 entries
+
+- **Consolidated 3D game development docs** into `docs/game-design/3d/` subfolder
+  - All Hermes 2026 dossier parts now live in `docs/game-design/3d/`
+  - All 3D-specific guardrail documents grouped under `3d/` for logical discovery
+
+#### Fixed
+
+- **Broken link** in README.md Game Design section (missing `/3d/` path segment)
+- **Missing documentation references** for v3.0.0 content in README.md
+- **Outdated version history** showing v2.8.0 as current
+
+---
+
 ## [3.0.0] - 2026-05-12
 
 ### Major Release: 3D Game Development & AI-Powered Development 2026
