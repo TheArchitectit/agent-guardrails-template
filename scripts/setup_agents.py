@@ -126,6 +126,28 @@ def ensure_parent_dirs(path: Path) -> None:
         parent.mkdir(parents=True, exist_ok=True)
 
 
+def ensure_skill_exists(source: Path) -> bool:
+    """Ensure a generated skill file exists by delegating to build_skills.py if missing."""
+    if source.exists():
+        return True
+
+    build_script = SCRIPT_DIR / "build_skills.py"
+    if not build_script.exists():
+        return False
+
+    try:
+        import subprocess
+        result = subprocess.run(
+            [sys.executable, str(build_script)],
+            cwd=REPO_ROOT,
+            capture_output=True,
+            text=True,
+        )
+        return source.exists()
+    except Exception:
+        return False
+
+
 def get_current_branch() -> str:
     """Get the current git branch for the repository."""
     try:
@@ -241,7 +263,7 @@ def install_skill(name: str, target_root: Optional[str], mode: str, dry_run: boo
         print(f"[DRY-RUN] Would {action}: {source} -> {target}")
         return True
 
-    if not source.exists():
+    if not ensure_skill_exists(source):
         print(f"[ERROR] Source not found: {source}")
         return False
 
@@ -292,7 +314,7 @@ def install_platform(target_root: Optional[str], platform: str, mode: str, dry_r
         print(f"[DRY-RUN] Would {action}: {source} -> {target}")
         return True
 
-    if not source.exists():
+    if not ensure_skill_exists(source):
         print(f"[ERROR] Source not found: {source}")
         return False
 
