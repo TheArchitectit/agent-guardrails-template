@@ -3,7 +3,7 @@
 A Model Context Protocol (MCP) server for enforcing guardrails across AI coding assistants and IDE extensions.
 
 [![Go Implementation](https://img.shields.io/badge/Implementation-Go-blue.svg?style=flat&logo=go)](https://golang.org)
-[![Version](https://img.shields.io/badge/version-v2.6.0-blue.svg)](./CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-v3.1.0-blue.svg)](./CHANGELOG.md)
 
 > **Go Implementation:** All code is written in Go. Package location: `mcp-server/internal/`
 > **Migration:** Python implementation deprecated as of v2.6.0. See [../docs/PYTHON_MIGRATION.md](../docs/PYTHON_MIGRATION.md).
@@ -442,7 +442,7 @@ MIT
 
 ## Deployment Status
 
-**Version:** v2.6.0
+**Version:** v3.1.0
 **Deployment Date:** 2026-02-15
 **Deployed To:** AI01 (0.0.0.0:8095/8096)
 **Status:** ✅ Successfully deployed and verified

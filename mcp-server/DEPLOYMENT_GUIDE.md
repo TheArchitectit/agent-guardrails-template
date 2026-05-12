@@ -1,8 +1,8 @@
 # Guardrail MCP Server Deployment Guide
 
-**Version:** 1.0.0
-**Last Updated:** 2026-02-13
-**Tested On:** AI01 (RHEL Server with Podman)
+**Version:** v3.1.0
+**Last Updated:** 2026-05-12
+**Tested On:** AI01 (RHEL Server with Podman), Docker Desktop (Windows 11), Ubuntu 24.04
 
 ## Overview
 
@@ -46,11 +46,11 @@ export $(cat .env | grep -v '^#' | grep -v '^$' | xargs)
 
 # Build Docker image
 podman build \
-  --build-arg VERSION=1.0.0 \
+  --build-arg VERSION=v3.1.0 \
   --build-arg BUILD_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ) \
   --build-arg GIT_COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo 'unknown') \
   -f deploy/Dockerfile \
-  -t guardrail-mcp:1.0.0 .
+  -t guardrail-mcp:v3.1.0 .
 
 # Create pod with port mappings
 podman pod create --name guardrail-pod -p 8095:8095 -p 8096:8096
@@ -94,8 +94,61 @@ podman run -d --pod guardrail-pod --name guardrail-mcp-server \
   -e JWT_ISSUER=guardrail-mcp \
   -e JWT_EXPIRY=15m \
   -e JWT_ROTATION_HOURS=168h \
-  localhost/guardrail-mcp:1.0.0
+  localhost/guardrail-mcp:v3.1.0
 ```
+
+## Windows Docker Desktop Deployment
+
+### Prerequisites
+
+- Windows 10/11 with WSL2 enabled
+- Docker Desktop installed with WSL2 backend
+- Git for Windows or WSL2 Git
+
+### Step 1: Clone and Configure
+
+```powershell
+# In PowerShell or Windows Terminal
+cd C:\Users\YourName\Projects
+git clone https://github.com/TheArchitectit/agent-guardrails-template.git
+cd agent-guardrails-template/mcp-server
+
+# Copy environment template
+copy .env.example .env
+
+# Generate secure keys (requires OpenSSL for Windows or use WSL2)
+# Or manually generate 32+ character strings
+```
+
+### Step 2: Deploy with Docker Compose
+
+```powershell
+# Build and start all services
+docker compose -f deploy/docker-compose.example.yml up -d --build
+
+# Verify containers are running
+docker compose -f deploy/docker-compose.example.yml ps
+
+# View logs
+docker compose -f deploy/docker-compose.example.yml logs -f
+```
+
+### Step 3: Access the Services
+
+| Service | URL |
+|---------|-----|
+| Web UI | http://localhost:8095 |
+| Health Check | http://localhost:8095/health/ready |
+| MCP SSE | http://localhost:8095/mcp/v1/sse |
+
+### Windows-Specific Notes
+
+- **Firewall:** Docker Desktop may prompt for firewall rules. Allow private network access.
+- **Port conflicts:** If ports 8095/8096 are in use, edit `.env` to change `MCP_PORT` and `WEB_PORT`.
+- **WSL2 file paths:** For best performance, keep project files inside WSL2 filesystem (`\\wsl$\Ubuntu\home\...`) rather than Windows mounts.
+- **PowerShell execution policy:** If scripts fail, run `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser`.
+
+---
 
 ## Detailed Deployment Steps
 
@@ -163,8 +216,8 @@ EOF
 # Check current server name
 grep 'NewDefaultServer' internal/mcp/server.go
 
-# Should show: server.NewDefaultServer("guardrail_mcp", "1.0.0")
-# NOT: server.NewDefaultServer("guardrail-mcp", "1.0.0")
+# Should show: server.NewDefaultServer("guardrail_mcp", "v3.1.0")
+# NOT: server.NewDefaultServer("guardrail-mcp", "v3.1.0")
 
 # If it shows "guardrail-mcp", change it:
 sed -i 's/server.NewDefaultServer("guardrail-mcp"/server.NewDefaultServer("guardrail_mcp"/' internal/mcp/server.go
@@ -176,7 +229,7 @@ sed -i 's/server.NewDefaultServer("guardrail-mcp"/server.NewDefaultServer("guard
 cd /home/user001/mcp-server
 
 # Set build variables
-VERSION=1.0.0
+VERSION=v3.1.0
 BUILD_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 GIT_COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo 'unknown')
 
@@ -251,7 +304,7 @@ podman run -d --pod guardrail-pod --name guardrail-mcp-server \
   -e JWT_ISSUER=guardrail-mcp \
   -e JWT_EXPIRY=15m \
   -e JWT_ROTATION_HOURS=168h \
-  localhost/guardrail-mcp:1.0.0
+  localhost/guardrail-mcp:v3.1.0
 ```
 
 ### Step 5: Verify Deployment
@@ -330,10 +383,10 @@ These settings were identified as critical during AI01 deployment:
    ```bash
    # In internal/mcp/server.go line 101:
    # GOOD:
-   s.mcpServer = server.NewDefaultServer("guardrail_mcp", "1.0.0")
+   s.mcpServer = server.NewDefaultServer("guardrail_mcp", "v3.1.0")
    
    # BAD (causes schema validation error):
-   s.mcpServer = server.NewDefaultServer("guardrail-mcp", "1.0.0")
+   s.mcpServer = server.NewDefaultServer("guardrail-mcp", "v3.1.0")
    ```
 
 ### Environment Variables Reference
@@ -466,13 +519,13 @@ volumes:
 ❌ **DON'T use dashes in server name:**
 ```go
 // WRONG - causes schema validation error:
-s.mcpServer = server.NewDefaultServer("guardrail-mcp", "1.0.0")
+s.mcpServer = server.NewDefaultServer("guardrail-mcp", "v3.1.0")
 ```
 
 ✅ **DO use underscores:**
 ```go
 // CORRECT:
-s.mcpServer = server.NewDefaultServer("guardrail_mcp", "1.0.0")
+s.mcpServer = server.NewDefaultServer("guardrail_mcp", "v3.1.0")
 ```
 
 ❌ **DON'T forget postgres user:**
@@ -582,7 +635,7 @@ In context=('properties', 'affected_files'), array schema missing items
 # Check server name
 grep 'NewDefaultServer' internal/mcp/server.go
 
-# Should show: server.NewDefaultServer("guardrail_mcp", "1.0.0")
+# Should show: server.NewDefaultServer("guardrail_mcp", "v3.1.0")
 # If not, fix it:
 sed -i 's/server.NewDefaultServer("guardrail-mcp"/server.NewDefaultServer("guardrail_mcp"/' internal/mcp/server.go
 
