@@ -1,0 +1,241 @@
+{
+  "name": "agent-guardrails-official",
+  "displayName": "Agent Guardrails Official Marketplace",
+  "description": "Core safety skills for AI-assisted development",
+  "version": "3.2.0",
+  "author": "TheArchitectit",
+  "repository": "https://github.com/TheArchitectit/agent-guardrails-template",
+  "skills": [
+    {
+      "id": "3d-game-dev",
+      "name": "3D Game Development Guardrails",
+      "description": "Mathematical correctness, asset safety, shader constraints, and Godot/Unity conventions for 3D game code",
+      "version": "1.0.0",
+      "applies_to": [
+        "claude",
+        "cursor",
+        "opencode",
+        "openclaw",
+        "windsurf",
+        "copilot"
+      ],
+      "source": {
+        "type": "github",
+        "owner": "TheArchitectit",
+        "repo": "agent-guardrails-template",
+        "path": "skills/3d-game-dev/SKILL.md",
+        "branch": "main"
+      }
+    },
+    {
+      "id": "commit-validator",
+      "name": "Commit Validator",
+      "description": "Validates git commits follow COMMIT_WORKFLOW.md standards",
+      "version": "1.0.0",
+      "applies_to": [
+        "claude",
+        "cursor",
+        "opencode",
+        "openclaw",
+        "windsurf",
+        "copilot"
+      ],
+      "source": {
+        "type": "github",
+        "owner": "TheArchitectit",
+        "repo": "agent-guardrails-template",
+        "path": "skills/commit-validator/SKILL.md",
+        "branch": "main"
+      }
+    },
+    {
+      "id": "env-separator",
+      "name": "Environment Separator",
+      "description": "Enforces strict separation between test and production environments",
+      "version": "1.0.0",
+      "applies_to": [
+        "claude",
+        "cursor",
+        "opencode",
+        "openclaw",
+        "windsurf",
+        "copilot"
+      ],
+      "source": {
+        "type": "github",
+        "owner": "TheArchitectit",
+        "repo": "agent-guardrails-template",
+        "path": "skills/env-separator/SKILL.md",
+        "branch": "main"
+      }
+    },
+    {
+      "id": "error-recovery",
+      "name": "Error Recovery Protocol",
+      "description": "How to recover from failures without making things worse",
+      "version": "1.0.0",
+      "applies_to": [
+        "claude",
+        "cursor",
+        "opencode",
+        "openclaw",
+        "windsurf",
+        "copilot"
+      ],
+      "source": {
+        "type": "github",
+        "owner": "TheArchitectit",
+        "repo": "agent-guardrails-template",
+        "path": "skills/error-recovery/SKILL.md",
+        "branch": "main"
+      }
+    },
+    {
+      "id": "four-laws",
+      "name": "The Four Laws of Agent Safety",
+      "description": "Mandatory and non-negotiable safety laws for all AI agent operations",
+      "version": "1.0.0",
+      "applies_to": [
+        "claude",
+        "cursor",
+        "opencode",
+        "openclaw",
+        "windsurf",
+        "copilot"
+      ],
+      "source": {
+        "type": "github",
+        "owner": "TheArchitectit",
+        "repo": "agent-guardrails-template",
+        "path": "skills/four-laws/SKILL.md",
+        "branch": "main"
+      }
+    },
+    {
+      "id": "guardrails-enforcer",
+      "name": "Guardrails Enforcement Agent",
+      "description": "Enforces the Four Laws of Agent Safety on all operations. Halts on uncertainty.",
+      "version": "1.0.0",
+      "applies_to": [
+        "claude",
+        "cursor",
+        "opencode",
+        "openclaw",
+        "windsurf",
+        "copilot"
+      ],
+      "source": {
+        "type": "github",
+        "owner": "TheArchitectit",
+        "repo": "agent-guardrails-template",
+        "path": "skills/guardrails-enforcer/SKILL.md",
+        "branch": "main"
+      }
+    },
+    {
+      "id": "halt-conditions",
+      "name": "Halt Conditions",
+      "description": "When to stop and ask the user for guidance instead of proceeding",
+      "version": "1.0.0",
+      "applies_to": [
+        "claude",
+        "cursor",
+        "opencode",
+        "openclaw",
+        "windsurf",
+        "copilot"
+      ],
+      "source": {
+        "type": "github",
+        "owner": "TheArchitectit",
+        "repo": "agent-guardrails-template",
+        "path": "skills/halt-conditions/SKILL.md",
+        "branch": "main"
+      }
+    },
+    {
+      "id": "production-first",
+      "name": "Production-First Rule",
+      "description": "Production code MUST be created before test or infrastructure code",
+      "version": "1.0.0",
+      "applies_to": [
+        "claude",
+        "cursor",
+        "opencode",
+        "openclaw",
+        "windsurf",
+        "copilot"
+      ],
+      "source": {
+        "type": "github",
+        "owner": "TheArchitectit",
+        "repo": "agent-guardrails-template",
+        "path": "skills/production-first/SKILL.md",
+        "branch": "main"
+      }
+    },
+    {
+      "id": "scope-validator",
+      "name": "Scope Validator",
+      "description": "Validates file modifications stay within authorized scope",
+      "version": "1.0.0",
+      "applies_to": [
+        "claude",
+        "cursor",
+        "opencode",
+        "openclaw",
+        "windsurf",
+        "copilot"
+      ],
+      "source": {
+        "type": "github",
+        "owner": "TheArchitectit",
+        "repo": "agent-guardrails-template",
+        "path": "skills/scope-validator/SKILL.md",
+        "branch": "main"
+      }
+    },
+    {
+      "id": "three-strikes",
+      "name": "Three Strikes Rule",
+      "description": "Tracks failure attempts and enforces halt after 3 strikes on any task",
+      "version": "1.0.0",
+      "applies_to": [
+        "claude",
+        "cursor",
+        "opencode",
+        "openclaw",
+        "windsurf",
+        "copilot"
+      ],
+      "source": {
+        "type": "github",
+        "owner": "TheArchitectit",
+        "repo": "agent-guardrails-template",
+        "path": "skills/three-strikes/SKILL.md",
+        "branch": "main"
+      }
+    },
+    {
+      "id": "vibe-coding",
+      "name": "Vibe Coding Principles",
+      "description": "Mandatory principles for all AI-driven rapid development sessions",
+      "version": "1.0.0",
+      "applies_to": [
+        "claude",
+        "cursor",
+        "opencode",
+        "openclaw",
+        "windsurf",
+        "copilot"
+      ],
+      "source": {
+        "type": "github",
+        "owner": "TheArchitectit",
+        "repo": "agent-guardrails-template",
+        "path": "skills/vibe-coding/SKILL.md",
+        "branch": "main"
+      }
+    }
+  ]
+}
