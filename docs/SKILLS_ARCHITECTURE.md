@@ -1,6 +1,6 @@
-# Superpowers Architecture
+# Skills Architecture
 
-This repo follows the [obra/superpowers](https://github.com/obra/superpowers) pattern: one canonical skill definition consumed by lightweight IDE-specific plugins.
+This repo follows a canonical skill pattern inspired by [obra/superpowers](https://github.com/obra/superpowers): one canonical skill definition consumed by lightweight IDE-specific plugins.
 
 ## Canonical Skill Format
 
