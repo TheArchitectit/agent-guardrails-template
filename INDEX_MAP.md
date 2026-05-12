@@ -78,6 +78,13 @@
 | regression-check | regression_check.py | scripts/ | Pre-commit regression pattern scanner |
 | prevention-rules | pattern-rules.json | .guardrails/prevention-rules/ | Regex patterns to prevent regressions |
 | game-design | 2026_GAME_DESIGN.md | docs/game-design/ | Agent-GDUI-2026 game design guardrails, XR/VR comfort zones |
+| 3d-guardrails | 3D_GAME_DEVELOPMENT.md | docs/game-design/ | 3D game development guardrails v1.0, engine-agnostic |
+| 3d-proposals | 3D_GUARDREL_PROPOSALS_V1.2.md | docs/game-design/ | Proposed v1.2 additions from Hermes 2026 AI Dossier |
+| 3d-math | 3D_MATHEMATICAL_FOUNDATIONS.md | docs/game-design/ | Linear algebra, quaternions, collision math reference |
+| 3d-architecture | 3D_MODULE_ARCHITECTURE.md | docs/game-design/ | Module architecture for LLM-to-3D-engine bridging |
+| ai-debuggable | AI_DEBUGGABLE_3D_ARCHITECTURE.md | docs/game-design/ | AI-debuggable 3D patterns for autonomous troubleshooting |
+| ai-2026-guide | AI_DEV_2026_COMPLETE_GUIDE.md | docs/game-design/ | AI-Powered Development 2026: ~45k word comprehensive guide |
+| hermes-dossier | HERMES_2026_AI_DOSSIER.md | docs/game-design/ | 2026 intelligence report on AI in 3D game development |
 | ui-ux | 2026_UI_UX_STANDARD.md | docs/ui-ux/ | UI/UX component standards, design tokens, interaction states |
 | accessibility | ACCESSIBILITY_GUIDE.md | docs/accessibility/ | WCAG 3.0+ compliance, conformance levels, testing methods |
 | spatial | SPATIAL_COMPUTING_UI.md | docs/spatial/ | XR/VR/AR UI patterns, comfort zones, latency requirements |
@@ -152,6 +159,13 @@
 | **CURSOR_INTEGRATION.md** | Cursor rules and guardrails integration | When using Cursor |
 | **GENERIC_LLM_INTEGRATION.md** | Generic/local LLM configuration (Ollama, vLLM, etc.) | When using custom LLMs |
 | **2026_GAME_DESIGN.md** | Game design guardrails, XR comfort zones, platform budgets | When building game interfaces or spatial UIs |
+| **3D_GAME_DEVELOPMENT.md** | 3D game dev guardrails v1.0: engine-agnostic, asset pipeline, physics | When building 3D games with AI assistance |
+| **3D_GUARDREL_PROPOSALS_V1.2.md** | Proposed v1.2 additions: neural fields, procedural geometry, AI NPCs | When reviewing next-gen 3D guardrails |
+| **3D_MATHEMATICAL_FOUNDATIONS.md** | Linear algebra, quaternions, collision math for AI-generated 3D code | When generating 3D math code |
+| **3D_MODULE_ARCHITECTURE.md** | Module architecture bridging LLMs with deterministic 3D engines | When architecting 3D game systems |
+| **AI_DEBUGGABLE_3D_ARCHITECTURE.md** | Patterns enabling AI agents to debug 3D features autonomously | When designing debuggable 3D systems |
+| **AI_DEV_2026_COMPLETE_GUIDE.md** | AI-Powered Development 2026: ~45k word comprehensive guide | When learning AI-first development |
+| **HERMES_2026_AI_DOSSIER.md** | 2026 intelligence report on AI in 3D game development | When researching AI/3D industry trends |
 | **2026_UI_UX_STANDARD.md** | UI/UX component patterns, design tokens, animation | When implementing UI components |
 | **ACCESSIBILITY_GUIDE.md** | WCAG 3.0+ compliance, perceptual/cognitive/physical a11y | When ensuring accessibility compliance |
 | **SPATIAL_COMPUTING_UI.md** | XR/VR/AR layout patterns, comfort zones, latency | When building spatial computing interfaces |
@@ -218,6 +232,13 @@
 
 ### 2026 Game Design & UI/UX
 - `2026_GAME_DESIGN.md` - Game design guardrails, XR/VR comfort zones, platform rules
+- `3D_GAME_DEVELOPMENT.md` - 3D game development guardrails v1.0, engine-agnostic patterns
+- `3D_GUARDREL_PROPOSALS_V1.2.md` - Proposed v1.2 additions from Hermes 2026 AI Dossier review
+- `3D_MATHEMATICAL_FOUNDATIONS.md` - Linear algebra, quaternions, collision math reference
+- `3D_MODULE_ARCHITECTURE.md` - Module architecture for LLM-to-3D-engine bridging
+- `AI_DEBUGGABLE_3D_ARCHITECTURE.md` - AI-debuggable patterns for autonomous 3D troubleshooting
+- `AI_DEV_2026_COMPLETE_GUIDE.md` - AI-Powered Development 2026: ~45k word comprehensive guide
+- `HERMES_2026_AI_DOSSIER.md` - 2026 intelligence report on AI in 3D game development
 - `2026_UI_UX_STANDARD.md` - UI/UX component standards, design tokens, responsive patterns
 - `ACCESSIBILITY_GUIDE.md` - WCAG 3.0+ conformance (Bronze/Silver/Gold), automated testing
 - `SPATIAL_COMPUTING_UI.md` - XR/VR/AR comfort zones, latency, depth layering, interaction
@@ -352,6 +373,12 @@ agent-guardrails-template/
 | MCP tools reference | MCP_TOOLS_REFERENCE.md |
 | Pattern authoring | RULE_PATTERNS_GUIDE.md |
 | Game design guardrails | 2026_GAME_DESIGN.md |
+| 3D game development guardrails | 3D_GAME_DEVELOPMENT.md |
+| 3D math reference | 3D_MATHEMATICAL_FOUNDATIONS.md |
+| 3D architecture blueprint | 3D_MODULE_ARCHITECTURE.md |
+| AI-debuggable 3D patterns | AI_DEBUGGABLE_3D_ARCHITECTURE.md |
+| AI development 2026 guide | AI_DEV_2026_COMPLETE_GUIDE.md |
+| AI in 3D games dossier | HERMES_2026_AI_DOSSIER.md |
 | UI/UX component standards | 2026_UI_UX_STANDARD.md |
 | Accessibility (WCAG 3.0+) | ACCESSIBILITY_GUIDE.md |
 | Spatial computing / XR / VR | SPATIAL_COMPUTING_UI.md |
@@ -361,9 +388,9 @@ agent-guardrails-template/
 
 **Authored by:** TheArchitectit
 **Document Owner:** Project Maintainers
-**Last Updated:** 2026-03-14
-**Document Count:** 79 (excluding INDEX files)
-**Line Count:** ~260
+**Last Updated:** 2026-05-12
+**Document Count:** 86 (excluding INDEX files)
+**Line Count:** ~280
 
 ---
 
@@ -391,4 +418,6 @@ The following files exceed the 500-line limit and should be split per MODULAR_DO
 | docs/standards/OPERATIONAL_PATTERNS.md | 667 | Split |
 | docs/workflows/AGENT_REVIEW_PROTOCOL.md | 638 | Split |
 | docs/security/SECURITY_AUDIT_CONFIG.md | 597 | Split |
+| docs/game-design/AI_DEV_2026_COMPLETE_GUIDE.md | 3023 | Split into chapters |
+| docs/game-design/HERMES_2026_AI_DOSSIER.md | 1015 | Split or keep as intelligence report |
 | README.md | 565 | Landing page - exempt |

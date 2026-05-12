@@ -91,15 +91,22 @@
 
 ### 2026 Game Design & UI/UX (`docs/`)
 
-| File | Path | Purpose |
-|------|------|---------|
-| **2026_GAME_DESIGN.md** | `docs/game-design/` | Game design guardrails, XR/VR comfort zones, platform budgets |
-| **2026_UI_UX_STANDARD.md** | `docs/ui-ux/` | UI/UX component patterns, design tokens, responsive breakpoints |
-| **ACCESSIBILITY_GUIDE.md** | `docs/accessibility/` | WCAG 3.0+ conformance (Bronze/Silver/Gold), testing methods |
-| **SPATIAL_COMPUTING_UI.md** | `docs/spatial/` | XR/VR/AR layout patterns, comfort zones, latency requirements |
-| **ETHICAL_ENGAGEMENT.md** | `docs/ethical/` | Dark pattern taxonomy and prevention, ethical design principles |
+| File | Path | Lines | Purpose |
+|------|------|-------|---------|
+| **2026_GAME_DESIGN.md** | `docs/game-design/` | ~350 | Game design guardrails, XR/VR comfort zones, platform budgets |
+| **3D_GAME_DEVELOPMENT.md** | `docs/game-design/` | 416 | 3D game development guardrails v1.0, engine-agnostic patterns |
+| **3D_GUARDREL_PROPOSALS_V1.2.md** | `docs/game-design/` | 201 | Proposed v1.2 additions from Hermes 2026 AI Dossier |
+| **3D_MATHEMATICAL_FOUNDATIONS.md** | `docs/game-design/` | 290 | Linear algebra, quaternions, collision math reference |
+| **3D_MODULE_ARCHITECTURE.md** | `docs/game-design/` | 237 | Module architecture for LLM-to-3D-engine bridging |
+| **AI_DEBUGGABLE_3D_ARCHITECTURE.md** | `docs/game-design/` | 302 | AI-debuggable patterns for autonomous 3D troubleshooting |
+| **AI_DEV_2026_COMPLETE_GUIDE.md** | `docs/game-design/` | 3023 | AI-Powered Development 2026: ~45k word comprehensive guide |
+| **HERMES_2026_AI_DOSSIER.md** | `docs/game-design/` | 1015 | 2026 intelligence report on AI in 3D game development |
+| **2026_UI_UX_STANDARD.md** | `docs/ui-ux/` | ~350 | UI/UX component patterns, design tokens, responsive breakpoints |
+| **ACCESSIBILITY_GUIDE.md** | `docs/accessibility/` | ~300 | WCAG 3.0+ conformance (Bronze/Silver/Gold), testing methods |
+| **SPATIAL_COMPUTING_UI.md** | `docs/spatial/` | ~400 | XR/VR/AR layout patterns, comfort zones, latency requirements |
+| **ETHICAL_ENGAGEMENT.md** | `docs/ethical/` | ~250 | Dark pattern taxonomy and prevention, ethical design principles |
 
-**Total:** 5 documents covering Agent-GDUI-2026 capabilities
+**Total:** 12 documents covering Agent-GDUI-2026 capabilities
 
 ### AI-First Development & Safety (`docs/`)
 
@@ -123,9 +130,9 @@
 | Workflows | 11 | ~3,500 |
 | Standards | 11 | ~4,400 |
 | Sprints | 3 | ~816 |
-| 2026 Game/UI/UX | 5 | ~2,500 |
+| 2026 Game/UI/UX | 12 | ~6,564 |
 | AI-First Development | 7 | ~2,061 |
-| **TOTAL** | **44** | **~14,327** |
+| **TOTAL** | **51** | **~17,391** |
 
 ---
 
@@ -277,6 +284,6 @@ All files follow these conventions:
 
 **Authored by:** TheArchitectit
 **Document Owner:** Project Maintainers
-**Last Updated:** 2026-03-14
-**Total Files:** 96
-**Total Lines:** ~12,500
+**Last Updated:** 2026-05-12
+**Total Files:** 103
+**Total Lines:** ~16,500
