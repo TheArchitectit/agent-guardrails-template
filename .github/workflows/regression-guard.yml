@@ -71,6 +71,19 @@ jobs:
             echo "::warning::tests/regression/ directory not found"
           fi
 
+      - name: Check Skill Build Drift
+        id: check_skill_drift
+        run: |
+          echo "::group::Skill Build Drift Check"
+          if python scripts/build_skills.py --check 2>&1; then
+            echo "drift_detected=false" >> $GITHUB_OUTPUT
+            echo "No skill build drift detected"
+          else
+            echo "drift_detected=true" >> $GITHUB_OUTPUT
+            echo "::warning::Skill build drift detected. Run 'python scripts/build_skills.py' to regenerate native files."
+          fi
+          echo "::endgroup::"
+
       - name: Check Failure Registry
         id: check_registry
         run: |
@@ -123,6 +136,16 @@ jobs:
             const fs = require('fs');
 
             let report = '## Regression Guard Report\n\n';
+
+            // Skill build drift
+            const driftDetected = '${{ steps.check_skill_drift.outputs.drift_detected }}' === 'true';
+            report += `### Skill Build Drift\n`;
+            if (driftDetected) {
+              report += `🔴 **Drift detected** — native skill files are out of sync.\n`;
+              report += `> Run \`python scripts/build_skills.py\` and commit the changes.\n\n`;
+            } else {
+              report += `✅ Native skill files are in sync\n\n`;
+            }
 
             // Active failures count
             const activeFailures = '${{ steps.check_registry.outputs.active_failures }}';
@@ -219,6 +242,13 @@ jobs:
             echo "::warning::Bug fix commits require regression tests."
             # Uncomment to make this a hard fail:
             # exit 1
+          fi
+
+          # Fail if skill build drift detected
+          DRIFT_DETECTED=${{ steps.check_skill_drift.outputs.drift_detected || 'false' }}
+          if [ "$DRIFT_DETECTED" = "true" ]; then
+            echo "::error::Skill build drift detected. Run 'python scripts/build_skills.py' and commit the changes."
+            exit 1
           fi
 
           exit 0

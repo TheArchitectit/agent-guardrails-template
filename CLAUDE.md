@@ -37,6 +37,7 @@ These constraints enable flow state. Follow the guardrails and you can generate 
 * **Stack Detection**: Read configuration files (package.json, requirements.txt, Makefile, etc) to determine stack. Do NOT read lockfiles.
 * **Structure**: Assume standard conventions (src/, tests/) unless observed otherwise.
 * **Guardrails**: Read [docs/AGENT_GUARDRAILS.md](docs/AGENT_GUARDRAILS.md) before any code changes.
+* **Skills**: Canonical skills live in `skills/<id>/SKILL.md`. Run `python scripts/build_skills.py` to generate native IDE files.
 
 ## 2. Token-Saving Rules (STRICT)
 
@@ -57,3 +58,11 @@ These constraints enable flow state. Follow the guardrails and you can generate 
 ## 4. Documentation Standards
 * **500-Line Max**: No document over 500 lines.
 * **Update Maps**: Update INDEX_MAP.md and HEADER_MAP.md when adding/changing docs.
+
+## 5. Plugin Architecture
+* **Claude**: `.claude-plugin/plugin.json` → `.claude/skills/*.json`
+* **Cursor**: `.cursor-plugin/plugin.json` → `.cursor/rules/*.md`
+* **Copilot**: `.codex-plugin/plugin.json` → `.github/copilot-instructions.md`
+* **Windsurf**: `.windsurfrules` (monolithic)
+* **OpenCode/OpenClaw**: `.opencode/skills/*` / `.openclaw/skills/*`
+* **Gemini**: `.gemini-extension/gemini-extension.json`
