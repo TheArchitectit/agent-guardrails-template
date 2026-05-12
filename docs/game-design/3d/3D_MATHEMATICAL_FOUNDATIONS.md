@@ -287,4 +287,4 @@ A strong architecture relies on:
 
 ---
 
-*Part of Agent Guardrails Template v2.8.0 — 3D Mathematical Foundations*
+*Part of Agent Guardrails Template v3.1.0 — 3D Mathematical Foundations*

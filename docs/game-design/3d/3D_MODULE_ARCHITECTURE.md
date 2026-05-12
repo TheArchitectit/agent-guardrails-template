@@ -234,4 +234,4 @@ By implementing these seven architectural pillars, the agent-guardrails-template
 
 ---
 
-*Part of Agent Guardrails Template v2.8.0 — 3D Game Design Module*
+*Part of Agent Guardrails Template v3.1.0 — 3D Game Design Module*
