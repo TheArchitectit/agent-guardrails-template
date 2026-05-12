@@ -130,6 +130,8 @@ func (e *ReviewEngine) Run(ctx context.Context, screenshotPath string) (*Report,
 		status = StatusFailed
 	}
 	_ = e.storage.UpdateReviewStatus(reviewID, status, &completedAt)
+	review.Status = status
+	review.CompletedAt = &completedAt
 
 	return &Report{
 		Review:     *review,

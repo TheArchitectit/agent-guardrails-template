@@ -127,6 +127,44 @@ Copy `godot/addons/vision_capture/` into your Godot project's `addons/` director
   --port 8080
 ```
 
+## HTTP API Usage
+
+Authentication uses `Authorization: Bearer <MCP_API_KEY>`.
+
+### Submit a Screenshot for Review
+
+```bash
+curl -X POST http://127.0.0.1:8081/v1/vision/review \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $MCP_API_KEY" \
+  -d '{"image_path":"/app/screenshots/test.png"}'
+```
+
+> **Field names:** Use `image_path` (not `path`). Base64 (`image_b64`) is not yet supported by the HTTP API.
+
+### Check Pipeline Health
+
+```bash
+curl http://127.0.0.1:8081/v1/vision/health \
+  -H "Authorization: Bearer $MCP_API_KEY"
+```
+
+## Performance & Timeouts
+
+With a 30B parameter vision model, a single screenshot review can take **2–3 minutes** depending on GPU load and image complexity. Configure your clients accordingly:
+
+| Layer | Default | Recommendation |
+|-------|---------|----------------|
+| `curl` / HTTP client | — | Use `--max-time 300` or higher |
+| Go `local_llama.go` client | 120s | Sufficient for most requests |
+| Echo web timeout | skips `/v1/vision/*` | Vision endpoints are exempt |
+
+Avoid submitting multiple concurrent vision reviews to the same llama-server instance — a 30B model typically processes one request at a time and will queue or 503-load additional requests.
+
+## Reasoning Models
+
+The Nemotron 3 Omni 30B A3B **Reasoning** model outputs its analysis in `reasoning_content` instead of the standard `content` field. The Go client automatically falls back to `reasoning_content` when `content` is empty, so structured findings are still parsed correctly.
+
 ## Security
 
 - `vision.yaml` is in `.gitignore` — never commit secrets.
