@@ -63,6 +63,12 @@ func NewVisionToolSet() (*VisionToolSet, error) {
 		fallbacks = append(fallbacks, vision.NewAnthropicClient(fallbackKey, fallbackModel, 120*time.Second))
 	} else if fallbackProvider == "openai" && fallbackKey != "" {
 		fallbacks = append(fallbacks, vision.NewOpenAIClient(fallbackKey, fallbackModel, 120*time.Second))
+	} else if fallbackProvider == "custom" {
+		fallbackURL := os.Getenv("FALLBACK_URL")
+		if fallbackURL == "" {
+			fallbackURL = "http://localhost:8080/v1"
+		}
+		fallbacks = append(fallbacks, vision.NewLocalLlamaClientWithKey(fallbackURL, fallbackModel, fallbackKey, 120*time.Second))
 	}
 
 	composite := vision.NewCompositeClient(localClient, fallbacks...)

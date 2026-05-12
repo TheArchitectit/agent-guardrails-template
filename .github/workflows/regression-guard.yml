@@ -11,6 +11,48 @@ jobs:
     runs-on: ubuntu-latest
     name: Check for Potential Regressions
 
+  windows-check:
+    runs-on: windows-latest
+    name: Windows Compatibility Check
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+
+      - name: Run Setup Script
+        shell: powershell
+        run: |
+          python scripts/setup_agents.py --claude --opencode --full
+          if (-not (Test-Path .claude/hooks/pre-execution.ps1)) { throw "PowerShell hooks not created" }
+
+      - name: Run E2E Tests
+        shell: powershell
+        run: |
+          python -m unittest scripts.e2e_tests
+
+      - name: Run Regression Check
+        shell: powershell
+        run: |
+          python scripts/regression_check.py --all
+
+      - name: Build Go Components
+        shell: powershell
+        run: |
+          cd mcp-server
+          go build ./...
+          cd ..\cmd\team-cli
+          go build .
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

@@ -26,9 +26,11 @@ python scripts/setup_agents.py --claude --opencode --full
 - `.claude/skills/guardrails-enforcer.json` - Four Laws enforcement
 - `.claude/skills/commit-validator.json` - Commit message validation
 - `.claude/skills/env-separator.json` - Test/production separation
-- `.claude/hooks/pre-execution.sh` - Pre-operation checks
-- `.claude/hooks/post-execution.sh` - Post-operation validation
-- `.claude/hooks/pre-commit.sh` - Pre-commit validation
+- `.claude/hooks/pre-execution.sh` (Unix) / `.claude/hooks/pre-execution.ps1` (Windows) - Pre-operation checks
+- `.claude/hooks/post-execution.sh` (Unix) / `.claude/hooks/post-execution.ps1` (Windows) - Post-operation validation
+- `.claude/hooks/pre-commit.sh` (Unix) / `.claude/hooks/pre-commit.ps1` (Windows) - Pre-commit validation
+
+> **Note:** On Windows, the setup script auto-detects the platform and creates PowerShell (`.ps1`) hooks instead of Bash (`.sh`) hooks. See [WINDOWS_SETUP.md](WINDOWS_SETUP.md) for details.
 
 ### OpenCode Configuration (`.opencode/`)
 

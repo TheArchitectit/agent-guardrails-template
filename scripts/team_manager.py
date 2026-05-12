@@ -7,8 +7,40 @@ team composition against standardized enterprise layout.
 """
 
 import argparse
-import fcntl
 import gzip
+import warnings
+
+# Cross-platform file locking: fcntl is Unix-only
+try:
+    import fcntl
+except ImportError:
+    # Windows fallback: msvcrt locking approximation
+    import msvcrt
+    warnings.warn("fcntl not available on Windows; using msvcrt locking fallback.", RuntimeWarning)
+
+    class _FcntlStub:
+        LOCK_EX = 1
+        LOCK_SH = 2
+        LOCK_NB = 4
+        LOCK_UN = 8
+
+        @staticmethod
+        def flock(fd, operation):
+            # msvcrt.locking is byte-range; lock first 2**31 bytes as whole-file approximation
+            import msvcrt
+            if operation == _FcntlStub.LOCK_UN:
+                try:
+                    msvcrt.locking(fd, msvcrt.LK_UNLCK, 2147483647)
+                except OSError:
+                    pass
+            else:
+                mode = msvcrt.LK_NBLCK if (operation & _FcntlStub.LOCK_NB) else msvcrt.LK_LOCK
+                try:
+                    msvcrt.locking(fd, mode, 2147483647)
+                except OSError as e:
+                    raise IOError(e.winerror, e.strerror)
+
+    fcntl = _FcntlStub()
 import json
 import os
 import re
@@ -102,7 +134,7 @@ class RulesLoader:
                 with open(self.rules_path, 'r') as f:
                     self._rules = json.load(f)
             except (json.JSONDecodeError, IOError) as e:
-                print(f"⚠️  Failed to load rules from {self.rules_path}: {e}", file=sys.stderr)
+                print(f"[WARN]  Failed to load rules from {self.rules_path}: {e}", file=sys.stderr)
                 self._rules = self._get_default_rules()
         else:
             self._rules = self._get_default_rules()
@@ -202,9 +234,9 @@ class EncryptionManager:
                     self._fernet = Fernet(self._key)
                     self._enabled = True
             except ImportError:
-                print("⚠️  cryptography library not installed. Encryption disabled.", file=sys.stderr)
+                print("[WARN]  cryptography library not installed. Encryption disabled.", file=sys.stderr)
             except Exception as e:
-                print(f"⚠️  Failed to initialize encryption: {e}", file=sys.stderr)
+                print(f"[WARN]  Failed to initialize encryption: {e}", file=sys.stderr)
 
     @property
     def enabled(self) -> bool:
@@ -332,7 +364,7 @@ class MigrationManager:
                     data["version"] = target_version
                     current_version = target_version
                 except Exception as e:
-                    print(f"   ❌ Migration failed: {e}")
+                    print(f"   [ERR] Migration failed: {e}")
                     raise
 
         # Update to final version
@@ -340,7 +372,7 @@ class MigrationManager:
         data["migrated_from"] = original_version
         data["migrated_at"] = datetime.now().isoformat()
 
-        print(f"✅ Migration complete: v{original_version} -> v{self.CURRENT_VERSION}")
+        print(f"[OK] Migration complete: v{original_version} -> v{self.CURRENT_VERSION}")
         return data
 
     def get_migration_status(self) -> Dict[str, Any]:
@@ -386,7 +418,7 @@ def reload_rules_cmd() -> None:
         _rules_loader = RulesLoader()
     else:
         _rules_loader.reload_rules()
-    print(f"✅ Rules reloaded from {RulesLoader.DEFAULT_RULES_PATH}")
+    print(f"[OK] Rules reloaded from {RulesLoader.DEFAULT_RULES_PATH}")
 
 class PerformanceMetrics:
     """Performance metrics collector for team operations (OPS-008).
@@ -454,7 +486,7 @@ class PerformanceMetrics:
                 finally:
                     fcntl.flock(f.fileno(), fcntl.LOCK_UN)
         except Exception as e:
-            print(f"⚠️  Failed to write metric: {e}", file=sys.stderr)
+            print(f"[WARN]  Failed to write metric: {e}", file=sys.stderr)
 
     def load_metrics(self, since: Optional[datetime] = None,
                      operation: Optional[str] = None) -> List[Dict[str, Any]]:
@@ -480,7 +512,7 @@ class PerformanceMetrics:
                     except (json.JSONDecodeError, KeyError):
                         continue
         except Exception as e:
-            print(f"⚠️  Failed to load metrics: {e}", file=sys.stderr)
+            print(f"[WARN]  Failed to load metrics: {e}", file=sys.stderr)
         return metrics
 
     def get_operation_stats(self, operation: Optional[str] = None,
@@ -554,7 +586,7 @@ class PerformanceMetrics:
                             writer.writerow(m_flat)
             return True
         except Exception as e:
-            print(f"❌ Export failed: {e}", file=sys.stderr)
+            print(f"[ERR] Export failed: {e}", file=sys.stderr)
             return False
 
 
@@ -992,7 +1024,7 @@ class BackupManager:
             return backup_path
         except Exception as e:
             # If backup fails, log but don't block the save
-            print(f"⚠️  Backup creation failed: {e}", file=sys.stderr)
+            print(f"[WARN]  Backup creation failed: {e}", file=sys.stderr)
             return None
 
     def _cleanup_old_backups(self) -> None:
@@ -1070,7 +1102,7 @@ class BackupManager:
                     pass
                 raise
         except Exception as e:
-            print(f"❌ Restore failed: {e}", file=sys.stderr)
+            print(f"[ERR] Restore failed: {e}", file=sys.stderr)
             return False
 
 
@@ -1120,7 +1152,7 @@ class AuditLogger:
                 finally:
                     fcntl.flock(f.fileno(), fcntl.LOCK_UN)
         except Exception as e:
-            print(f"⚠️  Audit logging failed: {e}", file=sys.stderr)
+            print(f"[WARN]  Audit logging failed: {e}", file=sys.stderr)
 
     def query_audit_log(self, start_time: Optional[datetime] = None,
                         end_time: Optional[datetime] = None,
@@ -1178,7 +1210,7 @@ class AuditLogger:
                     except json.JSONDecodeError:
                         continue
         except Exception as e:
-            print(f"⚠️  Audit query failed: {e}", file=sys.stderr)
+            print(f"[WARN]  Audit query failed: {e}", file=sys.stderr)
 
         return results
 
@@ -1660,7 +1692,7 @@ class TeamManager:
             self._require_auth("initialize project")
             self.teams = {team_id: team for team_id, team in self.STANDARD_TEAMS.items()}
             self.save()
-            print(f"✅ Initialized project '{self.project_name}' with {len(self.teams)} teams")
+            print(f"[OK] Initialized project '{self.project_name}' with {len(self.teams)} teams")
             self.performance_metrics.end_operation("init", success=True, team_count=len(self.teams))
         except Exception as e:
             self.performance_metrics.end_operation("init", success=False, error_type=type(e).__name__)
@@ -1794,7 +1826,7 @@ class TeamManager:
                 "error": str(e)
             })
             self.performance_metrics.end_operation("assign", success=False, error_type="validation_error")
-            print(f"❌ Validation error: {e}", file=sys.stderr)
+            print(f"[ERR] Validation error: {e}", file=sys.stderr)
             return False
 
         self._require_auth("assign role", team_id)
@@ -1809,7 +1841,7 @@ class TeamManager:
                 "operation": "assign_role",
                 "retry_after": retry_after
             })
-            print(f"❌ Rate limit exceeded. Retry after {retry_after} seconds.", file=sys.stderr)
+            print(f"[ERR] Rate limit exceeded. Retry after {retry_after} seconds.", file=sys.stderr)
             return False
 
         # FUNC-012: Check for duplicate assignments
@@ -1884,14 +1916,14 @@ class TeamManager:
         SEC-008: Logs audit trail.
         """
         if team_id not in self.teams:
-            print(f"❌ Team {team_id} not found")
+            print(f"[ERR] Team {team_id} not found")
             return False
 
         team = self.teams[team_id]
         for role in team.roles:
             if role.name == role_name:
                 if role.assigned_to is None:
-                    print(f"⚠️  Role '{role_name}' in {team.name} is already unassigned")
+                    print(f"[WARN]  Role '{role_name}' in {team.name} is already unassigned")
                     return False
                 previous_assignee = role.assigned_to
                 role.assigned_to = None
@@ -1911,10 +1943,10 @@ class TeamManager:
                         self.user_context
                     )
 
-                print(f"✅ Unassigned {previous_assignee} from {role_name} in {team.name}")
+                print(f"[OK] Unassigned {previous_assignee} from {role_name} in {team.name}")
                 return True
 
-        print(f"❌ Role '{role_name}' not found in {team.name}")
+        print(f"[ERR] Role '{role_name}' not found in {team.name}")
         return False
 
     def reassign_role(self, team_id: int, from_role: str, to_role: str, person: str) -> bool:
@@ -1944,14 +1976,14 @@ class TeamManager:
                 "person": person,
                 "error": str(e)
             })
-            print(f"❌ Validation error: {e}", file=sys.stderr)
+            print(f"[ERR] Validation error: {e}", file=sys.stderr)
             return False
 
         self._require_auth("reassign role", team_id)
 
         if team_id not in self.teams:
             self.logger.error("team_not_found", {"team_id": team_id})
-            print(f"❌ Team {team_id} not found")
+            print(f"[ERR] Team {team_id} not found")
             return False
 
         team = self.teams[team_id]
@@ -1971,7 +2003,7 @@ class TeamManager:
                 "team_id": team_id,
                 "from_role": from_role
             })
-            print(f"❌ Role '{from_role}' not found in {team.name}")
+            print(f"[ERR] Role '{from_role}' not found in {team.name}")
             return False
 
         if to_role_obj is None:
@@ -1979,7 +2011,7 @@ class TeamManager:
                 "team_id": team_id,
                 "to_role": to_role
             })
-            print(f"❌ Role '{to_role}' not found in {team.name}")
+            print(f"[ERR] Role '{to_role}' not found in {team.name}")
             return False
 
         # Validate person is actually assigned to from_role
@@ -1990,7 +2022,7 @@ class TeamManager:
                 "person": person,
                 "actual_assignee": from_role_obj.assigned_to
             })
-            print(f"❌ '{person}' is not assigned to '{from_role}' in {team.name}")
+            print(f"[ERR] '{person}' is not assigned to '{from_role}' in {team.name}")
             return False
 
         # Perform reassignment
@@ -2023,10 +2055,10 @@ class TeamManager:
         })
 
         if previous_assignee:
-            print(f"✅ Reassigned {person} from '{from_role}' to '{to_role}' in {team.name}")
+            print(f"[OK] Reassigned {person} from '{from_role}' to '{to_role}' in {team.name}")
             print(f"   Note: {previous_assignee} was previously assigned to '{to_role}'")
         else:
-            print(f"✅ Reassigned {person} from '{from_role}' to '{to_role}' in {team.name}")
+            print(f"[OK] Reassigned {person} from '{from_role}' to '{to_role}' in {team.name}")
         return True
 
     def start_team(self, team_id: int, override: bool = False, reason: Optional[str] = None) -> bool:
@@ -2066,12 +2098,12 @@ class TeamManager:
                     "user": self.user_context.user_id if self.user_context else None,
                     "role": self.user_context.role if self.user_context else None
                 })
-                print(f"❌ Override requires admin role")
+                print(f"[ERR] Override requires admin role")
                 return False
 
             if not reason:
                 self.logger.error("override_missing_reason", {"team_id": team_id})
-                print(f"❌ Override requires a reason (--reason)")
+                print(f"[ERR] Override requires a reason (--reason)")
                 return False
 
             self.logger.warn("phase_gate_override", {
@@ -2256,7 +2288,7 @@ class TeamManager:
                 validate_phase(phase)
             except ValueError as e:
                 self.logger.error("list_teams_validation_failed", {"error": str(e)})
-                print(f"❌ Validation error: {e}", file=sys.stderr)
+                print(f"[ERR] Validation error: {e}", file=sys.stderr)
                 return
 
         teams = self.teams.values()
@@ -2402,7 +2434,7 @@ class TeamManager:
         }
 
         if team_id not in self.teams:
-            result["message"] = f"❌ Team {team_id} not found in project '{self.project_name}'"
+            result["message"] = f"[ERR] Team {team_id} not found in project '{self.project_name}'"
             return result
 
         team = self.teams[team_id]
@@ -2410,7 +2442,7 @@ class TeamManager:
         if not confirmed:
             result["requires_confirmation"] = True
             result["message"] = (
-                f"⚠️  Deletion requires confirmation. "
+                f"[WARN]  Deletion requires confirmation. "
                 f"Team {team_id} ({team.name}) will be permanently removed. "
                 f"Set confirmed=true to proceed."
             )
@@ -2435,7 +2467,7 @@ class TeamManager:
             )
 
         result["success"] = True
-        result["message"] = f"✅ Team {team_id} ({deleted_team_name}) deleted from project '{self.project_name}'"
+        result["message"] = f"[OK] Team {team_id} ({deleted_team_name}) deleted from project '{self.project_name}'"
         return result
 
     def delete_project(self, confirmed: bool = False) -> dict:
@@ -2455,14 +2487,14 @@ class TeamManager:
         }
 
         if not self.config_path.exists():
-            result["message"] = f"❌ Project '{self.project_name}' not found"
+            result["message"] = f"[ERR] Project '{self.project_name}' not found"
             return result
 
         if not confirmed:
             result["requires_confirmation"] = True
             team_count = len(self.teams)
             result["message"] = (
-                f"⚠️  Deletion requires confirmation. "
+                f"[WARN]  Deletion requires confirmation. "
                 f"Project '{self.project_name}' with {team_count} team(s) will be permanently deleted. "
                 f"Set confirmed=true to proceed."
             )
@@ -2490,9 +2522,9 @@ class TeamManager:
             self.config_path.unlink()
 
             result["success"] = True
-            result["message"] = f"✅ Project '{self.project_name}' ({team_count} teams) deleted successfully"
+            result["message"] = f"[OK] Project '{self.project_name}' ({team_count} teams) deleted successfully"
         except Exception as e:
-            result["message"] = f"❌ Error deleting project: {e}"
+            result["message"] = f"[ERR] Error deleting project: {e}"
 
 
     # FUNC-012: Duplicate Detection Methods
@@ -2571,9 +2603,9 @@ class TeamManager:
             result["action"] = action
 
             if action == "block":
-                result["message"] = f"❌ Cannot assign '{person}': already assigned to {len(existing)} role(s)"
+                result["message"] = f"[ERR] Cannot assign '{person}': already assigned to {len(existing)} role(s)"
             else:
-                result["message"] = f"⚠️  Warning: '{person}' is already assigned to {len(existing)} role(s)"
+                result["message"] = f"[WARN]  Warning: '{person}' is already assigned to {len(existing)} role(s)"
 
         return result
 
@@ -2657,12 +2689,12 @@ class TeamManager:
         }
 
         if not self.backup_manager:
-            result["message"] = "❌ Backup manager not enabled"
+            result["message"] = "[ERR] Backup manager not enabled"
             return result
 
         backup_path = self.backup_manager.backup_dir / backup_filename
         if not backup_path.exists():
-            result["message"] = f"❌ Backup file not found: {backup_filename}"
+            result["message"] = f"[ERR] Backup file not found: {backup_filename}"
             return result
 
         # Create backup of current state before restore
@@ -2689,10 +2721,10 @@ class TeamManager:
                 )
 
             result["success"] = True
-            result["message"] = f"✅ Successfully restored from {backup_filename}"
+            result["message"] = f"[OK] Successfully restored from {backup_filename}"
             result["team_count"] = len(self.teams)
         else:
-            result["message"] = f"❌ Failed to restore from {backup_filename}"
+            result["message"] = f"[ERR] Failed to restore from {backup_filename}"
 
         return result
 
@@ -3080,14 +3112,14 @@ def main():
         if args.command in ["delete-team", "delete-project"]:
             # For delete commands, project may not exist yet (delete-project)
             if args.command == "delete-team" and not manager.load():
-                print(f"❌ Project '{args.project}' not found.")
+                print(f"[ERR] Project '{args.project}' not found.")
                 sys.exit(1)
             if args.command == "delete-project":
                 # Try to load but don't fail if file doesn't exist
                 manager.load()
         else:
             if not manager.load():
-                print(f"❌ Project '{args.project}' not found. Run: team_manager.py --project {args.project} init")
+                print(f"[ERR] Project '{args.project}' not found. Run: team_manager.py --project {args.project} init")
                 sys.exit(1)
 
         if args.command == "list":
@@ -3122,7 +3154,7 @@ def main():
 
         elif args.command == "assign":
             if manager.assign_role(args.team, args.role, args.person):
-                print(f"✅ Assigned {args.person} to {args.role} in Team {args.team}")
+                print(f"[OK] Assigned {args.person} to {args.role} in Team {args.team}")
 
         elif args.command == "unassign":
             manager.unassign_role(args.team, args.role)
@@ -3153,10 +3185,10 @@ def main():
         elif args.command == "validate-size":
             results = manager.validate_team_size(args.team)
             if results["valid"]:
-                print(f"✅ All {results['teams_checked']} teams have valid size (4-6 members)")
+                print(f"[OK] All {results['teams_checked']} teams have valid size (4-6 members)")
                 sys.exit(0)
             else:
-                print(f"❌ Team size violations found:")
+                print(f"[ERR] Team size violations found:")
                 for violation in results["violations"]:
                     print(f"   {violation['message']}")
                 sys.exit(1)
@@ -3301,9 +3333,9 @@ def main():
         elif args.command == "export-csv":
             result = manager.export_csv_file(Path(args.file))
             if result["success"]:
-                print(f"✅ Exported {result['exported']} roles to {result['file_path']}")
+                print(f"[OK] Exported {result['exported']} roles to {result['file_path']}")
             else:
-                print(f"❌ Export failed: {result['errors']}")
+                print(f"[ERR] Export failed: {result['errors']}")
                 sys.exit(1)
 
         elif args.command == "import-json":
@@ -3330,9 +3362,9 @@ def main():
             pretty = not args.compact
             result = manager.export_json_file(Path(args.file), pretty=pretty)
             if result["success"]:
-                print(f"✅ Exported {result['team_count']} teams to {result['file_path']}")
+                print(f"[OK] Exported {result['team_count']} teams to {result['file_path']}")
             else:
-                print(f"❌ Export failed: {result['errors']}")
+                print(f"[ERR] Export failed: {result['errors']}")
                 sys.exit(1)
 
     elif args.command in ["template-csv", "template-json"]:
@@ -3340,18 +3372,18 @@ def main():
         if args.command == "template-csv":
             result = create_csv_template(Path(args.file))
             if result["success"]:
-                print(f"✅ Created CSV template: {result['file_path']}")
+                print(f"[OK] Created CSV template: {result['file_path']}")
                 print("   Edit this file and run: team_manager.py --project <name> import-csv --file " + args.file)
             else:
-                print(f"❌ Failed to create template: {result['errors']}")
+                print(f"[ERR] Failed to create template: {result['errors']}")
                 sys.exit(1)
         elif args.command == "template-json":
             result = create_json_template(Path(args.file))
             if result["success"]:
-                print(f"✅ Created JSON template: {result['file_path']}")
+                print(f"[OK] Created JSON template: {result['file_path']}")
                 print("   Edit this file and run: team_manager.py --project <name> import-json --file " + args.file)
             else:
-                print(f"❌ Failed to create template: {result['errors']}")
+                print(f"[ERR] Failed to create template: {result['errors']}")
                 sys.exit(1)
 
     elif args.command == "reload-rules":
@@ -3367,14 +3399,14 @@ def main():
             print(f"   Target:  v{status['target_version']}")
             # Load will trigger migration
             manager.load()
-            print(f"✅ Migration complete")
+            print(f"[OK] Migration complete")
         elif status["status"] == "current":
-            print(f"✅ Project '{args.project}' is at current version (v{status['current_version']})")
+            print(f"[OK] Project '{args.project}' is at current version (v{status['current_version']})")
         elif status["status"] == "not_found":
-            print(f"❌ Project '{args.project}' not found")
+            print(f"[ERR] Project '{args.project}' not found")
             sys.exit(1)
         else:
-            print(f"❌ Error: {status.get('error', 'Unknown error')}")
+            print(f"[ERR] Error: {status.get('error', 'Unknown error')}")
             sys.exit(1)
 
     elif args.command == "health":
@@ -3406,7 +3438,7 @@ def main():
                 Path(args.output), format=args.export, days=args.days
             )
             if success:
-                print(f"✅ Performance report exported to {args.output}")
+                print(f"[OK] Performance report exported to {args.output}")
             else:
                 sys.exit(1)
         else:
@@ -3447,11 +3479,11 @@ def main():
     elif args.command in ["encrypt-project", "decrypt-project"]:
         # SEC-007: Encryption/Decryption commands
         if not manager.encryption_manager.enabled:
-            print("❌ Encryption not enabled. Set TEAM_ENCRYPTION_KEY environment variable.")
+            print("[ERR] Encryption not enabled. Set TEAM_ENCRYPTION_KEY environment variable.")
             sys.exit(1)
 
         if not manager.config_path.exists():
-            print(f"❌ Project '{args.project}' not found.")
+            print(f"[ERR] Project '{args.project}' not found.")
             sys.exit(1)
 
         # Load current data
@@ -3497,7 +3529,7 @@ def main():
             json.dump(data, f, indent=2)
 
         action = "Encrypted" if args.command == "encrypt-project" else "Decrypted"
-        print(f"✅ {action} {encrypted_count} sensitive fields in project '{args.project}'")
+        print(f"[OK] {action} {encrypted_count} sensitive fields in project '{args.project}'")
 
     else:
         parser.print_help()

@@ -149,7 +149,8 @@ class TestTeamManagerInitialization(unittest.TestCase):
     def test_init_creates_config_path(self):
         """Test that initialization uses correct config path."""
         manager = TeamManager("test-project", user_context=self.user_ctx, logger=self.logger)
-        self.assertEqual(manager.config_path, Path(".teams/test-project.json"))
+        self.assertEqual(manager.config_path.name, "test-project.json")
+        self.assertTrue(".teams" in str(manager.config_path))
 
     def test_init_requires_auth(self):
         """Test that operations require authentication."""

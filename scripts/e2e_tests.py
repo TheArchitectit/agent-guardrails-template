@@ -3,7 +3,7 @@
 End-to-End (E2E) Tests for Team Manager
 
 Tests complete workflows including:
-- Full lifecycle: init → assign → list → status → delete
+- Full lifecycle: init -> assign -> list -> status -> delete
 - Phase gate transitions
 - Error scenarios
 - Multi-phase workflow
@@ -53,7 +53,7 @@ class TestE2EFullWorkflow(unittest.TestCase):
 
     def test_complete_project_lifecycle(self):
         """
-        E2E-001: Full workflow: init → assign → start → complete → export → delete
+        E2E-001: Full workflow: init -> assign -> start -> complete -> export -> delete
         """
         # Step 1: Initialize project
         print("\n[E2E-001] Step 1: Initialize project")
@@ -102,7 +102,7 @@ class TestE2EFullWorkflow(unittest.TestCase):
         result = self.manager.delete_project(confirmed=True)
         self.assertTrue(result["success"])
 
-        print("[E2E-001] ✓ Complete lifecycle test passed")
+        print("[E2E-001] [OK] Complete lifecycle test passed")
 
 
 class TestE2EPhaseGates(unittest.TestCase):
@@ -143,7 +143,7 @@ class TestE2EPhaseGates(unittest.TestCase):
         self.assertEqual(status["progress_pct"], 100.0)
         self.assertEqual(status["completed"], 3)
 
-        print("[E2E-002] ✓ Phase 1 completion test passed")
+        print("[E2E-002] [OK] Phase 1 completion test passed")
 
     def test_phase_progression(self):
         """
@@ -167,9 +167,9 @@ class TestE2EPhaseGates(unittest.TestCase):
 
             status = self.manager.get_phase_status(phase)
             self.assertEqual(status["progress_pct"], 100.0)
-            print(f"  ✓ {phase}: 100%")
+            print(f"  [OK] {phase}: 100%")
 
-        print("[E2E-003] ✓ Phase progression test passed")
+        print("[E2E-003] [OK] Phase progression test passed")
 
 
 class TestE2EErrorScenarios(unittest.TestCase):
@@ -192,7 +192,7 @@ class TestE2EErrorScenarios(unittest.TestCase):
         print("\n[E2E-004] Testing invalid team assignment")
         result = self.manager.assign_role(99, "Some Role", "John Doe")
         self.assertFalse(result)
-        print("[E2E-004] ✓ Invalid team assignment handled correctly")
+        print("[E2E-004] [OK] Invalid team assignment handled correctly")
 
     def test_assign_invalid_role(self):
         """
@@ -201,7 +201,7 @@ class TestE2EErrorScenarios(unittest.TestCase):
         print("\n[E2E-005] Testing invalid role assignment")
         result = self.manager.assign_role(1, "Nonexistent Role", "John Doe")
         self.assertFalse(result)
-        print("[E2E-005] ✓ Invalid role assignment handled correctly")
+        print("[E2E-005] [OK] Invalid role assignment handled correctly")
 
     def test_delete_without_confirmation(self):
         """
@@ -211,7 +211,7 @@ class TestE2EErrorScenarios(unittest.TestCase):
         result = self.manager.delete_team(1, confirmed=False)
         self.assertFalse(result["success"])
         self.assertTrue(result["requires_confirmation"])
-        print("[E2E-006] ✓ Delete confirmation required correctly")
+        print("[E2E-006] [OK] Delete confirmation required correctly")
 
     def test_delete_nonexistent_project(self):
         """
@@ -226,7 +226,7 @@ class TestE2EErrorScenarios(unittest.TestCase):
         )
         result = empty_manager.delete_project(confirmed=True)
         self.assertFalse(result["success"])
-        print("[E2E-007] ✓ Non-existent project deletion handled correctly")
+        print("[E2E-007] [OK] Non-existent project deletion handled correctly")
 
     def test_unauthorized_access(self):
         """
@@ -246,7 +246,7 @@ class TestE2EErrorScenarios(unittest.TestCase):
         with self.assertRaises(PermissionDenied):
             manager.initialize_project()
 
-        print("[E2E-008] ✓ Unauthorized access handled correctly")
+        print("[E2E-008] [OK] Unauthorized access handled correctly")
 
 
 class TestE2ERBAC(unittest.TestCase):
@@ -269,7 +269,7 @@ class TestE2ERBAC(unittest.TestCase):
             result = manager.assign_role(team_id, manager.teams[team_id].roles[0].name, f"Admin Assignee {team_id}")
             self.assertTrue(result, f"Admin should be able to modify team {team_id}")
 
-        print("[E2E-009] ✓ Admin permissions verified")
+        print("[E2E-009] [OK] Admin permissions verified")
 
     def test_team_lead_can_only_modify_their_team(self):
         """
@@ -298,7 +298,7 @@ class TestE2ERBAC(unittest.TestCase):
         result = lead_manager.assign_role(5, lead_manager.teams[5].roles[0].name, "Lead Assignee")
         self.assertTrue(result)
 
-        print("[E2E-010] ✓ Team lead permissions verified")
+        print("[E2E-010] [OK] Team lead permissions verified")
 
     def test_viewer_cannot_modify(self):
         """
@@ -318,7 +318,7 @@ class TestE2ERBAC(unittest.TestCase):
         with self.assertRaises(PermissionDenied):
             manager.initialize_project()
 
-        print("[E2E-011] ✓ Viewer restrictions verified")
+        print("[E2E-011] [OK] Viewer restrictions verified")
 
 
 class TestE2EBatchOperations(unittest.TestCase):
@@ -365,7 +365,7 @@ class TestE2EBatchOperations(unittest.TestCase):
             self.assertIn("Alice", content)
             self.assertIn("Business Relationship Manager", content)
 
-        print("[E2E-012] ✓ CSV roundtrip test passed")
+        print("[E2E-012] [OK] CSV roundtrip test passed")
 
     def test_json_export_import_roundtrip(self):
         """
@@ -393,7 +393,7 @@ class TestE2EBatchOperations(unittest.TestCase):
             self.assertEqual(data["project_name"], "e2e-batch-test")
             self.assertEqual(len(data["teams"]), 12)
 
-        print("[E2E-013] ✓ JSON roundtrip test passed")
+        print("[E2E-013] [OK] JSON roundtrip test passed")
 
 
 class TestE2EAgentMapping(unittest.TestCase):
@@ -429,9 +429,9 @@ class TestE2EAgentMapping(unittest.TestCase):
             self.assertIsNotNone(team, f"Agent type '{agent_type}' should map to a team")
             self.assertEqual(team.id, expected_id)
             self.assertEqual(team.name, expected_name)
-            print(f"  ✓ '{agent_type}' → Team {expected_id}: {expected_name}")
+            print(f"  [OK] '{agent_type}' -> Team {expected_id}: {expected_name}")
 
-        print("[E2E-014] ✓ Agent type mapping verified")
+        print("[E2E-014] [OK] Agent type mapping verified")
 
     def test_invalid_agent_type(self):
         """
@@ -440,7 +440,7 @@ class TestE2EAgentMapping(unittest.TestCase):
         print("\n[E2E-015] Testing invalid agent type")
         team = self.manager.get_agent_team("invalid_agent_type")
         self.assertIsNone(team)
-        print("[E2E-015] ✓ Invalid agent type handled correctly")
+        print("[E2E-015] [OK] Invalid agent type handled correctly")
 
 
 class TestE2ETeamValidation(unittest.TestCase):
@@ -465,7 +465,7 @@ class TestE2ETeamValidation(unittest.TestCase):
         self.assertFalse(results["valid"])
         self.assertEqual(len(results["violations"]), 1)
         self.assertEqual(results["violations"][0]["issue"], "undersized")
-        print("[E2E-016] ✓ Empty team validation works")
+        print("[E2E-016] [OK] Empty team validation works")
 
     def test_properly_sized_team_passes(self):
         """
@@ -479,7 +479,7 @@ class TestE2ETeamValidation(unittest.TestCase):
         results = self.manager.validate_team_size(1)
         self.assertTrue(results["valid"])
         self.assertEqual(len(results["violations"]), 0)
-        print("[E2E-017] ✓ Properly sized team passes validation")
+        print("[E2E-017] [OK] Properly sized team passes validation")
 
 
 class TestE2EPersistence(unittest.TestCase):
@@ -522,7 +522,7 @@ class TestE2EPersistence(unittest.TestCase):
         role = next(r for r in manager2.teams[1].roles if r.name == "Business Relationship Manager")
         self.assertEqual(role.assigned_to, "Test User")
 
-        print("[E2E-018] ✓ Save/load persistence verified")
+        print("[E2E-018] [OK] Save/load persistence verified")
 
 
 def run_e2e_tests():

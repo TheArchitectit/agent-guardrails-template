@@ -11,11 +11,12 @@
 
 1. [Quick Diagnostics](#quick-diagnostics)
 2. [Common Errors](#common-errors)
-3. [Debug Mode](#debug-mode)
-4. [Log Analysis](#log-analysis)
-5. [Performance Issues](#performance-issues)
-6. [Recovery Procedures](#recovery-procedures)
-7. [Getting Help](#getting-help)
+3. [Windows-Specific Issues](#windows-specific-issues)
+4. [Debug Mode](#debug-mode)
+5. [Log Analysis](#log-analysis)
+6. [Performance Issues](#performance-issues)
+7. [Recovery Procedures](#recovery-procedures)
+8. [Getting Help](#getting-help)
 
 ---
 
@@ -308,6 +309,108 @@ Error: AUTH-002: Invalid API key
 3. **Check key permissions:**
    ```bash
    python scripts/verify_api_key.py YOUR_API_KEY
+   ```
+
+---
+
+## Windows-Specific Issues
+
+### Python Not Found After Install
+
+**Symptoms:**
+```
+python : The term 'python' is not recognized as a cmdlet...
+```
+
+**Solutions:**
+
+1. **Restart your terminal** after installing Python
+2. **Verify PATH manually:**
+   ```powershell
+   $env:Path = [Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [Environment]::GetEnvironmentVariable("Path", "User")
+   python --version
+   ```
+3. **Avoid Microsoft Store stub:** If `python` opens the Microsoft Store, install Python via winget or from python.org and disable the "App execution alias" in Windows Settings.
+
+### UnicodeEncodeError in Console
+
+**Symptoms:**
+```
+UnicodeEncodeError: 'charmap' codec can't encode character '✓'
+```
+
+**Cause:** Windows console defaults to `cp1252` encoding, which cannot display Unicode emoji characters used in print statements.
+
+**Solutions:**
+
+1. **Run Python with UTF-8 mode:**
+   ```powershell
+   $env:PYTHONIOENCODING = "utf-8"
+   python scripts/setup_agents.py --claude --full
+   ```
+2. **Use Windows Terminal** instead of legacy Command Prompt — it handles UTF-8 better.
+3. The codebase has been updated to use ASCII equivalents (`[OK]`, `[WARN]`, `[ERR]`) instead of emoji, so this should be rare.
+
+### `fcntl` Module Not Found
+
+**Symptoms:**
+```
+ModuleNotFoundError: No module named 'fcntl'
+```
+
+**Cause:** `fcntl` is a Unix-only module used for file locking. The codebase now includes a Windows fallback using `msvcrt.locking`, so this error should no longer occur.
+
+**If you still see it:** Update to the latest version of the template.
+
+### Hooks Created as `.sh` Instead of `.ps1`
+
+**Symptoms:**
+```
+.claude/hooks/pre-execution.sh
+```
+
+**Cause:** You are running an old version of `setup_agents.py` that doesn't detect Windows.
+
+**Solution:**
+```powershell
+git pull origin main
+python scripts/setup_agents.py --claude --full
+```
+
+The script now auto-detects Windows and creates `.ps1` PowerShell hooks.
+
+### `.env` File Not Detected by Post-Execution Hook
+
+**Symptoms:**
+The post-execution hook doesn't flag `.env` modifications.
+
+**Cause:** The PowerShell hook uses `Select-String -Pattern "\.env"`. Ensure the hook file `.claude/hooks/post-execution.ps1` exists and is up to date.
+
+**Solution:**
+```powershell
+python scripts/setup_agents.py --claude --full
+```
+
+### Go Build Fails (missing gcc)
+
+**Symptoms:**
+```
+go build: cgo: C compiler "gcc" not found
+```
+
+**Cause:** Some Go dependencies (e.g., `mattn/go-sqlite3`) require CGO and a C compiler on Windows.
+
+**Solutions:**
+
+1. **Install mingw-w64** via winget:
+   ```powershell
+   winget install mingw-w64
+   ```
+2. **Or** download from https://www.mingw-w64.org/downloads/
+3. **Or** disable CGO if SQLite is not required:
+   ```powershell
+   $env:CGO_ENABLED = "0"
+   go build ./...
    ```
 
 ---

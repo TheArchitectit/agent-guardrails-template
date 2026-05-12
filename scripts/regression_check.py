@@ -277,7 +277,7 @@ def run_regression_check(
 def print_report(issues: List[Dict], verbose: bool = False):
     """Print formatted report of issues."""
     if not issues:
-        print("\n✓ No potential regressions detected")
+        print("\n[OK] No potential regressions detected")
         return
 
     print("\n" + "=" * 70)
@@ -286,13 +286,13 @@ def print_report(issues: List[Dict], verbose: bool = False):
 
     for issue in issues:
         file_path = issue["file"]
-        print(f"\n📄 {file_path}")
+        print(f"\n[FILE] {file_path}")
         print("-" * 70)
 
         # Print matching failures
         for failure in issue["failures"]:
             severity = format_severity(failure.get("severity", "medium"))
-            print(f"\n  ⚠️  {severity} - Known Bug History")
+            print(f"\n  [WARN] {severity} - Known Bug History")
             print(f"      Failure ID: {failure['failure_id']}")
             print(f"      Category: {failure.get('category', 'unknown')}")
             print(f"      Previous Error: {failure.get('error_message', 'N/A')[:80]}...")
@@ -301,7 +301,7 @@ def print_report(issues: List[Dict], verbose: bool = False):
         # Print pattern violations
         for violation in issue["violations"]:
             severity = format_severity(violation.get("severity", "warning"))
-            print(f"\n  🚫 {severity} - Pattern Violation")
+            print(f"\n  [BLOCK] {severity} - Pattern Violation")
             print(f"      Rule: {violation.get('name', 'Unknown')}")
             print(f"      Message: {violation.get('message', 'N/A')}")
             if violation.get("failure_id"):
