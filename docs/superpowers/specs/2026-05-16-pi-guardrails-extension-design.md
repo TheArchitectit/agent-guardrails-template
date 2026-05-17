@@ -75,7 +75,7 @@ All registered via `pi.registerTool()` at extension init using `ToolDefinition` 
 
 | Tool | Purpose | MCP server equivalent |
 |------|---------|----------------------|
-| `guardrail_standalone_init` | Initialize a guardrails session (standalone mode) | `guardrail_init_session` (server) |
+| `guardrail_init` | Initialize a guardrails session (standalone mode) | `guardrail_init_session` (server) |
 | `guardrail_record_read` | Mark a file as having been read by the agent | `guardrail_record_file_read` (server) |
 | `guardrail_verify_read` | Check whether a file was read before an edit is attempted | `guardrail_verify_file_read` (server) |
 | `guardrail_set_scope` | Define the authorized file scope for the session | `guardrail_validate_scope` (server) |
@@ -109,13 +109,13 @@ The Go MCP server currently registers 50+ tools across these categories (not exh
 Each stub's `execute()` method:
 1. Checks whether MCP is connected at call time.
 2. If connected: proxies the call to the Go server and returns the result.
-3. If not connected: returns an informative message: *"Tool requires the Guardrail MCP server. Start it and run guardrail_standalone_init with MCP endpoint configured."*
+3. If not connected: returns an informative message: *"Tool requires the Guardrail MCP server. Start it and run guardrail_init with MCP endpoint configured."*
 
 ## Tool Schemas
 
 All tool parameter schemas use TypeBox `Type.Object()` definitions (imported from `@sinclair/typebox` directly, same pattern as pi-messenger line 14). Below is the logical schema for each tool — TypeBox equivalents are straightforward.
 
-### guardrail_standalone_init
+### guardrail_init
 
 ```
 Input: {
@@ -392,7 +392,7 @@ description: Available guardrail tools and automatic enforcement behavior for pi
 version: 1.0.0
 tags: [safety, core, pi]
 applies_to: [pi]
-tools: [guardrail_standalone_init, guardrail_record_read, guardrail_verify_read,
+tools: [guardrail_init, guardrail_record_read, guardrail_verify_read,
         guardrail_set_scope, guardrail_check_scope, guardrail_record_attempt,
         guardrail_check_strikes, guardrail_reset_strikes, guardrail_check_halt,
         guardrail_log_violation, guardrail_status]
@@ -520,8 +520,8 @@ pi-extension/
 - All MCP bridge tool stubs are **registered at extension init** (no dynamic tool registration).
 - At `session_start`, the extension attempts to connect to the configured MCP server binary using `@modelcontextprotocol/sdk` with **stdio transport** (`StdioClientTransport`) — the Go server is spawned as a child process.
 - If the spawn succeeds, each stub's `execute()` proxies the call to the Go server.
-- If it fails, each stub's `execute()` returns an informative message: *"Tool requires the Guardrail MCP server. Start it and run guardrail_standalone_init to retry connection."*
-- Reconnection uses exponential backoff (1s base, 30s max, 5 attempts max) with jitter — the agent can retry manually via `guardrail_standalone_init`.
+- If it fails, each stub's `execute()` returns an informative message: *"Tool requires the Guardrail MCP server. Start it and run guardrail_init to retry connection."*
+- Reconnection uses exponential backoff (1s base, 30s max, 5 attempts max) with jitter — the agent can retry manually via `guardrail_init`.
 - The `@modelcontextprotocol/sdk` package is an optional peer dependency — the extension handles its absence gracefully by marking MCP as permanently unavailable.
 - The tool list is read dynamically from the server at connection time (via MCP `tools/list`) rather than hardcoded in the extension, so new server tools are automatically available.
 

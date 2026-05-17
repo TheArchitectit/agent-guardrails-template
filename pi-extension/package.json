@@ -1,0 +1,52 @@
+{
+  "name": "@thearchitectit/pi-guardrails",
+  "version": "0.1.0",
+  "description": "Four Laws guardrails enforcement for pi coding agent — standalone + MCP bridge",
+  "type": "module",
+  "author": "TheArchitectit",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TheArchitectit/agent-guardrails-template.git",
+    "directory": "pi-extension"
+  },
+  "keywords": [
+    "pi-package",
+    "pi",
+    "pi-coding-agent",
+    "guardrails",
+    "safety",
+    "ai-agents"
+  ],
+  "bin": {
+    "pi-guardrails": "install.mjs"
+  },
+  "files": [
+    "*.ts",
+    "*.mjs",
+    "standalone/**",
+    "mcp-bridge/**",
+    "tui/**",
+    "skills/**",
+    "README.md"
+  ],
+  "pi": {
+    "extensions": ["./index.ts"],
+    "skills": ["./skills"]
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*",
+    "@earendil-works/pi-tui": "*"
+  },
+  "peerDependenciesMeta": {
+    "@earendil-works/pi-coding-agent": { "optional": true },
+    "@earendil-works/pi-tui": { "optional": true }
+  },
+  "devDependencies": {
+    "vitest": "^2.1.8"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest"
+  }
+}
