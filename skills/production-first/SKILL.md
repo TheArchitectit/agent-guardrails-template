@@ -4,7 +4,7 @@ name: Production-First Rule
 description: Production code MUST be created before test or infrastructure code
 version: 1.0.0
 tags: [safety, core, mandatory]
-applies_to: [claude, cursor, opencode, openclaw, windsurf, copilot]
+applies_to: [claude, cursor, opencode, openclaw, windsurf, copilot, pi]
 author: TheArchitectit
 ---
 
@@ -56,6 +56,16 @@ When asked to create tests or infrastructure:
 - Never use production data in tests without sanitization
 - Test fixtures must be version-controlled, not generated ad-hoc
 - Mock only external dependencies, not the code under test
+
+## Pi Enforcement
+
+When running in pi, the Production-First Rule is supported by the `@architectit/pi-guardrails` extension:
+
+- **Read tracking** (Law 1) ensures production code is read before tests reference it
+- **Scope enforcement** prevents test files from pulling production code out of scope
+- The MCP bridge (when connected) provides `guardrail_mcp` with action `validate_production_first` for explicit verification
+
+See [[guardrails-core]] for the full enforcement coverage map.
 
 ## Task
 

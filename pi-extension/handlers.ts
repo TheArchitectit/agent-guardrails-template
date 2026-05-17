@@ -7,7 +7,9 @@ import { HaltChecker } from "./standalone/halt-checker.js";
 import { ViolationLog } from "./standalone/violation-log.js";
 import type { MCPClient } from "./mcp-bridge/mcp-client.js";
 import { detectInjection, shouldBlockInjection, type InjectionConfig } from "./injection/detector.js";
+import { CanaryTokenManager, type CanaryConfig } from "./injection/canary.js";
 import { validateOutput, getValidationSummary, type ValidatorConfig } from "./output-validator/validator.js";
+import { ContentFilter, type ContentFilterConfig } from "./output-validator/content-filter.js";
 import { PermissionManager, type PermissionConfig } from "./permissions/permissions.js";
 import { renderStatusBar } from "./status.js";
 
@@ -23,6 +25,8 @@ export interface HandlerDeps {
   permissionManager: PermissionManager;
   injectionConfig?: InjectionConfig;
   validatorConfig?: ValidatorConfig;
+  contentFilter?: ContentFilter;
+  canaryManager?: CanaryTokenManager;
 }
 
 function updateStatusBar(ctx: any, deps: HandlerDeps): void {
@@ -178,24 +182,64 @@ export function createOutputValidationHandler(deps: HandlerDeps) {
   return (_event: any, ctx: any): void => {
     const event = _event as { toolName?: string; output?: string; input?: Record<string, unknown> };
 
-    // Scan tool output for sensitive data
     const output = event.output;
     if (!output || typeof output !== "string") return;
 
+    // Secret/PII scanning
     const result = validateOutput(output, deps.validatorConfig);
     if (result.hasSensitiveData) {
       const summary = getValidationSummary(result);
       deps.violationLog.log({
-        law: "halt-when-uncertain",
+        law: "verify-before-commit",
         severity: result.findings.some((f) => f.severity === "critical") ? "critical" : "warning",
         details: `Sensitive data in tool output: ${summary}`,
         operation: event.toolName,
       });
       updateStatusBar(ctx, deps);
 
-      // Notify the user via status bar — we can't block tool_result, but we can warn
       if (ctx?.hasUI && result.findings.some((f) => f.severity === "critical")) {
         ctx.ui.setStatus("guardrails", `WARNING: ${summary}`);
+      }
+    }
+
+    // Content filtering — detect and warn (tool_result handlers cannot block)
+    if (deps.contentFilter) {
+      const filterResult = deps.contentFilter.filter(output);
+      if (filterResult.blocked) {
+        deps.violationLog.log({
+          law: "verify-before-commit",
+          severity: "critical",
+          details: `Content matching denied topics detected: ${filterResult.matchedTopics.join(", ")}`,
+          operation: event.toolName,
+        });
+        updateStatusBar(ctx, deps);
+        if (ctx?.hasUI) {
+          ctx.ui.setStatus("guardrails", `WARNING: Denied content detected: ${filterResult.matchedTopics.join(", ")}`);
+        }
+      } else if (filterResult.matchedTopics.length > 0) {
+        deps.violationLog.log({
+          law: "verify-before-commit",
+          severity: "warning",
+          details: `Content matches watched topics (not denied): ${filterResult.matchedTopics.join(", ")}`,
+          operation: event.toolName,
+        });
+      }
+    }
+
+    // Canary token detection — detect and warn (tool_result handlers cannot block)
+    if (deps.canaryManager) {
+      const triggered = deps.canaryManager.check(output);
+      if (triggered.length > 0) {
+        deps.violationLog.log({
+          law: "verify-before-commit",
+          severity: "critical",
+          details: `Canary token triggered — possible data exfiltration from: ${triggered.map((c) => c.filePath).join(", ")}`,
+          operation: event.toolName,
+        });
+        updateStatusBar(ctx, deps);
+        if (ctx?.hasUI) {
+          ctx.ui.setStatus("guardrails", `ALERT: Data exfiltration detected from: ${triggered.map((c) => c.filePath).join(", ")}`);
+        }
       }
     }
   };

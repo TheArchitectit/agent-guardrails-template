@@ -74,6 +74,24 @@ export const McpBridgeParams = Type.Object({
   params: Type.Optional(Type.Record(Type.String(), Type.Unknown(), { description: "Parameters for the MCP tool" })),
 });
 
+export const PreWorkCheckParams = Type.Object({
+  cwd: Type.Optional(Type.String({ description: "Working directory for context" })),
+});
+
+export const DetectCreepParams = Type.Object({
+  scopePaths: Type.Array(Type.String(), { description: "Authorized scope path prefixes" }),
+  modifiedFiles: Type.Array(Type.String(), { description: "List of file paths that were modified" }),
+});
+
+export const CheckPatternParams = Type.Object({
+  code: Type.String({ description: "Code content to check against pattern rules" }),
+  filePath: Type.Optional(Type.String({ description: "File path for rule matching context" })),
+});
+
+export const ValidateGitParams = Type.Object({
+  command: Type.String({ description: "Git command to validate" }),
+});
+
 // --- Core Types ---
 
 export interface Attempt {
@@ -103,6 +121,32 @@ export interface CommandCheckResult {
   shouldHalt: boolean;
   reason?: string;
   category?: "destructive" | "elevated" | "network";
+}
+
+export interface PreWorkCheckResult {
+  risks: { category: string; description: string; severity: "warning" | "critical" }[];
+  recentViolations: number;
+  checklist: string[];
+}
+
+export interface CreepResult {
+  hasCreep: boolean;
+  inScopeModified: string[];
+  outOfScopeModified: string[];
+  warnings: string[];
+}
+
+export interface PatternCheckResult {
+  ruleId: string;
+  description: string;
+  match: string;
+  severity: "warning" | "critical";
+}
+
+export interface GitValidationResult {
+  allowed: boolean;
+  reason?: string;
+  category?: "protected-branch" | "commit-format" | "force-push" | "destructive";
 }
 
 export interface SessionState {
@@ -140,6 +184,21 @@ export interface GuardrailsConfig {
     enablePII?: boolean;
     autoRedact?: boolean;
     redactionText?: string;
+    contentFilter?: {
+      deniedTopics?: string[];
+      allowedTopics?: string[];
+      strictMode?: boolean;
+      topicPatterns?: Record<string, string[]>;
+    };
+  };
+  canary?: {
+    prefix?: string;
+    tokenLength?: number;
+  };
+  gitPolicy?: {
+    protectedBranches?: string[];
+    commitFormat?: string;
+    requireAIAttribution?: boolean;
   };
 }
 

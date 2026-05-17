@@ -4,7 +4,7 @@ name: Error Recovery Protocol
 description: How to recover from failures without making things worse
 version: 1.0.0
 tags: [safety, core, mandatory]
-applies_to: [claude, cursor, opencode, openclaw, windsurf, copilot]
+applies_to: [claude, cursor, opencode, openclaw, windsurf, copilot, pi]
 author: TheArchitectit
 ---
 
@@ -87,6 +87,17 @@ Escalate to user when:
 - Recovery requires destructive operations (delete, reset, restore from backup)
 - Error affects production data
 - You're on your 3rd recovery attempt (Three Strikes Rule)
+
+## Pi Enforcement
+
+When running in pi, error recovery is supported by the `@architectit/pi-guardrails` extension:
+
+- **Three Strikes**: `guardrail_record_attempt` tracks failures automatically — at 3 strikes, halting is recommended
+- **Violation logging**: `guardrail_log_violation` records failure context for post-mortem analysis
+- **Sandbox**: `guardrail_mcp` with action `sandbox_run` provides isolated execution for testing recovery steps
+- **Bash safety**: Prevents destructive commands during recovery (no `rm -rf`, `sudo`, etc.)
+
+See [[sandbox-isolation]] and [[guardrails-core]] for details.
 
 ## Task
 
