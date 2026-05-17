@@ -1,5 +1,5 @@
 import type { HaltResult, CommandCheckResult } from "../types.js";
-import { classifyCommand, shouldBlock, type ClassifyConfig } from "../../guardrails/bash-classify.js";
+import { classifyCommand, shouldBlock, type ClassifyConfig } from "../guardrails/bash-classify.js";
 
 const DESTRUCTIVE_PATTERNS: RegExp[] = [
   /\brm\s+(-[a-zA-Z]*f[a-zA-Z]*\s+|.*--no-preserve-root\s+.*\/)/,

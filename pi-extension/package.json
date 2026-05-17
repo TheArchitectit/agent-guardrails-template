@@ -1,5 +1,5 @@
 {
-  "name": "@thearchitectit/pi-guardrails",
+  "name": "@architectit/pi-guardrails",
   "version": "0.1.0",
   "description": "Four Laws guardrails enforcement for pi coding agent — standalone + MCP bridge",
   "type": "module",
@@ -25,14 +25,23 @@
     "*.ts",
     "*.mjs",
     "standalone/**",
+    "guardrails/**",
     "mcp-bridge/**",
     "tui/**",
     "skills/**",
+    "injection/**",
+    "output-validator/**",
+    "permissions/**",
+    "policy/**",
+    "sandbox/**",
     "README.md"
   ],
   "pi": {
     "extensions": ["./index.ts"],
     "skills": ["./skills"]
+  },
+  "dependencies": {
+    "@sinclair/typebox": "^0.34.0"
   },
   "peerDependencies": {
     "@earendil-works/pi-coding-agent": "*",
