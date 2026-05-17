@@ -6,6 +6,9 @@ import { ScopeValidator } from "./standalone/scope-validator.js";
 import { HaltChecker } from "./standalone/halt-checker.js";
 import { ViolationLog } from "./standalone/violation-log.js";
 import type { MCPClient } from "./mcp-bridge/mcp-client.js";
+import { detectInjection, shouldBlockInjection, type InjectionConfig } from "./injection/detector.js";
+import { validateOutput, getValidationSummary, type ValidatorConfig } from "./output-validator/validator.js";
+import { PermissionManager, type PermissionConfig } from "./permissions/permissions.js";
 import { renderStatusBar } from "./status.js";
 
 export interface HandlerDeps {
@@ -17,6 +20,9 @@ export interface HandlerDeps {
   violationLog: ViolationLog;
   mcpClient: MCPClient;
   config: GuardrailsConfig;
+  permissionManager: PermissionManager;
+  injectionConfig?: InjectionConfig;
+  validatorConfig?: ValidatorConfig;
 }
 
 function updateStatusBar(ctx: any, deps: HandlerDeps): void {
@@ -116,6 +122,103 @@ export function createBashSafetyHandler(deps: HandlerDeps) {
       });
       updateStatusBar(ctx, deps);
       return { block: true, reason: `Command blocked: ${result.reason}` };
+    }
+  };
+}
+
+// ---- Sprint 2: Injection Defense Handler ----
+
+export function createInjectionDefenseHandler(deps: HandlerDeps) {
+  return async (_event: any, ctx: any): Promise<{ block: true; reason: string } | void> => {
+    const event = _event as { toolName?: string; input?: Record<string, unknown> };
+
+    // Only scan tools that accept free-form user input
+    const scannableTools = ["bash", "write", "edit"];
+    if (!event.toolName || !scannableTools.includes(event.toolName)) return;
+
+    // Extract the text to scan
+    const input = event.input;
+    if (!input) return;
+    const textToScan = typeof input.command === "string"
+      ? input.command
+      : typeof input.content === "string"
+        ? input.content
+        : null;
+    if (!textToScan) return;
+
+    const result = detectInjection(textToScan, deps.injectionConfig);
+
+    if (shouldBlockInjection(result, deps.injectionConfig)) {
+      deps.violationLog.log({
+        law: "halt-when-uncertain",
+        severity: "critical",
+        details: `Prompt injection detected (confidence: ${result.confidence}, patterns: ${result.patterns.join(", ")})`,
+        operation: event.toolName,
+      });
+      updateStatusBar(ctx, deps);
+      return { block: true, reason: `Prompt injection detected (confidence: ${result.confidence}). Patterns: ${result.patterns.join(", ")}. If this is a false positive, use guardrail_set_scope to allow.` };
+    }
+
+    // Low-confidence detection: warn but don't block
+    if (result.detected && result.severity === "medium") {
+      deps.violationLog.log({
+        law: "halt-when-uncertain",
+        severity: "warning",
+        details: `Possible injection (confidence: ${result.confidence}, patterns: ${result.patterns.join(", ")})`,
+        operation: event.toolName,
+      });
+      updateStatusBar(ctx, deps);
+    }
+  };
+}
+
+// ---- Sprint 2: Output Validation Handler ----
+
+export function createOutputValidationHandler(deps: HandlerDeps) {
+  return (_event: any, ctx: any): void => {
+    const event = _event as { toolName?: string; output?: string; input?: Record<string, unknown> };
+
+    // Scan tool output for sensitive data
+    const output = event.output;
+    if (!output || typeof output !== "string") return;
+
+    const result = validateOutput(output, deps.validatorConfig);
+    if (result.hasSensitiveData) {
+      const summary = getValidationSummary(result);
+      deps.violationLog.log({
+        law: "halt-when-uncertain",
+        severity: result.findings.some((f) => f.severity === "critical") ? "critical" : "warning",
+        details: `Sensitive data in tool output: ${summary}`,
+        operation: event.toolName,
+      });
+      updateStatusBar(ctx, deps);
+
+      // Notify the user via status bar — we can't block tool_result, but we can warn
+      if (ctx?.hasUI && result.findings.some((f) => f.severity === "critical")) {
+        ctx.ui.setStatus("guardrails", `WARNING: ${summary}`);
+      }
+    }
+  };
+}
+
+// ---- Sprint 2: Permission Handler ----
+
+export function createPermissionHandler(deps: HandlerDeps) {
+  return (_event: any, ctx: any): { block: true; reason: string } | void => {
+    const event = _event as { toolName?: string; input?: Record<string, unknown> };
+    if (!event.toolName) return;
+
+    const result = deps.permissionManager.checkTool(event.toolName, event.input as Record<string, unknown>);
+
+    if (!result.allowed) {
+      deps.violationLog.log({
+        law: "halt-when-uncertain",
+        severity: "warning",
+        details: `Tool '${event.toolName}' blocked by permission policy${result.reason ? `: ${result.reason}` : ""}`,
+        operation: event.toolName,
+      });
+      updateStatusBar(ctx, deps);
+      return { block: true, reason: result.reason ?? `Tool '${event.toolName}' requires permission.` };
     }
   };
 }
