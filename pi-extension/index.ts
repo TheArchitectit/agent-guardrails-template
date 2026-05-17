@@ -53,7 +53,7 @@ export default function piGuardrailsExtension(pi: ExtensionAPI) {
   // ===========================================================================
   // State initialization
   // ===========================================================================
-  const config = loadConfig();
+  const config = loadConfig(process.cwd());
 
   fs.mkdirSync(getSessionsDir(), { recursive: true });
 
