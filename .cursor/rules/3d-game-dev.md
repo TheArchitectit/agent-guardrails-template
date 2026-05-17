@@ -134,6 +134,17 @@ Use when generating, modifying, or reviewing code/assets for a 3D game project.
 - Run `scripts/validate_math.py` on transform/rotation code
 - CI: 600-frame headless test must pass (FPS >30, memory stable)
 
+## Pi Enforcement
+
+When running in pi, 3D game dev guardrails are supported by the `@architectit/pi-guardrails` extension:
+
+- **Bash safety** prevents destructive filesystem operations during asset builds
+- **Scope enforcement** keeps changes within authorized game module paths
+- The MCP bridge (when connected) provides `guardrail_mcp` with action `validate_game_build` for mesh/shader/pipeline validation
+- **Sandbox** isolation is available for running untrusted build tools safely
+
+See [[sandbox-isolation]] and [[guardrails-core]] for details.
+
 ## Task
 
 Apply these 3D Game Development Guardrails to the user's request. When generating, modifying, or reviewing 3D game code or assets, enforce the mandatory guardrails above and provide safety-aware guidance.

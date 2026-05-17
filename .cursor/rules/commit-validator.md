@@ -50,6 +50,17 @@ If validation fails:
 3. Provide specific fix instructions
 4. Require user confirmation before proceeding
 
+## Pi Enforcement
+
+When running in pi, commit validation is supported by the `@architectit/pi-guardrails` extension:
+
+- **Output validation** scans diffs for secrets before they reach commit messages
+- **Bash safety** blocks `git push --force origin main/master` and `git reset --hard`
+- **Scope enforcement** ensures only in-scope files are included in commits
+- The MCP bridge (when connected) provides `guardrail_mcp` with action `validate_commit` for server-side verification
+
+See [[output-security]] and [[guardrails-core]] for details.
+
 ## Task
 
 Validate the current git state against the commit standards above. Check staged changes, commit messages, and diffs for violations. If issues are found, explain the violations and provide specific fix instructions. Require user confirmation before allowing the commit to proceed.

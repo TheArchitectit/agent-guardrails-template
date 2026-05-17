@@ -10,6 +10,12 @@ import { SessionStore } from "./standalone/session-store.js";
 import { MCPClient } from "./mcp-bridge/mcp-client.js";
 import { registerMCPBridgeTool } from "./mcp-bridge/mcp-tools.js";
 import { PermissionManager } from "./permissions/permissions.js";
+import { ContentFilter } from "./output-validator/content-filter.js";
+import { CanaryTokenManager } from "./injection/canary.js";
+import { PreWorkChecker } from "./standalone/pre-work-checker.js";
+import { FeatureCreepDetector } from "./standalone/feature-creep-detector.js";
+import { PatternRuleEngine } from "./standalone/pattern-rule-engine.js";
+import { GitValidator } from "./standalone/git-validator.js";
 import {
   initSession,
   recordRead,
@@ -46,6 +52,10 @@ import {
   CheckHaltParams,
   LogViolationParams,
   StatusParams,
+  PreWorkCheckParams,
+  DetectCreepParams,
+  CheckPatternParams,
+  ValidateGitParams,
 } from "./types.js";
 import { GuardrailsPanel } from "./tui/guardrails-panel.js";
 
@@ -66,6 +76,24 @@ export default function piGuardrailsExtension(pi: ExtensionAPI) {
   const mcpClient = new MCPClient();
   const permissionManager = new PermissionManager(config.toolPermissions);
 
+  // Output security: content filter + canary tokens
+  const contentFilter = config.outputValidation?.contentFilter
+    ? new ContentFilter(config.outputValidation.contentFilter)
+    : undefined;
+
+  const canaryManager = config.canary
+    ? new CanaryTokenManager({
+        prefix: config.canary.prefix,
+        tokenLength: config.canary.tokenLength,
+      })
+    : undefined;
+
+  // GAP modules
+  const preWorkChecker = new PreWorkChecker(violationLog, sessionStore);
+  const featureCreepDetector = new FeatureCreepDetector();
+  const patternRuleEngine = new PatternRuleEngine();
+  const gitValidator = new GitValidator(config.gitPolicy);
+
   const deps: HandlerDeps = {
     sessionStore,
     fileReadStore,
@@ -76,6 +104,8 @@ export default function piGuardrailsExtension(pi: ExtensionAPI) {
     mcpClient,
     config,
     permissionManager,
+    contentFilter,
+    canaryManager,
   };
 
   // ===========================================================================
@@ -218,6 +248,51 @@ export default function piGuardrailsExtension(pi: ExtensionAPI) {
 
   // MCP Bridge tool — proxies calls to Go MCP server
   registerMCPBridgeTool(pi, mcpClient);
+
+  // GAP tools
+  pi.registerTool({
+    name: "guardrail_pre_work_check",
+    label: "Pre-Work Check",
+    description: "Generate a pre-work risk checklist from the violation log before starting a new task.",
+    promptSnippet: "Run pre-work check",
+    parameters: PreWorkCheckParams,
+    execute(_id: string, params: any) {
+      return preWorkChecker.generateChecklist(params.cwd || process.cwd());
+    },
+  });
+
+  pi.registerTool({
+    name: "guardrail_detect_creep",
+    label: "Detect Feature Creep",
+    description: "Compare modified files against authorized scope to detect feature creep.",
+    promptSnippet: "Detect feature creep",
+    parameters: DetectCreepParams,
+    execute(_id: string, params: any) {
+      return featureCreepDetector.detectCreep(params.scopePaths, params.modifiedFiles);
+    },
+  });
+
+  pi.registerTool({
+    name: "guardrail_check_pattern",
+    label: "Check Pattern Rules",
+    description: "Check code content against loaded prevention pattern rules from .guardrails/prevention-rules/pattern-rules.json.",
+    promptSnippet: "Check code against pattern rules",
+    parameters: CheckPatternParams,
+    execute(_id: string, params: any) {
+      return patternRuleEngine.checkPattern(params.code, params.filePath);
+    },
+  });
+
+  pi.registerTool({
+    name: "guardrail_validate_git",
+    label: "Validate Git Operation",
+    description: "Validate a git command against branch protection rules, commit format, and destructive operation policies.",
+    promptSnippet: "Validate git operation",
+    parameters: ValidateGitParams,
+    execute(_id: string, params: any) {
+      return gitValidator.validateGitOp(params.command);
+    },
+  });
 
   // ===========================================================================
   // Event Handlers
