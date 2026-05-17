@@ -127,6 +127,20 @@ export interface GuardrailsConfig {
   maxStrikes: number;
   statusBarEnabled: boolean;
   panelAutoOpen: boolean;
+  toolPermissions?: {
+    defaultLevel?: "auto" | "ask" | "blocked";
+    tools?: Record<string, "auto" | "ask" | "blocked">;
+  };
+  injectionDefense?: {
+    blockThreshold?: number;
+    warnThreshold?: number;
+    heuristicEnabled?: boolean;
+  };
+  outputValidation?: {
+    enablePII?: boolean;
+    autoRedact?: boolean;
+    redactionText?: string;
+  };
 }
 
 export const DEFAULT_CONFIG: GuardrailsConfig = {

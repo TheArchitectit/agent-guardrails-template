@@ -9,6 +9,7 @@ import { ViolationLog } from "./standalone/violation-log.js";
 import { SessionStore } from "./standalone/session-store.js";
 import { MCPClient } from "./mcp-bridge/mcp-client.js";
 import { registerMCPBridgeTool } from "./mcp-bridge/mcp-tools.js";
+import { PermissionManager } from "./permissions/permissions.js";
 import {
   initSession,
   recordRead,
@@ -28,6 +29,9 @@ import {
   createReadTrackingHandler,
   createPreEditHandler,
   createBashSafetyHandler,
+  createInjectionDefenseHandler,
+  createOutputValidationHandler,
+  createPermissionHandler,
   type HandlerDeps,
 } from "./handlers.js";
 import {
@@ -60,6 +64,7 @@ export default function piGuardrailsExtension(pi: ExtensionAPI) {
   const violationLog = new ViolationLog(getViolationsLogPath());
   const sessionStore = new SessionStore(config.maxStrikes);
   const mcpClient = new MCPClient();
+  const permissionManager = new PermissionManager(config.toolPermissions);
 
   const deps: HandlerDeps = {
     sessionStore,
@@ -70,6 +75,7 @@ export default function piGuardrailsExtension(pi: ExtensionAPI) {
     violationLog,
     mcpClient,
     config,
+    permissionManager,
   };
 
   // ===========================================================================
@@ -85,7 +91,6 @@ export default function piGuardrailsExtension(pi: ExtensionAPI) {
     parameters: InitSessionParams,
     async execute(_id: string, params: any) {
       const result = initSession(sessionStore, mcpClient, params);
-      // Attempt MCP connection if endpoint is configured
       if (config.mcpBinaryPath && !mcpClient.isConnected()) {
         const connected = await mcpClient.tryConnect(config.mcpBinaryPath).catch(() => false);
         if (connected && sessionStore.getState()) {
@@ -221,8 +226,11 @@ export default function piGuardrailsExtension(pi: ExtensionAPI) {
   pi.on("session_start", createSessionStartHandler(deps));
   pi.on("session_shutdown", createSessionShutdownHandler(deps));
   pi.on("tool_result", createReadTrackingHandler(deps));
+  pi.on("tool_result", createOutputValidationHandler(deps));
+  pi.on("tool_call", createPermissionHandler(deps));
   pi.on("tool_call", createPreEditHandler(deps));
   pi.on("tool_call", createBashSafetyHandler(deps));
+  pi.on("tool_call", createInjectionDefenseHandler(deps));
 
   // ===========================================================================
   // Slash Command — /guardrails dashboard
