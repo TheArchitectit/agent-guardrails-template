@@ -1,5 +1,6 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
+import * as os from "node:os";
 import type { GuardrailsConfig } from "../types.js";
 import { DEFAULT_CONFIG } from "../types.js";
 
@@ -11,6 +12,57 @@ export interface PolicyLayer {
 
 export class PolicyLoader {
   private layers: PolicyLayer[] = [];
+
+  loadOrgPolicy(orgConfigPath?: string): PolicyLayer | null {
+    const searchPaths = [
+      orgConfigPath,
+      path.join(os.homedir(), ".pi", "guardrails-org.json"),
+      "/etc/pi-guardrails/org.json",
+    ].filter(Boolean) as string[];
+
+    for (const configPath of searchPaths) {
+      try {
+        if (!fs.existsSync(configPath)) continue;
+        const raw = fs.readFileSync(configPath, "utf-8");
+        const parsed = JSON.parse(raw);
+        const layer: PolicyLayer = {
+          name: "organization",
+          source: configPath,
+          config: parsed,
+        };
+        this.layers.push(layer);
+        return layer;
+      } catch {
+        // Skip malformed config
+      }
+    }
+    return null;
+  }
+
+  loadTeamPolicy(teamName?: string): PolicyLayer | null {
+    const searchPaths = [
+      teamName ? path.join(os.homedir(), ".pi", "teams", teamName, "guardrails.json") : null,
+      path.join(os.homedir(), ".pi", "guardrails-team.json"),
+    ].filter(Boolean) as string[];
+
+    for (const configPath of searchPaths) {
+      try {
+        if (!fs.existsSync(configPath)) continue;
+        const raw = fs.readFileSync(configPath, "utf-8");
+        const parsed = JSON.parse(raw);
+        const layer: PolicyLayer = {
+          name: "team",
+          source: configPath,
+          config: parsed,
+        };
+        this.layers.push(layer);
+        return layer;
+      } catch {
+        // Skip malformed config
+      }
+    }
+    return null;
+  }
 
   loadProjectPolicy(cwd: string): PolicyLayer | null {
     const candidates = [
@@ -37,35 +89,17 @@ export class PolicyLoader {
     return null;
   }
 
-  loadOrgPolicy(orgConfigPath?: string): PolicyLayer | null {
-    if (!orgConfigPath) return null;
-
-    try {
-      if (!fs.existsSync(orgConfigPath)) return null;
-      const raw = fs.readFileSync(orgConfigPath, "utf-8");
-      const parsed = JSON.parse(raw);
-      const layer: PolicyLayer = {
-        name: "organization",
-        source: orgConfigPath,
-        config: parsed,
-      };
-      this.layers.push(layer);
-      return layer;
-    } catch {
-      return null;
-    }
+  loadAll(cwd: string, options?: { orgConfigPath?: string; teamName?: string }): void {
+    this.loadOrgPolicy(options?.orgConfigPath);
+    this.loadTeamPolicy(options?.teamName);
+    this.loadProjectPolicy(cwd);
   }
 
   merge(base: GuardrailsConfig): GuardrailsConfig {
-    // Merge order: base defaults -> org -> team -> project
-    // Later layers override earlier ones
     let merged = { ...base };
 
-    // Sort layers: organization first, then project
-    const sorted = [...this.layers].sort((a, b) => {
-      const order: Record<string, number> = { organization: 0, team: 1, project: 2 };
-      return (order[a.name] ?? 99) - (order[b.name] ?? 99);
-    });
+    const order: Record<string, number> = { organization: 0, team: 1, project: 2 };
+    const sorted = [...this.layers].sort((a, b) => (order[a.name] ?? 99) - (order[b.name] ?? 99));
 
     for (const layer of sorted) {
       merged = this.deepMerge(merged, layer.config);
@@ -78,12 +112,16 @@ export class PolicyLoader {
     return [...this.layers];
   }
 
+  clear(): void {
+    this.layers = [];
+  }
+
   private deepMerge<T extends Record<string, any>>(target: T, source: Partial<T>): T {
     const result = { ...target };
     for (const key of Object.keys(source) as (keyof T)[]) {
       const sv = source[key];
-      const tv = target[key];
       if (sv !== undefined && sv !== null) {
+        const tv = target[key];
         if (typeof sv === "object" && !Array.isArray(sv) && typeof tv === "object" && !Array.isArray(tv) && tv !== null) {
           (result as any)[key] = this.deepMerge(tv as any, sv as any);
         } else {
