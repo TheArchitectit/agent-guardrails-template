@@ -5,6 +5,7 @@ import { StrikeCounter } from "./standalone/strike-counter.js";
 import { ScopeValidator } from "./standalone/scope-validator.js";
 import { HaltChecker } from "./standalone/halt-checker.js";
 import { ViolationLog } from "./standalone/violation-log.js";
+import type { MCPClient } from "./mcp-bridge/mcp-client.js";
 import { renderStatusBar } from "./status.js";
 
 export interface HandlerDeps {
@@ -14,7 +15,7 @@ export interface HandlerDeps {
   strikeCounter: StrikeCounter;
   haltChecker: HaltChecker;
   violationLog: ViolationLog;
-  mcpClient: unknown;
+  mcpClient: MCPClient;
   config: GuardrailsConfig;
 }
 
@@ -42,6 +43,7 @@ export function createSessionShutdownHandler(deps: HandlerDeps) {
   return async (): Promise<void> => {
     deps.violationLog.flush();
     deps.sessionStore.save();
+    await deps.mcpClient.close().catch(() => {});
   };
 }
 
