@@ -1,4 +1,5 @@
 import type { HaltResult, CommandCheckResult } from "../types.js";
+import { classifyCommand, shouldBlock, type ClassifyConfig } from "../../guardrails/bash-classify.js";
 
 const DESTRUCTIVE_PATTERNS: RegExp[] = [
   /\brm\s+(-[a-zA-Z]*f[a-zA-Z]*\s+|.*--no-preserve-root\s+.*\/)/,
@@ -23,7 +24,24 @@ const DANGEROUS_COMMANDS: string[] = [
 ];
 
 export class HaltChecker {
+  private classifyConfig?: ClassifyConfig;
+
+  constructor(classifyConfig?: ClassifyConfig) {
+    this.classifyConfig = classifyConfig;
+  }
+
   checkCommand(cmd: string): CommandCheckResult {
+    // Use classification engine when available
+    if (this.classifyConfig) {
+      const result = classifyCommand(cmd, this.classifyConfig);
+      const block = shouldBlock(result, this.classifyConfig);
+      if (block.block) {
+        return { shouldHalt: true, reason: block.reason ?? `Blocked ${result.category} command`, category: result.category };
+      }
+      return { shouldHalt: false };
+    }
+
+    // Fallback to hardcoded denylist (Sprint 0 behavior)
     const trimmed = cmd.trim().toLowerCase();
 
     for (const dangerous of DANGEROUS_COMMANDS) {

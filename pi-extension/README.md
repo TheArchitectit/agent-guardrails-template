@@ -55,6 +55,9 @@ The extension registers event handlers that enforce the Four Laws automatically:
 - **Pre-edit enforcement**: Edits to unread files are blocked (Law 1)
 - **Scope enforcement**: Edits outside the authorized scope are blocked (Law 2)
 - **Bash safety**: Dangerous commands (`rm -rf /`, `git push --force`, `sudo`, etc.) are blocked
+- **Injection defense**: Scans tool inputs for prompt injection patterns (Sprint 2)
+- **Output validation**: Detects secrets and PII in tool output (Sprint 2)
+- **Permission system**: Per-tool permission levels (auto/ask/blocked) (Sprint 2)
 
 ## Configuration
 
@@ -68,7 +71,26 @@ Config file: `~/.pi/agent/extensions/pi-guardrails/config.json`
   "defaultScope": [],
   "maxStrikes": 3,
   "statusBarEnabled": true,
-  "panelAutoOpen": false
+  "panelAutoOpen": false,
+  "toolPermissions": {
+    "defaultLevel": "auto",
+    "tools": {
+      "bash": "ask",
+      "write": "auto",
+      "edit": "auto",
+      "read": "auto"
+    }
+  },
+  "injectionDefense": {
+    "blockThreshold": 0.8,
+    "warnThreshold": 0.5,
+    "heuristicEnabled": true
+  },
+  "outputValidation": {
+    "enablePII": false,
+    "autoRedact": false,
+    "redactionText": "[REDACTED]"
+  }
 }
 ```
 
@@ -105,6 +127,36 @@ When the Go MCP server is available, the extension can proxy calls to it for enh
 4. Reconnection uses exponential backoff (1s base, 30s max, 5 attempts)
 
 The Go server supports SSE/HTTP transport (default port 8094) and the extension auto-detects the transport type from the endpoint URL.
+
+## Prompt Injection Defense
+
+The extension scans tool inputs (bash, write, edit) for common prompt injection patterns:
+
+- Pattern matching: instruction override, role manipulation, jailbreak attempts, prompt extraction
+- Heuristic scoring: excessive imperatives, system referencing, unusual structure
+- Confidence thresholds: high confidence blocks the call, medium confidence warns
+- Configurable via `injectionDefense` in config.json
+
+## Output Validation
+
+Tool output is scanned for sensitive data:
+
+- **Secret detection**: AWS keys, GitHub/GitLab tokens, Stripe keys, private keys, JWTs, database URLs, generic API keys
+- **PII detection** (optional): emails, IP addresses
+- **Auto-redaction** (optional): replaces detected secrets with `[REDACTED]`
+- Since pi's `tool_result` handler is side-effect only, output validation warns via status bar and logs violations rather than blocking
+
+## Tool Permissions
+
+Per-tool permission levels control which tools the agent can use:
+
+| Level | Behavior |
+|-------|----------|
+| `auto` | Tool executes without confirmation |
+| `ask` | Tool is blocked with a message telling the agent to get user approval |
+| `blocked` | Tool is blocked entirely |
+
+Configure via `toolPermissions` in config.json. Session overrides are available through the permission manager.
 
 ## Storage
 
