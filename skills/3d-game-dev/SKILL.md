@@ -4,7 +4,7 @@ name: 3D Game Development Guardrails
 description: Mathematical correctness, asset safety, shader constraints, and Godot/Unity conventions for 3D game code
 version: 1.0.0
 tags: [game-dev, 3d, safety]
-applies_to: [claude, cursor, opencode, openclaw, windsurf, copilot]
+applies_to: [claude, cursor, opencode, openclaw, windsurf, copilot, pi]
 author: TheArchitectit
 tools: [Read, Grep, Glob]
 globs: "**/*.{gd,cs,glsl,hlsl,wgsl,shader,obj,fbx,gltf,blend,tscn,unity}"
@@ -139,6 +139,17 @@ Use when generating, modifying, or reviewing code/assets for a 3D game project.
 - Run `scripts/validate_shaders.py` on shader code
 - Run `scripts/validate_math.py` on transform/rotation code
 - CI: 600-frame headless test must pass (FPS >30, memory stable)
+
+## Pi Enforcement
+
+When running in pi, 3D game dev guardrails are supported by the `@architectit/pi-guardrails` extension:
+
+- **Bash safety** prevents destructive filesystem operations during asset builds
+- **Scope enforcement** keeps changes within authorized game module paths
+- The MCP bridge (when connected) provides `guardrail_mcp` with action `validate_game_build` for mesh/shader/pipeline validation
+- **Sandbox** isolation is available for running untrusted build tools safely
+
+See [[sandbox-isolation]] and [[guardrails-core]] for details.
 
 ## Task
 

@@ -83,6 +83,18 @@ The Three Strikes Rule can be overridden ONLY by explicit user instruction:
 
 Without explicit override, HALT at 3 strikes every time.
 
+## Pi Enforcement
+
+When running in pi, the Three Strikes Rule is enforced by the `@architectit/pi-guardrails` extension:
+
+- `guardrail_record_attempt` — Record each attempt (success or failure)
+- `guardrail_check_strikes` — Check current strike count for a task
+- `guardrail_reset_strikes` — Reset after successful resolution or user escalation
+- Strike count is shown in the status bar (`g: !!2/3` means 2 strikes active)
+- At 3 strikes, `guardrail_check_halt` returns a halt recommendation
+
+See [[guardrails-core]] for the full enforcement coverage map.
+
 ## Task
 
 Track failure attempts on the current task. If this is the first or second failure, adjust and retry. If this is the third strike, halt immediately and escalate to the user with a summary of attempts and current state.

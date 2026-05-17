@@ -67,6 +67,21 @@ If an operation fails 3 times:
 
 Never continue beyond 3 failures.
 
+## Pi Enforcement
+
+When running in pi, the `@architectit/pi-guardrails` extension enforces these rules automatically:
+
+- **Read tracking** (Law 1): Edits to unread files are blocked via `tool_result` handler
+- **Scope enforcement** (Law 2): Out-of-scope edits are blocked via `tool_call` handler
+- **Bash safety** (Law 4): Dangerous commands are blocked via `tool_call` handler
+- **Injection defense** (Law 4): Prompt injection in tool results is blocked/warned
+- **Output validation** (Law 3): Secrets are auto-redacted from tool results
+- **Permissions** (All): Tool access gated by auto/ask/blocked levels
+
+Explicit tools: `guardrail_verify_read`, `guardrail_check_scope`, `guardrail_check_halt`, `guardrail_record_attempt`, `guardrail_check_strikes`, `guardrail_log_violation`, `guardrail_status`.
+
+See [[guardrails-core]] for the full enforcement coverage map.
+
 ## Task
 
 Enforce the guardrails on the current operation. Verify compliance with all safety rules above, check for halt conditions, and stop the operation if any violation is detected.
@@ -202,6 +217,17 @@ These laws apply to ALL operations:
 - Configuration changes
 - Documentation updates
 
+## Pi Enforcement
+
+When running in pi, these laws are enforced automatically by the `@architectit/pi-guardrails` extension:
+
+- **Law 1** (Read Before Editing): `guardrail_verify_read` blocks edits to unread files
+- **Law 2** (Stay in Scope): `guardrail_check_scope` blocks out-of-scope edits
+- **Law 3** (Verify Before Committing): Output validation auto-redacts secrets; `guardrail_check_halt` evaluates commit safety
+- **Law 4** (Halt When Uncertain): `guardrail_record_attempt`/`guardrail_check_strikes` enforce Three Strikes; injection defense blocks prompt attacks
+
+See [[guardrails-core]] for the full enforcement coverage map.
+
 ## Task
 
 Apply the Four Laws of Agent Safety to the current operation. Evaluate whether any law is at risk of being violated, enforce compliance, and halt if necessary.
@@ -317,6 +343,19 @@ Continuing beyond 3 attempts:
 
 When in doubt, HALT.
 
+## Pi Enforcement
+
+When running in pi, halt conditions are enforced by the `@architectit/pi-guardrails` extension:
+
+- **Three strikes**: `guardrail_record_attempt` and `guardrail_check_strikes` track failures automatically
+- **Bash safety**: Dangerous commands (destructive, elevated, network) are blocked automatically
+- **Injection defense**: Prompt injection content in tool results is blocked at high confidence
+- **Scope violations**: Out-of-scope file edits are blocked automatically
+
+Use `guardrail_check_halt` to explicitly evaluate halt conditions before proceeding.
+
+See [[guardrails-core]] and [[injection-defense]] for more details.
+
 ## Task
 
 Evaluate the current situation against the halt conditions above. If any condition is met, issue a halt and escalate to the user with a clear explanation of the triggered condition and the risk of proceeding.
@@ -411,6 +450,18 @@ The Three Strikes Rule can be overridden ONLY by explicit user instruction:
 
 Without explicit override, HALT at 3 strikes every time.
 
+## Pi Enforcement
+
+When running in pi, the Three Strikes Rule is enforced by the `@architectit/pi-guardrails` extension:
+
+- `guardrail_record_attempt` — Record each attempt (success or failure)
+- `guardrail_check_strikes` — Check current strike count for a task
+- `guardrail_reset_strikes` — Reset after successful resolution or user escalation
+- Strike count is shown in the status bar (`g: !!2/3` means 2 strikes active)
+- At 3 strikes, `guardrail_check_halt` returns a halt recommendation
+
+See [[guardrails-core]] for the full enforcement coverage map.
+
 ## Task
 
 Track failure attempts on the current task. If this is the first or second failure, adjust and retry. If this is the third strike, halt immediately and escalate to the user with a summary of attempts and current state.
@@ -473,6 +524,16 @@ When asked to create tests or infrastructure:
 - Never use production data in tests without sanitization
 - Test fixtures must be version-controlled, not generated ad-hoc
 - Mock only external dependencies, not the code under test
+
+## Pi Enforcement
+
+When running in pi, the Production-First Rule is supported by the `@architectit/pi-guardrails` extension:
+
+- **Read tracking** (Law 1) ensures production code is read before tests reference it
+- **Scope enforcement** prevents test files from pulling production code out of scope
+- The MCP bridge (when connected) provides `guardrail_mcp` with action `validate_production_first` for explicit verification
+
+See [[guardrails-core]] for the full enforcement coverage map.
 
 ## Task
 
@@ -552,6 +613,17 @@ Reason: <why these are needed>
 Should I proceed with these additional files, or keep changes limited to the original scope?
 ```
 
+## Pi Enforcement
+
+When running in pi, scope is enforced by the `@architectit/pi-guardrails` extension:
+
+- `guardrail_set_scope` defines authorized file paths at session start
+- `guardrail_check_scope` verifies a path is in scope before operations
+- Out-of-scope edits are **blocked automatically** via `tool_call` handler
+- The MCP bridge (when connected) provides `guardrail_mcp` with action `validate_scope` for server-side checks
+
+See [[guardrails-core]] for the full enforcement coverage map.
+
 ## Task
 
 Validate that the proposed file modifications are within authorized scope. Check the user request, task description, and dependency impact before allowing changes. If scope creep is detected, halt and ask for user confirmation.
@@ -611,6 +683,17 @@ If validation fails:
 3. Provide specific fix instructions
 4. Require user confirmation before proceeding
 
+## Pi Enforcement
+
+When running in pi, commit validation is supported by the `@architectit/pi-guardrails` extension:
+
+- **Output validation** scans diffs for secrets before they reach commit messages
+- **Bash safety** blocks `git push --force origin main/master` and `git reset --hard`
+- **Scope enforcement** ensures only in-scope files are included in commits
+- The MCP bridge (when connected) provides `guardrail_mcp` with action `validate_commit` for server-side verification
+
+See [[output-security]] and [[guardrails-core]] for details.
+
 ## Task
 
 Validate the current git state against the commit standards above. Check staged changes, commit messages, and diffs for violations. If issues are found, explain the violations and provide specific fix instructions. Require user confirmation before allowing the commit to proceed.
@@ -659,6 +742,16 @@ If you cannot verify environment separation:
 1. HALT the operation immediately
 2. Ask the user to confirm environment boundaries
 3. Do NOT proceed until separation is guaranteed
+
+## Pi Enforcement
+
+When running in pi, environment separation is supported by the `@architectit/pi-guardrails` extension:
+
+- **Output validation** auto-redacts database URLs and credentials (prevents leaking prod connection strings)
+- **Canary tokens** can detect if production file contents are being exfiltrated into output
+- The MCP bridge (when connected) provides `guardrail_mcp` with action `check_test_prod_separation` for explicit verification
+
+See [[output-security]] and [[canary-tokens]] for details.
 
 ## Task
 
@@ -754,6 +847,17 @@ Escalate to user when:
 - Recovery requires destructive operations (delete, reset, restore from backup)
 - Error affects production data
 - You're on your 3rd recovery attempt (Three Strikes Rule)
+
+## Pi Enforcement
+
+When running in pi, error recovery is supported by the `@architectit/pi-guardrails` extension:
+
+- **Three Strikes**: `guardrail_record_attempt` tracks failures automatically — at 3 strikes, halting is recommended
+- **Violation logging**: `guardrail_log_violation` records failure context for post-mortem analysis
+- **Sandbox**: `guardrail_mcp` with action `sandbox_run` provides isolated execution for testing recovery steps
+- **Bash safety**: Prevents destructive commands during recovery (no `rm -rf`, `sudo`, etc.)
+
+See [[sandbox-isolation]] and [[guardrails-core]] for details.
 
 ## Task
 
@@ -899,6 +1003,17 @@ Use when generating, modifying, or reviewing code/assets for a 3D game project.
 - Run `scripts/validate_math.py` on transform/rotation code
 - CI: 600-frame headless test must pass (FPS >30, memory stable)
 
+## Pi Enforcement
+
+When running in pi, 3D game dev guardrails are supported by the `@architectit/pi-guardrails` extension:
+
+- **Bash safety** prevents destructive filesystem operations during asset builds
+- **Scope enforcement** keeps changes within authorized game module paths
+- The MCP bridge (when connected) provides `guardrail_mcp` with action `validate_game_build` for mesh/shader/pipeline validation
+- **Sandbox** isolation is available for running untrusted build tools safely
+
+See [[sandbox-isolation]] and [[guardrails-core]] for details.
+
 ## Task
 
 Apply these 3D Game Development Guardrails to the user's request. When generating, modifying, or reviewing 3D game code or assets, enforce the mandatory guardrails above and provide safety-aware guidance.
@@ -1005,6 +1120,18 @@ These principles are MANDATORY for all AI-driven rapid development sessions.
 - If three iterations haven't worked, HALT and rethink the approach
 
 ---
+
+## Pi Enforcement
+
+When running in pi, vibe coding principles are supported by the `@architectit/pi-guardrails` extension:
+
+- **Principle 1** (Guardrails Enable Speed): All enforcement is automatic — no manual safety checks needed
+- **Principle 2** (Decide by Risk Level): Tool permissions (`ask` level for `bash`) enforce medium-risk confirmation; `guardrail_check_halt` evaluates risk
+- **Principle 3** (Preserve Design Intent): Read tracking (Law 1) enforces read-before-edit; scope enforcement prevents scope creep
+- **Principle 4** (Ship Accessible): Content filtering can enforce accessibility compliance via topic patterns
+- **Principle 5** (Iterate, Don't Rebuild): Three Strikes enforces halt when 3 iterations fail
+
+See [[guardrails-core]] and [[tool-permissions]] for details.
 
 ## Task
 

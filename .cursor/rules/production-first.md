@@ -54,6 +54,16 @@ When asked to create tests or infrastructure:
 - Test fixtures must be version-controlled, not generated ad-hoc
 - Mock only external dependencies, not the code under test
 
+## Pi Enforcement
+
+When running in pi, the Production-First Rule is supported by the `@architectit/pi-guardrails` extension:
+
+- **Read tracking** (Law 1) ensures production code is read before tests reference it
+- **Scope enforcement** prevents test files from pulling production code out of scope
+- The MCP bridge (when connected) provides `guardrail_mcp` with action `validate_production_first` for explicit verification
+
+See [[guardrails-core]] for the full enforcement coverage map.
+
 ## Task
 
 Evaluate the current task against the Production-First Rule. Ensure production code exists and is validated before any test or infrastructure code is created. If production code is missing or incomplete, prioritize creating it first.
