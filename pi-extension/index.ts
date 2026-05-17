@@ -7,6 +7,8 @@ import { ScopeValidator } from "./standalone/scope-validator.js";
 import { HaltChecker } from "./standalone/halt-checker.js";
 import { ViolationLog } from "./standalone/violation-log.js";
 import { SessionStore } from "./standalone/session-store.js";
+import { MCPClient } from "./mcp-bridge/mcp-client.js";
+import { registerMCPBridgeTool } from "./mcp-bridge/mcp-tools.js";
 import {
   initSession,
   recordRead,
@@ -40,8 +42,8 @@ import {
   CheckHaltParams,
   LogViolationParams,
   StatusParams,
-  McpBridgeParams,
 } from "./types.js";
+import { GuardrailsPanel } from "./tui/guardrails-panel.js";
 
 export default function piGuardrailsExtension(pi: ExtensionAPI) {
   // ===========================================================================
@@ -57,8 +59,7 @@ export default function piGuardrailsExtension(pi: ExtensionAPI) {
   const haltChecker = new HaltChecker();
   const violationLog = new ViolationLog(getViolationsLogPath());
   const sessionStore = new SessionStore(config.maxStrikes);
-
-  const mcpClient: unknown = null;
+  const mcpClient = new MCPClient();
 
   const deps: HandlerDeps = {
     sessionStore,
@@ -82,8 +83,19 @@ export default function piGuardrailsExtension(pi: ExtensionAPI) {
       "Initialize a guardrails session. Sets up scope, strike tracking, and file read enforcement. Call this at the start of each session.",
     promptSnippet: "Initialize guardrails session",
     parameters: InitSessionParams,
-    execute(_id: string, params: any) {
-      return initSession(sessionStore, mcpClient, params);
+    async execute(_id: string, params: any) {
+      const result = initSession(sessionStore, mcpClient, params);
+      // Attempt MCP connection if endpoint is configured
+      if (config.mcpBinaryPath && !mcpClient.isConnected()) {
+        const connected = await mcpClient.tryConnect(config.mcpBinaryPath).catch(() => false);
+        if (connected && sessionStore.getState()) {
+          sessionStore.setMcpConnected(config.mcpBinaryPath, true);
+          result.mode = "mcp-bridge";
+          result.mcpConnected = true;
+          result.availableTools = ["guardrail_mcp", ...mcpClient.getTools()];
+        }
+      }
+      return result;
     },
   });
 
@@ -199,20 +211,8 @@ export default function piGuardrailsExtension(pi: ExtensionAPI) {
     },
   });
 
-  pi.registerTool({
-    name: "guardrail_mcp",
-    label: "MCP Bridge",
-    description:
-      "Proxy calls to the guardrails MCP server. Requires MCP connection. Use action parameter to specify the MCP tool name.",
-    promptSnippet: "Call MCP guardrails tool",
-    parameters: McpBridgeParams,
-    execute(_id: string, params: any) {
-      if (!sessionStore.getState()?.mcpConnected) {
-        return { error: "MCP server not connected. Initialize session with guardrail_init to connect." };
-      }
-      return { error: "MCP bridge not yet implemented (Sprint 1). Use standalone tools instead." };
-    },
-  });
+  // MCP Bridge tool — proxies calls to Go MCP server
+  registerMCPBridgeTool(pi, mcpClient);
 
   // ===========================================================================
   // Event Handlers
@@ -223,4 +223,30 @@ export default function piGuardrailsExtension(pi: ExtensionAPI) {
   pi.on("tool_result", createReadTrackingHandler(deps));
   pi.on("tool_call", createPreEditHandler(deps));
   pi.on("tool_call", createBashSafetyHandler(deps));
+
+  // ===========================================================================
+  // Slash Command — /guardrails dashboard
+  // ===========================================================================
+
+  pi.registerCommand("guardrails", {
+    description: "Open guardrails dashboard",
+    handler: async (_args: any, ctx: any) => {
+      if (!ctx?.hasUI) return;
+
+      await ctx.ui.custom<void>(
+        (tui: any, theme: any, _keybindings: any, done: () => void) => {
+          return new GuardrailsPanel(tui, theme, done, {
+            sessionStore,
+            fileReadStore,
+            scopeValidator,
+            strikeCounter,
+            haltChecker,
+            violationLog,
+            mcpConnected: mcpClient.isConnected(),
+          });
+        },
+        { overlay: true },
+      );
+    },
+  });
 }
