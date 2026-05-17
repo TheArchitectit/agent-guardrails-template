@@ -45,7 +45,7 @@ The standalone mode is the primary value proposition — teams don't need to run
 | `guardrail_check_halt` | Evaluate halt conditions |
 | `guardrail_log_violation` | Log a guardrail violation |
 | `guardrail_status` | Get current session status |
-| `guardrail_mcp` | Proxy to MCP server (Sprint 1) |
+| `guardrail_mcp` | Proxy to MCP server (when connected) |
 
 ## Automatic Enforcement
 
@@ -82,6 +82,29 @@ When enabled, shows a compact status in the pi status bar:
 - `g: ok` — no issues
 - `g: !!2/3 src/ mcp:*` — 2/3 strikes, scope set to `src/`, MCP connected
 - `g: src/ !3v mcp:.` — scope set, 3 violations, MCP disconnected
+
+## TUI Dashboard
+
+Open the guardrails overlay with:
+
+```
+/guardrails
+```
+
+The panel shows safety score, Four Laws status, strike tracker, scope, and MCP connection status.
+
+Close with `Esc` or `q`. Scroll with `j`/`k`.
+
+## MCP Bridge
+
+When the Go MCP server is available, the extension can proxy calls to it for enhanced enforcement:
+
+1. Configure the server endpoint in `config.json` under `mcpBinaryPath` (URL for SSE, command for stdio)
+2. Initialize a session with `guardrail_init` — the extension auto-connects
+3. Use `guardrail_mcp` with an `action` parameter to call any MCP server tool
+4. Reconnection uses exponential backoff (1s base, 30s max, 5 attempts)
+
+The Go server supports SSE/HTTP transport (default port 8094) and the extension auto-detects the transport type from the endpoint URL.
 
 ## Storage
 

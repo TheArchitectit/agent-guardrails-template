@@ -5,6 +5,7 @@ import { StrikeCounter } from "./standalone/strike-counter.js";
 import { ScopeValidator } from "./standalone/scope-validator.js";
 import { HaltChecker } from "./standalone/halt-checker.js";
 import { ViolationLog } from "./standalone/violation-log.js";
+import type { MCPClient } from "./mcp-bridge/mcp-client.js";
 
 // --- Return Types ---
 
@@ -22,7 +23,7 @@ export interface SessionStatusResult {
 
 export function initSession(
   sessionStore: SessionStore,
-  mcpClient: unknown,
+  mcpClient: MCPClient,
   params: { projectSlug: string; agentType?: string; scope?: string[]; rules?: string[] },
 ): { sessionId: string; mode: "standalone" | "mcp-bridge"; availableTools: string[]; mcpConnected: boolean } {
   const state = sessionStore.initialize(params.projectSlug, params.scope);
@@ -152,7 +153,7 @@ export function getStatus(
   strikeCounter: StrikeCounter,
   scopeValidator: ScopeValidator,
   violationLog: ViolationLog,
-  mcpClient: unknown,
+  mcpClient: MCPClient,
 ): SessionStatusResult {
   const state = sessionStore.getState();
 
