@@ -165,3 +165,49 @@ All state is stored under `~/.pi/agent/extensions/pi-guardrails/`:
 - `sessions/` — session state JSON files
 - `violations.jsonl` — append-only violation log
 - `config.json` — user configuration
+
+## Canary Tokens
+
+Canary tokens can be inserted into sensitive files the agent reads. If the token appears in agent output, it indicates a potential data leak or indirect prompt injection:
+
+1. Insert a canary via `CanaryTokenManager.insert(filePath)` — returns a unique token string
+2. Agent output is automatically scanned for canary tokens
+3. Triggered canaries are logged as violations and flagged in the status bar
+
+## Content Filtering
+
+Configurable topic allowlist/denylist for agent output. Pre-built patterns for violence, hate, self-harm, sexual content, and credentials. Strict mode blocks all output not matching an allowed topic.
+
+## Sandbox Mode
+
+Docker-based isolation for dangerous tool execution:
+
+- Commands classified as `destructive` can be routed to a Docker container
+- Read-only filesystem mounts for source code
+- Network isolation by default
+- Configurable memory and CPU limits
+- Timeout enforcement (default 30s)
+- Requires Docker availability (gracefully degrades if unavailable)
+
+## Team Policy
+
+Organization-level config hierarchy: org → team → project → session. Place `.pi-guardrails.json` at the project root to define project-level overrides. The `PolicyLoader` merges layers with later layers overriding earlier ones.
+
+## CI/CD Integration
+
+### Pre-commit Hook
+
+```bash
+# Install the hook
+cp guardrails/pre-commit.sh .git/hooks/pre-commit
+chmod +x .git/hooks/pre-commit
+```
+
+Scans staged files for secrets (AWS keys, GitHub tokens, private keys, database URLs) and validates scope compliance.
+
+### GitHub Actions
+
+The `.github/workflows/pi-guardrails-ci.yml` workflow runs on PRs:
+- Unit tests for pi-extension and guardrails modules
+- Secret scanning on changed files
+- Scope compliance validation
