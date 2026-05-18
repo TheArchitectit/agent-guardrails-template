@@ -5,14 +5,14 @@ export class ScopeValidator {
   private reason: string | null = null;
 
   setScope(paths: string[], reason?: string): void {
-    this.paths = paths.map((p) => p.replace(/\/+$/, ""));
+    this.paths = [...paths];
     this.reason = reason ?? null;
   }
 
   isInScope(filePath: string, _operation: "read" | "edit" | "delete"): boolean {
     if (this.paths.length === 0) return true;
     const resolved = path.resolve(filePath);
-    return this.paths.some((scopePath) => resolved.startsWith(scopePath));
+    return this.paths.some((scopePath) => resolved.startsWith(scopePath.replace(/\/+$/, "")));
   }
 
   getScope(): string[] {
