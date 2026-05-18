@@ -88,6 +88,7 @@ export function createPreEditHandler(deps: HandlerDeps) {
         filePath,
         operation: event.toolName,
       });
+      deps.sessionStore.recordHalt(`Law 1 violation: editing ${filePath} without reading`, "critical");
       updateStatusBar(ctx, deps);
       return { block: true, reason: `Law 1 violation: You must read ${filePath} before editing it. Use guardrail_record_read or read the file first.` };
     }
@@ -101,6 +102,7 @@ export function createPreEditHandler(deps: HandlerDeps) {
         filePath,
         operation: event.toolName,
       });
+      deps.sessionStore.recordHalt(`Law 2 violation: ${filePath} is outside scope`, "warning");
       updateStatusBar(ctx, deps);
       return { block: true, reason: `Law 2 violation: ${filePath} is outside the authorized scope. Use guardrail_set_scope to expand.` };
     }
@@ -124,6 +126,7 @@ export function createBashSafetyHandler(deps: HandlerDeps) {
         details: `Blocked dangerous command: ${cmd}`,
         operation: "bash",
       });
+      deps.sessionStore.recordHalt(`Dangerous command blocked: ${result.reason}`, "critical");
       updateStatusBar(ctx, deps);
       return { block: true, reason: `Command blocked: ${result.reason}` };
     }
@@ -159,6 +162,7 @@ export function createInjectionDefenseHandler(deps: HandlerDeps) {
         details: `Prompt injection detected (confidence: ${result.confidence}, patterns: ${result.patterns.join(", ")})`,
         operation: event.toolName,
       });
+      deps.sessionStore.recordHalt(`Prompt injection detected (confidence: ${result.confidence})`, "critical");
       updateStatusBar(ctx, deps);
       return { block: true, reason: `Prompt injection detected (confidence: ${result.confidence}). Patterns: ${result.patterns.join(", ")}. If this is a false positive, use guardrail_set_scope to allow.` };
     }

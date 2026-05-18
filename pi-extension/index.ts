@@ -1,5 +1,6 @@
 import * as fs from "node:fs";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { Type } from "@sinclair/typebox";
 import { loadConfig, getSessionsDir, getViolationsLogPath } from "./config.js";
 import { FileReadStore } from "./standalone/file-read-store.js";
 import { StrikeCounter } from "./standalone/strike-counter.js";
@@ -17,6 +18,8 @@ import { FeatureCreepDetector } from "./standalone/feature-creep-detector.js";
 import { PatternRuleEngine } from "./standalone/pattern-rule-engine.js";
 import { GitValidator } from "./standalone/git-validator.js";
 import { LanguageDetector } from "./standalone/language-detector.js";
+import { RegressionGuard } from "./standalone/regression-guard.js";
+import { ExactReplacementValidator } from "./standalone/replacement-validator.js";
 import {
   initSession,
   recordRead,
@@ -59,6 +62,11 @@ import {
   ValidateGitParams,
   DetectLanguageParams,
   GetLanguageProfileParams,
+  CheckRegressionParams,
+  VerifyFixesParams,
+  RegisterFailureParams,
+  ValidateReplacementParams,
+  AcknowledgeHaltParams,
 } from "./types.js";
 import { GuardrailsPanel } from "./tui/guardrails-panel.js";
 
@@ -96,7 +104,10 @@ export default function piGuardrailsExtension(pi: ExtensionAPI) {
   const featureCreepDetector = new FeatureCreepDetector();
   const patternRuleEngine = new PatternRuleEngine();
   const languageDetector = new LanguageDetector();
-  patternRuleEngine.setLanguageDetector(languageDetector);  const gitValidator = new GitValidator(config.gitPolicy);
+  patternRuleEngine.setLanguageDetector(languageDetector);
+
+  const regressionGuard = new RegressionGuard(undefined, getViolationsLogPath());
+  const replacementValidator = new ExactReplacementValidator();  const gitValidator = new GitValidator(config.gitPolicy);
 
   const deps: HandlerDeps = {
     sessionStore,
@@ -331,6 +342,161 @@ export default function piGuardrailsExtension(pi: ExtensionAPI) {
         ruleCount: rules.length,
         availableRules: rules.map((r) => ({ id: r.id, description: r.description, severity: r.severity })),
       };
+    },
+  });
+
+  pi.registerTool({
+    name: "guardrail_check_regression",
+    label: "Check Regression Risk",
+    description: "Check if modifying specified files risks regressing past failures from the failure registry.",
+    promptSnippet: "Check regression risk for files",
+    parameters: CheckRegressionParams,
+    execute(_id: string, params: any) {
+      return regressionGuard.checkRegression(params.filePaths, params.codeContent);
+    },
+  });
+
+  pi.registerTool({
+    name: "guardrail_verify_fixes",
+    label: "Verify Fixes Intact",
+    description: "Verify that past fixes in a file are still intact by checking current content against regression patterns.",
+    promptSnippet: "Verify fixes are still intact",
+    parameters: VerifyFixesParams,
+    execute(_id: string, params: any) {
+      return regressionGuard.verifyFixesIntact(params.filePath, params.currentContent);
+    },
+  });
+
+  pi.registerTool({
+    name: "guardrail_register_failure",
+    label: "Register Failure in Registry",
+    description: "Register a past failure in the cross-session failure registry for regression prevention.",
+    promptSnippet: "Register a past failure",
+    parameters: RegisterFailureParams,
+    execute(_id: string, params: any) {
+      const id = regressionGuard.registerFailure({
+        category: params.category,
+        severity: params.severity,
+        message: params.message,
+        rootCause: params.rootCause,
+        regressionPattern: params.regressionPattern,
+        affectedFiles: params.affectedFiles,
+        fixedAt: new Date().toISOString(),
+      });
+      return { id, registered: true };
+    },
+  });
+
+  pi.registerTool({
+    name: "guardrail_validate_replacement",
+    label: "Validate Exact Replacement",
+    description: "Validate that the old content in an edit operation matches the actual file content. Catches stale edits.",
+    promptSnippet: "Validate edit replacement matches file",
+    parameters: ValidateReplacementParams,
+    execute(_id: string, params: any) {
+      if (params.operation === "edit") {
+        return replacementValidator.validateEdit(params.filePath, params.oldContent);
+      }
+      return replacementValidator.validateWrite(params.filePath, params.oldContent);
+    },
+  });
+
+  pi.registerTool({
+    name: "guardrail_acknowledge_halt",
+    label: "Acknowledge Halt",
+    description: "Acknowledge a halt condition so work can resume. Use after reviewing the halt reason.",
+    promptSnippet: "Acknowledge halt and resume",
+    parameters: AcknowledgeHaltParams,
+    execute(_id: string, params: any) {
+      const result = sessionStore.acknowledgeHalt(params.reason);
+      if (!result) {
+        return { acknowledged: false, reason: "No active halt to acknowledge" };
+      }
+      return { acknowledged: true, haltState: result };
+    },
+  });
+
+  pi.registerTool({
+    name: "guardrail_read_skill",
+    label: "Read Skill Documentation",
+    description: "Read a guardrails skill's SKILL.md documentation by name.",
+    promptSnippet: "Read guardrails skill docs",
+    parameters: Type.Object({
+      skill: Type.String({ description: "Skill name (e.g. 'injection-defense', 'guardrails-core')" }),
+    }),
+    execute(_id: string, params: any) {
+      const skillDir = `skills/${params.skill}`;
+      const skillPath = `${__dirname}/${skillDir}/SKILL.md`;
+      try {
+        if (!fs.existsSync(skillPath)) {
+          return { error: `Skill '${params.skill}' not found` };
+        }
+        return { content: fs.readFileSync(skillPath, "utf-8"), path: skillPath };
+      } catch {
+        return { error: `Failed to read skill '${params.skill}'` };
+      }
+    },
+  });
+
+  pi.registerTool({
+    name: "guardrail_list_skills",
+    label: "List Guardrails Skills",
+    description: "List all available guardrails skills and their descriptions.",
+    promptSnippet: "List guardrails skills",
+    parameters: Type.Object({}),
+    execute() {
+      const skillsDir = `${__dirname}/skills`;
+      try {
+        const dirs = fs.readdirSync(skillsDir).filter((d) => {
+          return fs.statSync(`${skillsDir}/${d}`).isDirectory();
+        });
+        return {
+          skills: dirs.map((d) => {
+            const skillPath = `${skillsDir}/${d}/SKILL.md`;
+            try {
+              const content = fs.readFileSync(skillPath, "utf-8");
+              const nameMatch = content.match(/name:\s*(.+)/);
+              const descMatch = content.match(/description:\s*(.+)/);
+              return {
+                id: d,
+                name: nameMatch?.[1]?.trim() ?? d,
+                description: descMatch?.[1]?.trim() ?? "",
+              };
+            } catch {
+              return { id: d, name: d, description: "" };
+            }
+          }),
+        };
+      } catch {
+        return { skills: [] };
+      }
+    },
+  });
+
+  pi.registerTool({
+    name: "guardrail_list_languages",
+    label: "List Available Languages",
+    description: "List all languages with available prevention rules.",
+    promptSnippet: "List available languages",
+    parameters: Type.Object({}),
+    execute() {
+      const langsDir = `${__dirname}/../../.guardrails/prevention-rules/languages`;
+      try {
+        const files = fs.readdirSync(langsDir).filter((f) => f.endsWith(".json"));
+        return {
+          languages: files.map((f) => {
+            const lang = f.replace(".json", "");
+            const rules = JSON.parse(fs.readFileSync(`${langsDir}/${f}`, "utf-8"));
+            return {
+              language: lang,
+              ruleCount: rules.rules?.length ?? 0,
+              version: rules.version ?? "unknown",
+            };
+          }),
+        };
+      } catch {
+        return { languages: [] };
+      }
     },
   });
 
