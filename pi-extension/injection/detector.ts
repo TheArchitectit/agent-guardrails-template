@@ -17,7 +17,7 @@ export interface InjectionConfig {
 // Patterns adapted from common prompt injection indicators
 const INJECTION_PATTERNS: { pattern: RegExp; name: string; baseScore: number }[] = [
   // Direct instruction override
-  { pattern: /ignore\s+(previous|above|all|your)\s+(instructions|rules|guidelines|directives)/i, name: "instruction-override", baseScore: 0.95 },
+  { pattern: /ignore\s+(previous|above|all|your)\s+(?:\w+\s+)?(instructions|rules|guidelines|directives)/i, name: "instruction-override", baseScore: 0.95 },
   { pattern: /forget\s+(everything|all|your)\s+(you|instructions|rules)/i, name: "memory-wipe", baseScore: 0.9 },
   { pattern: /disregard\s+(your|all|previous|the)\s+(instructions|rules|guidelines)/i, name: "disregard-instructions", baseScore: 0.9 },
   { pattern: /do not\s+(follow|obey|adhere|comply)/i, name: "disobey", baseScore: 0.85 },
