@@ -1,6 +1,6 @@
 import * as fs from "node:fs";
 import * as crypto from "node:crypto";
-import type { SessionState } from "../types.js";
+import type { SessionState, HaltState } from "../types.js";
 import { getSessionsDir, ensureDirs } from "../config.js";
 import { FileReadStore } from "./file-read-store.js";
 import { StrikeCounter } from "./strike-counter.js";
@@ -98,5 +98,38 @@ export class SessionStore {
     } catch {
       return null;
     }
+  }
+
+  recordHalt(reason: string, severity: "none" | "warning" | "critical"): HaltState {
+    const haltState: HaltState = {
+      status: "halted",
+      reason,
+      severity,
+      haltedAt: new Date().toISOString(),
+    };
+    if (this.state) {
+      this.state.haltState = haltState;
+      this.save();
+    }
+    return haltState;
+  }
+
+  acknowledgeHalt(reason?: string): HaltState | null {
+    if (!this.state?.haltState || this.state.haltState.status !== "halted") {
+      return null;
+    }
+    this.state.haltState.status = "acknowledged";
+    this.state.haltState.acknowledgedAt = new Date().toISOString();
+    this.state.haltState.acknowledgedBy = reason ?? "user";
+    this.save();
+    return this.state.haltState;
+  }
+
+  getHaltState(): HaltState | null {
+    return this.state?.haltState ?? null;
+  }
+
+  isHalted(): boolean {
+    return this.state?.haltState?.status === "halted";
   }
 }

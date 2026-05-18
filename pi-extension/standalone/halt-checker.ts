@@ -68,17 +68,34 @@ export class HaltChecker {
   checkHalt(operation: string, filePath?: string, details?: string): HaltResult {
     const reasons: string[] = [];
     const suggestions: string[] = [];
+    let uncertaintyScore = 0;
 
     if (operation === "delete" && filePath) {
       if (filePath.includes(".env") || filePath.includes("config")) {
         reasons.push(`Deleting ${filePath} could remove environment or configuration data`);
         suggestions.push("Verify this file is safe to delete before proceeding");
+        uncertaintyScore = Math.max(uncertaintyScore, 0.8);
       }
     }
 
     if (details?.toLowerCase().includes("production")) {
       reasons.push("Operation may affect production environment");
       suggestions.push("Confirm test/production separation compliance");
+      uncertaintyScore = Math.max(uncertaintyScore, 0.9);
+    }
+
+    if (details?.toLowerCase().includes("unsure") || details?.toLowerCase().includes("uncertain") || details?.toLowerCase().includes("guessing")) {
+      reasons.push("Agent expressed uncertainty about the operation");
+      suggestions.push("Pause and verify before proceeding");
+      uncertaintyScore = Math.max(uncertaintyScore, 0.7);
+    }
+
+    if (operation === "edit" && !details) {
+      uncertaintyScore = Math.max(uncertaintyScore, 0.3);
+    }
+
+    if (operation === "delete" && !details) {
+      uncertaintyScore = Math.max(uncertaintyScore, 0.6);
     }
 
     const severity: HaltResult["severity"] =
@@ -89,6 +106,7 @@ export class HaltChecker {
       reasons,
       severity,
       suggestions,
+      uncertaintyScore: Math.round(uncertaintyScore * 100) / 100,
     };
   }
 }

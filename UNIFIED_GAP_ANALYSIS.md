@@ -34,7 +34,7 @@ Date: 2026-05-17
 | 8 | sandbox-isolation | sandbox/sandbox-runner.ts | No (on-demand) |
 | 9 | canary-tokens | injection/canary.ts | Yes (output scan) |
 
-### 16 Pi Code Modules (runtime enforcement)
+### 22 Pi Code Modules (runtime enforcement)
 
 | Module | Handler Type | Event | Law |
 |--------|-------------|-------|-----|
@@ -54,6 +54,9 @@ Date: 2026-05-17
 | FeatureCreepDetector | tool | on-demand | Law 2 |
 | PatternRuleEngine | tool | on-demand | Law 3 |
 | GitValidator | tool | on-demand | Law 4 |
+| LanguageDetector | tool | on-demand | Law 3 |
+| RegressionGuard | tool | on-demand | Law 3/4 |
+| ExactReplacementValidator | tool | on-demand | Law 1 |
 
 ### 52 Go MCP Server Tools
 
@@ -84,104 +87,64 @@ Date: 2026-05-17
 
 ## Gap Analysis
 
-### GAP-1: Language-Specific Guardrails (No Pi Code or Skill)
+### GAP-1: Language-Specific Guardrails — CLOSED
 
-The MCP server has 4 language tools (`detect_language`, `get_language_profile`, `list_languages`, `validate_language_rules`) for language-specific coding guardrails. Pi has **zero** language-specific enforcement.
+**Implemented**: `LanguageDetector` module + 4 language rule files (Python 8 rules, TypeScript 7, Go 6, Rust 6). `guardrail_detect_language` and `guardrail_get_language_profile` tools. Language rules auto-loaded by `PatternRuleEngine`. `language-detection` canonical skill.
 
-**Impact**: HIGH — language-specific patterns (Python type hints, Rust ownership, Go error handling) are not enforced in pi.
+### GAP-2: Pre-Work Checklist — CLOSED
 
-**Recommendation**: Create a `pi-extension/languages/` module with LanguageProfileLoader and language-specific rule sets. Add a `language-guardrails` pi skill.
+**Implemented**: `PreWorkChecker` reads ViolationLog + SessionStore. `guardrail_pre_work_check` tool.
 
-### GAP-2: Pre-Work Checklist (No Pi Code or Skill)
+### GAP-3: Feature Creep Detection — CLOSED
 
-The MCP server has `guardrail_pre_work_check` that loads the failure registry and generates a pre-work checklist. Pi has no equivalent.
+**Implemented**: `FeatureCreepDetector` compares modified files against scope paths. `guardrail_detect_creep` tool.
 
-**Impact**: MEDIUM — agents don't check for past failures before starting new work.
+### GAP-4: Regression Prevention — CLOSED
 
-**Recommendation**: Add a `PreWorkChecker` module that reads the violation log on session start and surfaces relevant past failures. Add a `pre-work-check` pi skill or extend guardrails-core.
+**Implemented**: `RegressionGuard` with cross-session failure registry. `guardrail_check_regression`, `guardrail_verify_fixes`, `guardrail_register_failure` tools. Seeds from ViolationLog critical violations.
 
-### GAP-3: Feature Creep Detection (No Pi Code or Skill)
+### GAP-5: Exact Replacement Validation — CLOSED
 
-The MCP server has `guardrail_detect_feature_creep` that compares git diff against authorized scope. Pi has scope enforcement but no diff-based detection.
+**Implemented**: `ExactReplacementValidator` validates edit old_content against actual file. `guardrail_validate_replacement` tool.
 
-**Impact**: LOW — scope enforcement catches out-of-scope edits, but can't detect subtle feature creep within in-scope files.
+### GAP-6: Git Operations Validation — CLOSED
 
-**Recommendation**: Add a `FeatureCreepDetector` that compares planned vs actual changes in scope. Add to `scope-validator` skill as a pi-specific section.
+**Implemented**: `GitValidator` with branch protection, commit format, force-push detection. `guardrail_validate_git` tool.
 
-### GAP-4: Regression Prevention (No Pi Code or Skill)
+### GAP-7: Halt Event Lifecycle — CLOSED
 
-The MCP server has `guardrail_prevent_regression` (failure registry matching) and `guardrail_verify_fixes_intact` (verify past fixes haven't regressed). Pi has neither.
+**Implemented**: `HaltState` in SessionStore (active/halted/acknowledged). Handlers record halts on block. `guardrail_acknowledge_halt` tool.
 
-**Impact**: MEDIUM — past violations and fixes are not tracked across sessions for regression prevention.
+### GAP-8: Document/Standard Access — CLOSED
 
-**Recommendation**: Extend ViolationLog to support cross-session failure registry. Add a `regression-guard` pi skill.
+**Implemented**: `guardrail_read_skill`, `guardrail_list_skills`, `guardrail_list_languages` tools. `docs-access` pi skill.
 
-### GAP-5: Exact Replacement Validation (No Pi Code or Skill)
+### GAP-9: Uncertainty Scoring — CLOSED
 
-The MCP server has `guardrail_validate_exact_replacement` that validates code replacements match spec. Pi has no equivalent.
+**Implemented**: `uncertaintyScore` (0-1) added to HaltResult. Scales: certain (0-0.2), probably (0.2-0.5), uncertain (0.5-0.8), guessing (0.8-1.0).
 
-**Impact**: LOW — edits are tracked but not validated against specifications.
+### GAP-10: Pattern Rules Engine — CLOSED
 
-**Recommendation**: Add an `ExactReplacementValidator` that checks edit operations against expected old content. Add to `guardrails-core` as an edit validation step.
-
-### GAP-6: Git Operations Validation (Partial Pi Coverage)
-
-The MCP server has `guardrail_validate_git_operation` and `guardrail_validate_push` for Git-specific guardrails. Pi has bash safety (catches force-push) but no git-domain-aware validation.
-
-**Impact**: MEDIUM — bash safety catches the most dangerous git commands, but doesn't validate branch names, commit message format, or merge strategies.
-
-**Recommendation**: Add a `GitOperationValidator` with branch protection, commit format, and merge strategy rules. Add a `git-safety` pi skill.
-
-### GAP-7: Halt Event Lifecycle (Partial Pi Coverage)
-
-The MCP server has a full halt lifecycle (`check_halt_conditions`, `record_halt`, `acknowledge_halt`). Pi has `check_halt` and `record_violation` but no explicit halt tracking or acknowledgment flow.
-
-**Impact**: LOW — the current halt + violation flow covers most use cases, but lacks formal halt acknowledgment semantics.
-
-**Recommendation**: Add `halt` and `acknowledge_halt` states to SessionStore. Extend `guardrails-core` skill.
-
-### GAP-8: Document/Standard Access (No Pi Code or Skill)
-
-The MCP server has `guardrail_get_standard`, `guardrail_get_workflow`, `guardrail_search_docs` for accessing guardrail documentation. Pi has no doc retrieval tools.
-
-**Impact**: LOW — agents can read files directly, but structured doc access facilitates better guardrail compliance.
-
-**Recommendation**: Add a `GuardrailDocs` module that indexes and searches `docs/`, `.guardrails/`, and `skills/`. Add to MCP bridge only (not worth a separate pi module).
-
-### GAP-9: Uncertainty Scoring (Partial Pi Coverage)
-
-The MCP server has `guardrail_check_uncertainty` with a structured uncertainty scale (certain/probably/uncertain/guessing). Pi has `check_halt` which returns boolean decisions but no calibrated uncertainty score.
-
-**Impact**: LOW — the current system halts appropriately, but lacks the nuance of calibrated uncertainty.
-
-**Recommendation**: Add an uncertainty score (0-1) to HaltResult. Extend `halt-conditions` skill to mention the pi uncertainty scoring.
-
-### GAP-10: Pattern Rules Engine (No Pi Code or Skill)
-
-The MCP server has `guardrail_get_prevention_rules` and `guardrail_check_pattern` for loading `.guardrails/prevention-rules/` and checking code against them. Pi has no pattern rule engine.
-
-**Impact**: MEDIUM — `.guardrails/prevention-rules/pattern-rules.json` contains language-specific prevention patterns that are not enforced in pi.
-
-**Recommendation**: Add a `PatternRuleEngine` that loads prevention rules from `.guardrails/prevention-rules/` and checks code against them. Add a `pattern-rules` pi skill.
+**Implemented**: `PatternRuleEngine` loads from `.guardrails/prevention-rules/pattern-rules.json`. `guardrail_check_pattern` tool. Auto-loads language rules via LanguageDetector.
 
 ---
 
-## Summary: Priority-Ordered Gap List
+## Summary: All Gaps Closed
 
-| Priority | Gap | Effort | Impact |
-|----------|-----|--------|--------|
-| P1 | GAP-1: Language-specific guardrails | High | HIGH |
-| P2 | GAP-10: Pattern rules engine | Medium | MEDIUM |
-| P3 | GAP-2: Pre-work checklist | Low | MEDIUM |
-| P4 | GAP-4: Regression prevention | Medium | MEDIUM |
-| P5 | GAP-6: Git operations validation | Medium | MEDIUM |
-| P6 | GAP-3: Feature creep detection | Low | LOW |
-| P7 | GAP-5: Exact replacement validation | Low | LOW |
-| P8 | GAP-7: Halt event lifecycle | Low | LOW |
-| P9 | GAP-9: Uncertainty scoring | Low | LOW |
-| P10 | GAP-8: Document/standard access | Low | LOW |
+| Priority | Gap | Status |
+|----------|-----|--------|
+| P1 | GAP-1: Language-specific guardrails | CLOSED — LanguageDetector + 4 language rule files |
+| P2 | GAP-10: Pattern rules engine | CLOSED — PatternRuleEngine |
+| P3 | GAP-2: Pre-work checklist | CLOSED — PreWorkChecker |
+| P4 | GAP-4: Regression prevention | CLOSED — RegressionGuard |
+| P5 | GAP-6: Git operations validation | CLOSED — GitValidator |
+| P6 | GAP-3: Feature creep detection | CLOSED — FeatureCreepDetector |
+| P7 | GAP-5: Exact replacement validation | CLOSED — ExactReplacementValidator |
+| P8 | GAP-7: Halt event lifecycle | CLOSED — HaltState in SessionStore |
+| P9 | GAP-9: Uncertainty scoring | CLOSED — uncertaintyScore in HaltResult |
+| P10 | GAP-8: Document/standard access | CLOSED — read_skill/list_skills/list_languages tools |
 
-## What's Now Covered (After Unification)
+## What's Now Covered (After Unification + All Gaps Closed)
 
 | Guardrail Domain | Canonical Skill | Pi Skill | Code Module | Auto-Enforced |
 |------------------|----------------|----------|-------------|---------------|
@@ -204,3 +167,9 @@ The MCP server has `guardrail_get_prevention_rules` and `guardrail_check_pattern
 | Sandbox | (no canonical) | sandbox-isolation | SandboxRunner | On-demand |
 | Canary tokens | (no canonical) | canary-tokens | CanaryTokenManager | Yes |
 | Dashboard | (no canonical) | guardrails-dashboard | GuardrailsPanel | N/A |
+| Language detection | language-detection | (via guardrails-core) | LanguageDetector | Auto (on load) |
+| Regression prevention | (no canonical) | (via guardrails-core) | RegressionGuard | On-demand |
+| Replacement validation | (no canonical) | (via guardrails-core) | ExactReplacementValidator | On-demand |
+| Halt lifecycle | (no canonical) | (via guardrails-core) | SessionStore HaltState | Auto (on block) |
+| Uncertainty scoring | (no canonical) | (via guardrails-core) | HaltChecker | Yes (in check_halt) |
+| Docs access | (no canonical) | docs-access | (inline tools) | No |

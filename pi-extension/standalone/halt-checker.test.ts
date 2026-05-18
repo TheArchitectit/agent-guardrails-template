@@ -68,5 +68,29 @@ describe("HaltChecker", () => {
       const result = checker.checkHalt("deploy", undefined, "pushing to production");
       expect(result.reasons).toContain("Operation may affect production environment");
     });
+
+    it("includes mild uncertainty score for edit without details", () => {
+      const checker = new HaltChecker();
+      const result = checker.checkHalt("edit", "/src/app.ts");
+      expect(result.uncertaintyScore).toBe(0.3); // edit without details = mild uncertainty
+    });
+
+    it("includes high uncertainty score for production-affected operations", () => {
+      const checker = new HaltChecker();
+      const result = checker.checkHalt("deploy", undefined, "pushing to production");
+      expect(result.uncertaintyScore).toBeGreaterThanOrEqual(0.9);
+    });
+
+    it("includes uncertainty score for expressing doubt", () => {
+      const checker = new HaltChecker();
+      const result = checker.checkHalt("edit", "/src/app.ts", "feeling uncertain about this change");
+      expect(result.uncertaintyScore).toBeGreaterThanOrEqual(0.7);
+    });
+
+    it("elevates uncertainty for delete without details", () => {
+      const checker = new HaltChecker();
+      const result = checker.checkHalt("delete", "/src/old.ts");
+      expect(result.uncertaintyScore).toBeGreaterThanOrEqual(0.6);
+    });
   });
 });
