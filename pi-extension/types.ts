@@ -101,6 +101,31 @@ export const GetLanguageProfileParams = Type.Object({
   languages: Type.Optional(Type.Array(Type.String(), { description: "Specific languages to load rules for" })),
 });
 
+export const CheckRegressionParams = Type.Object({
+  filePaths: Type.Array(Type.String(), { description: "File paths being modified" }),
+  codeContent: Type.Optional(Type.String({ description: "Current code content to check against regression patterns" })),
+});
+
+export const VerifyFixesParams = Type.Object({
+  filePath: Type.String({ description: "File path to verify fixes for" }),
+  currentContent: Type.String({ description: "Current file content to check against regression patterns" }),
+});
+
+export const RegisterFailureParams = Type.Object({
+  category: Type.String({ description: "Failure category (e.g. law name)" }),
+  severity: StringEnum(["warning", "critical"] as const),
+  message: Type.String({ description: "What the failure was" }),
+  rootCause: Type.String({ description: "Root cause of the failure" }),
+  regressionPattern: Type.Optional(Type.String({ description: "Regex pattern that would indicate regression" })),
+  affectedFiles: Type.Array(Type.String(), { description: "Files affected by the failure" }),
+});
+
+export const ValidateReplacementParams = Type.Object({
+  filePath: Type.String({ description: "Path to the file being edited" }),
+  oldContent: Type.String({ description: "The content the edit expects to replace" }),
+  operation: StringEnum(["edit", "write"] as const, { description: "Type of operation" }),
+});
+
 // --- Core Types ---
 
 export interface Attempt {
@@ -124,6 +149,7 @@ export interface HaltResult {
   reasons: string[];
   severity: "none" | "warning" | "critical";
   suggestions: string[];
+  uncertaintyScore?: number;
 }
 
 export interface CommandCheckResult {
@@ -165,6 +191,19 @@ export interface LanguageProfileResult {
   availableRules: { id: string; description: string; severity: "warning" | "critical" }[];
 }
 
+export interface HaltState {
+  status: "active" | "halted" | "acknowledged";
+  reason: string;
+  severity: "none" | "warning" | "critical";
+  haltedAt: string;
+  acknowledgedAt?: string;
+  acknowledgedBy?: string;
+}
+
+export const AcknowledgeHaltParams = Type.Object({
+  reason: Type.Optional(Type.String({ description: "Why the halt is being acknowledged" })),
+});
+
 export interface SessionState {
   id: string;
   projectSlug: string;
@@ -177,6 +216,7 @@ export interface SessionState {
   strikes: Record<string, { attempts: Attempt[] }>;
   mcpEndpoint: string | null;
   mcpConnected: boolean;
+  haltState?: HaltState;
 }
 
 export interface GuardrailsConfig {
