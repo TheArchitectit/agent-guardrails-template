@@ -16,6 +16,7 @@ import { PreWorkChecker } from "./standalone/pre-work-checker.js";
 import { FeatureCreepDetector } from "./standalone/feature-creep-detector.js";
 import { PatternRuleEngine } from "./standalone/pattern-rule-engine.js";
 import { GitValidator } from "./standalone/git-validator.js";
+import { LanguageDetector } from "./standalone/language-detector.js";
 import {
   initSession,
   recordRead,
@@ -56,6 +57,8 @@ import {
   DetectCreepParams,
   CheckPatternParams,
   ValidateGitParams,
+  DetectLanguageParams,
+  GetLanguageProfileParams,
 } from "./types.js";
 import { GuardrailsPanel } from "./tui/guardrails-panel.js";
 
@@ -92,7 +95,8 @@ export default function piGuardrailsExtension(pi: ExtensionAPI) {
   const preWorkChecker = new PreWorkChecker(violationLog, sessionStore);
   const featureCreepDetector = new FeatureCreepDetector();
   const patternRuleEngine = new PatternRuleEngine();
-  const gitValidator = new GitValidator(config.gitPolicy);
+  const languageDetector = new LanguageDetector();
+  patternRuleEngine.setLanguageDetector(languageDetector);  const gitValidator = new GitValidator(config.gitPolicy);
 
   const deps: HandlerDeps = {
     sessionStore,
@@ -291,6 +295,42 @@ export default function piGuardrailsExtension(pi: ExtensionAPI) {
     parameters: ValidateGitParams,
     execute(_id: string, params: any) {
       return gitValidator.validateGitOp(params.command);
+    },
+  });
+
+  pi.registerTool({
+    name: "guardrail_detect_language",
+    label: "Detect Project Languages",
+    description: "Auto-detect programming languages in a project by scanning config files and source extensions.",
+    promptSnippet: "Detect project languages",
+    parameters: DetectLanguageParams,
+    execute(_id: string, params: any) {
+      const cwd = params.cwd || process.cwd();
+      const profile = languageDetector.detectLanguages(cwd);
+      return profile;
+    },
+  });
+
+  pi.registerTool({
+    name: "guardrail_get_language_profile",
+    label: "Get Language Profile",
+    description: "Get a detailed language profile including available language-specific prevention rules.",
+    promptSnippet: "Get language profile with rules",
+    parameters: GetLanguageProfileParams,
+    execute(_id: string, params: any) {
+      const cwd = params.cwd || process.cwd();
+      if (!languageDetector.isScanned()) {
+        languageDetector.detectLanguages(cwd);
+      }
+      const profile = languageDetector.getProfile();
+      const languages = params.languages ?? profile.languages;
+      const rules = languageDetector.loadLanguageRules(cwd, languages);
+      return {
+        languages: profile.languages,
+        detectedBy: profile.detectedBy,
+        ruleCount: rules.length,
+        availableRules: rules.map((r) => ({ id: r.id, description: r.description, severity: r.severity })),
+      };
     },
   });
 
