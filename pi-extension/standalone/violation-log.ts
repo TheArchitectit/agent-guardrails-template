@@ -6,7 +6,6 @@ let counter = 0;
 
 export class ViolationLog {
   private logPath: string;
-  private stream: fs.WriteStream | null = null;
 
   constructor(logPath?: string) {
     this.logPath = logPath ?? getViolationsLogPath();
@@ -21,14 +20,11 @@ export class ViolationLog {
 
     const line = JSON.stringify(entry) + "\n";
     try {
-      if (!this.stream) {
-        const dir = this.logPath.substring(0, this.logPath.lastIndexOf("/"));
-        if (!fs.existsSync(dir)) {
-          fs.mkdirSync(dir, { recursive: true });
-        }
-        this.stream = fs.createWriteStream(this.logPath, { flags: "a" });
+      const dir = this.logPath.substring(0, this.logPath.lastIndexOf("/"));
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
       }
-      this.stream.write(line);
+      fs.appendFileSync(this.logPath, line);
     } catch {
       // Best-effort write; don't block tool execution on log failure
     }
@@ -37,8 +33,7 @@ export class ViolationLog {
   }
 
   flush(): void {
-    this.stream?.end();
-    this.stream = null;
+    // No-op: log() writes synchronously via appendFileSync
   }
 
   getLogPath(): string {

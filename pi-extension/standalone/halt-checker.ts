@@ -10,7 +10,7 @@ const DESTRUCTIVE_PATTERNS: RegExp[] = [
   /\bchmod\s+777/,
   /\bdd\s+if=/,
   /\bmkfs\b/,
-  /\b:\(\)\{\s*:\|:&\s*\}/, // fork bomb
+  /:\(\)\{\s*:\|:&\s*\}/, // fork bomb
 ];
 
 const DANGEROUS_COMMANDS: string[] = [

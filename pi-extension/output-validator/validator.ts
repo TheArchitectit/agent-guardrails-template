@@ -94,12 +94,14 @@ export function validateOutput(text: string, config?: ValidatorConfig): Validati
     }
   }
 
-  // Deduplicate overlapping findings
+  // Deduplicate overlapping findings — prefer more-specific (contained) matches
   findings.sort((a, b) => a.start - b.start);
   const deduped: SensitiveFinding[] = [];
   for (const f of findings) {
     if (deduped.length === 0 || f.start >= deduped[deduped.length - 1].end) {
       deduped.push(f);
+    } else if (f.end <= deduped[deduped.length - 1].end && f.start > deduped[deduped.length - 1].start) {
+      deduped[deduped.length - 1] = f; // replace broader match with more-specific one
     }
   }
 
