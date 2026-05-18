@@ -92,6 +92,15 @@ export const ValidateGitParams = Type.Object({
   command: Type.String({ description: "Git command to validate" }),
 });
 
+export const DetectLanguageParams = Type.Object({
+  cwd: Type.Optional(Type.String({ description: "Working directory to scan for languages" })),
+});
+
+export const GetLanguageProfileParams = Type.Object({
+  cwd: Type.Optional(Type.String({ description: "Working directory for language profile" })),
+  languages: Type.Optional(Type.Array(Type.String(), { description: "Specific languages to load rules for" })),
+});
+
 // --- Core Types ---
 
 export interface Attempt {
@@ -147,6 +156,13 @@ export interface GitValidationResult {
   allowed: boolean;
   reason?: string;
   category?: "protected-branch" | "commit-format" | "force-push" | "destructive";
+}
+
+export interface LanguageProfileResult {
+  languages: string[];
+  detectedBy: Record<string, string[]>;
+  ruleCount: number;
+  availableRules: { id: string; description: string; severity: "warning" | "critical" }[];
 }
 
 export interface SessionState {

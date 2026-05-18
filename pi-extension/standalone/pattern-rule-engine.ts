@@ -1,6 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import type { PatternCheckResult } from "../types.js";
+import { LanguageDetector } from "./language-detector.js";
 
 interface PatternRule {
   id: string;
@@ -13,11 +14,17 @@ interface PatternRule {
 export class PatternRuleEngine {
   private rules: PatternRule[] = [];
   private loaded = false;
+  private languageDetector?: LanguageDetector;
+
+  setLanguageDetector(detector: LanguageDetector): void {
+    this.languageDetector = detector;
+  }
 
   loadRules(cwd: string): number {
     this.rules = [];
     this.loaded = false;
 
+    // Load generic pattern rules
     const searchPaths = [
       path.join(cwd, ".guardrails", "prevention-rules", "pattern-rules.json"),
       path.join(cwd, ".pi", "prevention-rules", "pattern-rules.json"),
@@ -59,6 +66,18 @@ export class PatternRuleEngine {
         break;
       } catch {
         // Skip malformed config
+      }
+    }
+
+    // Auto-load language-specific rules
+    if (this.languageDetector) {
+      const profile = this.languageDetector.detectLanguages(cwd);
+      if (profile.languages.length > 0) {
+        const langRules = this.languageDetector.loadLanguageRules(cwd, profile.languages);
+        for (const rule of langRules) {
+          this.rules.push(rule);
+        }
+        if (langRules.length > 0) this.loaded = true;
       }
     }
 

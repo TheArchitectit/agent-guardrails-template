@@ -1,0 +1,56 @@
+{
+  "$schema": "./language-rules.schema.json",
+  "language": "rust",
+  "version": "1.0.0",
+  "detectors": ["*.rs", "Cargo.toml", "Cargo.lock"],
+  "rules": [
+    {
+      "id": "rs-unsafe",
+      "name": "unsafe block",
+      "pattern": "\\bunsafe\\s*\\{",
+      "severity": "warning",
+      "message": "unsafe block bypasses Rust safety guarantees — document safety invariants in a SAFETY comment",
+      "filePatterns": ["\\.rs$"]
+    },
+    {
+      "id": "rs-unwrap",
+      "name": ".unwrap() in non-test code",
+      "pattern": "\\.unwrap\\s*\\(\\s*\\)",
+      "severity": "warning",
+      "message": ".unwrap() will panic on None/Err — use ? operator, expect(), or match in production code",
+      "filePatterns": ["\\.rs$"]
+    },
+    {
+      "id": "rs-panic",
+      "name": "panic! in library code",
+      "pattern": "panic!\\s*\\(",
+      "severity": "warning",
+      "message": "panic! in library code — return Result<T, E> instead for recoverable errors",
+      "filePatterns": ["\\.rs$"]
+    },
+    {
+      "id": "rs-todo",
+      "name": "todo!/unimplemented! macro",
+      "pattern": "(todo|unimplemented)!\\s*\\(",
+      "severity": "warning",
+      "message": "todo!/unimplemented! will panic at runtime — implement or use a proper error type",
+      "filePatterns": ["\\.rs$"]
+    },
+    {
+      "id": "rs-clone-large",
+      "name": ".clone() on large type",
+      "pattern": "(String|Vec|HashMap)\\s*:?=.*\\.clone\\s*\\(",
+      "severity": "warning",
+      "message": ".clone() on heap-allocated type — consider borrowing with & or Arc for shared ownership",
+      "filePatterns": ["\\.rs$"]
+    },
+    {
+      "id": "rs-raw-pointer",
+      "name": "Raw pointer dereference",
+      "pattern": "\\*\\s*(const|mut)\\s+\\w+",
+      "severity": "warning",
+      "message": "Raw pointer dereference requires unsafe — verify memory safety and aliasing rules",
+      "filePatterns": ["\\.rs$"]
+    }
+  ]
+}

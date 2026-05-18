@@ -1,0 +1,64 @@
+{
+  "$schema": "./language-rules.schema.json",
+  "language": "typescript",
+  "version": "1.0.0",
+  "detectors": ["*.ts", "*.tsx", "*.js", "*.jsx", "tsconfig.json", "package.json"],
+  "rules": [
+    {
+      "id": "ts-any-type",
+      "name": "Usage of 'any' type",
+      "pattern": ":\\s*any\\b",
+      "severity": "warning",
+      "message": "any bypasses type checking — use unknown, a specific type, or generics",
+      "filePatterns": ["\\.(ts|tsx)$"]
+    },
+    {
+      "id": "ts-non-null-assertion",
+      "name": "Non-null assertion operator",
+      "pattern": "\\w+!",
+      "severity": "warning",
+      "message": "Non-null assertion (!) bypasses null checks — use optional chaining or explicit guard",
+      "filePatterns": ["\\.(ts|tsx)$"]
+    },
+    {
+      "id": "ts-eval",
+      "name": "Dangerous eval/Function usage",
+      "pattern": "\\b(eval|new\\s+Function)\\s*\\(",
+      "severity": "critical",
+      "message": "eval()/new Function() enables code injection — use JSON.parse() or sandboxed execution",
+      "filePatterns": ["\\.(js|ts|jsx|tsx)$"]
+    },
+    {
+      "id": "ts-innerhtml",
+      "name": "innerHTML assignment",
+      "pattern": "\\.innerHTML\\s*=",
+      "severity": "critical",
+      "message": "innerHTML enables XSS — use textContent, DOM APIs, or a sanitizer library",
+      "filePatterns": ["\\.(js|ts|jsx|tsx)$"]
+    },
+    {
+      "id": "ts-console-log",
+      "name": "console.log in production code",
+      "pattern": "console\\.(log|debug|info)\\s*\\(",
+      "severity": "warning",
+      "message": "console.log in production — remove or replace with structured logger",
+      "filePatterns": ["\\.(js|ts|jsx|tsx)$"]
+    },
+    {
+      "id": "ts-document-write",
+      "name": "document.write usage",
+      "pattern": "document\\.write\\s*\\(",
+      "severity": "critical",
+      "message": "document.write() is a security risk and blocks parsing — use DOM manipulation",
+      "filePatterns": ["\\.(js|ts|jsx|tsx)$"]
+    },
+    {
+      "id": "ts-hardcoded-secret",
+      "name": "Hardcoded secret/token",
+      "pattern": "(password|secret|api[_-]?key|token|private[_-]?key)\\s*[:=]\\s*[\"'][^\"']{8,}[\"']",
+      "severity": "critical",
+      "message": "Hardcoded credential detected — use environment variables",
+      "filePatterns": ["\\.(js|ts|jsx|tsx)$"]
+    }
+  ]
+}
