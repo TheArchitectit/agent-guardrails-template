@@ -2,14 +2,15 @@
 id: guardrails-core
 name: Pi Guardrails Core
 description: Available guardrail tools and automatic enforcement behavior for pi agents
-version: 1.1.0
+version: 1.2.0
 tags: [safety, core, pi]
 tools: [guardrail_init, guardrail_record_read, guardrail_verify_read,
         guardrail_set_scope, guardrail_check_scope, guardrail_record_attempt,
         guardrail_check_strikes, guardrail_reset_strikes, guardrail_check_halt,
         guardrail_log_violation, guardrail_status, guardrail_mcp,
         guardrail_pre_work_check, guardrail_detect_creep,
-        guardrail_check_pattern, guardrail_validate_git]
+        guardrail_check_pattern, guardrail_validate_git,
+        guardrail_detect_language, guardrail_get_language_profile]
 ---
 
 # Pi Guardrails Core
@@ -85,6 +86,8 @@ When the Go MCP server is available, `guardrail_mcp` proxies calls to it for enh
 | Pre-work check | [[guardrails-core]] | No | guardrail_pre_work_check |
 | Feature creep | [[guardrails-core]] | No | guardrail_detect_creep |
 | Pattern rules | [[guardrails-core]] | No | guardrail_check_pattern |
+| Language detection | [[language-detection]] | Auto (on load) | guardrail_detect_language |
+| Language profile | [[language-detection]] | No | guardrail_get_language_profile |
 | Git validation | [[guardrails-core]] | No | guardrail_validate_git |
 
 ## References
@@ -96,4 +99,5 @@ When the Go MCP server is available, `guardrail_mcp` proxies calls to it for enh
 - [[policy-config]] — Organization → team → project policy hierarchy
 - [[sandbox-isolation]] — Docker-based command isolation
 - [[canary-tokens]] — Honeypot data exfiltration detection
+- [[language-detection]] — Auto-detect project languages and apply language-specific rules
 - [[guardrails-dashboard]] — Status bar and panel UI

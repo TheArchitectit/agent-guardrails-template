@@ -1,0 +1,72 @@
+{
+  "$schema": "./language-rules.schema.json",
+  "language": "python",
+  "version": "1.0.0",
+  "detectors": ["*.py", "requirements.txt", "pyproject.toml", "setup.py", "Pipfile"],
+  "rules": [
+    {
+      "id": "py-eval",
+      "name": "Dangerous eval/exec usage",
+      "pattern": "\\b(eval|exec)\\s*\\(",
+      "severity": "critical",
+      "message": "Avoid eval()/exec() — use ast.literal_eval() for safe parsing",
+      "filePatterns": ["\\.py$"]
+    },
+    {
+      "id": "py-subprocess-shell",
+      "name": "Subprocess with shell=True",
+      "pattern": "subprocess\\.(call|run|Popen)\\s*\\(.*shell\\s*=\\s*True",
+      "severity": "critical",
+      "message": "subprocess with shell=True is a command injection risk — use list form instead",
+      "filePatterns": ["\\.py$"]
+    },
+    {
+      "id": "py-bare-except",
+      "name": "Bare except clause",
+      "pattern": "except\\s*:",
+      "severity": "warning",
+      "message": "Bare except catches all exceptions including KeyboardInterrupt — use 'except Exception:' at minimum",
+      "filePatterns": ["\\.py$"]
+    },
+    {
+      "id": "py-mutable-default",
+      "name": "Mutable default argument",
+      "pattern": "def\\s+\\w+\\s*\\([^)]*\\b(list|dict|set)\\s*=\\s*\\[\\{\\(]",
+      "severity": "warning",
+      "message": "Mutable default arguments persist between calls — use None and initialize inside function",
+      "filePatterns": ["\\.py$"]
+    },
+    {
+      "id": "py-pickle-load",
+      "name": "Untrusted pickle.load",
+      "pattern": "pickle\\.load\\s*\\(",
+      "severity": "critical",
+      "message": "pickle.load() on untrusted data enables arbitrary code execution",
+      "filePatterns": ["\\.py$"]
+    },
+    {
+      "id": "py-hardcoded-secret",
+      "name": "Hardcoded password/secret",
+      "pattern": "(password|secret|api_key|token)\\s*=\\s*[\"'][^\"']+[\"']",
+      "severity": "critical",
+      "message": "Hardcoded credential detected — use environment variables or config files",
+      "filePatterns": ["\\.py$"]
+    },
+    {
+      "id": "py-sql-injection",
+      "name": "SQL string formatting",
+      "pattern": "(execute|cursor)\\s*\\(.*(%s|\\.format|f\"|\")",
+      "severity": "critical",
+      "message": "SQL injection risk — use parameterized queries with placeholder syntax",
+      "filePatterns": ["\\.py$"]
+    },
+    {
+      "id": "py-type-ignore",
+      "name": "type: ignore comment",
+      "pattern": "#\\s*type:\\s*ignore",
+      "severity": "warning",
+      "message": "type: ignore suppresses type checking — verify this is intentional",
+      "filePatterns": ["\\.py$"]
+    }
+  ]
+}

@@ -37,8 +37,12 @@
     "README.md"
   ],
   "pi": {
-    "extensions": ["./index.ts"],
-    "skills": ["./skills"]
+    "extensions": [
+      "./index.ts"
+    ],
+    "skills": [
+      "./skills"
+    ]
   },
   "dependencies": {
     "@sinclair/typebox": "^0.34.0"
@@ -48,10 +52,15 @@
     "@earendil-works/pi-tui": "*"
   },
   "peerDependenciesMeta": {
-    "@earendil-works/pi-coding-agent": { "optional": true },
-    "@earendil-works/pi-tui": { "optional": true }
+    "@earendil-works/pi-coding-agent": {
+      "optional": true
+    },
+    "@earendil-works/pi-tui": {
+      "optional": true
+    }
   },
   "devDependencies": {
+    "typescript": "^6.0.3",
     "vitest": "^2.1.8"
   },
   "scripts": {
