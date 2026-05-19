@@ -85,6 +85,17 @@ Escalate to user when:
 - Error affects production data
 - You're on your 3rd recovery attempt (Three Strikes Rule)
 
+## Pi Enforcement
+
+When running in pi, error recovery is supported by the `@architectit/pi-guardrails` extension:
+
+- **Three Strikes**: `guardrail_record_attempt` tracks failures automatically — at 3 strikes, halting is recommended
+- **Violation logging**: `guardrail_log_violation` records failure context for post-mortem analysis
+- **Sandbox**: `guardrail_mcp` with action `sandbox_run` provides isolated execution for testing recovery steps
+- **Bash safety**: Prevents destructive commands during recovery (no `rm -rf`, `sudo`, etc.)
+
+See [[sandbox-isolation]] and [[guardrails-core]] for details.
+
 ## Task
 
 Apply the Error Recovery Protocol to the current failure or error situation. Guide the user through stopping, assessing, understanding, and fixing the problem without making it worse. Follow the recovery steps above and escalate when the escalation criteria are met.

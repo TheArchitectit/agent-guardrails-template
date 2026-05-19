@@ -4,7 +4,7 @@ name: Environment Separator
 description: Enforces strict separation between test and production environments
 version: 1.0.0
 tags: [safety, core, mandatory]
-applies_to: [claude, cursor, opencode, openclaw, windsurf, copilot]
+applies_to: [claude, cursor, opencode, openclaw, windsurf, copilot, pi]
 author: TheArchitectit
 tools: [Read, Grep, Glob, AskUserQuestion]
 globs: "**/*"
@@ -45,6 +45,16 @@ If you cannot verify environment separation:
 1. HALT the operation immediately
 2. Ask the user to confirm environment boundaries
 3. Do NOT proceed until separation is guaranteed
+
+## Pi Enforcement
+
+When running in pi, environment separation is supported by the `@architectit/pi-guardrails` extension:
+
+- **Output validation** auto-redacts database URLs and credentials (prevents leaking prod connection strings)
+- **Canary tokens** can detect if production file contents are being exfiltrated into output
+- The MCP bridge (when connected) provides `guardrail_mcp` with action `check_test_prod_separation` for explicit verification
+
+See [[output-security]] and [[canary-tokens]] for details.
 
 ## Task
 
