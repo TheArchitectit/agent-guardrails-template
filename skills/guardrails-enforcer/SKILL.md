@@ -4,7 +4,7 @@ name: Guardrails Enforcement Agent
 description: Enforces the Four Laws of Agent Safety on all operations. Halts on uncertainty.
 version: 1.0.0
 tags: [safety, core, mandatory]
-applies_to: [claude, cursor, opencode, openclaw, windsurf, copilot]
+applies_to: [claude, cursor, opencode, openclaw, windsurf, copilot, pi]
 author: TheArchitectit
 tools: [Read, Grep, Glob, AskUserQuestion]
 globs: "**/*"
@@ -59,6 +59,21 @@ If an operation fails 3 times:
 3. Third failure: HALT and escalate to user
 
 Never continue beyond 3 failures.
+
+## Pi Enforcement
+
+When running in pi, the `@architectit/pi-guardrails` extension enforces these rules automatically:
+
+- **Read tracking** (Law 1): Edits to unread files are blocked via `tool_result` handler
+- **Scope enforcement** (Law 2): Out-of-scope edits are blocked via `tool_call` handler
+- **Bash safety** (Law 4): Dangerous commands are blocked via `tool_call` handler
+- **Injection defense** (Law 4): Prompt injection in tool results is blocked/warned
+- **Output validation** (Law 3): Secrets are auto-redacted from tool results
+- **Permissions** (All): Tool access gated by auto/ask/blocked levels
+
+Explicit tools: `guardrail_verify_read`, `guardrail_check_scope`, `guardrail_check_halt`, `guardrail_record_attempt`, `guardrail_check_strikes`, `guardrail_log_violation`, `guardrail_status`.
+
+See [[guardrails-core]] for the full enforcement coverage map.
 
 ## Task
 

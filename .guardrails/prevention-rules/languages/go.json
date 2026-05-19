@@ -1,0 +1,56 @@
+{
+  "$schema": "./language-rules.schema.json",
+  "language": "go",
+  "version": "1.0.0",
+  "detectors": ["*.go", "go.mod", "go.sum"],
+  "rules": [
+    {
+      "id": "go-ignored-error",
+      "name": "Ignored error return",
+      "pattern": "\\w+\\s*,\\s*_\\s*:?=",
+      "severity": "warning",
+      "message": "Error return value ignored — handle or explicitly document with _ = func()",
+      "filePatterns": ["\\.go$"]
+    },
+    {
+      "id": "go-panic",
+      "name": "panic() in library code",
+      "pattern": "\\bpanic\\s*\\(",
+      "severity": "warning",
+      "message": "panic() in library code — return errors instead; panic is for unrecoverable conditions only",
+      "filePatterns": ["\\.go$"]
+    },
+    {
+      "id": "go-sql-concat",
+      "name": "SQL string concatenation",
+      "pattern": "(Exec|Query|QueryRow)\\s*\\([^)]*\\+\\s*",
+      "severity": "critical",
+      "message": "SQL injection risk — use parameterized queries with ? placeholders",
+      "filePatterns": ["\\.go$"]
+    },
+    {
+      "id": "go-os-exec",
+      "name": "os/exec with variable input",
+      "pattern": "exec\\.Command\\s*\\(",
+      "severity": "warning",
+      "message": "os/exec with variable input may enable command injection — validate inputs",
+      "filePatterns": ["\\.go$"]
+    },
+    {
+      "id": "go-defer-close",
+      "name": "Resource close without defer",
+      "pattern": "\\.Close\\s*\\(\\s*\\)",
+      "severity": "warning",
+      "message": "Resource Close() found — verify it's called in a defer statement to prevent leaks",
+      "filePatterns": ["\\.go$"]
+    },
+    {
+      "id": "go-goroutine-no-ctx",
+      "name": "Goroutine without context",
+      "pattern": "go\\s+func\\s*\\(\\s*\\)",
+      "severity": "warning",
+      "message": "Goroutine without context.Context — use context for cancellation and timeout propagation",
+      "filePatterns": ["\\.go$"]
+    }
+  ]
+}

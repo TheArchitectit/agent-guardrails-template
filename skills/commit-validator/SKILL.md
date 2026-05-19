@@ -4,7 +4,7 @@ name: Commit Validator
 description: Validates git commits follow COMMIT_WORKFLOW.md standards
 version: 1.0.0
 tags: [safety, workflow]
-applies_to: [claude, cursor, opencode, openclaw, windsurf, copilot]
+applies_to: [claude, cursor, opencode, openclaw, windsurf, copilot, pi]
 author: TheArchitectit
 tools: [Bash, Read, Grep]
 globs: "**/*"
@@ -55,6 +55,17 @@ If validation fails:
 2. Explain the violation
 3. Provide specific fix instructions
 4. Require user confirmation before proceeding
+
+## Pi Enforcement
+
+When running in pi, commit validation is supported by the `@architectit/pi-guardrails` extension:
+
+- **Output validation** scans diffs for secrets before they reach commit messages
+- **Bash safety** blocks `git push --force origin main/master` and `git reset --hard`
+- **Scope enforcement** ensures only in-scope files are included in commits
+- The MCP bridge (when connected) provides `guardrail_mcp` with action `validate_commit` for server-side verification
+
+See [[output-security]] and [[guardrails-core]] for details.
 
 ## Task
 

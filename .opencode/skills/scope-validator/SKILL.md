@@ -68,6 +68,17 @@ Reason: <why these are needed>
 Should I proceed with these additional files, or keep changes limited to the original scope?
 ```
 
+## Pi Enforcement
+
+When running in pi, scope is enforced by the `@architectit/pi-guardrails` extension:
+
+- `guardrail_set_scope` defines authorized file paths at session start
+- `guardrail_check_scope` verifies a path is in scope before operations
+- Out-of-scope edits are **blocked automatically** via `tool_call` handler
+- The MCP bridge (when connected) provides `guardrail_mcp` with action `validate_scope` for server-side checks
+
+See [[guardrails-core]] for the full enforcement coverage map.
+
 ## Task
 
 Validate that the proposed file modifications are within authorized scope. Check the user request, task description, and dependency impact before allowing changes. If scope creep is detected, halt and ask for user confirmation.

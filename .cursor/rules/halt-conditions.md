@@ -109,6 +109,19 @@ Continuing beyond 3 attempts:
 
 When in doubt, HALT.
 
+## Pi Enforcement
+
+When running in pi, halt conditions are enforced by the `@architectit/pi-guardrails` extension:
+
+- **Three strikes**: `guardrail_record_attempt` and `guardrail_check_strikes` track failures automatically
+- **Bash safety**: Dangerous commands (destructive, elevated, network) are blocked automatically
+- **Injection defense**: Prompt injection content in tool results is blocked at high confidence
+- **Scope violations**: Out-of-scope file edits are blocked automatically
+
+Use `guardrail_check_halt` to explicitly evaluate halt conditions before proceeding.
+
+See [[guardrails-core]] and [[injection-defense]] for more details.
+
 ## Task
 
 Evaluate the current situation against the halt conditions above. If any condition is met, issue a halt and escalate to the user with a clear explanation of the triggered condition and the risk of proceeding.

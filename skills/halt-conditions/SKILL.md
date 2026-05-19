@@ -4,7 +4,7 @@ name: Halt Conditions
 description: When to stop and ask the user for guidance instead of proceeding
 version: 1.0.0
 tags: [safety, core, mandatory]
-applies_to: [claude, cursor, opencode, openclaw, windsurf, copilot]
+applies_to: [claude, cursor, opencode, openclaw, windsurf, copilot, pi]
 author: TheArchitectit
 ---
 
@@ -109,6 +109,19 @@ Continuing beyond 3 attempts:
 | Guessing (<50%) | **HALT and ask** |
 
 When in doubt, HALT.
+
+## Pi Enforcement
+
+When running in pi, halt conditions are enforced by the `@architectit/pi-guardrails` extension:
+
+- **Three strikes**: `guardrail_record_attempt` and `guardrail_check_strikes` track failures automatically
+- **Bash safety**: Dangerous commands (destructive, elevated, network) are blocked automatically
+- **Injection defense**: Prompt injection content in tool results is blocked at high confidence
+- **Scope violations**: Out-of-scope file edits are blocked automatically
+
+Use `guardrail_check_halt` to explicitly evaluate halt conditions before proceeding.
+
+See [[guardrails-core]] and [[injection-defense]] for more details.
 
 ## Task
 

@@ -122,6 +122,17 @@ These laws apply to ALL operations:
 - Configuration changes
 - Documentation updates
 
+## Pi Enforcement
+
+When running in pi, these laws are enforced automatically by the `@architectit/pi-guardrails` extension:
+
+- **Law 1** (Read Before Editing): `guardrail_verify_read` blocks edits to unread files
+- **Law 2** (Stay in Scope): `guardrail_check_scope` blocks out-of-scope edits
+- **Law 3** (Verify Before Committing): Output validation auto-redacts secrets; `guardrail_check_halt` evaluates commit safety
+- **Law 4** (Halt When Uncertain): `guardrail_record_attempt`/`guardrail_check_strikes` enforce Three Strikes; injection defense blocks prompt attacks
+
+See [[guardrails-core]] for the full enforcement coverage map.
+
 ## Task
 
 Apply the Four Laws of Agent Safety to the current operation. Evaluate whether any law is at risk of being violated, enforce compliance, and halt if necessary.
