@@ -96,6 +96,18 @@ These principles are MANDATORY for all AI-driven rapid development sessions.
 
 ---
 
+## Pi Enforcement
+
+When running in pi, vibe coding principles are supported by the `@architectit/pi-guardrails` extension:
+
+- **Principle 1** (Guardrails Enable Speed): All enforcement is automatic — no manual safety checks needed
+- **Principle 2** (Decide by Risk Level): Tool permissions (`ask` level for `bash`) enforce medium-risk confirmation; `guardrail_check_halt` evaluates risk
+- **Principle 3** (Preserve Design Intent): Read tracking (Law 1) enforces read-before-edit; scope enforcement prevents scope creep
+- **Principle 4** (Ship Accessible): Content filtering can enforce accessibility compliance via topic patterns
+- **Principle 5** (Iterate, Don't Rebuild): Three Strikes enforces halt when 3 iterations fail
+
+See [[guardrails-core]] and [[tool-permissions]] for details.
+
 ## Task
 
 Apply these Vibe Coding Principles to answer the user's request or guide their current rapid development session. Use the principles above to provide actionable, safety-aware advice.

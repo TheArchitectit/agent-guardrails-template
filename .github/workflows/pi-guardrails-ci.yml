@@ -1,0 +1,108 @@
+name: Pi Guardrails CI
+
+on:
+  pull_request:
+    paths:
+      - 'pi-extension/**'
+      - 'guardrails/**'
+  push:
+    branches: [main, feature/pi-extension]
+    paths:
+      - 'pi-extension/**'
+      - 'guardrails/**'
+
+jobs:
+  guardrails-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        run: |
+          cd pi-extension
+          npm install --save-dev vitest @sinclair/typebox
+
+      - name: Run unit tests
+        run: |
+          cd pi-extension
+          npx vitest run --reporter=verbose
+
+      - name: Run bash-classify tests
+        run: |
+          cd guardrails
+          npm init -y 2>/dev/null
+          npm install --save-dev vitest
+          npx vitest run bash-classify.test.ts --reporter=verbose
+
+  secret-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Scan for secrets
+        run: |
+          SECRETS_FOUND=0
+          PATTERNS=(
+            'AKIA[0-9A-Z]{16}'
+            'gh[pousr]_[A-Za-z0-9_]{36,}'
+            'glpat-[A-Za-z0-9\-]{20}'
+            'sk_live_[A-Za-z0-9]{24,}'
+            '-----BEGIN (.*)PRIVATE KEY-----'
+            '(postgres|mysql|mongodb|redis)://[^\s"'"'"']+'
+          )
+
+          git diff --name-only origin/main...HEAD 2>/dev/null | while read -r file; do
+            [ -f "$file" ] || continue
+            for pattern in "${PATTERNS[@]}"; do
+              if grep -qE "$pattern" "$file" 2>/dev/null; then
+                match=$(grep -oE "$pattern" "$file" 2>/dev/null | head -1)
+                echo "::warning file=$file::Secret pattern detected: ${match:0:8}..."
+                SECRETS_FOUND=1
+              fi
+            done
+          done
+
+          if [ "$SECRETS_FOUND" -ne 0 ]; then
+            echo "::error::Secrets detected in PR. Review and remove before merging."
+            exit 1
+          fi
+
+  scope-check:
+    runs-on: ubuntu-latest
+    if: hashFiles('.pi-guardrails.json') != ''
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate scope compliance
+        run: |
+          if [ ! -f ".pi-guardrails.json" ]; then
+            echo "No .pi-guardrails.json found, skipping scope check"
+            exit 0
+          fi
+
+          SCOPE=$(node -e "
+            const c = JSON.parse(require('fs').readFileSync('.pi-guardrails.json', 'utf8'));
+            console.log((c.defaultScope || []).join('|'));
+          " 2>/dev/null || echo "")
+
+          if [ -z "$SCOPE" ]; then
+            echo "No scope defined, skipping"
+            exit 0
+          fi
+
+          VIOLATIONS=0
+          git diff --name-only origin/main...HEAD 2>/dev/null | while read -r file; do
+            if ! echo "$file" | grep -qE "^($SCOPE)"; then
+              echo "::warning file=$file::File is outside authorized scope"
+              VIOLATIONS=$((VIOLATIONS + 1))
+            fi
+          done
+
+          echo "Scope validation complete"

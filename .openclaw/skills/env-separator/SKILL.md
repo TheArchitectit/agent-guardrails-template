@@ -39,6 +39,16 @@ If you cannot verify environment separation:
 2. Ask the user to confirm environment boundaries
 3. Do NOT proceed until separation is guaranteed
 
+## Pi Enforcement
+
+When running in pi, environment separation is supported by the `@architectit/pi-guardrails` extension:
+
+- **Output validation** auto-redacts database URLs and credentials (prevents leaking prod connection strings)
+- **Canary tokens** can detect if production file contents are being exfiltrated into output
+- The MCP bridge (when connected) provides `guardrail_mcp` with action `check_test_prod_separation` for explicit verification
+
+See [[output-security]] and [[canary-tokens]] for details.
+
 ## Task
 
 Verify that test and production environments are properly separated for the current operation. Check environment boundaries, credentials, and data flows. Halt if separation cannot be guaranteed.

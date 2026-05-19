@@ -1,0 +1,64 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Language Rules",
+  "description": "Schema for language-specific prevention rule files",
+  "type": "object",
+  "required": ["language", "version", "detectors", "rules"],
+  "properties": {
+    "language": {
+      "type": "string",
+      "description": "Language name (lowercase)",
+      "pattern": "^[a-z][a-z0-9-]*$"
+    },
+    "version": {
+      "type": "string",
+      "description": "Schema version (semver)",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "detectors": {
+      "type": "array",
+      "description": "File patterns that indicate this language is present",
+      "items": { "type": "string" },
+      "minItems": 1
+    },
+    "rules": {
+      "type": "array",
+      "description": "Prevention rules for this language",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "pattern", "severity", "message"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique rule identifier (prefixed with language abbreviation)",
+            "pattern": "^[a-z]+-[a-z][a-z0-9-]*$"
+          },
+          "name": {
+            "type": "string",
+            "description": "Short human-readable rule name"
+          },
+          "pattern": {
+            "type": "string",
+            "description": "Regex pattern to detect the violation"
+          },
+          "severity": {
+            "type": "string",
+            "enum": ["warning", "critical"],
+            "description": "Violation severity level"
+          },
+          "message": {
+            "type": "string",
+            "description": "Explanation of the rule and suggested fix"
+          },
+          "filePatterns": {
+            "type": "array",
+            "description": "File path patterns this rule applies to (regex)",
+            "items": { "type": "string" }
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}
