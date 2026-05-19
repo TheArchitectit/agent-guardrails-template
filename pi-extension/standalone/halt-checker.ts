@@ -5,6 +5,7 @@ const DESTRUCTIVE_PATTERNS: RegExp[] = [
   /\brm\s+(-[a-zA-Z]*f[a-zA-Z]*\s+|.*--no-preserve-root\s+.*\/)/,
   /\bgit\s+push\s+.*--force/,
   /\bgit\s+push\s+.*-f\b/,
+  /\bgit\s+push\s+\S*\s+\+/,
   /\bgit\s+reset\s+--hard/,
   /\bsudo\s+/,
   /\bchmod\s+777/,

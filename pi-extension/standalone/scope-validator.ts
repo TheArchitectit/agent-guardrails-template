@@ -12,7 +12,10 @@ export class ScopeValidator {
   isInScope(filePath: string, _operation: "read" | "edit" | "delete"): boolean {
     if (this.paths.length === 0) return true;
     const resolved = path.resolve(filePath);
-    return this.paths.some((scopePath) => resolved.startsWith(scopePath.replace(/\/+$/, "")));
+    return this.paths.some((scopePath) => {
+      const normalizedScope = path.resolve(scopePath.replace(/\/+$/, ""));
+      return resolved === normalizedScope || resolved.startsWith(normalizedScope + path.sep);
+    });
   }
 
   getScope(): string[] {

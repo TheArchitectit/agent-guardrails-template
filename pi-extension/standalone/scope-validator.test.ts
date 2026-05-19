@@ -40,4 +40,22 @@ describe("ScopeValidator", () => {
     expect(restored.getScope()).toEqual(["/src/"]);
     expect(restored.getReason()).toBe("reason");
   });
+
+  it("rejects path traversal via prefix matching", () => {
+    const validator = new ScopeValidator();
+    validator.setScope(["/home/user/project"]);
+    expect(validator.isInScope("/home/user/project-secrets/keys", "edit")).toBe(false);
+  });
+
+  it("rejects parent directory path traversal", () => {
+    const validator = new ScopeValidator();
+    validator.setScope(["/home/user/project"]);
+    expect(validator.isInScope("/home/user/project/../etc/passwd", "edit")).toBe(false);
+  });
+
+  it("allows exact scope path match", () => {
+    const validator = new ScopeValidator();
+    validator.setScope(["/home/user/project"]);
+    expect(validator.isInScope("/home/user/project", "edit")).toBe(true);
+  });
 });
