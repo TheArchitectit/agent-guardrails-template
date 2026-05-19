@@ -26,6 +26,9 @@ export interface SandboxResult {
   timedOut: boolean;
 }
 
+const VALID_IMAGE_RE = /^[a-zA-Z0-9._:/-]+$/;
+const SENSITIVE_MOUNT_RE = /^\/(etc|root|proc|sys|dev)(\/|$)/;
+
 export class SandboxRunner {
   private config: Required<Pick<SandboxConfig, "image" | "timeout">> &
     Pick<SandboxConfig, "readOnlyMounts" | "readWriteMounts" | "networkAccess" | "memoryLimit" | "cpuLimit" | "workdir">;
@@ -57,6 +60,11 @@ export class SandboxRunner {
 
     const dockerArgs: string[] = ["run", "--rm"];
 
+    // Validate image name to prevent arg injection
+    if (!VALID_IMAGE_RE.test(image)) {
+      return { exitCode: 1, stdout: "", stderr: `Invalid docker image name: ${image}`, timedOut: false };
+    }
+
     // No network by default
     if (!(options?.networkAccess ?? this.config.networkAccess)) {
       dockerArgs.push("--network=none");
@@ -68,18 +76,20 @@ export class SandboxRunner {
     const cpu = options?.cpuLimit ?? this.config.cpuLimit;
     if (cpu) dockerArgs.push(`--cpus=${cpu}`);
 
-    // Read-only mounts
+    // Read-only mounts (reject sensitive system directories)
     const roMounts = options?.readOnlyMounts ?? this.config.readOnlyMounts;
     if (roMounts) {
       for (const mount of roMounts) {
+        if (SENSITIVE_MOUNT_RE.test(mount)) continue;
         dockerArgs.push("-v", `${mount}:${mount}:ro`);
       }
     }
 
-    // Read-write mounts
+    // Read-write mounts (reject sensitive system directories)
     const rwMounts = options?.readWriteMounts ?? this.config.readWriteMounts;
     if (rwMounts) {
       for (const mount of rwMounts) {
+        if (SENSITIVE_MOUNT_RE.test(mount)) continue;
         dockerArgs.push("-v", `${mount}:${mount}:rw`);
       }
     }
