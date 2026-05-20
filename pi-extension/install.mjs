@@ -93,6 +93,13 @@ console.log(`${action} pi-guardrails v${VERSION} → ${EXTENSION_DIR}
 Tools:    guardrail_init, guardrail_record_read, guardrail_verify_read,
           guardrail_set_scope, guardrail_check_scope, guardrail_record_attempt,
           guardrail_check_strikes, guardrail_reset_strikes, guardrail_check_halt,
-          guardrail_log_violation, guardrail_status, guardrail_mcp
-Commands: /guardrails (Sprint 1)
+          guardrail_log_violation, guardrail_status, guardrail_mcp,
+          guardrail_pre_work_check, guardrail_detect_creep,
+          guardrail_check_pattern, guardrail_validate_git,
+          guardrail_detect_language, guardrail_get_language_profile,
+          guardrail_check_regression, guardrail_verify_fixes,
+          guardrail_register_failure, guardrail_validate_replacement,
+          guardrail_acknowledge_halt, guardrail_read_skill,
+          guardrail_list_skills, guardrail_list_languages
+Commands: /guardrails (dashboard)
 Docs:     ${EXTENSION_DIR}/README.md`);

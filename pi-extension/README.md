@@ -1,17 +1,17 @@
-# @thearchitectit/pi-guardrails
+# @architectit/pi-guardrails
 
 Four Laws guardrails enforcement for the pi coding agent. Works standalone (no MCP server required) and can bridge to the existing Go MCP server when available.
 
 ## Installation
 
 ```bash
-pi install npm:@thearchitectit/pi-guardrails
+pi install npm:@architectit/pi-guardrails
 ```
 
 Or manually:
 
 ```bash
-npx @thearchitectit/pi-guardrails
+npx @architectit/pi-guardrails
 ```
 
 ## Architecture
@@ -30,7 +30,9 @@ The standalone mode is the primary value proposition — teams don't need to run
 3. **Verify Before Committing** — Changes must be verified before committing
 4. **Halt When Uncertain** — The Three Strikes rule: 3 consecutive failures triggers a halt
 
-## Tools
+## Tools (28 registered)
+
+### Core Enforcement
 
 | Tool | Purpose |
 |------|---------|
@@ -42,9 +44,38 @@ The standalone mode is the primary value proposition — teams don't need to run
 | `guardrail_record_attempt` | Record a task attempt result (Law 4) |
 | `guardrail_check_strikes` | Check strike count for a task |
 | `guardrail_reset_strikes` | Reset strikes after resolution |
-| `guardrail_check_halt` | Evaluate halt conditions |
+| `guardrail_check_halt` | Evaluate halt conditions (includes uncertainty score) |
 | `guardrail_log_violation` | Log a guardrail violation |
 | `guardrail_status` | Get current session status |
+| `guardrail_acknowledge_halt` | Acknowledge a halt condition to resume |
+
+### Language & Pattern Rules
+
+| Tool | Purpose |
+|------|---------|
+| `guardrail_detect_language` | Auto-detect project languages |
+| `guardrail_get_language_profile` | Get language profile with available rules |
+| `guardrail_check_pattern` | Check code against prevention pattern rules |
+| `guardrail_list_languages` | List available language rule sets |
+| `guardrail_list_skills` | List all guardrails skills |
+| `guardrail_read_skill` | Read a skill's documentation |
+
+### Regression & Validation
+
+| Tool | Purpose |
+|------|---------|
+| `guardrail_check_regression` | Check if file edits risk regressing past failures |
+| `guardrail_verify_fixes` | Verify that past fixes are still intact |
+| `guardrail_register_failure` | Register a failure in the cross-session registry |
+| `guardrail_validate_replacement` | Validate edit old_content matches actual file |
+| `guardrail_validate_git` | Validate git operations (branch protection, force-push) |
+
+### Planning & Scope
+
+| Tool | Purpose |
+|------|---------|
+| `guardrail_pre_work_check` | Generate pre-work risk checklist |
+| `guardrail_detect_creep` | Detect feature creep against authorized scope |
 | `guardrail_mcp` | Proxy to MCP server (when connected) |
 
 ## Automatic Enforcement
@@ -55,9 +86,25 @@ The extension registers event handlers that enforce the Four Laws automatically:
 - **Pre-edit enforcement**: Edits to unread files are blocked (Law 1)
 - **Scope enforcement**: Edits outside the authorized scope are blocked (Law 2)
 - **Bash safety**: Dangerous commands (`rm -rf /`, `git push --force`, `sudo`, etc.) are blocked
-- **Injection defense**: Scans tool inputs for prompt injection patterns (Sprint 2)
-- **Output validation**: Detects secrets and PII in tool output (Sprint 2)
-- **Permission system**: Per-tool permission levels (auto/ask/blocked) (Sprint 2)
+- **Injection defense**: Scans tool inputs for prompt injection patterns
+- **Output validation**: Detects secrets and PII in tool output
+- **Content filtering**: Detects denied topics in output (warn-only)
+- **Canary tokens**: Detects data exfiltration via embedded tokens (warn-only)
+- **Permission system**: Per-tool permission levels (auto/ask/blocked)
+- **Halt lifecycle**: Blocked operations record halt state; requires acknowledgment to resume
+
+## Language-Specific Rules
+
+Auto-detects project languages and loads prevention rules from `.guardrails/prevention-rules/languages/`:
+
+| Language | Rules | Examples |
+|----------|-------|---------|
+| Python | 8 | eval/exec, subprocess shell=True, bare except, pickle, SQL injection |
+| TypeScript | 7 | any type, non-null assertion, eval, innerHTML, hardcoded secrets |
+| Go | 6 | ignored errors, panic, SQL concat, goroutine without context |
+| Rust | 6 | unsafe blocks, unwrap, panic!, todo!, raw pointer deref |
+
+Add new languages by creating a JSON file in `.guardrails/prevention-rules/languages/`.
 
 ## Configuration
 
@@ -89,13 +136,46 @@ Config file: `~/.pi/agent/extensions/pi-guardrails/config.json`
   "outputValidation": {
     "enablePII": false,
     "autoRedact": false,
-    "redactionText": "[REDACTED]"
+    "redactionText": "[REDACTED]",
+    "contentFilter": {
+      "deniedTopics": ["malicious code"],
+      "allowedTopics": [],
+      "strictMode": false
+    }
+  },
+  "canary": {
+    "prefix": "CATALOG:",
+    "tokenLength": 32
+  },
+  "gitPolicy": {
+    "protectedBranches": ["main", "master"],
+    "commitFormat": "conventional",
+    "requireAIAttribution": true
   }
 }
 ```
 
 Environment variables:
 - `PI_GUARDRAILS_MCP_API_KEY` — API key for the MCP server
+
+## Halt Lifecycle
+
+When a handler blocks an operation, a halt is recorded:
+
+1. **active** → operation attempted
+2. **halted** → handler blocked, reason recorded
+3. **acknowledged** → `guardrail_acknowledge_halt` called after review
+
+## Uncertainty Scoring
+
+`guardrail_check_halt` returns an `uncertaintyScore` (0-1):
+
+| Score | Level | Meaning |
+|-------|-------|---------|
+| 0-0.2 | Certain | No concerns |
+| 0.2-0.5 | Probably | Mild uncertainty (e.g. edit without details) |
+| 0.5-0.8 | Uncertain | Significant concern (e.g. delete without details) |
+| 0.8-1.0 | Guessing | High risk (e.g. production-affected operations) |
 
 ## Status Bar
 
@@ -126,84 +206,27 @@ When the Go MCP server is available, the extension can proxy calls to it for enh
 3. Use `guardrail_mcp` with an `action` parameter to call any MCP server tool
 4. Reconnection uses exponential backoff (1s base, 30s max, 5 attempts)
 
-The Go server supports SSE/HTTP transport (default port 8094) and the extension auto-detects the transport type from the endpoint URL.
-
-## Prompt Injection Defense
-
-The extension scans tool inputs (bash, write, edit) for common prompt injection patterns:
-
-- Pattern matching: instruction override, role manipulation, jailbreak attempts, prompt extraction
-- Heuristic scoring: excessive imperatives, system referencing, unusual structure
-- Confidence thresholds: high confidence blocks the call, medium confidence warns
-- Configurable via `injectionDefense` in config.json
-
-## Output Validation
-
-Tool output is scanned for sensitive data:
-
-- **Secret detection**: AWS keys, GitHub/GitLab tokens, Stripe keys, private keys, JWTs, database URLs, generic API keys
-- **PII detection** (optional): emails, IP addresses
-- **Auto-redaction** (optional): replaces detected secrets with `[REDACTED]`
-- Since pi's `tool_result` handler is side-effect only, output validation warns via status bar and logs violations rather than blocking
-
-## Tool Permissions
-
-Per-tool permission levels control which tools the agent can use:
-
-| Level | Behavior |
-|-------|----------|
-| `auto` | Tool executes without confirmation |
-| `ask` | Tool is blocked with a message telling the agent to get user approval |
-| `blocked` | Tool is blocked entirely |
-
-Configure via `toolPermissions` in config.json. Session overrides are available through the permission manager.
-
 ## Storage
 
 All state is stored under `~/.pi/agent/extensions/pi-guardrails/`:
 
 - `sessions/` — session state JSON files
 - `violations.jsonl` — append-only violation log
+- `.guardrails/regression/failure-registry.jsonl` — cross-session failure registry
 - `config.json` — user configuration
 
-## Canary Tokens
+## 22 Code Modules
 
-Canary tokens can be inserted into sensitive files the agent reads. If the token appears in agent output, it indicates a potential data leak or indirect prompt injection:
-
-1. Insert a canary via `CanaryTokenManager.insert(filePath)` — returns a unique token string
-2. Agent output is automatically scanned for canary tokens
-3. Triggered canaries are logged as violations and flagged in the status bar
-
-## Content Filtering
-
-Configurable topic allowlist/denylist for agent output. Pre-built patterns for violence, hate, self-harm, sexual content, and credentials. Strict mode blocks all output not matching an allowed topic.
-
-## Sandbox Mode
-
-Docker-based isolation for dangerous tool execution:
-
-- Commands classified as `destructive` can be routed to a Docker container
-- Read-only filesystem mounts for source code
-- Network isolation by default
-- Configurable memory and CPU limits
-- Timeout enforcement (default 30s)
-- Requires Docker availability (gracefully degrades if unavailable)
-
-## Team Policy
-
-Organization-level config hierarchy: org → team → project → session. Place `.pi-guardrails.json` at the project root to define project-level overrides. The `PolicyLoader` merges layers with later layers overriding earlier ones.
+FileReadStore, ScopeValidator, StrikeCounter, HaltChecker, ViolationLog, SessionStore, InjectionDetector, OutputValidator, ContentFilter, CanaryTokenManager, PermissionManager, PolicyLoader, MCPClient, PreWorkChecker, FeatureCreepDetector, PatternRuleEngine, GitValidator, LanguageDetector, RegressionGuard, ExactReplacementValidator, SandboxRunner, GuardrailsPanel
 
 ## CI/CD Integration
 
 ### Pre-commit Hook
 
 ```bash
-# Install the hook
 cp guardrails/pre-commit.sh .git/hooks/pre-commit
 chmod +x .git/hooks/pre-commit
 ```
-
-Scans staged files for secrets (AWS keys, GitHub tokens, private keys, database URLs) and validates scope compliance.
 
 ### GitHub Actions
 
