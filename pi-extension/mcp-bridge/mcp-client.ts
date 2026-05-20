@@ -1,13 +1,19 @@
-let MCP_SDK: typeof import("@modelcontextprotocol/sdk") | null = null;
-try {
-  MCP_SDK = await import("@modelcontextprotocol/sdk");
-} catch {
-  // @modelcontextprotocol/sdk is an optional dependency
-  // MCP bridge is permanently unavailable when not installed
+let mcpSdk: any = null;
+let sdkLoaded = false;
+
+async function loadSDK(): Promise<any> {
+  if (sdkLoaded) return mcpSdk;
+  sdkLoaded = true;
+  try {
+    mcpSdk = await import("@modelcontextprotocol/sdk");
+  } catch {
+    mcpSdk = null;
+  }
+  return mcpSdk;
 }
 
 export class MCPClient {
-  private client: InstanceType<typeof MCP_SDK!["Client"]> | null = null;
+  private client: any = null;
   private transport: unknown = null;
   private connected = false;
   private tools: string[] = [];
@@ -16,14 +22,12 @@ export class MCPClient {
   private endpoint: string | null = null;
 
   async tryConnect(endpoint: string): Promise<boolean> {
-    if (!MCP_SDK) return false;
+    const sdk = await loadSDK();
+    if (!sdk) return false;
 
     this.endpoint = endpoint;
 
     try {
-      // Determine transport type from endpoint
-      // If endpoint looks like a URL (http/https), use SSE transport
-      // If it's a file path or command, use stdio transport
       if (endpoint.startsWith("http://") || endpoint.startsWith("https://")) {
         return await this.connectSSE(endpoint);
       } else {
@@ -37,9 +41,10 @@ export class MCPClient {
   }
 
   private async connectSSE(url: string): Promise<boolean> {
-    if (!MCP_SDK) return false;
+    const sdk = await loadSDK();
+    if (!sdk) return false;
 
-    const { SSEClientTransport } = await MCP_SDK;
+    const { SSEClientTransport } = sdk;
     const sseUrl = new URL(url.endsWith("/sse") ? url : `${url}/mcp/v1/sse`);
 
     const headers: Record<string, string> = {};
@@ -57,9 +62,10 @@ export class MCPClient {
   }
 
   private async connectStdio(command: string): Promise<boolean> {
-    if (!MCP_SDK) return false;
+    const sdk = await loadSDK();
+    if (!sdk) return false;
 
-    const { StdioClientTransport } = await MCP_SDK;
+    const { StdioClientTransport } = sdk;
     const parts = command.split(" ");
     this.transport = new StdioClientTransport({
       command: parts[0],
@@ -71,16 +77,16 @@ export class MCPClient {
   }
 
   private async performConnection(): Promise<boolean> {
-    if (!MCP_SDK || !this.transport) return false;
+    const sdk = await loadSDK();
+    if (!sdk || !this.transport) return false;
 
-    const { Client } = await MCP_SDK;
+    const { Client } = sdk;
     this.client = new Client({ name: "pi-guardrails", version: "0.1.0" });
 
     await this.client.connect(this.transport as any);
     this.connected = true;
     this.reconnectAttempts = 0;
 
-    // Discover available tools
     const result = await this.client.listTools();
     this.tools = result.tools.map((t: any) => t.name);
 
@@ -98,7 +104,6 @@ export class MCPClient {
       const result = await this.client.callTool({ name: toolName, arguments: params });
       return result;
     } catch (err: any) {
-      // Connection may have dropped
       this.connected = false;
       this.scheduleReconnect();
       return { error: `MCP call failed: ${err.message}` };
@@ -136,7 +141,7 @@ export class MCPClient {
     const jitter = Math.random() * delay * 0.1;
 
     setTimeout(() => {
-      this.tryConnect(this.endpoint!).catch(() => {});
+      if (this.endpoint) this.tryConnect(this.endpoint).catch(() => {});
     }, delay + jitter);
   }
 }
