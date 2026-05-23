@@ -67,6 +67,11 @@ func NewServer(cfg *config.Config, db *database.DB, cacheClient *cache.Client, a
 	return s
 }
 
+// Echo exposes the underlying Echo instance for external route registration.
+func (s *Server) Echo() *echo.Echo {
+	return s.echo
+}
+
 // setupMiddleware configures Echo middleware
 func (s *Server) setupMiddleware() {
 	// Request ID generation
@@ -112,9 +117,12 @@ func (s *Server) setupMiddleware() {
 	limiter := s.cache.NewDistributedLimiter()
 	s.echo.Use(RateLimitMiddleware(limiter, s.cfg))
 
-	// Request timeout
+	// Request timeout (skip vision endpoints — they have long-running inference)
 	s.echo.Use(middleware.TimeoutWithConfig(middleware.TimeoutConfig{
 		Timeout: s.cfg.RequestTimeout,
+		Skipper: func(c echo.Context) bool {
+			return strings.HasPrefix(c.Request().URL.Path, "/v1/vision")
+		},
 	}))
 
 	// Body limit

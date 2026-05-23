@@ -6,14 +6,17 @@ toolchain go1.24.13
 
 require (
 	github.com/caarlos0/env/v11 v11.3.1
+	github.com/fsnotify/fsnotify v1.4.9
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.7.1
 	github.com/labstack/echo/v4 v4.13.3
 	github.com/lib/pq v1.11.1
 	github.com/mark3labs/mcp-go v0.4.0
+	github.com/mattn/go-sqlite3 v1.14.44
 	github.com/prometheus/client_golang v1.20.5
 	github.com/sony/gobreaker v1.0.0
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
@@ -28,6 +31,7 @@ require (
 	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
 	github.com/jackc/puddle/v2 v2.2.2 // indirect
 	github.com/klauspost/compress v1.17.9 // indirect
+	github.com/kr/text v0.2.0 // indirect
 	github.com/labstack/gommon v0.4.2 // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
@@ -50,5 +54,4 @@ require (
 	golang.org/x/text v0.21.0 // indirect
 	golang.org/x/time v0.8.0 // indirect
 	google.golang.org/protobuf v1.34.2 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
