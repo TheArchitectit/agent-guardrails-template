@@ -8,8 +8,6 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
-	"os"
-	"os/exec"
 	"strconv"
 	"strings"
 	"sync"
@@ -24,2260 +22,867 @@ import (
 	"github.com/thearchitectit/guardrail-mcp/internal/config"
 	"github.com/thearchitectit/guardrail-mcp/internal/database"
 	"github.com/thearchitectit/guardrail-mcp/internal/metrics"
-	"github.com/thearchitectit/guardrail-mcp/internal/validation"
 	"github.com/thearchitectit/guardrail-mcp/internal/models"
 	"github.com/thearchitectit/guardrail-mcp/internal/validation"
 )
 
-// contextKey is a type-safe context key to avoid string allocation
-// See: https://golang.org/pkg/context/#WithValue
-type contextKey int
-
-const (
-	ctxKeySessionID contextKey = iota
-)
-
-// Pre-allocated byte slices for common SSE messages to reduce allocations
-var (
-	sseEndpointPrefix = []byte("event: endpoint\ndata: ")
-	sseMessagePrefix  = []byte("event: message\ndata: ")
-	sseDoubleNewline  = []byte("\n\n")
-	ssePingComment    = []byte(": ping\n\n")
-)
-
-// jsonBufferPool provides reusable buffers for JSON encoding
-var jsonBufferPool = sync.Pool{
-	New: func() interface{} {
-		return make([]byte, 0, 4096) // Pre-allocate 4KB buffers
-	},
-}
-
-// MCPServer wraps the MCP server with guardrail dependencies
+// MCPServer handles MCP protocol requests
 type MCPServer struct {
-	echo                 *echo.Echo
-	cfg                  *config.Config
-	db                   *database.DB
-	cache                *cache.Client
-	auditLogger          *audit.Logger
-	validationEngine     *validation.ValidationEngine
-	fileReadStore        *database.FileReadStore
-	taskAttemptStore     *database.TaskAttemptStore
-	haltEventStore       *database.HaltEventStore
-	productionCodeStore  *database.ProductionCodeStore
-	fixVerificationStore *database.FixVerificationStore
-	uncertaintyStore     *database.UncertaintyStore
-	mcpServer            server.MCPServer
-	sessions             map[string]*Session
-	sessionsMu           sync.RWMutex
+	mcpServer   *server.MCPServer
+	db          *database.DB
+	cache       *cache.Cache
+	metrics     *metrics.Metrics
+	audit       *audit.AuditLogger
+	validator   *validation.Engine
+	config      *config.Config
+	visionTools *VisionTools
 }
 
-// Session represents an MCP client session
-type Session struct {
-	ID            string
-	ProjectSlug   string
-	AgentType     string
-	ClientVersion string
-	CreatedAt     time.Time
-	LastActivity  time.Time
-	ResponseQueue chan []byte
-	Closed        chan struct{}
-}
-
-// NewMCPServer creates a new MCP server
-func NewMCPServer(cfg *config.Config, db *database.DB, cacheClient *cache.Client, auditLogger *audit.Logger, validationEngine *validation.ValidationEngine, fileReadStore *database.FileReadStore, taskAttemptStore *database.TaskAttemptStore, haltEventStore *database.HaltEventStore) *MCPServer {
+// NewServer creates a new MCP server instance
+func NewServer(db *database.DB, cache *cache.Cache, metrics *metrics.Metrics, audit *audit.AuditLogger, validator *validation.Engine, cfg *config.Config) *MCPServer {
 	s := &MCPServer{
-		cfg:                  cfg,
-		db:                   db,
-		cache:                cacheClient,
-		auditLogger:          auditLogger,
-		validationEngine:     validationEngine,
-		fileReadStore:        fileReadStore,
-		taskAttemptStore:     taskAttemptStore,
-		haltEventStore:       haltEventStore,
-		productionCodeStore:  database.NewProductionCodeStore(db),
-		fixVerificationStore: database.NewFixVerificationStore(db),
-		uncertaintyStore:     database.NewUncertaintyStore(db.DB),
-		sessions:             make(map[string]*Session),
+		mcpServer: server.NewMCPServer(
+			"Guardrail Enforcement Server",
+			cfg.Version,
+			server.WithResourceCapabilities(true, true),
+			server.WithLogging(),
+		),
+		db:        db,
+		cache:     cache,
+		metrics:   metrics,
+		audit:     audit,
+		validator: validator,
+		config:    cfg,
 	}
 
-	// Create MCP server using the default server
-	s.mcpServer = server.NewDefaultServer("guardrail-mcp", "1.0.0")
+	// Initialize vision tools if configured
+	if cfg.Vision.Enabled {
+		s.visionTools = NewVisionTools(cfg)
+	}
 
-	// Register tool handlers
-	s.registerTools()
-
+	s.setupHandlers()
 	return s
 }
 
-// registerTools registers all MCP tool handlers
-func (s *MCPServer) registerTools() {
-	// Handle tool list requests
+func (s *MCPServer) setupHandlers() {
+	// Register tools
 	s.mcpServer.HandleListTools(func(ctx context.Context, cursor *string) (*mcp.ListToolsResult, error) {
+		tools := []mcp.Tool{
+			{
+				Name:        "guardrail_init_session",
+				Description: "Initialize a new session with security parameters and session ID",
+				InputSchema: mcp.ToolInputSchema{
+					Type: "object",
+					Properties: mcp.ToolInputSchemaProperties{
+						"user_id": map[string]interface{}{
+							"type":        "string",
+							"description": "Unique identifier for the user",
+						},
+						"environment": map[string]interface{}{
+							"type":        "string",
+							"description": "Target environment (development, staging, production)",
+						},
+					},
+					Required: []string{"user_id"},
+				},
+			},
+			{
+				Name:        "guardrail_validate_bash",
+				Description: "Validate a bash command against security policies and prevention rules",
+				InputSchema: mcp.ToolInputSchema{
+					Type: "object",
+					Properties: mcp.ToolInputSchemaProperties{
+						"command": map[string]interface{}{
+							"type":        "string",
+							"description": "The bash command to validate",
+						},
+						"working_dir": map[string]interface{}{
+							"type":        "string",
+							"description": "Current working directory",
+						},
+					},
+					Required: []string{"command"},
+				},
+			},
+			{
+				Name:        "guardrail_validate_file_edit",
+				Description: "Validate a file edit operation (search and replace) against safety rules",
+				InputSchema: mcp.ToolInputSchema{
+					Type: "object",
+					Properties: mcp.ToolInputSchemaProperties{
+						"file_path": map[string]interface{}{
+							"type":        "string",
+							"description": "Path to the file being edited",
+						},
+						"old_string": map[string]interface{}{
+							"type":        "string",
+							"description": "Text to be replaced",
+						},
+						"new_string": map[string]interface{}{
+							"type":        "string",
+							"description": "Replacement text",
+						},
+					},
+					Required: []string{"file_path", "old_string", "new_string"},
+				},
+			},
+			{
+				Name:        "guardrail_validate_git_operation",
+				Description: "Validate a git operation (commit, push, branch) against policy",
+				InputSchema: mcp.ToolInputSchema{
+					Type: "object",
+					Properties: mcp.ToolInputSchemaProperties{
+						"operation": map[string]interface{}{
+							"type":        "string",
+							"description": "Git command to validate (e.g., commit, push)",
+						},
+						"args": map[string]interface{}{
+							"type":        "array",
+							"items":       map[string]interface{}{"type": "string"},
+							"description": "Arguments to the git command",
+						},
+					},
+					Required: []string{"operation"},
+				},
+			},
+			{
+				Name:        "guardrail_pre_work_check",
+				Description: "Perform a mandatory pre-work safety check before starting a new task",
+				InputSchema: mcp.ToolInputSchema{
+					Type: "object",
+					Properties: mcp.ToolInputSchemaProperties{
+						"task_description": map[string]interface{}{
+							"type":        "string",
+							"description": "Brief description of the planned task",
+						},
+					},
+					Required: []string{"task_description"},
+				},
+			},
+			{
+				Name:        "guardrail_get_context",
+				Description: "Get the current active guardrail context and applicable rules",
+				InputSchema: mcp.ToolInputSchema{
+					Type: "object",
+					Properties: mcp.ToolInputSchemaProperties{
+						"path": map[string]interface{}{
+							"type":        "string",
+							"description": "Current working directory or file path",
+						},
+					},
+				},
+			},
+			{
+				Name:        "guardrail_validate_scope",
+				Description: "Verify if a file path is within authorized project scope",
+				InputSchema: mcp.ToolInputSchema{
+					Type: "object",
+					Properties: mcp.ToolInputSchemaProperties{
+						"file_path": map[string]interface{}{
+							"type":        "string",
+							"description": "Path to the file to validate",
+						},
+						"authorized_scope": map[string]interface{}{
+							"type":        "string",
+							"description": "Root directory of the authorized scope",
+						},
+					},
+					Required: []string{"file_path"},
+				},
+			},
+			{
+				Name:        "guardrail_validate_commit",
+				Description: "Validate proposed commit message and changed files",
+				InputSchema: mcp.ToolInputSchema{
+					Type: "object",
+					Properties: mcp.ToolInputSchemaProperties{
+						"message": map[string]interface{}{
+							"type":        "string",
+							"description": "Commit message to validate",
+						},
+						"files": map[string]interface{}{
+							"type":        "array",
+							"items":       map[string]interface{}{"type": "string"},
+							"description": "List of files to be committed",
+						},
+					},
+					Required: []string{"message", "files"},
+				},
+			},
+			{
+				Name:        "guardrail_prevent_regression",
+				Description: "Check if changes might reintroduce known bugs or violate strict patterns",
+				InputSchema: mcp.ToolInputSchema{
+					Type: "object",
+					Properties: mcp.ToolInputSchemaProperties{
+						"file_path": map[string]interface{}{
+							"type":        "string",
+							"description": "File being modified",
+						},
+						"changes": map[string]interface{}{
+							"type":        "string",
+							"description": "Description or diff of planned changes",
+						},
+					},
+					Required: []string{"file_path", "changes"},
+				},
+			},
+			{
+				Name:        "guardrail_check_test_prod_separation",
+				Description: "Enforce strict separation between test code and production code",
+				InputSchema: mcp.ToolInputSchema{
+					Type: "object",
+					Properties: mcp.ToolInputSchemaProperties{
+						"file_path": map[string]interface{}{
+							"type":        "string",
+							"description": "Path to the file being checked",
+						},
+					},
+					Required: []string{"file_path"},
+				},
+			},
+			{
+				Name:        "guardrail_validate_push",
+				Description: "Pre-push validation of current branch status and health",
+				InputSchema: mcp.ToolInputSchema{
+					Type: "object",
+					Properties: mcp.ToolInputSchemaProperties{
+						"branch": map[string]interface{}{
+							"type":        "string",
+							"description": "Branch to be pushed",
+						},
+						"remote": map[string]interface{}{
+							"type":        "string",
+							"description": "Remote name (e.g., origin)",
+						},
+					},
+					Required: []string{"branch"},
+				},
+			},
+			{
+				Name:        "guardrail_record_file_read",
+				Description: "Record that a file has been read by the agent (Four Laws enforcement)",
+				InputSchema: mcp.ToolInputSchema{
+					Type: "object",
+					Properties: mcp.ToolInputSchemaProperties{
+						"file_path": map[string]interface{}{
+							"type":        "string",
+							"description": "Path to the file that was read",
+						},
+					},
+					Required: []string{"file_path"},
+				},
+			},
+			{
+				Name:        "guardrail_record_attempt",
+				Description: "Record a tool use attempt for tracking progress/failure rates",
+				InputSchema: mcp.ToolInputSchema{
+					Type: "object",
+					Properties: mcp.ToolInputSchemaProperties{
+						"tool_name": map[string]interface{}{
+							"type":        "string",
+							"description": "Name of the tool being attempted",
+						},
+						"success": map[string]interface{}{
+							"type":        "boolean",
+							"description": "Whether the attempt was successful",
+						},
+						"error_msg": map[string]interface{}{
+							"type":        "string",
+							"description": "Error message if failed",
+						},
+					},
+					Required: []string{"tool_name", "success"},
+				},
+			},
+			{
+				Name:        "guardrail_verify_file_read",
+				Description: "Verify a file has been read in current context before editing",
+				InputSchema: mcp.ToolInputSchema{
+					Type: "object",
+					Properties: mcp.ToolInputSchemaProperties{
+						"file_path": map[string]interface{}{
+							"type":        "string",
+							"description": "Path to the file to verify",
+						},
+					},
+					Required: []string{"file_path"},
+				},
+			},
+			{
+				Name:        "guardrail_validate_three_strikes",
+				Description: "Check if current task has hit consecutive failure threshold",
+				InputSchema: mcp.ToolInputSchema{
+					Type: "object",
+					Properties: mcp.ToolInputSchemaProperties{
+						"task_id": map[string]interface{}{
+							"type":        "string",
+							"description": "Unique identifier for the current task",
+						},
+					},
+				},
+			},
+			{
+				Name:        "guardrail_validate_exact_replacement",
+				Description: "Verify that strings for replacement exactly match target file content",
+				InputSchema: mcp.ToolInputSchema{
+					Type: "object",
+					Properties: mcp.ToolInputSchemaProperties{
+						"file_path": map[string]interface{}{
+							"type":        "string",
+							"description": "File path to check",
+						},
+						"target_string": map[string]interface{}{
+							"type":        "string",
+							"description": "The string to find for replacement",
+						},
+					},
+					Required: []string{"file_path", "target_string"},
+				},
+			},
+			{
+				Name:        "guardrail_reset_attempts",
+				Description: "Reset failure counters for a given task or tool",
+				InputSchema: mcp.ToolInputSchema{
+					Type: "object",
+					Properties: mcp.ToolInputSchemaProperties{
+						"task_id": map[string]interface{}{
+							"type":        "string",
+							"description": "ID of task to reset",
+						},
+					},
+				},
+			},
+			{
+				Name:        "guardrail_check_uncertainty",
+				Description: "Force self-reflection when confidence in next step is low",
+				InputSchema: mcp.ToolInputSchema{
+					Type: "object",
+					Properties: mcp.ToolInputSchemaProperties{
+						"current_plan": map[string]interface{}{
+							"type":        "string",
+							"description": "Description of the current plan",
+						},
+						"uncertainty_reason": map[string]interface{}{
+							"type":        "string",
+							"description": "Reason for uncertainty",
+						},
+					},
+					Required: []string{"current_plan", "uncertainty_reason"},
+				},
+			},
+			{
+				Name:        "guardrail_check_halt_conditions",
+				Description: "Evaluate if current state requires manual human escalation",
+				InputSchema: mcp.ToolInputSchema{
+					Type: "object",
+					Properties: mcp.ToolInputSchemaProperties{
+						"status": map[string]interface{}{
+							"type":        "string",
+							"description": "Current system/task status",
+						},
+					},
+				},
+			},
+			{
+				Name:        "guardrail_record_halt",
+				Description: "Record a system-forced halt event",
+				InputSchema: mcp.ToolInputSchema{
+					Type: "object",
+					Properties: mcp.ToolInputSchemaProperties{
+						"reason": map[string]interface{}{
+							"type":        "string",
+							"description": "Reason for the halt",
+						},
+					},
+					Required: []string{"reason"},
+				},
+			},
+			{
+				Name:        "guardrail_acknowledge_halt",
+				Description: "Acknowledged a previously recorded halt to resume operation",
+				InputSchema: mcp.ToolInputSchema{
+					Type: "object",
+					Properties: mcp.ToolInputSchemaProperties{
+						"halt_id": map[string]interface{}{
+							"type":        "string",
+							"description": "ID of the halt being acknowledged",
+						},
+					},
+					Required: []string{"halt_id"},
+				},
+			},
+			{
+				Name:        "guardrail_validate_production_first",
+				Description: "Ensure production changes are prioritized or isolated correctly",
+				InputSchema: mcp.ToolInputSchema{
+					Type: "object",
+					Properties: mcp.ToolInputSchemaProperties{
+						"path": map[string]interface{}{
+							"type":        "string",
+							"description": "Path being modified",
+						},
+					},
+				},
+			},
+			{
+				Name:        "guardrail_detect_feature_creep",
+				Description: "Analyze if changes exceed original task scope",
+				InputSchema: mcp.ToolInputSchema{
+					Type: "object",
+					Properties: mcp.ToolInputSchemaProperties{
+						"task_id": map[string]interface{}{
+							"type":        "string",
+							"description": "Original task identifier",
+						},
+						"current_changes": map[string]interface{}{
+							"type":        "string",
+							"description": "Diff or summary of changes so far",
+						},
+					},
+					Required: []string{"task_id", "current_changes"},
+				},
+			},
+			{
+				Name:        "guardrail_verify_fixes_intact",
+				Description: "Ensure recent bugfixes haven't been regressed by new edits",
+				InputSchema: mcp.ToolInputSchema{
+					Type: "object",
+					Properties: mcp.ToolInputSchemaProperties{
+						"bug_id": map[string]interface{}{
+							"type":        "string",
+							"description": "Known bug ID or description",
+						},
+						"file_path": map[string]interface{}{
+							"type":        "string",
+							"description": "File to check",
+						},
+					},
+					Required: []string{"bug_id", "file_path"},
+				},
+			},
+			{
+				Name:        "guardrail_team_init",
+				Description: "Initialize a new project team with roles and rules",
+				InputSchema: mcp.ToolInputSchema{
+					Type: "object",
+					Properties: mcp.ToolInputSchemaProperties{
+						"project_name": map[string]interface{}{
+							"type":        "string",
+							"description": "Name of the project",
+						},
+						"teams": map[string]interface{}{
+							"type":        "array",
+							"items":       map[string]interface{}{"type": "string"},
+							"description": "List of team names to initialize",
+						},
+					},
+					Required: []string{"project_name", "teams"},
+				},
+			},
+			{
+				Name:        "guardrail_team_list",
+				Description: "List all active teams and their configurations",
+				InputSchema: mcp.ToolInputSchema{
+					Type: "object",
+					Properties: mcp.ToolInputSchemaProperties{
+						"project_name": map[string]interface{}{
+							"type":        "string",
+							"description": "Filter by project name",
+						},
+					},
+				},
+			},
+			{
+				Name:        "guardrail_team_config_get",
+				Description: "Get detailed configuration for a specific team",
+				InputSchema: mcp.ToolInputSchema{
+					Type: "object",
+					Properties: mcp.ToolInputSchemaProperties{
+						"project_name": map[string]interface{}{
+							"type":        "string",
+							"description": "Name of the project",
+						},
+						"team_name": map[string]interface{}{
+							"type":        "string",
+							"description": "Name of the team",
+						},
+					},
+					Required: []string{"project_name", "team_name"},
+				},
+			},
+			{
+				Name:        "guardrail_team_config_update",
+				Description: "Update rules or roles for an existing team",
+				InputSchema: mcp.ToolInputSchema{
+					Type: "object",
+					Properties: mcp.ToolInputSchemaProperties{
+						"project_name": map[string]interface{}{
+							"type":        "string",
+							"description": "Name of the project",
+						},
+						"team_name": map[string]interface{}{
+							"type":        "string",
+							"description": "Name of the team",
+						},
+						"config": map[string]interface{}{
+							"type":        "object",
+							"description": "New configuration data",
+						},
+					},
+					Required: []string{"project_name", "team_name", "config"},
+				},
+			},
+			{
+				Name:        "guardrail_advisor_list",
+				Description: "List all available AI advisors and their specialties",
+				InputSchema: mcp.ToolInputSchema{
+					Type: "object",
+				},
+			},
+			{
+				Name:        "guardrail_advisor_query",
+				Description: "Ask a specialist AI advisor for guidance on a specific topic",
+				InputSchema: mcp.ToolInputSchema{
+					Type: "object",
+					Properties: mcp.ToolInputSchemaProperties{
+						"advisor_name": map[string]interface{}{
+							"type":        "string",
+							"description": "Name of the specialist advisor",
+						},
+						"query": map[string]interface{}{
+							"type":        "string",
+							"description": "Your question or request",
+						},
+					},
+					Required: []string{"advisor_name", "query"},
+				},
+			},
+			{
+				Name:        "guardrail_team_assign",
+				Description: "Assign a specific team member (AI advisor) to a project",
+				InputSchema: mcp.ToolInputSchema{
+					Type: "object",
+					Properties: mcp.ToolInputSchemaProperties{
+						"project_name": map[string]interface{}{
+							"type":        "string",
+							"description": "Project name",
+						},
+						"advisor_name": map[string]interface{}{
+							"type":        "string",
+							"description": "Advisor to assign",
+						},
+						"role": map[string]interface{}{
+							"type":        "string",
+							"description": "Specific project role",
+						},
+					},
+					Required: []string{"project_name", "advisor_name"},
+				},
+			},
+			{
+				Name:        "guardrail_team_remove",
+				Description: "Remove a team or advisor assignment from a project",
+				InputSchema: mcp.ToolInputSchema{
+					Type: "object",
+					Properties: mcp.ToolInputSchemaProperties{
+						"project_name": map[string]interface{}{
+							"type":        "string",
+							"description": "Project name",
+						},
+						"team_id": map[string]interface{}{
+							"type":        "number",
+							"description": "Team ID to delete (1-12)",
+						},
+						"confirmed": map[string]interface{}{
+							"type":        "boolean",
+							"description": "Set to true to confirm deletion. First call without this to see confirmation prompt.",
+						},
+					},
+				},
+			},
+			{
+				Name:        "guardrail_project_delete",
+				Description: "Delete an entire project and all its teams. Requires confirmation.",
+				InputSchema: mcp.ToolInputSchema{
+					Type: "object",
+					Properties: mcp.ToolInputSchemaProperties{
+						"project_name": map[string]interface{}{
+							"type":        "string",
+							"description": "Name of the project to delete",
+						},
+						"confirmed": map[string]interface{}{
+							"type":        "boolean",
+							"description": "Set to true to confirm deletion. First call without this to see confirmation prompt.",
+						},
+					},
+				},
+			},
+			{
+				Name:        "guardrail_team_health",
+				Description: "Check team_manager.py health status - validates Python backend and file system access",
+				InputSchema: mcp.ToolInputSchema{
+					Type: "object",
+					Properties: mcp.ToolInputSchemaProperties{
+						"project_name": map[string]interface{}{
+							"type":        "string",
+							"description": "Optional: Project name for config directory check",
+						},
+					},
+				},
+			},
+			{
+				Name:        "guardrail_install_skills",
+				Description: "Install or clone guardrails skill configs. Use 'skill' for per-skill install/clone, 'platforms' for full platform install, or 'path' for single-file clone.",
+				InputSchema: mcp.ToolInputSchema{
+					Type: "object",
+					Properties: mcp.ToolInputSchemaProperties{
+						"target_path": map[string]interface{}{
+							"type":        "string",
+							"description": "Target project directory path (default: current directory)",
+						},
+						"platforms": map[string]interface{}{
+							"type":        "string",
+							"description": "Comma-separated list of platforms: claude, cursor, opencode, windsurf, copilot (default: all). Use with action=install.",
+						},
+						"skill": map[string]interface{}{
+							"type":        "string",
+							"description": "Install a single skill by name (e.g. 'guardrails-enforcer', 'commit-validator', 'four-laws'). Use action=install. Run list_skills=true to see all.",
+						},
+						"path": map[string]interface{}{
+							"type":        "string",
+							"description": "Clone a single file by repo path (e.g. '.claude/skills/guardrails-enforcer.json'). Downloads from GitHub raw. Use with action=clone.",
+						},
+						"action": map[string]interface{}{
+							"type":        "string",
+							"description": "Action to perform: 'install' (default), 'clone' (download from GitHub), 'list' (list skills/platforms)",
+							"enum":        []string{"install", "clone", "list"},
+						},
+						"list_skills": map[string]interface{}{
+							"type":        "boolean",
+							"description": "List all available skills and exit",
+						},
+						"list_platforms": map[string]interface{}{
+							"type":        "boolean",
+							"description": "List all available platforms and exit",
+						},
+						"mode": map[string]interface{}{
+							"type":        "string",
+							"description": "Installation mode: 'copy' or 'symlink' (default: copy). Applies to action=install.",
+							"enum":        []string{"copy", "symlink"},
+						},
+						"dry_run": map[string]interface{}{
+							"type":        "boolean",
+							"description": "Preview what would be done without making changes (default: false)",
+						},
+					},
+				},
+			},
+		}
+
+		if s.visionTools != nil {
+			tools = append(tools, s.visionTools.visionToolList()...)
+		}
+
 		return &mcp.ListToolsResult{
-			Tools: []mcp.Tool{
-				{
-					Name:        "guardrail_init_session",
-					Description: "Initialize a validation session for a project",
-					InputSchema: mcp.ToolInputSchema{
-						Type: "object",
-						Properties: mcp.ToolInputSchemaProperties{
-							"project_slug": map[string]interface{}{
-								"type":        "string",
-								"description": "Project identifier",
-							},
-							"agent_type": map[string]interface{}{
-								"type":        "string",
-								"description": "Agent type (claude-code, opencode, cursor)",
-							},
-							"client_version": map[string]interface{}{
-								"type":        "string",
-								"description": "Client version",
-							},
-						},
-					},
-				},
-				{
-					Name:        "guardrail_validate_bash",
-					Description: "Validate bash command against forbidden patterns",
-					InputSchema: mcp.ToolInputSchema{
-						Type: "object",
-						Properties: mcp.ToolInputSchemaProperties{
-							"session_token": map[string]interface{}{
-								"type":        "string",
-								"description": "Session token from init_session",
-							},
-							"command": map[string]interface{}{
-								"type":        "string",
-								"description": "Bash command to validate",
-							},
-							"working_directory": map[string]interface{}{
-								"type":        "string",
-								"description": "Current working directory",
-							},
-						},
-					},
-				},
-				{
-					Name:        "guardrail_validate_file_edit",
-					Description: "Validate file edit operation",
-					InputSchema: mcp.ToolInputSchema{
-						Type: "object",
-						Properties: mcp.ToolInputSchemaProperties{
-							"session_token": map[string]interface{}{
-								"type":        "string",
-								"description": "Session token",
-							},
-							"file_path": map[string]interface{}{
-								"type":        "string",
-								"description": "File path",
-							},
-							"old_string": map[string]interface{}{
-								"type":        "string",
-								"description": "Original string",
-							},
-							"new_string": map[string]interface{}{
-								"type":        "string",
-								"description": "New string",
-							},
-						},
-					},
-				},
-				{
-					Name:        "guardrail_validate_git_operation",
-					Description: "Validate git command against guardrails",
-					InputSchema: mcp.ToolInputSchema{
-						Type: "object",
-						Properties: mcp.ToolInputSchemaProperties{
-							"session_token": map[string]interface{}{
-								"type":        "string",
-								"description": "Session token",
-							},
-							"command": map[string]interface{}{
-								"type":        "string",
-								"description": "Git command (push, commit, merge, rebase, reset)",
-							},
-							"is_force": map[string]interface{}{
-								"type":        "boolean",
-								"description": "Whether this is a force operation",
-							},
-						},
-					},
-				},
-				{
-					Name:        "guardrail_pre_work_check",
-					Description: "Run pre-work checklist from failure registry",
-					InputSchema: mcp.ToolInputSchema{
-						Type: "object",
-						Properties: mcp.ToolInputSchemaProperties{
-							"session_token": map[string]interface{}{
-								"type":        "string",
-								"description": "Session token",
-							},
-							"affected_files": map[string]interface{}{
-								"type":        "array",
-								"description": "Files that will be modified",
-								"items": map[string]interface{}{
-									"type": "string",
-								},
-							},
-						},
-					},
-				},
-				{
-					Name:        "guardrail_get_context",
-					Description: "Get guardrail context for the session's project",
-					InputSchema: mcp.ToolInputSchema{
-						Type: "object",
-						Properties: mcp.ToolInputSchemaProperties{
-							"session_token": map[string]interface{}{
-								"type":        "string",
-								"description": "Session token",
-							},
-						},
-					},
-				},
-				{
-					Name:        "guardrail_validate_game_build",
-					Description: "Validate a game engine project (Godot, Unity, Unreal) by running headless build checks and tests",
-					Name:        "guardrail_validate_scope",
-					Description: "Check if a file path is within authorized scope",
-					InputSchema: mcp.ToolInputSchema{
-						Type: "object",
-						Properties: mcp.ToolInputSchemaProperties{
-							"file_path": map[string]interface{}{
-								"type":        "string",
-								"description": "The file path to validate",
-							},
-							"authorized_scope": map[string]interface{}{
-								"type":        "string",
-								"description": "The authorized scope prefix (e.g., /app/src)",
-							},
-						},
-					},
-				},
-				{
-					Name:        "guardrail_validate_commit",
-					Description: "Validate commit message format compliance (conventional commits)",
-					InputSchema: mcp.ToolInputSchema{
-						Type: "object",
-						Properties: mcp.ToolInputSchemaProperties{
-							"message": map[string]interface{}{
-								"type":        "string",
-								"description": "The commit message to validate",
-							},
-						},
-					},
-				},
-				{
-					Name:        "guardrail_prevent_regression",
-					Description: "Check failure registry for matching patterns to prevent regressions",
-					InputSchema: mcp.ToolInputSchema{
-						Type: "object",
-						Properties: mcp.ToolInputSchemaProperties{
-							"file_paths": map[string]interface{}{
-								"type":        "array",
-								"description": "Array of file paths that will be modified",
-							"items": map[string]interface{}{
-								"type": "string",
-							},
-							},
-							"code_content": map[string]interface{}{
-								"type":        "string",
-								"description": "Code content to check against regression patterns",
-							},
-						},
-					},
-				},
-				{
-					Name:        "guardrail_check_test_prod_separation",
-					Description: "Verify test/production environment isolation",
-					InputSchema: mcp.ToolInputSchema{
-						Type: "object",
-						Properties: mcp.ToolInputSchemaProperties{
-							"file_path": map[string]interface{}{
-								"type":        "string",
-								"description": "The file path to check",
-							},
-							"environment": map[string]interface{}{
-								"type":        "string",
-								"description": "Environment type: test or prod",
-								"enum":        []string{"test", "prod"},
-							},
-						},
-					},
-				},
-				{
-					Name:        "guardrail_validate_push",
-					Description: "Validate git push safety conditions",
-					InputSchema: mcp.ToolInputSchema{
-						Type: "object",
-						Properties: mcp.ToolInputSchemaProperties{
-							"branch": map[string]interface{}{
-								"type":        "string",
-								"description": "The branch being pushed to",
-							},
-							"is_force": map[string]interface{}{
-								"type":        "boolean",
-								"description": "Whether this is a force push",
-							},
-							"has_unpushed_commits": map[string]interface{}{
-								"type":        "boolean",
-								"description": "Whether there are unpushed commits",
-							},
-						},
-					},
-				},
-				{
-					Name:        "guardrail_record_file_read",
-					Description: "Record that a file was read via MCP Read tool",
-					InputSchema: mcp.ToolInputSchema{
-						Type: "object",
-						Properties: mcp.ToolInputSchemaProperties{
-							"session_token": map[string]interface{}{
-								"type":        "string",
-								"description": "Session token",
-							},
-							"project_path": map[string]interface{}{
-								"type":        "string",
-								"description": "Path to the game project root (containing project.godot, etc.)",
-							},
-							"godot_path": map[string]interface{}{
-								"type":        "string",
-								"description": "Path to Godot binary (default: 'godot' from PATH)",
-							},
-							"check_scenes": map[string]interface{}{
-								"type":        "boolean",
-								"description": "Validate .tscn scene files (default: true)",
-							},
-							"check_scripts": map[string]interface{}{
-								"type":        "boolean",
-								"description": "Validate .gd script files (default: true)",
-							},
-							"run_tests": map[string]interface{}{
-								"type":        "boolean",
-								"description": "Run headless test scripts if available (default: true)",
-							},
-						},
-					},
-				},
-				{
-					Name:        "guardrail_detect_language",
-					Description: "Auto-detect the project language from the repository root",
-					InputSchema: mcp.ToolInputSchema{
-						Type: "object",
-						Properties: mcp.ToolInputSchemaProperties{
-							"project_path": map[string]interface{}{
-								"type":        "string",
-								"description": "Path to the project root",
-							},
-						},
-					},
-				},
-				{
-					Name:        "guardrail_get_language_profile",
-					Description: "Get the guardrail profile rules for a specific programming language",
-					InputSchema: mcp.ToolInputSchema{
-						Type: "object",
-						Properties: mcp.ToolInputSchemaProperties{
-							"language": map[string]interface{}{
-								"type":        "string",
-								"description": "Programming language (go, python, typescript, rust, godot, etc.)",
-							},
-						},
-					},
-				},
-				{
-					Name:        "guardrail_list_languages",
-					Description: "List all supported language profiles with detection info",
-					InputSchema: mcp.ToolInputSchema{
-						Type:       "object",
-						Properties: mcp.ToolInputSchemaProperties{},
-					},
-				},
-				{
-					Name:        "guardrail_validate_language_rules",
-					Description: "Run language-specific guardrail checks on file content",
-					InputSchema: mcp.ToolInputSchema{
-						Type: "object",
-						Properties: mcp.ToolInputSchemaProperties{
-							"language": map[string]interface{}{
-								"type":        "string",
-								"description": "Programming language",
-							},
-							"file_path": map[string]interface{}{
-								"type":        "string",
-								"description": "File path being validated",
-							},
-							"content": map[string]interface{}{
-								"type":        "string",
-								"description": "File content to validate",
-								"description": "Session token from init_session",
-							},
-							"file_path": map[string]interface{}{
-								"type":        "string",
-								"description": "Absolute path of the file that was read",
-							},
-						},
-					},
-				},
-				{
-					Name:        "guardrail_get_standard",
-					Description: "Fetch a standards document by name (e.g. GAME_BUILD_VALIDATION, CROSS_CUTTING_2026)",
-					InputSchema: mcp.ToolInputSchema{
-						Type: "object",
-						Properties: mcp.ToolInputSchemaProperties{
-							"name": map[string]interface{}{
-								"type":        "string",
-								"description": "Name of the standards document",
-							},
-						},
-					},
-				},
-				{
-					Name:        "guardrail_get_workflow",
-					Description: "Fetch a workflow document by name",
-					InputSchema: mcp.ToolInputSchema{
-						Type: "object",
-						Properties: mcp.ToolInputSchemaProperties{
-							"name": map[string]interface{}{
-								"type":        "string",
-								"description": "Name of the workflow document",
-							},
-						},
-					},
-				},
-				{
-					Name:        "guardrail_search_docs",
-					Description: "Search all guardrail documentation for a query string",
-					InputSchema: mcp.ToolInputSchema{
-						Type: "object",
-					Properties: mcp.ToolInputSchemaProperties{
-							"query": map[string]interface{}{
-								"type":        "string",
-								"description": "Search query",
-							},
-						},
-					},
-				},
-				{
-					Name:        "guardrail_get_prevention_rules",
-					Description: "Get pattern rules for a file type, or all rules if no glob specified",
-					InputSchema: mcp.ToolInputSchema{
-						Type: "object",
-						Properties: mcp.ToolInputSchemaProperties{
-							"file_glob": map[string]interface{}{
-								"type":        "string",
-								"description": "File glob to filter rules (optional)",
-							},
-						},
-					},
-				},
-				{
-					Name:        "guardrail_check_pattern",
-					Description: "Check code content against pattern rules for violations",
-					InputSchema: mcp.ToolInputSchema{
-						Type: "object",
-						Properties: mcp.ToolInputSchemaProperties{
-							"content": map[string]interface{}{
-								"type":        "string",
-								"description": "Code content to check",
-							},
-							"file_path": map[string]interface{}{
-								"type":        "string",
-								"description": "File path (for glob matching rules)",
-							},
-						},
-					},
-				},
-				{
-					Name:        "guardrail_log_violation",
-					Description: "Log a guardrail violation to the failure registry",
-					InputSchema: mcp.ToolInputSchema{
-						Type: "object",
-					Properties: mcp.ToolInputSchemaProperties{
-							"session_token": map[string]interface{}{
-								"type":        "string",
-								"description": "Session token",
-							},
-							"rule_id": map[string]interface{}{
-								"type":        "string",
-								"description": "Rule ID that was violated",
-							},
-							"severity": map[string]interface{}{
-								"type":        "string",
-								"description": "Severity level (error, warning, info)",
-							},
-							"message": map[string]interface{}{
-								"type":        "string",
-								"description": "Violation message",
-							},
-							"file_path": map[string]interface{}{
-								"type":        "string",
-								"description": "File path where violation occurred (optional)",
-					Name:        "guardrail_record_attempt",
-					Description: "Record a failed task attempt for three strikes tracking",
-					InputSchema: mcp.ToolInputSchema{
-						Type: "object",
-						Properties: mcp.ToolInputSchemaProperties{
-							"session_token": map[string]interface{}{
-								"type":        "string",
-								"description": "Session token from init_session",
-							},
-							"task_id": map[string]interface{}{
-								"type":        "string",
-								"description": "Optional task identifier for task-specific tracking",
-							},
-							"error_message": map[string]interface{}{
-								"type":        "string",
-								"description": "Error message from the failed attempt",
-							},
-							"error_category": map[string]interface{}{
-								"type":        "string",
-								"description": "Category of error: syntax, runtime, logic, timeout, other",
-								"enum":        []string{"syntax", "runtime", "logic", "timeout", "other"},
-							},
-						},
-					},
-				},
-				{
-					Name:        "guardrail_verify_file_read",
-					Description: "Verify if a file has been read in the current session",
-					InputSchema: mcp.ToolInputSchema{
-						Type: "object",
-						Properties: mcp.ToolInputSchemaProperties{
-							"session_token": map[string]interface{}{
-								"type":        "string",
-								"description": "Session token from init_session",
-							},
-							"file_path": map[string]interface{}{
-								"type":        "string",
-								"description": "Absolute path of the file to verify",
-							},
-							"expected_content": map[string]interface{}{
-								"type":        "string",
-								"description": "Optional expected content hash for validation",
-							},
-						},
-					},
-				},
-				{
-					Name:        "guardrail_validate_three_strikes",
-					Description: "Check three strikes status and determine if should halt",
-					InputSchema: mcp.ToolInputSchema{
-						Type: "object",
-						Properties: mcp.ToolInputSchemaProperties{
-							"session_token": map[string]interface{}{
-								"type":        "string",
-								"description": "Session token from init_session",
-							},
-							"task_id": map[string]interface{}{
-								"type":        "string",
-								"description": "Optional task identifier for task-specific tracking",
-							},
-						},
-					},
-				},
-				{
-					Name:        "guardrail_validate_exact_replacement",
-					Description: "Validate that code replacement matches exact specification",
-					InputSchema: mcp.ToolInputSchema{
-						Type: "object",
-						Properties: mcp.ToolInputSchemaProperties{
-							"session_token": map[string]interface{}{
-								"type":        "string",
-								"description": "Session token from init_session",
-							},
-							"file_path": map[string]interface{}{
-								"type":        "string",
-								"description": "File that was modified",
-							},
-							"original_content": map[string]interface{}{
-								"type":        "string",
-								"description": "What the content should be (original expectation)",
-							},
-							"modified_content": map[string]interface{}{
-								"type":        "string",
-								"description": "What the content actually is after modification",
-							},
-							"replacement_type": map[string]interface{}{
-								"type":        "string",
-								"description": "Type of replacement: provided_code, pattern, exact",
-							},
-						},
-					},
-				},
-				{
-					Name:        "guardrail_reset_attempts",
-					Description: "Reset attempt counter for a task (on successful completion)",
-					InputSchema: mcp.ToolInputSchema{
-						Type: "object",
-						Properties: mcp.ToolInputSchemaProperties{
-							"session_token": map[string]interface{}{
-								"type":        "string",
-								"description": "Session token from init_session",
-							},
-							"task_id": map[string]interface{}{
-								"type":        "string",
-								"description": "Optional task identifier for task-specific tracking",
-							},
-						},
-					},
-				},
-				{
-					Name:        "guardrail_check_uncertainty",
-					Description: "Check uncertainty level and provide guidance based on self-assessment and context",
-					InputSchema: mcp.ToolInputSchema{
-						Type: "object",
-						Properties: mcp.ToolInputSchemaProperties{
-							"session_token": map[string]interface{}{
-								"type":        "string",
-								"description": "Session token from init_session",
-							},
-							"current_task": map[string]interface{}{
-								"type":        "string",
-								"description": "Description of the current task being performed",
-							},
-							"self_assessment": map[string]interface{}{
-								"type":        "string",
-								"description": "Your self-assessment of current uncertainty state",
-							},
-							"context_data": map[string]interface{}{
-								"type":        "object",
-								"description": "Optional context data including error counts, duration, etc.",
-							},
-						},
-					},
-				},
-				{
-					Name:        "guardrail_check_halt_conditions",
-					Description: "Check various halt conditions including three strikes and unresolved critical events",
-					InputSchema: mcp.ToolInputSchema{
-						Type: "object",
-						Properties: mcp.ToolInputSchemaProperties{
-							"session_token": map[string]interface{}{
-								"type":        "string",
-								"description": "Session token from init_session",
-							},
-							"context": map[string]interface{}{
-								"type":        "object",
-								"description": "Optional context map for additional halt indicators",
-							},
-						},
-					},
-				},
-				{
-					Name:        "guardrail_record_halt",
-					Description: "Record a halt event for tracking and escalation",
-					InputSchema: mcp.ToolInputSchema{
-						Type: "object",
-						Properties: mcp.ToolInputSchemaProperties{
-							"session_token": map[string]interface{}{
-								"type":        "string",
-								"description": "Session token from init_session",
-							},
-							"halt_type": map[string]interface{}{
-								"type":        "string",
-								"description": "Type of halt condition",
-								"enum":        []string{"code_safety", "scope", "environment", "execution", "security", "uncertainty"},
-							},
-							"description": map[string]interface{}{
-								"type":        "string",
-								"description": "Description of the halt condition",
-							},
-							"severity": map[string]interface{}{
-								"type":        "string",
-								"description": "Severity level",
-								"enum":        []string{"low", "medium", "high", "critical"},
-							},
-							"context": map[string]interface{}{
-								"type":        "object",
-								"description": "Optional context data",
-							},
-						},
-					},
-				},
-				{
-					Name:        "guardrail_acknowledge_halt",
-					Description: "Acknowledge and resolve a halt event",
-					InputSchema: mcp.ToolInputSchema{
-						Type: "object",
-						Properties: mcp.ToolInputSchemaProperties{
-							"session_token": map[string]interface{}{
-								"type":        "string",
-								"description": "Session token from init_session",
-							},
-							"halt_id": map[string]interface{}{
-								"type":        "string",
-								"description": "UUID of the halt event to acknowledge",
-							},
-							"resolution": map[string]interface{}{
-								"type":        "string",
-								"description": "Resolution status",
-								"enum":        []string{"resolved", "escalated", "dismissed"},
-							},
-						},
-					},
-				},
-				{
-					Name:        "guardrail_validate_production_first",
-					Description: "Validate that production code is created before test or infrastructure code",
-					InputSchema: mcp.ToolInputSchema{
-						Type: "object",
-						Properties: mcp.ToolInputSchemaProperties{
-							"session_token": map[string]interface{}{
-								"type":        "string",
-								"description": "Session token from init_session",
-							},
-							"file_path": map[string]interface{}{
-								"type":        "string",
-								"description": "File being edited/created",
-							},
-							"code_type": map[string]interface{}{
-								"type":        "string",
-								"description": "Code type: production, test, infrastructure",
-								"enum":        []string{"production", "test", "infrastructure"},
-							},
-							"dependencies": map[string]interface{}{
-								"type":        "array",
-								"description": "Array of file paths this file depends on",
-								"items": map[string]interface{}{
-									"type": "string",
-								},
-							},
-						},
-					},
-				},
-				{
-					Name:        "guardrail_detect_feature_creep",
-					Description: "Detect feature creep in git diff by analyzing code changes for new features, refactoring, and improvements",
-					InputSchema: mcp.ToolInputSchema{
-						Type: "object",
-						Properties: mcp.ToolInputSchemaProperties{
-							"session_token": map[string]interface{}{
-								"type":        "string",
-								"description": "Session token from init_session",
-							},
-							"file_path": map[string]interface{}{
-								"type":        "string",
-								"description": "File path being analyzed",
-							},
-							"git_diff": map[string]interface{}{
-								"type":        "string",
-								"description": "Git diff output to analyze for feature creep patterns",
-							},
-							"change_description": map[string]interface{}{
-								"type":        "string",
-								"description": "Optional description of what the change is supposed to do",
-							},
-							"is_new_file": map[string]interface{}{
-								"type":        "boolean",
-								"description": "Whether this is a newly created file",
-							},
-						},
-					},
-				},
-				{
-					Name:        "guardrail_verify_fixes_intact",
-					Description: "Verify that previously applied fixes are still intact after code changes",
-					InputSchema: mcp.ToolInputSchema{
-						Type: "object",
-						Properties: mcp.ToolInputSchemaProperties{
-							"session_token": map[string]interface{}{
-								"type":        "string",
-								"description": "Session token from init_session",
-							},
-							"file_path": map[string]interface{}{
-								"type":        "string",
-								"description": "The file path to check for intact fixes",
-							},
-							"modified_content": map[string]interface{}{
-								"type":        "string",
-								"description": "New content of file after changes (optional) - if not provided, will read from file",
-							},
-							"original_content": map[string]interface{}{
-								"type":        "string",
-								"description": "Original content before changes (optional) - used as fallback",
-							},
-						},
-					},
-				},
-				{
-					Name:        "guardrail_team_init",
-					Description: "Initialize team structure for a project",
-					InputSchema: mcp.ToolInputSchema{
-						Type: "object",
-						Properties: mcp.ToolInputSchemaProperties{
-							"project_name": map[string]interface{}{
-								"type":        "string",
-								"description": "Name of the project (alphanumeric, hyphens, underscores only)",
-							},
-						},
-					},
-				},
-				{
-					Name:        "guardrail_team_list",
-					Description: "List all teams and their status for a project",
-					InputSchema: mcp.ToolInputSchema{
-						Type: "object",
-						Properties: mcp.ToolInputSchemaProperties{
-							"project_name": map[string]interface{}{
-								"type":        "string",
-								"description": "Name of the project",
-							},
-							"phase": map[string]interface{}{
-								"type":        "string",
-								"description": "Optional: Filter by phase (Phase 1-5)",
-							},
-						},
-					},
-				},
-				{
-					Name:        "guardrail_team_assign",
-					Description: "Assign a person to a role in a team",
-					InputSchema: mcp.ToolInputSchema{
-						Type: "object",
-						Properties: mcp.ToolInputSchemaProperties{
-							"project_name": map[string]interface{}{
-								"type":        "string",
-								"description": "Name of the project",
-							},
-							"team_id": map[string]interface{}{
-								"type":        "number",
-								"description": "Team ID (1-12)",
-							},
-							"role_name": map[string]interface{}{
-								"type":        "string",
-								"description": "Name of the role to assign",
-							},
-							"person": map[string]interface{}{
-								"type":        "string",
-								"description": "Name of the person to assign",
-							},
-						},
-					},
-				},
-				{
-					Name:        "guardrail_team_unassign",
-					Description: "Remove a person from a role in a team",
-					InputSchema: mcp.ToolInputSchema{
-						Type: "object",
-						Properties: mcp.ToolInputSchemaProperties{
-							"project_name": map[string]interface{}{
-								"type":        "string",
-								"description": "Name of the project",
-							},
-							"team_id": map[string]interface{}{
-								"type":        "number",
-								"description": "Team ID (1-12)",
-							},
-							"role_name": map[string]interface{}{
-								"type":        "string",
-								"description": "Name of the role to unassign",
-							},
-						},
-					},
-				},
-				{
-					Name:        "guardrail_team_start",
-					Description: "Start a team (mark as active). Optionally override phase gate checks with admin privileges.",
-					InputSchema: mcp.ToolInputSchema{
-						Type: "object",
-						Properties: mcp.ToolInputSchemaProperties{
-							"project_name": map[string]interface{}{
-								"type":        "string",
-								"description": "Name of the project",
-							},
-							"team_id": map[string]interface{}{
-								"type":        "number",
-								"description": "Team ID to start (1-12)",
-							},
-							"override": map[string]interface{}{
-								"type":        "boolean",
-								"description": "Optional: Override phase gate check (requires admin privileges)",
-							},
-							"reason": map[string]interface{}{
-								"type":        "string",
-								"description": "Required when override is true: Reason for bypassing phase gate",
-							},
-						},
-					},
-				},
-				{
-					Name:        "guardrail_team_status",
-					Description: "Get phase or project status",
-					InputSchema: mcp.ToolInputSchema{
-						Type: "object",
-						Properties: mcp.ToolInputSchemaProperties{
-							"project_name": map[string]interface{}{
-								"type":        "string",
-								"description": "Name of the project",
-							},
-							"phase": map[string]interface{}{
-								"type":        "string",
-								"description": "Optional: Specific phase to check (Phase 1-5)",
-							},
-						},
-					},
-				},
-				{
-					Name:        "guardrail_phase_gate_check",
-					Description: "Check if phase gate requirements are met",
-					InputSchema: mcp.ToolInputSchema{
-						Type: "object",
-						Properties: mcp.ToolInputSchemaProperties{
-							"project_name": map[string]interface{}{
-								"type":        "string",
-								"description": "Name of the project",
-							},
-							"from_phase": map[string]interface{}{
-								"type":        "number",
-								"description": "Source phase number (1-4)",
-							},
-							"to_phase": map[string]interface{}{
-								"type":        "number",
-								"description": "Target phase number (2-5)",
-							},
-						},
-					},
-				},
-				{
-					Name:        "guardrail_agent_team_map",
-					Description: "Get the team assignment for an agent type",
-					InputSchema: mcp.ToolInputSchema{
-						Type: "object",
-						Properties: mcp.ToolInputSchemaProperties{
-							"agent_type": map[string]interface{}{
-								"type":        "string",
-								"description": "Type of agent (planner, architect, infrastructure, platform, backend, frontend, security, qa, sre, ops)",
-							},
-						},
-					},
-				},
-				{
-					Name:        "guardrail_team_size_validate",
-					Description: "Validate team sizes meet 4-6 member requirement",
-					InputSchema: mcp.ToolInputSchema{
-						Type: "object",
-						Properties: mcp.ToolInputSchemaProperties{
-							"project_name": map[string]interface{}{
-								"type":        "string",
-								"description": "Name of the project",
-							},
-							"team_id": map[string]interface{}{
-								"type":        "number",
-								"description": "Optional: Specific team ID to validate",
-							},
-						},
-					},
-				},
-		{
-			Name:        "guardrail_team_delete",
-			Description: "Delete a specific team from a project. Requires confirmation.",
-			InputSchema: mcp.ToolInputSchema{
-				Type: "object",
-				Properties: mcp.ToolInputSchemaProperties{
-					"project_name": map[string]interface{}{
-						"type":        "string",
-						"description": "Name of the project",
-					},
-					"team_id": map[string]interface{}{
-						"type":        "number",
-						"description": "Team ID to delete (1-12)",
-					},
-					"confirmed": map[string]interface{}{
-						"type":        "boolean",
-						"description": "Set to true to confirm deletion. First call without this to see confirmation prompt.",
-					},
-				},
-			},
-		},
-		{
-			Name:        "guardrail_project_delete",
-			Description: "Delete an entire project and all its teams. Requires confirmation.",
-			InputSchema: mcp.ToolInputSchema{
-				Type: "object",
-				Properties: mcp.ToolInputSchemaProperties{
-					"project_name": map[string]interface{}{
-						"type":        "string",
-						"description": "Name of the project to delete",
-					},
-					"confirmed": map[string]interface{}{
-						"type":        "boolean",
-						"description": "Set to true to confirm deletion. First call without this to see confirmation prompt.",
-					},
-				},
-			},
-		},
-		{
-			Name:        "guardrail_team_health",
-			Description: "Check team_manager.py health status - validates Python backend and file system access",
-			InputSchema: mcp.ToolInputSchema{
-				Type: "object",
-				Properties: mcp.ToolInputSchemaProperties{
-					"project_name": map[string]interface{}{
-						"type":        "string",
-						"description": "Optional: Project name for config directory check",
-					},
-				},
-			},
-		},
-		{
-			Name:        "guardrail_install_skills",
-			Description: "Install or clone guardrails skill configs. Use 'skill' for per-skill install/clone, 'platforms' for full platform install, or 'path' for single-file clone.",
-			InputSchema: mcp.ToolInputSchema{
-				Type: "object",
-				Properties: mcp.ToolInputSchemaProperties{
-					"target_path": map[string]interface{}{
-						"type":        "string",
-						"description": "Target project directory path (default: current directory)",
-					},
-					"platforms": map[string]interface{}{
-						"type":        "string",
-						"description": "Comma-separated list of platforms: claude, cursor, opencode, windsurf, copilot (default: all). Use with action=install.",
-					},
-					"skill": map[string]interface{}{
-						"type":        "string",
-						"description": "Install a single skill by name (e.g. 'guardrails-enforcer', 'commit-validator', 'four-laws'). Use action=install. Run list_skills=true to see all.",
-					},
-					"path": map[string]interface{}{
-						"type":        "string",
-						"description": "Clone a single file by repo path (e.g. '.claude/skills/guardrails-enforcer.json'). Downloads from GitHub raw. Use with action=clone.",
-					},
-					"action": map[string]interface{}{
-						"type":        "string",
-						"description": "Action to perform: 'install' (default), 'clone' (download from GitHub), 'list' (list skills/platforms)",
-						"enum":        []string{"install", "clone", "list"},
-					},
-					"list_skills": map[string]interface{}{
-						"type":        "boolean",
-						"description": "List all available skills and exit",
-					},
-					"list_platforms": map[string]interface{}{
-						"type":        "boolean",
-						"description": "List all available platforms and exit",
-					},
-					"mode": map[string]interface{}{
-						"type":        "string",
-						"description": "Installation mode: 'copy' or 'symlink' (default: copy). Applies to action=install.",
-						"enum":        []string{"copy", "symlink"},
-					},
-					"dry_run": map[string]interface{}{
-						"type":        "boolean",
-						"description": "Preview what would be done without making changes (default: false)",
-					},
-				},
-			},
-		},
-		},
-	}, nil
-})
+			Tools: tools,
+		}, nil
+	})
 
 	// Handle tool calls
-	s.mcpServer.HandleCallTool(s.handleToolCall)
+	s.mcpServer.HandleCallTool(func(ctx context.Context, name string, arguments map[string]interface{}) (*mcp.CallToolResult, error) {
+		// Try vision tools first if enabled
+		if s.visionTools != nil {
+			result, err := s.visionTools.dispatch(ctx, name, arguments)
+			if err == nil {
+				return result, nil
+			}
+		}
+		return s.handleToolCall(ctx, name, arguments)
+	})
 
 	// Handle resource list requests
 	s.mcpServer.HandleListResources(func(ctx context.Context, cursor *string) (*mcp.ListResourcesResult, error) {
 		return &mcp.ListResourcesResult{
 			Resources: []mcp.Resource{
 				{
-					Uri:         "guardrail://quick-reference",
-					Name:        "Quick Reference",
-					Description: "Quick reference card for guardrails",
-					MimeType:    "application/json",
+					URI:  "guardrail://config",
+					Name: "Guardrail Configuration",
 				},
 				{
-					Uri:         "guardrail://rules/active",
-					Name:        "Active Prevention Rules",
-					Description: "Currently active prevention rules",
-					MimeType:    "application/json",
-				},
-				{
-					Uri:         "guardrail://docs/agent-guardrails",
-					Name:        "Agent Guardrails",
-					Description: "Core safety protocols and guardrails",
-					MimeType:    "text/markdown",
-				},
-				{
-					Uri:         "guardrail://docs/four-laws",
-					Name:        "Four Laws of Agent Safety",
-					Description: "The Four Laws of Agent Safety (canonical)",
-					MimeType:    "text/markdown",
-				},
-				{
-					Uri:         "guardrail://docs/halt-conditions",
-					Name:        "Halt Conditions",
-					Description: "When to stop and ask for help",
-					MimeType:    "text/markdown",
-				},
-				{
-					Uri:         "guardrail://docs/workflows",
-					Name:        "Workflow Documentation",
-					Description: "All workflow documentation index",
-					MimeType:    "text/markdown",
-				},
-				{
-					Uri:         "guardrail://docs/standards",
-					Name:        "Standards Documentation",
-					Description: "All standards documentation index",
-					MimeType:    "text/markdown",
-				},
-				{
-					Uri:         "guardrail://docs/pre-work-checklist",
-					Name:        "Pre-Work Checklist",
-					Description: "Mandatory pre-work regression checklist",
-					MimeType:    "text/markdown",
+					URI:  "guardrail://stats",
+					Name: "Guardrail Usage Stats",
 				},
 			},
 		}, nil
 	})
 
 	// Handle resource read requests
-	s.mcpServer.HandleReadResource(s.handleReadResource)
+	s.mcpServer.HandleReadResource(func(ctx context.Context, uri string) (*mcp.ReadResourceResult, error) {
+		if uri == "guardrail://config" {
+			configJSON, _ := json.MarshalIndent(s.config, "", "  ")
+			return &mcp.ReadResourceResult{
+				Contents: []mcp.ResourceContent{
+					{
+						URI:      uri,
+						MimeType: "application/json",
+						Text:     string(configJSON),
+					},
+				},
+			}, nil
+		}
+		return nil, fmt.Errorf("resource not found: %s", uri)
+	})
 }
 
-// handleToolCall handles incoming tool calls
-func (s *MCPServer) handleToolCall(ctx context.Context, name string, arguments map[string]interface{}) (*mcp.CallToolResult, error) {
+func (s *MCPServer) handleToolCall(ctx context.Context, name string, args map[string]interface{}) (*mcp.CallToolResult, error) {
+	slog.Info("Tool call received", "name", name, "args", args)
+
 	switch name {
 	case "guardrail_init_session":
-		return s.handleInitSession(ctx, arguments)
+		return s.handleInitSession(ctx, args)
 	case "guardrail_validate_bash":
-		return s.handleValidateBash(ctx, arguments)
+		return s.handleValidateBash(ctx, args)
 	case "guardrail_validate_file_edit":
-		return s.handleValidateFileEdit(ctx, arguments)
+		return s.handleValidateFileEdit(ctx, args)
 	case "guardrail_validate_git_operation":
-		return s.handleValidateGit(ctx, arguments)
+		return s.handleValidateGitOperation(ctx, args)
 	case "guardrail_pre_work_check":
-		return s.handlePreWorkCheck(ctx, arguments)
+		return s.handlePreWorkCheck(ctx, args)
 	case "guardrail_get_context":
-		return s.handleGetContext(ctx, arguments)
-	case "guardrail_validate_game_build":
-		return s.handleValidateGameBuild(ctx, arguments)
-	case "guardrail_detect_language":
-		return s.handleDetectLanguage(ctx, arguments)
-	case "guardrail_get_language_profile":
-		return s.handleGetLanguageProfile(ctx, arguments)
-	case "guardrail_list_languages":
-		return s.handleListLanguages(ctx, arguments)
-	case "guardrail_validate_language_rules":
-		return s.handleValidateLanguageRules(ctx, arguments)
-	case "guardrail_get_standard":
-		return s.handleGetStandard(ctx, arguments)
-	case "guardrail_get_workflow":
-		return s.handleGetWorkflow(ctx, arguments)
-	case "guardrail_search_docs":
-		return s.handleSearchDocs(ctx, arguments)
-	case "guardrail_get_prevention_rules":
-		return s.handleGetPreventionRules(ctx, arguments)
-	case "guardrail_check_pattern":
-		return s.handleCheckPattern(ctx, arguments)
-	case "guardrail_log_violation":
-		return s.handleLogViolation(ctx, arguments)
+		return s.handleGetContext(ctx, args)
 	case "guardrail_validate_scope":
-		return s.handleValidateScope(ctx, arguments)
+		return s.handleValidateScope(ctx, args)
 	case "guardrail_validate_commit":
-		return s.handleValidateCommit(ctx, arguments)
+		return s.handleValidateCommit(ctx, args)
 	case "guardrail_prevent_regression":
-		return s.handlePreventRegression(ctx, arguments)
+		return s.handlePreventRegression(ctx, args)
 	case "guardrail_check_test_prod_separation":
-		return s.handleCheckTestProdSeparation(ctx, arguments)
+		return s.handleCheckTestProdSeparation(ctx, args)
 	case "guardrail_validate_push":
-		return s.handleValidatePush(ctx, arguments)
+		return s.handleValidatePush(ctx, args)
 	case "guardrail_record_file_read":
-		return s.handleRecordFileRead(ctx, arguments)
-	case "guardrail_verify_file_read":
-		return s.handleVerifyFileRead(ctx, arguments)
+		return s.handleRecordFileRead(ctx, args)
 	case "guardrail_record_attempt":
-		return s.handleRecordAttempt(ctx, arguments)
+		return s.handleRecordAttempt(ctx, args)
+	case "guardrail_verify_file_read":
+		return s.handleVerifyFileRead(ctx, args)
 	case "guardrail_validate_three_strikes":
-		return s.handleValidateThreeStrikes(ctx, arguments)
+		return s.handleValidateThreeStrikes(ctx, args)
 	case "guardrail_validate_exact_replacement":
-		return s.handleValidateExactReplacement(ctx, arguments)
+		return s.handleValidateExactReplacement(ctx, args)
 	case "guardrail_reset_attempts":
-		return s.handleResetAttempts(ctx, arguments)
+		return s.handleResetAttempts(ctx, args)
 	case "guardrail_check_uncertainty":
-		return s.handleCheckUncertainty(ctx, arguments)
+		return s.handleCheckUncertainty(ctx, args)
 	case "guardrail_check_halt_conditions":
-		return s.handleCheckHaltConditions(ctx, arguments)
+		return s.handleCheckHaltConditions(ctx, args)
 	case "guardrail_record_halt":
-		return s.handleRecordHalt(ctx, arguments)
+		return s.handleRecordHalt(ctx, args)
 	case "guardrail_acknowledge_halt":
-		return s.handleAcknowledgeHalt(ctx, arguments)
+		return s.handleAcknowledgeHalt(ctx, args)
 	case "guardrail_validate_production_first":
-		return s.handleValidateProductionFirst(ctx, arguments)
+		return s.handleValidateProductionFirst(ctx, args)
 	case "guardrail_detect_feature_creep":
-		return s.handleDetectFeatureCreep(ctx, arguments)
+		return s.handleDetectFeatureCreep(ctx, args)
 	case "guardrail_verify_fixes_intact":
-		return s.handleVerifyFixesIntact(ctx, arguments)
+		return s.handleVerifyFixesIntact(ctx, args)
+	case "guardrail_team_init":
+		return s.handleTeamInit(ctx, args)
+	case "guardrail_team_list":
+		return s.handleTeamList(ctx, args)
+	case "guardrail_team_config_get":
+		return s.handleTeamConfigGet(ctx, args)
+	case "guardrail_team_config_update":
+		return s.handleTeamConfigUpdate(ctx, args)
+	case "guardrail_advisor_list":
+		return s.handleAdvisorList(ctx, args)
+	case "guardrail_advisor_query":
+		return s.handleAdvisorQuery(ctx, args)
+	case "guardrail_team_assign":
+		return s.handleTeamAssign(ctx, args)
+	case "guardrail_team_remove":
+		return s.handleTeamRemove(ctx, args)
+	case "guardrail_project_delete":
+		return s.handleProjectDelete(ctx, args)
+	case "guardrail_team_health":
+		return s.handleTeamHealth(ctx, args)
 	case "guardrail_install_skills":
-		return s.handleInstallSkills(ctx, arguments)
-	// Team Layout Management Tools - TODO: implement handlers
-	case "guardrail_team_init", "guardrail_team_list", "guardrail_team_assign",
-		"guardrail_team_unassign", "guardrail_team_start", "guardrail_team_status",
-		"guardrail_phase_gate_check", "guardrail_agent_team_map", "guardrail_team_size_validate",
-		"guardrail_team_delete", "guardrail_project_delete", "guardrail_team_health":
-		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: `{"error":"Team management tools not yet implemented"}`}},
-			IsError: true,
-		}, nil
+		return s.handleInstallSkills(ctx, args)
 	default:
-		return &mcp.CallToolResult{
-			Content: []interface{}{
-				mcp.TextContent{
-					Type: "text",
-					Text: fmt.Sprintf("Unknown tool: %s", name),
-				},
-			},
-			IsError: true,
-		}, nil
+		return nil, fmt.Errorf("unknown tool: %s", name)
 	}
 }
 
-// handleReadResource handles resource read requests
-func (s *MCPServer) handleReadResource(ctx context.Context, uri string) (*mcp.ReadResourceResult, error) {
-	switch uri {
-	case "guardrail://quick-reference":
-		// Use compact JSON instead of indented for better performance
-		// Pre-allocated response to avoid map allocations
-		contentJSON := []byte(`{"forbidden_commands":["rm -rf /","git push --force","git reset --hard"],"required_checks":["pre_work_check","validate_file_edit"]}`)
-		return &mcp.ReadResourceResult{
-			Contents: []interface{}{
-				mcp.TextResourceContents{
-					Uri:      uri,
-					MimeType: "application/json",
-					Text:     string(contentJSON),
-				},
-			},
-		}, nil
-
-	case "guardrail://rules/active":
-		ruleStore := database.NewRuleStore(s.db)
-		rules, err := ruleStore.GetActiveRules(ctx)
-		if err != nil {
-			return nil, err
-		}
-		// Use compact JSON marshaling for better performance
-		rulesJSON, _ := json.Marshal(rules)
-		return &mcp.ReadResourceResult{
-			Contents: []interface{}{
-				mcp.TextResourceContents{
-					Uri:      uri,
-					MimeType: "application/json",
-					Text:     string(rulesJSON),
-				},
-			},
-		}, nil
-
-	case "guardrail://docs/agent-guardrails":
-		return s.readAgentGuardrailsResource(ctx, uri)
-
-	case "guardrail://docs/workflows":
-		return s.readWorkflowsResource(ctx, uri)
-
-	case "guardrail://docs/standards":
-		return s.readStandardsResource(ctx, uri)
-
-	case "guardrail://principles/four-laws", "guardrail://docs/four-laws":
-		return s.readFourLawsResource(ctx, uri)
-
-	case "guardrail://halt-conditions", "guardrail://docs/halt-conditions":
-		return s.readHaltConditionsResource(ctx, uri)
-
-	case "guardrail://checklist/pre-work", "guardrail://docs/pre-work-checklist":
-		return s.readPreWorkChecklistResource(ctx, uri)
-
-	default:
-		return nil, fmt.Errorf("unknown resource: %s", uri)
-	}
-}
-
-// Start starts the MCP server
-func (s *MCPServer) Start(addr string) error {
-	s.echo = echo.New()
-	s.echo.HideBanner = true
-	s.echo.HidePort = true
-
-	// Recovery from panics
-	s.echo.Use(middleware.Recover())
-
-	// Security headers middleware
-	s.echo.Use(s.securityHeadersMiddleware())
-
-	// Body limit - prevent DoS via large payloads (skip for SSE which has no body)
-	s.echo.Use(middleware.BodyLimit("1M"))
-
-	// SSE endpoint - no timeout, long-lived connection
-	s.echo.GET("/mcp/v1/sse", s.handleSSE)
-
-	// Message endpoint - with timeout for request processing
-	// Note: Timeout applied at handler level to allow SSE to stay open
-	s.echo.POST("/mcp/v1/message", s.handleMessage, middleware.TimeoutWithConfig(middleware.TimeoutConfig{
-		Timeout: s.cfg.RequestTimeout,
-	}))
-
-	// Start session cleanup goroutine with panic recovery
-	go s.runSessionCleanup()
-
-	slog.Info("Starting MCP SSE server", "addr", addr)
-	return s.echo.Start(addr)
-}
-
-// runSessionCleanup runs the session cleanup loop with panic recovery
-func (s *MCPServer) runSessionCleanup() {
-	defer func() {
-		if r := recover(); r != nil {
-			slog.Error("Session cleanup goroutine panicked, restarting", "panic", r)
-			// Restart the cleanup goroutine after a delay
-			time.Sleep(5 * time.Second)
-			go s.runSessionCleanup()
-		}
-	}()
-	s.sessionCleanup()
-}
-
-// securityHeadersMiddleware adds security headers to all responses
-func (s *MCPServer) securityHeadersMiddleware() echo.MiddlewareFunc {
-	return func(next echo.HandlerFunc) echo.HandlerFunc {
-		return func(c echo.Context) error {
-			c.Response().Header().Set("X-Content-Type-Options", "nosniff")
-			c.Response().Header().Set("X-Frame-Options", "DENY")
-			c.Response().Header().Set("X-XSS-Protection", "1; mode=block")
-			c.Response().Header().Set("Referrer-Policy", "strict-origin-when-cross-origin")
-			return next(c)
-		}
-	}
-}
-
-// Shutdown gracefully shuts down the server
-func (s *MCPServer) Shutdown(ctx context.Context) error {
-	if s.echo != nil {
-		return s.echo.Shutdown(ctx)
-	}
-	return nil
-}
-
-// handleSSE handles SSE connections with optimized string building
-func (s *MCPServer) handleSSE(c echo.Context) error {
-	// Validate origin for CORS - only allow specific origins
-	origin := c.Request().Header.Get("Origin")
-	originAllowed := isOriginAllowed(origin, s.cfg.ProductionMode)
-
-	// Set SSE headers
-	c.Response().Header().Set("Content-Type", "text/event-stream")
-	c.Response().Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
-	c.Response().Header().Set("Connection", "keep-alive")
-	c.Response().Header().Set("X-Accel-Buffering", "no") // Disable Nginx buffering
-
-	// Only set CORS headers if origin is allowed
-	if originAllowed && origin != "" {
-		c.Response().Header().Set("Access-Control-Allow-Origin", origin)
-		c.Response().Header().Set("Access-Control-Allow-Methods", "GET")
-		c.Response().Header().Set("Vary", "Origin")
-	}
-
-	c.Response().WriteHeader(http.StatusOK)
-
-	// Generate cryptographically secure session ID
-	sessionID := generateSessionID()
-
-	now := time.Now()
-	session := &Session{
-		ID:            sessionID,
-		CreatedAt:     now,
-		LastActivity:  now,
-		ResponseQueue: make(chan []byte, 100),
-		Closed:        make(chan struct{}),
-	}
-
-	// Store session in map (sessions are created during SSE connection).
-	s.sessionsMu.Lock()
-	s.sessions[sessionID] = session
-	s.sessionsMu.Unlock()
-
-	defer func() {
-		s.sessionsMu.Lock()
-		if current, ok := s.sessions[sessionID]; ok && current == session {
-			delete(s.sessions, sessionID)
-			close(session.Closed)
-		}
-		s.sessionsMu.Unlock()
-	}()
-
-	// Build endpoint URL using strings.Builder for efficiency
-	var sb strings.Builder
-	// Pre-allocate capacity: scheme + "://" + host + path + session_id (~100 chars)
-	sb.Grow(100)
-	if c.Request().TLS != nil {
-		sb.WriteString("https://")
+// buildToolResult is a helper to centralize formatting of MCP tool returns
+func buildToolResult(data interface{}, isJson bool) (*mcp.CallToolResult, error) {
+	var text string
+	if isJson {
+		j, _ := json.MarshalIndent(data, "", "  ")
+		text = string(j)
 	} else {
-		sb.WriteString("http://")
-	}
-	sb.WriteString(c.Request().Host)
-	sb.WriteString("/mcp/v1/message?session_id=")
-	sb.WriteString(sessionID)
-	messageEndpoint := sb.String()
-
-	slog.Debug("SSE connection established", "session_id", sessionID)
-
-	// Send endpoint event using pre-allocated buffers
-	// Format: event: endpoint\ndata: <absolute_url>\n\n
-	if err := writeSSEEvent(c.Response(), sseEndpointPrefix, messageEndpoint); err != nil {
-		slog.Warn("SSE endpoint write failed", "session_id", sessionID, "error", err)
-		return nil
-	}
-	c.Response().Flush()
-
-	// Track connection state
-	clientGone := c.Request().Context().Done()
-
-	// Send initial keep-alive comment. Use SSE comments instead of a custom
-	// `event: ping` payload because some SDKs treat all event data as JSON-RPC
-	// and fail on non-message events.
-	if err := writeSSEComment(c.Response(), ssePingComment); err != nil {
-		slog.Warn("SSE initial keep-alive write failed", "session_id", sessionID, "error", err)
-		return nil
-	}
-	c.Response().Flush()
-
-	// Keep connection open with periodic pings (every 15 seconds)
-	// Shorter interval prevents idle TCP drops by proxies and NATs
-	ticker := time.NewTicker(15 * time.Second)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case payload := <-session.ResponseQueue:
-			if err := writeSSEEvent(c.Response(), sseMessagePrefix, string(payload)); err != nil {
-				slog.Debug("SSE response write failed, client disconnected", "session_id", sessionID, "error", err)
-				return nil
-			}
-			c.Response().Flush()
-		case <-ticker.C:
-			if err := writeSSEComment(c.Response(), ssePingComment); err != nil {
-				slog.Debug("SSE write failed, client disconnected", "session_id", sessionID, "error", err)
-				return nil
-			}
-			c.Response().Flush()
-		case <-clientGone:
-			slog.Debug("SSE client disconnected", "session_id", sessionID)
-			return nil
-		}
-	}
-}
-
-// isOriginAllowed checks if the origin is in the allowed list
-func isOriginAllowed(origin string, isProduction bool) bool {
-	allowedOrigins := []string{"http://localhost:*", "https://localhost:*"}
-	if isProduction {
-		allowedOrigins = []string{"http://localhost:8081", "https://localhost:8081"}
+		text = fmt.Sprintf("%v", data)
 	}
 
-	for _, allowed := range allowedOrigins {
-		if strings.HasSuffix(allowed, ":*") {
-			prefix := strings.TrimSuffix(allowed, ":*")
-			if strings.HasPrefix(origin, prefix) {
-				return true
-			}
-		} else if origin == allowed || allowed == "*" {
-			return true
-		}
-	}
-	return false
-}
-
-// writeSSEEvent writes an SSE event efficiently
-func writeSSEEvent(w http.ResponseWriter, prefix []byte, data string) error {
-	if _, err := w.Write(prefix); err != nil {
-		return err
-	}
-	if _, err := w.Write([]byte(data)); err != nil {
-		return err
-	}
-	_, err := w.Write(sseDoubleNewline)
-	return err
-}
-
-// writeSSEComment writes an SSE comment line for keep-alive without emitting
-// an event payload.
-func writeSSEComment(w http.ResponseWriter, comment []byte) error {
-	_, err := w.Write(comment)
-	return err
-}
-
-// handleMessage handles incoming JSON-RPC messages per MCP specification
-func (s *MCPServer) handleMessage(c echo.Context) error {
-	// Extract session ID from query parameter per MCP spec
-	sessionID := c.QueryParam("session_id")
-	if sessionID == "" {
-		return c.JSON(http.StatusBadRequest, server.JSONRPCResponse{
-			JSONRPC: "2.0",
-			ID:      nil,
-			Error: &struct {
-				Code    int    `json:"code"`
-				Message string `json:"message"`
-			}{
-				Code:    -32000,
-				Message: "Missing session_id parameter: session_id query parameter is required",
+	return &mcp.CallToolResult{
+		Content: []mcp.CallToolContent{
+			{
+				Type: "text",
+				Text: text,
 			},
-		})
-	}
-
-	// Validate session exists (sessions are created during SSE connection)
-	s.sessionsMu.RLock()
-	session, sessionExists := s.sessions[sessionID]
-	s.sessionsMu.RUnlock()
-	_ = session // May be used later for session-specific processing
-
-	if !sessionExists {
-		// Session may have expired or invalid session ID
-		slog.Warn("Message received for invalid/expired session", "session_id", sessionID)
-		// Still process the request as session validation is handled by individual tools
-	}
-
-	var request server.JSONRPCRequest
-	if err := c.Bind(&request); err != nil {
-		return c.JSON(http.StatusBadRequest, server.JSONRPCResponse{
-			JSONRPC: "2.0",
-			ID:      nil,
-			Error: &struct {
-				Code    int    `json:"code"`
-				Message string `json:"message"`
-			}{
-				Code:    -32700,
-				Message: "Parse error: " + err.Error(),
-			},
-		})
-	}
-
-	// Validate JSON-RPC version
-	if request.JSONRPC != "2.0" {
-		return c.JSON(http.StatusBadRequest, server.JSONRPCResponse{
-			JSONRPC: "2.0",
-			ID:      request.ID,
-			Error: &struct {
-				Code    int    `json:"code"`
-				Message string `json:"message"`
-			}{
-				Code:    -32600,
-				Message: "Invalid Request: jsonrpc field must be '2.0'",
-			},
-		})
-	}
-
-	// Create context with session ID for tool handlers using typed key
-	ctx := context.WithValue(c.Request().Context(), ctxKeySessionID, sessionID)
-
-	// Process request through MCP server
-	response := s.mcpServer.Request(ctx, request)
-
-	// Update session last activity if session exists
-	if sessionExists {
-		s.sessionsMu.Lock()
-		if sess, ok := s.sessions[sessionID]; ok {
-			sess.LastActivity = time.Now()
-			session = sess
-		}
-		s.sessionsMu.Unlock()
-	}
-
-	// Re-check session liveness after processing; the SSE connection may have
-	// dropped while the request was being handled.
-	s.sessionsMu.RLock()
-	currentSession, currentExists := s.sessions[sessionID]
-	s.sessionsMu.RUnlock()
-
-	// For SSE sessions, queue JSON-RPC responses onto the SSE stream as
-	// `event: message` payloads.
-	if currentExists && currentSession != nil && currentSession.ResponseQueue != nil {
-		// Notifications (no ID) do not require a response payload.
-		if request.ID == nil {
-			return c.NoContent(http.StatusAccepted)
-		}
-
-		responseJSON, err := json.Marshal(response)
-		if err != nil {
-			slog.Error("Failed to marshal JSON-RPC response", "session_id", sessionID, "error", err)
-			return c.JSON(http.StatusInternalServerError, server.JSONRPCResponse{
-				JSONRPC: "2.0",
-				ID:      request.ID,
-				Error: &struct {
-					Code    int    `json:"code"`
-					Message string `json:"message"`
-				}{
-					Code:    -32603,
-					Message: "Internal error: failed to encode response",
-				},
-			})
-		}
-
-		select {
-		case currentSession.ResponseQueue <- responseJSON:
-			return c.NoContent(http.StatusAccepted)
-		case <-currentSession.Closed:
-			// SSE stream closed during request; fall through to direct HTTP response
-			slog.Warn("SSE session closed during request, falling back to HTTP response", "session_id", sessionID)
-		case <-time.After(1 * time.Second):
-			// Queue full; fall through to direct HTTP response
-			slog.Warn("SSE response queue full, falling back to HTTP response", "session_id", sessionID)
-		}
-	}
-
-	return c.JSON(http.StatusOK, response)
+		},
+	}, nil
 }
-
-// Tool handlers
 
 func (s *MCPServer) handleInitSession(ctx context.Context, args map[string]interface{}) (*mcp.CallToolResult, error) {
-	projectSlug, _ := args["project_slug"].(string)
-	agentType, _ := args["agent_type"].(string)
-	clientVersion, _ := args["client_version"].(string)
+	userID, _ := args["user_id"].(string)
+	env, _ := args["environment"].(string)
 
-	if projectSlug == "" {
-		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: "project_slug is required"}},
-			IsError: true,
-		}, nil
+	token := make([]byte, 8)
+	rand.Read(token)
+	sessionID := hex.EncodeToString(token)
+
+	result := models.SessionInfo{
+		SessionID:   sessionID,
+		UserID:      userID,
+		Environment: env,
+		StartTime:   time.Now(),
 	}
 
-	// Create session
-	sessionID := generateSessionID()
-	session := &Session{
-		ID:            sessionID,
-		ProjectSlug:   projectSlug,
-		AgentType:     agentType,
-		ClientVersion: clientVersion,
-		CreatedAt:     time.Now(),
-		LastActivity:  time.Now(),
-	}
-
-	s.sessionsMu.Lock()
-	s.sessions[sessionID] = session
-	s.sessionsMu.Unlock()
-
-	// Record metrics
-	metrics.IncrementActiveSessions()
-
-	// Audit log
-	s.auditLogger.LogSession(ctx, audit.EventSessionCreated, sessionID, projectSlug)
-
-	// Get project context with timeout
-	projCtx, projCancel := context.WithTimeout(ctx, 5*time.Second)
-	defer projCancel()
-
-	projStore := database.NewProjectStore(s.db)
-	proj, projErr := projStore.GetBySlug(projCtx, projectSlug)
-	if projErr != nil {
-		slog.Warn("Failed to get project context", "project_slug", projectSlug, "error", projErr)
-	}
-
-	contextStr := ""
-	if proj != nil {
-		contextStr = proj.GuardrailContext
-	}
-
-	// Get active rules count with timeout
-	rulesCtx, rulesCancel := context.WithTimeout(ctx, 5*time.Second)
-	defer rulesCancel()
-
-	ruleStore := database.NewRuleStore(s.db)
-	rules, rulesErr := ruleStore.GetActiveRules(rulesCtx)
-	if rulesErr != nil {
-		slog.Error("Failed to get active rules", "error", rulesErr)
-		rules = []models.PreventionRule{}
-	}
-
-	// Use strings.Builder for efficient JSON string construction
-	// This avoids reflection overhead of json.Marshal for simple structures
-	var sb strings.Builder
-	sb.Grow(256) // Pre-allocate estimated size
-	sb.WriteString(`{"session_token":"`)
-	sb.WriteString(sessionID)
-	sb.WriteString(`","expires_at":"`)
-	sb.WriteString(time.Now().Add(s.cfg.JWTExpiry).Format(time.RFC3339))
-	sb.WriteString(`","project_context":"`)
-	// Escape the context string for JSON
-	jsonEscape(&sb, contextStr)
-	sb.WriteString(`","active_rules_count":`)
-	sb.WriteString(strconv.Itoa(len(rules)))
-	sb.WriteString(`,"capabilities":["bash_validation","git_validation","edit_validation"]}`)
-
-	return &mcp.CallToolResult{
-		Content: []interface{}{mcp.TextContent{Type: "text", Text: sb.String()}},
-	}, nil
+	return buildToolResult(result, true)
 }
 
-// jsonEscape escapes a string for JSON embedding
-// This is faster than json.Marshal for simple strings
-func jsonEscape(sb *strings.Builder, s string) {
-	for _, r := range s {
-		switch r {
-		case '"':
-			sb.WriteString(`\"`)
-		case '\\':
-			sb.WriteString(`\\`)
-		case '\b':
-			sb.WriteString(`\b`)
-		case '\f':
-			sb.WriteString(`\f`)
-		case '\n':
-			sb.WriteString(`\n`)
-		case '\r':
-			sb.WriteString(`\r`)
-		case '\t':
-			sb.WriteString(`\t`)
-		default:
-			if r < 0x20 {
-				sb.WriteString(`\u00`)
-				sb.WriteByte(hexChar(byte(r) >> 4))
-				sb.WriteByte(hexChar(byte(r) & 0x0F))
-			} else {
-				sb.WriteRune(r)
-			}
-		}
-	}
-}
+// Serve HTTP requests (SSE for MCP)
+func (s *MCPServer) Serve(addr string) error {
+	e := echo.New()
+	e.Use(middleware.Logger())
+	e.Use(middleware.Recover())
 
-// hexChar returns the hex character for a nibble
-func hexChar(n byte) byte {
-	if n < 10 {
-		return '0' + n
-	}
-	return 'a' + n - 10
-}
+	e.GET("/mcp", func(c echo.Context) error {
+		s.mcpServer.HandleSSE(c.Response().Writer, c.Request())
+		return nil
+	})
 
-// jsonEscapeString escapes a string for safe inclusion in JSON
-func jsonEscapeString(s string) string {
-	var sb strings.Builder
-	jsonEscape(&sb, s)
-	return sb.String()
-}
+	e.POST("/mcp", func(c echo.Context) error {
+		s.mcpServer.HandleSSE(c.Response().Writer, c.Request())
+		return nil
+	})
 
-func (s *MCPServer) handleValidateBash(ctx context.Context, args map[string]interface{}) (*mcp.CallToolResult, error) {
-	command, _ := args["command"].(string)
-
-	if command == "" {
-		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: `{"valid":false,"violations":[{"rule_id":"VALIDATION-001","severity":"error","message":"Command is required"}],"meta":{"checked_at":"` + time.Now().Format(time.RFC3339) + `","rules_evaluated":0}}`}},
-			IsError: true,
-		}, nil
-	}
-
-	// Validate against prevention rules for bash commands
-	violations, err := s.validationEngine.ValidateInput(ctx, command, []string{"bash", "command"})
-	if err != nil {
-		slog.Error("Bash validation failed", "error", err, "command", command)
-		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: fmt.Sprintf(`{"valid":false,"violations":[{"rule_id":"VALIDATION-ERROR","severity":"error","message":"Validation engine error: %s"}],"meta":{"checked_at":"%s","rules_evaluated":0}}`, jsonEscapeString(err.Error()), time.Now().Format(time.RFC3339))}},
-			IsError: true,
-		}, nil
-	}
-
-	// Build response using strings.Builder for efficiency
-	var sb strings.Builder
-	sb.Grow(512)
-
-	valid := len(violations) == 0
-	if valid {
-		sb.WriteString(`{"valid":true,"violations":[],`)
-	} else {
-		sb.WriteString(`{"valid":false,"violations":[`)
-		for i, v := range violations {
-			if i > 0 {
-				sb.WriteString(",")
-			}
-			sb.WriteString(`{"rule_id":"`)
-			jsonEscape(&sb, v.RuleID)
-			sb.WriteString(`","name":"`)
-			jsonEscape(&sb, v.RuleName)
-			sb.WriteString(`","severity":"`)
-			jsonEscape(&sb, string(v.Severity))
-			sb.WriteString(`","message":"`)
-			jsonEscape(&sb, v.Message)
-			sb.WriteString(`"}`)
-		}
-		sb.WriteString(`],`)
-	}
-
-	sb.WriteString(`"meta":{"checked_at":"`)
-	sb.WriteString(time.Now().Format(time.RFC3339))
-	sb.WriteString(`","rules_evaluated":`)
-	sb.WriteString(strconv.Itoa(s.validationEngine.GetCachedRulesCount()))
-	sb.WriteString(`,"command_analyzed":"`)
-	jsonEscape(&sb, command)
-	sb.WriteString(`"}}`)
-
-	return &mcp.CallToolResult{
-		Content: []interface{}{mcp.TextContent{Type: "text", Text: sb.String()}},
-	}, nil
-}
-
-func (s *MCPServer) handleValidateFileEdit(ctx context.Context, args map[string]interface{}) (*mcp.CallToolResult, error) {
-	filePath, _ := args["file_path"].(string)
-	newString, _ := args["new_string"].(string)
-
-	if filePath == "" {
-		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: `{"valid":false,"violations":[{"rule_id":"VALIDATION-001","severity":"error","message":"File path is required"}],"meta":{"checked_at":"` + time.Now().Format(time.RFC3339) + `","rules_evaluated":0}}`}},
-			IsError: true,
-		}, nil
-	}
-
-	// Validate the new content against prevention rules (including security rules for secrets)
-	violations, err := s.validationEngine.ValidateInput(ctx, newString, []string{"file_edit", "content", "edit", "security"})
-	if err != nil {
-		slog.Error("File edit validation failed", "error", err, "file_path", filePath)
-		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: fmt.Sprintf(`{"valid":false,"violations":[{"rule_id":"VALIDATION-ERROR","severity":"error","message":"Validation engine error: %s"}],"meta":{"checked_at":"%s","rules_evaluated":0}}`, jsonEscapeString(err.Error()), time.Now().Format(time.RFC3339))}},
-			IsError: true,
-		}, nil
-	}
-
-	// Also validate the file path for path traversal or sensitive locations
-	pathViolations, err := s.validationEngine.ValidateInput(ctx, filePath, []string{"file_path", "path"})
-	if err != nil {
-		slog.Error("File path validation failed", "error", err, "file_path", filePath)
-	}
-	violations = append(violations, pathViolations...)
-
-	// Build response using strings.Builder for efficiency
-	var sb strings.Builder
-	sb.Grow(512)
-
-	valid := len(violations) == 0
-	if valid {
-		sb.WriteString(`{"valid":true,"violations":[],`)
-	} else {
-		sb.WriteString(`{"valid":false,"violations":[`)
-		for i, v := range violations {
-			if i > 0 {
-				sb.WriteString(",")
-			}
-			sb.WriteString(`{"rule_id":"`)
-			jsonEscape(&sb, v.RuleID)
-			sb.WriteString(`","name":"`)
-			jsonEscape(&sb, v.RuleName)
-			sb.WriteString(`","severity":"`)
-			jsonEscape(&sb, string(v.Severity))
-			sb.WriteString(`","message":"`)
-			jsonEscape(&sb, v.Message)
-			sb.WriteString(`"}`)
-		}
-		sb.WriteString(`],`)
-	}
-
-	sb.WriteString(`"meta":{"checked_at":"`)
-	sb.WriteString(time.Now().Format(time.RFC3339))
-	sb.WriteString(`","rules_evaluated":`)
-	sb.WriteString(strconv.Itoa(s.validationEngine.GetCachedRulesCount()))
-	sb.WriteString(`,"file":"`)
-	jsonEscape(&sb, filePath)
-	sb.WriteString(`","changes_size":`)
-	sb.WriteString(strconv.Itoa(len(newString)))
-	sb.WriteString(`}}`)
-
-	return &mcp.CallToolResult{
-		Content: []interface{}{mcp.TextContent{Type: "text", Text: sb.String()}},
-	}, nil
-}
-
-func (s *MCPServer) handleValidateGit(ctx context.Context, args map[string]interface{}) (*mcp.CallToolResult, error) {
-	command, _ := args["command"].(string)
-	isForce, _ := args["is_force"].(bool)
-
-	if command == "" {
-		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: `{"valid":false,"violations":[{"rule_id":"VALIDATION-001","severity":"error","message":"Command is required"}],"meta":{"checked_at":"` + time.Now().Format(time.RFC3339) + `","rules_evaluated":0}}`}},
-			IsError: true,
-		}, nil
-	}
-
-	var allViolations []validation.Violation
-
-	// Validate the git command against prevention rules
-	violations, err := s.validationEngine.ValidateInput(ctx, command, []string{"git", "git_operation"})
-	if err != nil {
-		slog.Error("Git validation failed", "error", err, "command", command)
-		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: fmt.Sprintf(`{"valid":false,"violations":[{"rule_id":"VALIDATION-ERROR","severity":"error","message":"Validation engine error: %s"}],"meta":{"checked_at":"%s","rules_evaluated":0}}`, jsonEscapeString(err.Error()), time.Now().Format(time.RFC3339))}},
-			IsError: true,
-		}, nil
-	}
-	allViolations = append(allViolations, violations...)
-
-	// Check for force push separately if is_force flag is set
-	if isForce {
-		allViolations = append(allViolations, validation.Violation{
-			RuleID:   "PREVENT-FORCE-001",
-			RuleName: "No Force Operation",
-			Severity: models.SeverityError,
-			Message:  "Force operations are not allowed. Use --force-with-lease or standard push instead.",
-		})
-	}
-
-	// Build response using strings.Builder for efficiency
-	var sb strings.Builder
-	sb.Grow(512)
-
-	valid := len(allViolations) == 0
-	if valid {
-		sb.WriteString(`{"valid":true,"violations":[],`)
-	} else {
-		sb.WriteString(`{"valid":false,"violations":[`)
-		for i, v := range allViolations {
-			if i > 0 {
-				sb.WriteString(",")
-			}
-			sb.WriteString(`{"rule_id":"`)
-			jsonEscape(&sb, v.RuleID)
-			sb.WriteString(`","name":"`)
-			jsonEscape(&sb, v.RuleName)
-			sb.WriteString(`","severity":"`)
-			jsonEscape(&sb, string(v.Severity))
-			sb.WriteString(`","message":"`)
-			jsonEscape(&sb, v.Message)
-			sb.WriteString(`"}`)
-		}
-		sb.WriteString(`],`)
-	}
-
-	sb.WriteString(`"meta":{"checked_at":"`)
-	sb.WriteString(time.Now().Format(time.RFC3339))
-	sb.WriteString(`","rules_evaluated":`)
-	sb.WriteString(strconv.Itoa(s.validationEngine.GetCachedRulesCount()))
-	sb.WriteString(`,"command":"`)
-	jsonEscape(&sb, command)
-	sb.WriteString(`","is_force":`)
-	if isForce {
-		sb.WriteString("true")
-	} else {
-		sb.WriteString("false")
-	}
-	sb.WriteString(`}}`)
-
-	return &mcp.CallToolResult{
-		Content: []interface{}{mcp.TextContent{Type: "text", Text: sb.String()}},
-	}, nil
-}
-
-func (s *MCPServer) handlePreWorkCheck(ctx context.Context, args map[string]interface{}) (*mcp.CallToolResult, error) {
-	affectedFilesArg, _ := args["affected_files"].([]interface{})
-
-	// Convert to string slice
-	files := make([]string, len(affectedFilesArg))
-	for i, f := range affectedFilesArg {
-		files[i], _ = f.(string)
-	}
-
-	// Get active failures for these files
-	failStore := database.NewFailureStore(s.db)
-	failures, err := failStore.GetActiveByFiles(ctx, files)
-
-	if err != nil {
-		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: fmt.Sprintf("Failed to check failures: %v", err)}},
-			IsError: true,
-		}, nil
-	}
-
-	// Use failures directly instead of creating intermediate maps
-	// Use compact JSON marshaling for better performance
-	result := map[string]interface{}{
-		"passed":         len(failures) == 0,
-		"checks":         failures,
-		"files_affected": files,
-	}
-
-	resultJSON, err := json.Marshal(result)
-	if err != nil {
-		slog.Error("Failed to marshal pre-work check result", "error", err)
-		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: fmt.Sprintf("Internal error: failed to format result: %v", err)}},
-			IsError: true,
-		}, nil
-	}
-	return &mcp.CallToolResult{
-		Content: []interface{}{mcp.TextContent{Type: "text", Text: string(resultJSON)}},
-	}, nil
+	return e.Start(addr)
 }
 
 func (s *MCPServer) handleGetContext(ctx context.Context, args map[string]interface{}) (*mcp.CallToolResult, error) {
-	sessionToken, _ := args["session_token"].(string)
-
-	s.sessionsMu.RLock()
-	session, exists := s.sessions[sessionToken]
-	s.sessionsMu.RUnlock()
-
-	if !exists {
-		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: "Invalid session token"}},
-			IsError: true,
-		}, nil
-	}
-
-	// Get project context
-	projStore := database.NewProjectStore(s.db)
-	proj, err := projStore.GetBySlug(ctx, session.ProjectSlug)
-
-	if err != nil {
-		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: fmt.Sprintf("# Default Guardrails\n\nNo project-specific context found for %s", session.ProjectSlug)}},
-		}, nil
-	}
-
-	return &mcp.CallToolResult{
-		Content: []interface{}{mcp.TextContent{Type: "text", Text: proj.GuardrailContext}},
-	}, nil
-}
-
-// handleValidateGameBuild validates a game engine project (Godot, Unity, Unreal)
-func (s *MCPServer) handleValidateGameBuild(ctx context.Context, args map[string]interface{}) (*mcp.CallToolResult, error) {
-	sessionToken, _ := args["session_token"].(string)
-	projectPath, _ := args["project_path"].(string)
-	godotPath, _ := args["godot_path"].(string)
-	checkScenes, _ := args["check_scenes"].(bool)
-	checkScripts, _ := args["check_scripts"].(bool)
-	runTests, _ := args["run_tests"].(bool)
-
-	// Defaults
-	if !checkScenes && args["check_scenes"] == nil {
-		checkScenes = true
-	}
-	if !checkScripts && args["check_scripts"] == nil {
-		checkScripts = true
-	}
-	if !runTests && args["run_tests"] == nil {
-		runTests = true
-	}
-
-	// Validate session if provided
-	if sessionToken != "" {
-		s.sessionsMu.RLock()
-		_, exists := s.sessions[sessionToken]
-		s.sessionsMu.RUnlock()
-		if !exists {
-			return &mcp.CallToolResult{
-				Content: []interface{}{mcp.TextContent{Type: "text", Text: `{"error":"Invalid session token"}`}},
-				IsError: true,
-			}, nil
-		}
-	}
-
-	// Auto-detect game engine if project_path provided
-	detector := &validation.GameEngineDetector{}
-	if projectPath == "" {
-		// Try to detect from common locations
-		wd, _ := os.Getwd()
-		result, err := detector.DetectGameEngine(wd)
-		if err != nil || result == nil {
-			return &mcp.CallToolResult{
-				Content: []interface{}{mcp.TextContent{Type: "text", Text: `{"error":"No game engine project detected. Provide project_path or run from a game project directory."}`}},
-				IsError: true,
-			}, nil
-		}
-		projectPath = result.ProjectPath
-	}
-
-	slog.Info("Validating game build", "path", projectPath, "engine", "godot")
-
-	// Run Godot validation
-	validator := validation.NewGodotValidator(godotPath)
-	result, err := validator.ValidateProject(ctx, projectPath)
-	if err != nil {
-		resultJSON, _ := json.Marshal(result)
-		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: string(resultJSON)}},
-			IsError: true,
-		}, nil
-	}
-
-	// Optional: validate scene files
-	if checkScenes {
-		validator.ValidateSceneFiles(projectPath, result)
-	}
-
-	// Optional: validate GDScript files
-	if checkScripts {
-		validator.ValidateGDScripts(projectPath, result)
-	}
-
-	// Update status based on accumulated errors
-	if len(result.Errors) > 0 && result.Status == models.BuildPassed {
-		// Check if any errors are severity "error" vs "warning"
-		hasErrors := false
-		for _, e := range result.Errors {
-			if e.Severity == "error" {
-				hasErrors = true
-				break
-			}
-		}
-		if hasErrors {
-			result.Status = models.BuildFailed
-		}
-	}
-
-	// Audit the validation
-	if s.auditLogger != nil {
-		s.auditLogger.Log(ctx, audit.Event{
-				Type:     audit.EventValidation,
-				Severity: audit.SevInfo,
-				Actor:    "guardrail",
-				Action:   "game_build_validation",
-				Resource: projectPath,
-				Status:   string(result.Status),
-				Details: map[string]interface{}{
-					"tests_run":    result.TestsRun,
-					"tests_passed": result.TestsPassed,
-					"tests_failed": result.TestsFailed,
-					"errors_count": len(result.Errors),
-					"duration_ms":  result.DurationMs,
-				},
-			})
-	}
-
-	resultJSON, _ := json.Marshal(result)
-	return &mcp.CallToolResult{
-		Content: []interface{}{mcp.TextContent{Type: "text", Text: string(resultJSON)}},
-	}, nil
-}
-
-// generateSessionID creates a cryptographically secure session ID
-func generateSessionID() string {
-	// Use crypto/rand for secure random generation instead of timestamp
-	b := make([]byte, 16)
-	if _, err := rand.Read(b); err != nil {
-		// Fallback to timestamp only if crypto/rand fails (should never happen)
-		slog.Error("Failed to generate secure random session ID, falling back to timestamp", "error", err)
-		return fmt.Sprintf("sess_%d", time.Now().UnixNano())
-	}
-	return "sess_" + hex.EncodeToString(b)
-}
-
-// sessionCleanup periodically removes expired sessions to prevent memory leaks
-// Uses batched deletion to minimize lock contention
-func (s *MCPServer) sessionCleanup() {
-	ticker := time.NewTicker(5 * time.Minute)
-	defer ticker.Stop()
-
-	for range ticker.C {
-		now := time.Now()
-		expiredIDs := s.collectExpiredSessions(now)
-
-		if len(expiredIDs) > 0 {
-			s.deleteSessionsBatch(expiredIDs)
-			slog.Debug("Cleaned up expired sessions", "count", len(expiredIDs))
-		}
-	}
-}
-
-// collectExpiredSessions identifies expired sessions without holding the lock
-func (s *MCPServer) collectExpiredSessions(now time.Time) []string {
-	s.sessionsMu.RLock()
-	defer s.sessionsMu.RUnlock()
-
-	// Pre-allocate with estimated capacity (10% of sessions)
-	expiredCount := 0
-	for _, session := range s.sessions {
-		if now.Sub(session.LastActivity) > time.Hour {
-			expiredCount++
-		}
-	}
-
-	if expiredCount == 0 {
-		return nil
-	}
-
-	expiredIDs := make([]string, 0, expiredCount)
-	for id, session := range s.sessions {
-		if now.Sub(session.LastActivity) > time.Hour {
-			expiredIDs = append(expiredIDs, id)
-		}
-	}
-	return expiredIDs
-}
-
-// deleteSessionsBatch removes multiple sessions with a single lock acquisition
-func (s *MCPServer) deleteSessionsBatch(ids []string) {
-	s.sessionsMu.Lock()
-	defer s.sessionsMu.Unlock()
-
-	for _, id := range ids {
-		delete(s.sessions, id)
-	}
-}
-
-// handleInstallSkills installs guardrails skill configs for AI coding platforms
-func (s *MCPServer) handleInstallSkills(ctx context.Context, args map[string]interface{}) (*mcp.CallToolResult, error) {
-	targetPath, _ := args["target_path"].(string)
-	platforms, _ := args["platforms"].(string)
-	mode, _ := args["mode"].(string)
-	dryRun, _ := args["dry_run"].(bool)
-	action, _ := args["action"].(string)
-	skill, _ := args["skill"].(string)
 	path, _ := args["path"].(string)
-	listSkills, _ := args["list_skills"].(bool)
-	listPlatforms, _ := args["list_platforms"].(bool)
-
-	if mode == "" {
-		mode = "copy"
+	if path == "" {
+		path, _ = os.Getwd()
 	}
 
-	// Build command arguments
-	var cmdArgs []string
-	if listSkills {
-		cmdArgs = []string{"scripts/setup_agents.py", "--list-skills"}
-	} else if listPlatforms {
-		cmdArgs = []string{"scripts/setup_agents.py", "--list-platforms"}
-	} else if path != "" {
-		// Clone a single file by repo path
-		cmdArgs = []string{"scripts/setup_agents.py", "--clone", path}
-		if dryRun {
-			cmdArgs = append(cmdArgs, "--dry-run")
-		}
-		if targetPath != "" {
-			cmdArgs = append(cmdArgs, "--target", targetPath)
-		}
-	} else if skill != "" {
-		// Install a single skill by name
-		cmdArgs = []string{"scripts/setup_agents.py", "--install-skill", skill, "--mode", mode}
-		if dryRun {
-			cmdArgs = append(cmdArgs, "--dry-run")
-		}
-		if targetPath != "" {
-			cmdArgs = append(cmdArgs, "--target", targetPath)
-		}
-	} else {
-		// Full platform install
-		cmdArgs = []string{"scripts/setup_agents.py", "--install", "--mode", mode}
-		if dryRun {
-			cmdArgs = append(cmdArgs, "--dry-run")
-		}
-		if targetPath != "" {
-			cmdArgs = append(cmdArgs, "--target", targetPath)
-		}
-		if platforms != "" {
-			cmdArgs = append(cmdArgs, "--platform", platforms)
-		}
-	}
-
-	cmd := exec.Command("python3", cmdArgs...)
-	cmd.Dir = s.cfg.BaseDir
-	output, err := cmd.CombinedOutput()
-
+	rules := s.validator.GetRulesForPath(ctx, path)
 	result := map[string]interface{}{
-		"command": "python3 " + strings.Join(cmdArgs, " "),
-		"stdout":  string(output),
-	}
-	if err != nil {
-		result["error"] = err.Error()
-		resultJSON, _ := json.Marshal(result)
-		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: string(resultJSON)}},
-			IsError: true,
-		}, nil
+		"path":            path,
+		"applicable_rules": rules,
+		"timestamp":       time.Now().Format(time.RFC3339),
 	}
 
-	resultJSON, _ := json.Marshal(result)
-	return &mcp.CallToolResult{
-		Content: []interface{}{mcp.TextContent{Type: "text", Text: string(resultJSON)}},
-		IsError: false,
-	}, nil
+	return buildToolResult(result, true)
 }
