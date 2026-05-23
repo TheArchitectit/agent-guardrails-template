@@ -13,6 +13,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/thearchitectit/guardrail-mcp/internal/api"
 	"github.com/thearchitectit/guardrail-mcp/internal/audit"
 	"github.com/thearchitectit/guardrail-mcp/internal/cache"
 	"github.com/thearchitectit/guardrail-mcp/internal/config"
@@ -120,6 +121,14 @@ func main() {
 	// Create MCP server
 	haltEventStore := database.NewHaltEventStore(db)
 	mcpSrv := mcpServer.NewMCPServer(cfg, db, redisClient, auditLogger, validationEngine, fileReadStore, taskAttemptStore, haltEventStore)
+
+	// Register vision HTTP routes on the web server if vision is enabled
+	if vt := mcpSrv.VisionTools(); vt != nil {
+		visionGroup := webServer.Echo().Group("/v1/vision")
+		visionServer := api.NewVisionServer(vt.Engine(), vt.Watcher())
+		visionServer.RegisterRoutes(visionGroup)
+		slog.Info("Vision HTTP API mounted", "prefix", "/v1/vision")
+	}
 
 	// Start servers
 	ctx, cancel := context.WithCancel(context.Background())
