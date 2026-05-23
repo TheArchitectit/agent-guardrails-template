@@ -168,10 +168,22 @@ services:
       # CORS Configuration
       - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-*}
       - CORS_MAX_AGE=${CORS_MAX_AGE:-86400}
+      # Vision Pipeline Configuration
+      - VISION_ENABLED=${VISION_ENABLED:-true}
+      - LOCAL_LLAMA_URL=${LOCAL_LLAMA_URL:-http://host.docker.internal:8080/v1}
+      - LOCAL_LLAMA_MODEL=${LOCAL_LLAMA_MODEL:-nemotron-vision-local}
+      - FALLBACK_PROVIDER=${FALLBACK_PROVIDER:-}
+      - FALLBACK_MODEL=${FALLBACK_MODEL:-}
+      - FALLBACK_API_KEY=${FALLBACK_API_KEY:-}
+      - SCREENSHOT_DIR=/app/screenshots
+      - VISION_DB_PATH=/app/vision_data/vision_reviews.db
       # Version info (passed at runtime)
       - VERSION=${VERSION:-dev}
       - BUILD_TIME=${BUILD_TIME:-unknown}
       - GIT_COMMIT=${GIT_COMMIT:-unknown}
+    volumes:
+      - ${SCREENSHOT_DIR:-./screenshots}:/app/screenshots
+      - vision_db:/app/vision_data
     read_only: true
     user: "65532:65532"
     security_opt:
@@ -218,6 +230,8 @@ volumes:
   pg_data:
     driver: local
   redis_data:
+    driver: local
+  vision_db:
     driver: local
 
 networks:
