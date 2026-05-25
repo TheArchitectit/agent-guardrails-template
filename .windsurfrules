@@ -63,10 +63,64 @@ Only touch files within the authorized scope:
 3. Direct dependencies of target files (with approval)
 4. When uncertain: HALT and ask user
 
+## Architecture Patterns (Go/MCP Server)
+
+When working on `mcp-server/`:
+
+### Clean Architecture Layers
+
+```
+Domain → Application → Adapters → Interface
+```
+
+- **Domain** (`internal/domain/`) — Interfaces, value objects. ZERO deps.
+- **Application** — Command/query handlers. Depends on Domain only.
+- **Adapters** (`internal/adapters/`) — DB, cache, external services.
+- **Interface** (`internal/mcp/`) — MCP handlers. Depends on Domain.
+
+### Dependency Rule
+
+Outer layers can depend on inner, never reverse. Domain has no imports.
+
+### CQRS
+
+- **Commands** (write): CreateRule, UpdateRule, LogViolation
+- **Queries** (read): Evaluate, List, Get — cache-friendly
+
+Commands publish events → cache subscribes → invalidates on rule changes.
+
+### Vertical Slices
+
+Each guardrail type is self-contained:
+
+```
+internal/guardrails/
+├── bash/           ← model + evaluator + handler
+├── git/            ← all git-related code
+└── fileedit/       ← all file edit code
+```
+
+### SOLID
+
+- **S**: One responsibility per type
+- **O**: Add new evaluator (interface), don't modify engine
+- **L**: Implement interface fully or not at all
+- **I**: Small interfaces (3 methods max)
+- **D**: Depend on abstraction (interface), not concrete
+
+### Never Do (Architecture)
+
+- Import database packages in domain types
+- Put concrete implementations in domain layer
+- Create cross-layer circular dependencies
+- Add infrastructure logic to handlers
+
 ## References
 
 - `skills/shared-prompts/four-laws.md` - The Four Laws (canonical)
 - `skills/shared-prompts/halt-conditions.md` - Full halt conditions
 - `skills/shared-prompts/three-strikes.md` - Full strike tracking
 - `skills/shared-prompts/production-first.md` - Full production-first rules
+- `skills/shared-prompts/clean-architecture.md` - Clean Architecture patterns
+- `skills/shared-prompts/cqrs.md` - CQRS command/query separation
 - `docs/AGENT_GUARDRAILS.md` - Core safety protocols

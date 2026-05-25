@@ -68,9 +68,64 @@ Include at the top of new files:
 
 Or equivalent in the target language.
 
+## Architecture Patterns (Go/MCP Server)
+
+When working on `mcp-server/`:
+
+### Layer Order (Inside-Out)
+
+1. **Domain** (`internal/domain/`) — Interfaces, value objects, ZERO external deps
+2. **Application** — Command/query handlers
+3. **Adapters** (`internal/adapters/`) — Infrastructure implementations
+4. **Interface** (`internal/mcp/`) — MCP handlers
+
+### Dependency Rule
+
+Outer layers depend inward. Domain is pure — no database, no HTTP imports.
+
+### CQRS Pattern
+
+| Commands (Write) | Queries (Read) |
+|-----------------|----------------|
+| Create | Evaluate |
+| Update | List |
+| Delete | Get |
+| Toggle | GetViolations |
+
+Commands: validate → persist → publish event (cache invalidation)
+Queries: cache-first, no state modification
+
+### Vertical Slices
+
+Group all code for one feature together:
+
+```
+internal/guardrails/
+├── bash/           ← model + evaluator + handler
+├── git/
+└── fileedit/
+```
+
+### SOLID
+
+- **S**: One responsibility per type
+- **O**: Add new evaluator via interface, don't modify existing code
+- **L**: Implement interfaces fully
+- **I**: Small focused interfaces
+- **D**: Depend on interface, not concrete type
+
+### Forbidden (Architecture)
+
+- Importing database packages in domain types
+- Putting concrete implementations in domain layer
+- Cross-layer circular dependencies
+- Adding infrastructure logic in handlers
+
 ## References
 
 - `skills/shared-prompts/four-laws.md` - The Four Laws (canonical)
+- `skills/shared-prompts/clean-architecture.md` - Clean Architecture patterns
+- `skills/shared-prompts/cqrs.md` - CQRS details
 - `docs/AGENT_GUARDRAILS.md` - Core safety protocols
 - `docs/standards/TEST_PRODUCTION_SEPARATION.md` - Environment isolation
 - `docs/workflows/COMMIT_WORKFLOW.md` - Commit standards

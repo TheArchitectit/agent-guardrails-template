@@ -5,17 +5,17 @@ This guide explains how to integrate Agent Guardrails with Cursor using markdown
 ## Overview
 
 Cursor supports:
-- **Rules** - Markdown files that define AI behavior and constraints
+- **Rules** - Markdown files with YAML frontmatter that define AI behavior and constraints
 - **Global Rules** - `.cursorrules` file in project root for universal settings
 
-The setup script generates these configurations for you.
+The setup script installs these configurations for you.
 
 ## Setup
 
-### 1. Run Setup Script
+### 1. Install All Rules
 
 ```bash
-python scripts/setup_agents.py --cursor --full
+python scripts/setup_agents.py --install --platform cursor
 ```
 
 This creates:
@@ -24,11 +24,29 @@ This creates:
 ├── rules/
 │   ├── guardrails-enforcer.md
 │   ├── commit-validator.md
-│   └── env-separator.md
+│   ├── env-separator.md
+│   ├── scope-validator.md
+│   ├── production-first.md
+│   ├── three-strikes.md
+│   └── error-recovery.md
 └── .cursorrules (optional root config)
 ```
 
-### 2. Verify Installation
+### 2. Install a Single Skill
+
+To install just one skill by name:
+
+```bash
+python scripts/setup_agents.py --install-skill guardrails-enforcer --platform cursor
+```
+
+Use `--list-skills` to see all available skill names:
+
+```bash
+python scripts/setup_agents.py --list-skills
+```
+
+### 3. Verify Installation
 
 Check that rules are loaded:
 ```bash
@@ -40,39 +58,89 @@ Check that `.cursorrules` exists (if using global config):
 cat .cursorrules
 ```
 
-## How It Works
+## Rule File Format
 
-### Rules
+Rules are markdown files in `.cursor/rules/` with YAML frontmatter:
 
-Rules are markdown files with:
-- **Frontmatter** - Metadata (name, description, version)
-- **Always Section** - Rules applied to all interactions
-- **When Section** - Conditional rules for specific contexts
-
-**Example: guardrails-enforcer.md**
 ```markdown
 ---
-name: guardrails-enforcer
-description: Enforces the Four Laws of Agent Safety
-version: 1.0.0
+description: Enforces the Four Laws of Agent Safety on all code generation
+globs: "**/*"
+alwaysApply: true
 ---
 
-## Always
+# Guardrails Enforcement
 
-You MUST enforce these rules:
-1. Read before editing
-2. Stay in scope
-3. Verify before committing
-4. Halt when uncertain
+You are the Guardrails Enforcement Agent. Enforce these rules on EVERY operation.
 
-## When
+## The Four Laws of Agent Safety
 
-- Before modifying any file
-- Before running git commands
-- When uncertain about scope
+1. **Read Before Editing** - Never modify code without reading it first
+2. **Stay in Scope** - Only touch files explicitly authorized
+3. **Verify Before Committing** - Test and check all changes
+4. **Halt When Uncertain** - Ask for clarification instead of guessing
+...
 ```
 
-### Global Rules (.cursorrules)
+### Frontmatter Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `description` | string | Summary shown in the Cursor rules list |
+| `globs` | string | File patterns this rule applies to (e.g., `"**/*"`, `"src/**/*.ts"`) |
+| `alwaysApply` | boolean | Whether to apply this rule to every session automatically |
+
+### Example: guardrails-enforcer.md (Actual File)
+
+```markdown
+---
+description: Enforces the Four Laws of Agent Safety on all code generation
+globs: "**/*"
+alwaysApply: true
+---
+
+# Guardrails Enforcement
+
+You are the Guardrails Enforcement Agent. Enforce these rules on EVERY operation.
+
+## The Four Laws of Agent Safety
+
+1. **Read Before Editing** - Never modify code without reading it first
+2. **Stay in Scope** - Only touch files explicitly authorized
+3. **Verify Before Committing** - Test and check all changes
+4. **Halt When Uncertain** - Ask for clarification instead of guessing
+
+## Pre-Operation Checklist
+
+Before ANY file modification:
+- [ ] Read the target file(s) completely
+- [ ] Verify the operation is within authorized scope
+- [ ] Identify the rollback procedure
+- [ ] Check for test/production separation requirements
+
+## Forbidden Actions
+
+1. Modifying code without reading it first
+2. Mixing test and production environments
+3. Force pushing to main/master
+4. Committing secrets, credentials, or .env files
+5. Running untested code in production
+6. Modifying unread code
+7. Working outside authorized scope
+
+## Halt Conditions
+
+STOP and escalate when:
+- Attempting to modify code you haven't read
+- No rollback procedure exists or is unclear
+- Production impact is uncertain
+- User authorization is ambiguous
+- Test and production environments may mix
+- You are uncertain about ANY aspect of the task
+- An operation has failed 3 times
+```
+
+## Global Rules (.cursorrules)
 
 The `.cursorrules` file in the project root applies to all Cursor sessions:
 
@@ -91,55 +159,58 @@ The `.cursorrules` file in the project root applies to all Cursor sessions:
 - Running commands: Verify environment separation
 ```
 
-## Skill Details
+Use `.cursorrules` for simple, universal rules. Use `.cursor/rules/*.md` for structured, per-skill rules with frontmatter.
+
+## Rule Reference
 
 ### guardrails-enforcer
 
-**Purpose:** Enforces the Four Laws of Agent Safety
-
-**Rules Enforced:**
-1. Read before editing
-2. Stay in scope
-3. Verify before committing
-4. Halt when uncertain
-
-**Halt Conditions:**
-- Modifying unread code
-- Unclear scope boundaries
-- No rollback procedure
-- Test/production mix
-- Three failed attempts
+Applies to all files. Enforces the Four Laws, pre-operation checklist, forbidden actions, and halt conditions.
 
 ### commit-validator
 
-**Purpose:** Validates git commits
-
-**Checks:**
-- AI attribution present (`Co-Authored-By:`)
-- Single focus per commit
-- No secrets in diff
-- Tests pass
-
-**Commit Format:**
-```
-<type>: <description>
-
-Co-Authored-By: Claude <noreply@anthropic.com>
-```
+Validates git commits. Checks AI attribution, single focus, no secrets, tests pass.
 
 ### env-separator
 
-**Purpose:** Enforces test/production separation
+Enforces test/production separation. Detects shared instances, production DB in tests.
 
-**Rules:**
-- Production code before tests
-- Separate service instances
-- No test data in production
+### scope-validator
 
-**Detection:**
-- Production DB connections in tests
-- Shared instances
-- Hardcoded production credentials
+Enforces scope boundaries. Only explicitly authorized files may be modified.
+
+### production-first
+
+Requires production code before tests. Order: implementation, validation, tests, infrastructure.
+
+### three-strikes
+
+Failure recovery. After three consecutive failures, halts and escalates to user.
+
+### error-recovery
+
+Error handling procedures. Provides structured guidance when operations fail.
+
+## Shared Prompts Reference
+
+All rule markdown files incorporate rules from the shared prompts directory:
+
+| Shared Prompt | Used By Rules |
+|---------------|---------------|
+| `skills/shared-prompts/four-laws.md` | guardrails-enforcer |
+| `skills/shared-prompts/halt-conditions.md` | guardrails-enforcer |
+| `skills/shared-prompts/three-strikes.md` | three-strikes |
+| `skills/shared-prompts/production-first.md` | production-first |
+| `skills/shared-prompts/clean-architecture.md` | guardrails-enforcer |
+| `skills/shared-prompts/cqrs.md` | guardrails-enforcer |
+| `skills/shared-prompts/scope-validation.md` | scope-validator |
+| `skills/shared-prompts/error-recovery.md` | error-recovery |
+
+When shared prompts are updated, re-run the setup script:
+
+```bash
+python scripts/setup_agents.py --install --platform cursor
+```
 
 ## Customization
 
@@ -149,38 +220,19 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ```markdown
 ---
-name: my-rule
-description: What it does
-version: 1.0.0
+description: Custom TypeScript strict mode enforcement
+globs: "src/**/*.ts"
+alwaysApply: false
 ---
 
 ## Always
 
-Your universal instructions here.
-
-## When
-
-- Context for conditional application
+- Use strict mode for all TypeScript files
+- No `any` types allowed
+- All functions must have return type annotations
 ```
 
-2. Cursor automatically loads rules from this directory
-
-### Modifying Global Rules
-
-Edit `.cursorrules` in the project root:
-
-```markdown
-# Custom Global Rules
-
-## Always
-
-- Your custom rule 1
-- Your custom rule 2
-
-## When
-
-- Specific context: Apply specific rule
-```
+2. Cursor automatically loads rules from this directory.
 
 ### Rule Priority
 
@@ -190,81 +242,58 @@ Rules are applied in order:
 
 Later rules can override earlier ones for the same context.
 
-## Advanced Configuration
+### Conditional Rules with Globs
 
-### Rule Selection
+Use `globs` to target specific file patterns (e.g., `"**/*.py"`, `"src/**/*.ts"`). Set `alwaysApply: true` for safety rules that must always be active.
 
-By default, all rules in `.cursor/rules/` are active. To disable a rule temporarily:
+### Disabling a Rule
 
-1. Move it out of the rules directory:
+Move it out of the rules directory:
 ```bash
+mkdir -p .cursor/rules/disabled
 mv .cursor/rules/commit-validator.md .cursor/rules/disabled/
 ```
 
-2. Cursor will stop loading it immediately
+Cursor will stop loading it immediately.
 
-### Rule Chaining
+## Installation Modes
 
-Rules can reference other rules in their instructions:
-
-```markdown
----
-name: custom-validator
----
-
-## Always
-
-Apply the commit-validator rules, then additionally:
-- Check for TODO comments
-- Verify no console.log statements
-```
-
-### Conditional Rules
-
-Use the `When` section for context-specific behavior:
-
-```markdown
-## When
-
-- Editing Python files: Follow PEP 8
-- Editing JavaScript: Use ESLint rules
-- Running tests: Ensure env-separator rules are active
-```
+| Mode | Command | Behavior |
+|------|---------|----------|
+| Copy | `--mode copy` (default) | Writes standalone copies to the project |
+| Symlink | `--mode symlink` | Creates symlinks back to this repo |
 
 ## Troubleshooting
 
 ### Rules Not Loading
 
-**Check:**
-- Markdown syntax is valid
-- Frontmatter is properly formatted with `---` delimiters
-- Files are in `.cursor/rules/` directory
-- File extension is `.md`
+- Check frontmatter: `---` delimiters with valid YAML
+- Files in `.cursor/rules/` with `.md` extension
+- Restart Cursor to reload rules
 
 ### .cursorrules Not Applied
 
-**Check:**
 - File is in project root (not `.cursor/`)
 - File is named exactly `.cursorrules` (no extension)
-- Cursor has indexed the project
+- Restart Cursor to re-index
 
 ### Rules Being Ignored
 
-**Fix:**
-- Ensure rule files are saved
-- Restart Cursor to reload rules
+- Save all rule files
+- Restart Cursor to reload
 - Check for conflicting rules (later rules override earlier ones)
+- Verify `globs` pattern matches the files being edited
 
 ## Best Practices
 
-1. **Keep rules focused** - One rule = One responsibility
-2. **Use frontmatter** - Always include name and description
-3. **Document customizations** - Add comments explaining complex rules
-4. **Version control** - Commit `.cursor/` and `.cursorrules` to share with team
-5. **Test rules** - Verify rules work as expected in practice
+1. **One rule = one responsibility** - Keep rules focused and composable
+2. **Always include frontmatter** - `description`, `globs`, `alwaysApply` are required
+3. **Use `alwaysApply: true` for guardrails** - Safety rules should not be optional
+4. **Regenerate after shared prompt updates** - Re-run setup to sync rules
+5. **Commit `.cursor/` and `.cursorrules`** - Team shares the same guardrails
 
 ## References
 
-- [Cursor Rules Documentation](https://docs.cursor.com/context/rules)
+- [AGENTS_AND_SKILLS_SETUP.md](AGENTS_AND_SKILLS_SETUP.md) - Unified setup guide
 - [AGENT_GUARDRAILS.md](AGENT_GUARDRAILS.md) - Core safety protocols
-- [AGENTS_AND_SKILLS_SETUP.md](AGENTS_AND_SKILLS_SETUP.md) - General setup guide
+- [skills/shared-prompts/](../skills/shared-prompts/) - Canonical prompt definitions
