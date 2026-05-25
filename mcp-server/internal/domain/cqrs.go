@@ -2,6 +2,8 @@ package domain
 
 import (
 	"context"
+	"log/slog"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -26,21 +28,18 @@ type CreateRuleCommand struct {
 type CreateRuleHandler struct {
 	repo    RuleRepository
 	bus     EventBus
-	cache   CachePort
 	matcher PatternMatcher
 }
 
-func NewCreateRuleHandler(repo RuleRepository, bus EventBus, cache CachePort, matcher PatternMatcher) *CreateRuleHandler {
+func NewCreateRuleHandler(repo RuleRepository, bus EventBus, matcher PatternMatcher) *CreateRuleHandler {
 	return &CreateRuleHandler{
 		repo:    repo,
 		bus:     bus,
-		cache:   cache,
 		matcher: matcher,
 	}
 }
 
 func (h *CreateRuleHandler) Handle(ctx context.Context, cmd CreateRuleCommand) (*PreventionRule, error) {
-	// Validate pattern
 	if err := h.matcher.ValidatePattern(cmd.Pattern); err != nil {
 		return nil, err
 	}
@@ -66,42 +65,37 @@ func (h *CreateRuleHandler) Handle(ctx context.Context, cmd CreateRuleCommand) (
 		return nil, err
 	}
 
-	// Publish event for cache invalidation
 	h.bus.Publish(ctx, Event{
-		Type:    EventRuleCreated,
-		Payload: rule,
+		Type:      EventRuleCreated,
+		Payload:   rule,
+		Timestamp: time.Now(),
 	})
-
-	// Invalidate cache
-	h.cache.InvalidateRules(ctx)
 
 	return rule, nil
 }
 
 // UpdateRuleCommand updates an existing rule
 type UpdateRuleCommand struct {
-	ID        uuid.UUID `json:"id"`
-	Name      string    `json:"name"`
-	Pattern   string    `json:"pattern"`
-	Message   string    `json:"message"`
-	Severity  Severity  `json:"severity"`
-	Enabled   bool      `json:"enabled"`
-	Category  string    `json:"category"`
+	ID       uuid.UUID `json:"id"`
+	Name     string    `json:"name"`
+	Pattern  string    `json:"pattern"`
+	Message  string    `json:"message"`
+	Severity Severity  `json:"severity"`
+	Enabled  bool      `json:"enabled"`
+	Category string    `json:"category"`
 }
 
 // UpdateRuleHandler handles UpdateRuleCommand
 type UpdateRuleHandler struct {
 	repo    RuleRepository
 	bus     EventBus
-	cache   CachePort
 	matcher PatternMatcher
 }
 
-func NewUpdateRuleHandler(repo RuleRepository, bus EventBus, cache CachePort, matcher PatternMatcher) *UpdateRuleHandler {
+func NewUpdateRuleHandler(repo RuleRepository, bus EventBus, matcher PatternMatcher) *UpdateRuleHandler {
 	return &UpdateRuleHandler{
 		repo:    repo,
 		bus:     bus,
-		cache:   cache,
 		matcher: matcher,
 	}
 }
@@ -129,11 +123,10 @@ func (h *UpdateRuleHandler) Handle(ctx context.Context, cmd UpdateRuleCommand) (
 	}
 
 	h.bus.Publish(ctx, Event{
-		Type:    EventRuleUpdated,
-		Payload: rule,
+		Type:      EventRuleUpdated,
+		Payload:   rule,
+		Timestamp: time.Now(),
 	})
-
-	h.cache.InvalidateRules(ctx)
 
 	return rule, nil
 }
@@ -146,13 +139,12 @@ type ToggleRuleCommand struct {
 
 // ToggleRuleHandler handles ToggleRuleCommand
 type ToggleRuleHandler struct {
-	repo  RuleRepository
-	bus   EventBus
-	cache CachePort
+	repo RuleRepository
+	bus  EventBus
 }
 
-func NewToggleRuleHandler(repo RuleRepository, bus EventBus, cache CachePort) *ToggleRuleHandler {
-	return &ToggleRuleHandler{repo: repo, bus: bus, cache: cache}
+func NewToggleRuleHandler(repo RuleRepository, bus EventBus) *ToggleRuleHandler {
+	return &ToggleRuleHandler{repo: repo, bus: bus}
 }
 
 func (h *ToggleRuleHandler) Handle(ctx context.Context, cmd ToggleRuleCommand) error {
@@ -160,7 +152,11 @@ func (h *ToggleRuleHandler) Handle(ctx context.Context, cmd ToggleRuleCommand) e
 		return err
 	}
 
-	h.cache.InvalidateRules(ctx)
+	h.bus.Publish(ctx, Event{
+		Type:      EventRuleToggled,
+		Payload:   cmd,
+		Timestamp: time.Now(),
+	})
 
 	return nil
 }
@@ -190,12 +186,11 @@ func (h *LogViolationHandler) Handle(ctx context.Context, cmd LogViolationComman
 
 // EvaluateCommandQuery queries guardrail evaluation (read-optimized with caching)
 type EvaluateCommandQuery struct {
-	Command   string   `json:"command"`
+	Command    string   `json:"command"`
 	Categories []string `json:"categories,omitempty"`
 }
 
 // EvaluateCommandHandler handles EvaluateCommandQuery
-// Query handlers can use read replicas, aggressive caching, etc.
 type EvaluateCommandHandler struct {
 	guardrailSvc GuardrailService
 	cache        CachePort
@@ -209,7 +204,6 @@ func NewEvaluateCommandHandler(guardrailSvc GuardrailService, cache CachePort) *
 }
 
 func (h *EvaluateCommandHandler) Handle(ctx context.Context, q EvaluateCommandQuery) (*ValidationResult, error) {
-	// Query side can read through cache first
 	violations, err := h.guardrailSvc.EvaluateCommand(ctx, q.Command)
 	if err != nil {
 		return nil, err
@@ -266,10 +260,10 @@ func (h *EvaluateFileEditHandler) Handle(ctx context.Context, q EvaluateFileEdit
 
 // ListRulesQuery queries rule listing
 type ListRulesQuery struct {
-	Enabled  *bool   `json:"enabled,omitempty"`
-	Category string  `json:"category,omitempty"`
-	Limit    int     `json:"limit"`
-	Offset   int     `json:"offset"`
+	Enabled  *bool  `json:"enabled,omitempty"`
+	Category string `json:"category,omitempty"`
+	Limit    int    `json:"limit"`
+	Offset   int    `json:"offset"`
 }
 
 // ListRulesHandler handles ListRulesQuery
@@ -286,25 +280,25 @@ func (h *ListRulesHandler) Handle(ctx context.Context, q ListRulesQuery) ([]Prev
 }
 
 // ============================================================================
-// EVENT BUS
+// EVENT BUS (interface only — concrete impl in adapters/)
 // ============================================================================
 
 // EventType defines the type of domain event
 type EventType string
 
 const (
-	EventRuleCreated   EventType = "rule.created"
-	EventRuleUpdated   EventType = "rule.updated"
-	EventRuleDeleted   EventType = "rule.deleted"
-	EventRuleToggled   EventType = "rule.toggled"
+	EventRuleCreated      EventType = "rule.created"
+	EventRuleUpdated      EventType = "rule.updated"
+	EventRuleDeleted      EventType = "rule.deleted"
+	EventRuleToggled      EventType = "rule.toggled"
 	EventCacheInvalidated EventType = "cache.invalidated"
 )
 
 // Event represents a domain event
 type Event struct {
-	Type      EventType    `json:"type"`
-	Payload   interface{}  `json:"payload"`
-	Timestamp time.Time    `json:"timestamp"`
+	Type      EventType   `json:"type"`
+	Payload   interface{} `json:"payload"`
+	Timestamp time.Time   `json:"timestamp"`
 }
 
 // EventBus allows cross-context communication via events
@@ -318,40 +312,3 @@ type EventBus interface {
 
 // EventHandler is a function that handles domain events
 type EventHandler func(ctx context.Context, event Event)
-
-// DefaultEventBus is a simple in-memory event bus
-type DefaultEventBus struct {
-	subscribers map[EventType][]EventHandler
-}
-
-// NewDefaultEventBus creates a new event bus
-func NewDefaultEventBus() *DefaultEventBus {
-	return &DefaultEventBus{
-		subscribers: make(map[EventType][]EventHandler),
-	}
-}
-
-func (b *DefaultEventBus) Publish(ctx context.Context, event Event) {
-	handlers := b.subscribers[event.Type]
-	for _, handler := range handlers {
-		handler(ctx, event)
-	}
-}
-
-func (b *DefaultEventBus) Subscribe(eventType EventType, handler EventHandler) {
-	b.subscribers[eventType] = append(b.subscribers[eventType], handler)
-}
-
-// CacheInvalidationHandler handles cache invalidation on rule changes
-type CacheInvalidationHandler struct {
-	cache CachePort
-}
-
-// NewCacheInvalidationHandler creates a handler that invalidates cache on rule events
-func NewCacheInvalidationHandler(cache CachePort) *CacheInvalidationHandler {
-	return &CacheInvalidationHandler{cache: cache}
-}
-
-func (h *CacheInvalidationHandler) Handle(ctx context.Context, event Event) {
-	h.cache.InvalidateRules(ctx)
-}

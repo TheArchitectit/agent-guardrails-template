@@ -104,6 +104,9 @@ type RuleRepository interface {
 	// Delete removes a rule
 	Delete(ctx context.Context, id uuid.UUID) error
 
+	// Toggle enables or disables a rule
+	Toggle(ctx context.Context, id uuid.UUID, enabled bool) error
+
 	// Count returns the total number of rules matching optional filters
 	Count(ctx context.Context, enabled *bool, category string) (int, error)
 }

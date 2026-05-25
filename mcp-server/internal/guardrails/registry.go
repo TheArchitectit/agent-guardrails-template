@@ -106,6 +106,22 @@ func (r *Registry) EvaluateFileEdit(ctx context.Context, filePath, content, sess
 	return nil, nil
 }
 
+func (r *Registry) EvaluateInput(ctx context.Context, input string, categories []string) ([]domain.Violation, error) {
+	// Route to appropriate evaluator based on category
+	for _, cat := range categories {
+		switch cat {
+		case "bash", "command":
+			return r.EvaluateCommand(ctx, input)
+		case "git":
+			return r.EvaluateGit(ctx, input)
+		case "file_edit":
+			return nil, nil // file_edit requires file path, can't evaluate generically
+		}
+	}
+	// Default: try bash
+	return r.EvaluateCommand(ctx, input)
+}
+
 func (r *Registry) CheckFileRead(ctx context.Context, sessionID, filePath string) (*domain.FileReadVerification, error) {
 	if r.transport != nil {
 		return r.transport.CheckFileRead(ctx, sessionID, filePath)
