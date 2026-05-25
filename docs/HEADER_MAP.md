@@ -238,6 +238,12 @@
 |---------|------|--------|
 | Team Tools | 1 | 0 |
 
+### ARCHITECTURE_CLEAN_CQRS.md (docs/ARCHITECTURE_CLEAN_CQRS.md)
+
+| Section | Line | Offset |
+|---------|------|--------|
+| Clean Architecture & CQRS | 1 | 0 |
+
 ---
 
 ## AI TOOL INTEGRATION
@@ -254,15 +260,47 @@
 |---------|------|--------|
 | OpenCode Integration | 1 | 0 |
 
+### CURSOR_INTEGRATION.md (docs/CURSOR_INTEGRATION.md)
+
+| Section | Line | Offset |
+|---------|------|--------|
+| Cursor Integration | 1 | 0 |
+
+### WINDSURF_INTEGRATION.md (docs/WINDSURF_INTEGRATION.md)
+
+| Section | Line | Offset |
+|---------|------|--------|
+| Windsurf Integration | 1 | 0 |
+
+### COPILOT_INTEGRATION.md (docs/COPILOT_INTEGRATION.md)
+
+| Section | Line | Offset |
+|---------|------|--------|
+| GitHub Copilot Integration | 1 | 0 |
+
 ### AGENTS_AND_SKILLS_SETUP.md (docs/AGENTS_AND_SKILLS_SETUP.md)
 
 | Section | Line | Offset |
 |---------|------|--------|
-| Quick Start | 1 | 0 |
-| Clone Individual Skill Files | 29 | 28 |
-| Install Per-Skill (Named Install) | 42 | 41 |
-| Available Platforms | 50 | 49 |
-| MCP Tool | 64 | 63 |
+| Quick Start | 5 | 0 |
+| Platform Comparison | 16 | 11 |
+| Installation Methods | 28 | 23 |
+| MCP Tool (Automated) | 30 | 25 |
+| Python Script (CLI) | 51 | 46 |
+| Manual Copy | 81 | 76 |
+| Symlink (Live Updates) | 104 | 99 |
+| Per-Platform Guides | 115 | 110 |
+| Claude Code | 117 | 112 |
+| Cursor | 165 | 160 |
+| Windsurf | 209 | 204 |
+| OpenCode | 238 | 233 |
+| GitHub Copilot | 315 | 310 |
+| Shared Prompts | 345 | 340 |
+| MCP Tool Usage | 361 | 356 |
+| Architecture Reference | 407 | 402 |
+| Customization | 415 | 410 |
+| Troubleshooting | 459 | 454 |
+| References | 487 | 482 |
 
 ---
 
@@ -309,6 +347,6 @@ read docs/ethical/ETHICAL_ENGAGEMENT.md --offset 84 --limit 20
 
 ---
 
-**Last Updated:** 2026-03-14
+**Last Updated:** 2026-05-09
 **Document Owner:** Documentation Team
 **Token Savings:** 60-80% vs full document reads
