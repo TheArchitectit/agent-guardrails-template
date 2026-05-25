@@ -51,3 +51,34 @@ STOP and escalate when:
 - Strike 3: HALT and escalate to user
 
 Never continue beyond 3 failures.
+
+## Architecture Patterns (Go/MCP Server)
+
+When working on the MCP server:
+
+### Clean Architecture Layers
+
+1. **Domain** (`internal/domain/`) — Interfaces, value objects, zero external deps
+2. **Application** — Command/query handlers
+3. **Adapters** (`internal/adapters/`) — Infrastructure implementations
+4. **Interface** (`internal/mcp/`) — MCP handlers
+
+### Dependency Rule
+
+Outer layers depend inward. Domain has no dependencies.
+
+### CQRS
+
+- **Commands**: Create, Update, Delete (write operations)
+- **Queries**: Evaluate, List, Get (read operations, cache-friendly)
+
+### Vertical Slices
+
+Group by feature: `internal/guardrails/bash/`, `internal/guardrails/git/`, etc.
+
+## References
+
+- `skills/shared-prompts/clean-architecture.md` — Clean Architecture patterns
+- `skills/shared-prompts/cqrs.md` — CQRS command/query separation
+- `skills/shared-prompts/four-laws.md` — Canonical Four Laws
+- `skills/shared-prompts/three-strikes.md` — Failure handling
