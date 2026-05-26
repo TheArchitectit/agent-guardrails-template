@@ -72,6 +72,7 @@ Then see [QUICK_SETUP.md](QUICK_SETUP.md) for the 5-minute setup, or [HOW_TO_APP
 | [TEST_PRODUCTION_SEPARATION.md](docs/standards/TEST_PRODUCTION_SEPARATION.md) | Mandatory test/production isolation |
 | [four-laws.md](skills/shared-prompts/four-laws.md) | Canonical Four Laws prompt |
 | [halt-conditions.md](skills/shared-prompts/halt-conditions.md) | When to stop and ask |
+| [.guardrails/](.guardrails/) | Live rule enforcement: failure registry, prevention rules, pre-work checks, team layout rules |
 
 ### AI-First Development 
 
@@ -164,6 +165,76 @@ Then see [QUICK_SETUP.md](QUICK_SETUP.md) for the 5-minute setup, or [HOW_TO_APP
 | [All workflows →](docs/workflows/INDEX.md) | 10 workflow documents |
 | [All standards →](docs/standards/INDEX.md) | 11 standards documents |
 
+### Security & Compliance
+
+| Document | Purpose |
+|----------|---------|
+| [SECURITY_AUDIT_API.md](docs/security/SECURITY_AUDIT_API.md) | API security audit checklist |
+| [SECURITY_AUDIT_CODE.md](docs/security/SECURITY_AUDIT_CODE.md) | Code-level security review |
+| [SECURITY_AUDIT_CONFIG.md](docs/security/SECURITY_AUDIT_CONFIG.md) | Configuration hardening audit |
+| [SECURITY_AUDIT_CONTAINERS.md](docs/security/SECURITY_AUDIT_CONTAINERS.md) | Container security posture |
+| [SECURITY_AUDIT_DATABASE.md](docs/security/SECURITY_AUDIT_DATABASE.md) | Database security best practices |
+| [SECURITY_AUDIT_DEPENDENCIES.md](docs/security/SECURITY_AUDIT_DEPENDENCIES.md) | Dependency vulnerability scanning |
+| [SECRETS_MANAGEMENT.md](.github/SECRETS_MANAGEMENT.md) | Git-based secrets prevention |
+
+### Advisors (Cost, Privacy, Resilience)
+
+| Document | Purpose |
+|----------|---------|
+| [COST_ADVISOR.md](docs/advisors/COST_ADVISOR.md) | Token budget estimation, LLM cost forecasting, optimization strategies |
+| [PRIVACY_ADVISOR.md](docs/advisors/PRIVACY_ADVISOR.md) | Data minimization, consent flows, PII handling |
+| [RESILIENCE_ADVISOR.md](docs/advisors/RESILIENCE_ADVISOR.md) | Failure modes, retry strategies, circuit breakers |
+| [Advisors Index](docs/advisors/INDEX.md) | Complete advisor reference |
+
+### Sprint & Task Framework
+
+| Document | Purpose |
+|----------|---------|
+| [SPRINT_GUIDE.md](docs/sprints/SPRINT_GUIDE.md) | Sprint planning methodology |
+| [SPRINT_TEMPLATE.md](docs/sprints/SPRINT_TEMPLATE.md) | Sprint document template |
+| [SPRINT_001–006](docs/sprints/) | 6 completed sprints (MCP gaps, Web UI, docs parity, precommit safety, advisor roles) |
+| [MCP_SERVER_PLAN.md](docs/plans/MCP_SERVER_PLAN.md) | Architecture plan for MCP server development |
+
+### AgentMCP (Sentinel Agent Framework)
+
+| Document | Purpose |
+|----------|---------|
+| [docs/agentmcp/](docs/agentmcp/) | Full Sentinel agent architecture: 40+ documents covering kernel, profiles (Go, Rust, Python, 12+ languages), IDE/CI-CD integration, cost governance, branching, secrets, sprint governance |
+| **Core kernel** | Sentinel Core, System Prompt, Escalation Protocols, Knowledge Management |
+| **Language profiles** | Go, Rust, Python, TypeScript, C#, Java, Kotlin, C++, Swift, GDScript, PHP, Ruby, R, Scala, SQL — per-language guardrail templates |
+| **Infrastructure** | Deployment, Rollback, Remote Architecture, Secrets, CI-CD, Branching Strategy |
+| **Cost & Analytics** | Budgeting, Cost Governance, Cost Estimator, Tokenizer, Forensics |
+
+### CI/CD & Automation
+
+| Resource | Purpose |
+|----------|---------|
+| [.github/workflows](.github/workflows/) | GitHub Actions CI/CD workflows |
+| [ci/gitlab-ci.yml](ci/gitlab-ci.yml) | GitLab CI pipeline configuration |
+| [ci/Jenkinsfile](ci/Jenkinsfile) | Jenkins pipeline definition |
+| [.github/ISSUE_TEMPLATE](.github/ISSUE_TEMPLATE/) | Standardized issue templates |
+| [.github/PULL_REQUEST_TEMPLATE.md](.github/PULL_REQUEST_TEMPLATE.md) | PR template with guardrail checklist |
+
+### Utility Scripts
+
+| Script | Purpose |
+|--------|---------|
+| [scripts/setup_agents.py](scripts/setup_agents.py) | Automated agent environment setup |
+| [scripts/batch_operations.py](scripts/batch_operations.py) | Batch file/rule operations |
+| [scripts/regression_check.py](scripts/regression_check.py) | Regression prevention checker |
+| [scripts/log_failure.py](scripts/log_failure.py) | Failure logging to registry |
+| [scripts/ingest_docs.go](scripts/ingest_docs.go) | Document ingestion tool |
+| [scripts/e2e_tests.py](scripts/e2e_tests.py) | End-to-end guardrail validation |
+| [scripts/encryption.py](scripts/encryption.py) | Config/secret encryption utilities |
+| [scripts/log_aggregator.py](scripts/log_aggregator.py) | Log aggregation and analysis |
+| [scripts/team_manager.py](scripts/team_manager.py) | Team layout and rules management |
+
+### Godot Integration
+
+| Resource | Purpose |
+|----------|---------|
+| [godot/addons/](godot/addons/) | Godot engine addons — vision capture, autosave, plugin config |
+
 ### Token Efficiency
 
 | Tool | Purpose |
@@ -172,6 +243,8 @@ Then see [QUICK_SETUP.md](QUICK_SETUP.md) for the 5-minute setup, or [HOW_TO_APP
 | [HEADER_MAP.md](HEADER_MAP.md) | Jump to specific sections with line numbers |
 | [TOC.md](TOC.md) | Complete file listing |
 | `.claudeignore` | Skip irrelevant files |
+| [Header Map (AgentMCP)](docs/agentmcp/Header%20Map.txt) | AgentMCP optimized navigation |
+| [LLM Index Map](docs/agentmcp/LLM%20Index%20Map.txt) | AgentMCP keyword index |
 
 All documents follow the **500-line max** rule for fast context loading.
 
@@ -188,6 +261,7 @@ The **Model Context Protocol Server** provides real-time guardrail enforcement �
 | **17 MCP Tools** | Session init, bash/file/git validation, scope checking, regression prevention, team management |
 | **8 MCP Resources** | Quick reference, active rules, documentation access |
 | **Web UI** | Dashboard, document browser, rules management, failure registry |
+| **Vision Pipeline** | Vision capture, inference (local llama + Anthropic), composite review, review engine |
 | **Endpoints** | SSE stream (`/mcp/v1/sse`), JSON-RPC (`/mcp/v1/message`), Web UI (`/web`) |
 
 ```bash
@@ -197,6 +271,9 @@ cd mcp-server && docker compose -f deploy/podman-compose.yml up -d
 # Verify
 curl http://your-server:8095/health/ready
 ```
+
+### MCP Vision Pipeline (v3.1.0)
+Real-time visual capture and review: monitors Godot viewport, captures screenshots, runs inference through local Llama or Anthropic API, and feeds results back into the guardrail review engine. See `mcp-server/internal/vision/` for capture, storage, inference, and review logic.
 
 See [mcp-server/README.md](mcp-server/README.md) for full setup, API docs, and troubleshooting.
 See [DEPLOYMENT_GUIDE.md](mcp-server/DEPLOYMENT_GUIDE.md) for production deployment.
@@ -288,6 +365,9 @@ agent-guardrails-template/
 | **Workflows** | 10 documents |
 | **Standards** | 11 documents |
 | **Example Languages** | 14 (Go, TS, Rust, Python, Java, Swift, Dart, GDScript, Scala, R, C#, C++, PHP, Ruby) |
+| **AgentMCP Profiles** | 16 language profiles + infrastructure |
+| **Sprints Completed** | 6 (MCP gaps, Web UI, docs parity, precommit safety, advisor roles) |
+| **Security Audits** | 6 (API, code, config, containers, database, dependencies) |
 | **MCP Tools** | 17 |
 | **MCP Resources** | 8 |
 | **Supported AI Models** | 30+ LLM families |
