@@ -335,3 +335,10 @@ Help keep this project going — use a referral link below and both of us get cr
 ---
 
 **v3.1.0** · AI-First Rapid Development Framework · [Get Started →](QUICK_SETUP.md)
+
+
+## ☁️ Cloud Credits
+
+Power your AI projects with [Ozore.com](https://ozore.com) — use code **lundrog50** for 50% off your first month.
+
+> `direct-pin` and `custom-router` are available on **Pro** and **Max** plans only.
