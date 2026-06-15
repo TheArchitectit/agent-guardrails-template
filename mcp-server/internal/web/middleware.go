@@ -60,7 +60,6 @@ func APIKeyAuth(cfg *config.Config) echo.MiddlewareFunc {
 				strings.HasSuffix(requestPath, ".png") ||
 				strings.HasSuffix(requestPath, ".jpg") ||
 				strings.HasSuffix(requestPath, ".ico") ||
-				strings.HasSuffix(requestPath, ".json") ||
 				strings.HasSuffix(requestPath, ".woff") ||
 				strings.HasSuffix(requestPath, ".woff2") ||
 				strings.HasSuffix(requestPath, ".ttf") {
@@ -83,13 +82,9 @@ func APIKeyAuth(cfg *config.Config) echo.MiddlewareFunc {
 				return next(c)
 			}
 
-			// Skip safe write operations for public browsing when no API key is configured
-			// These are safe operations that don't expose sensitive data
-			if method == "POST" && (path == "/api/ingest" ||
-				path == "/api/ingest/sync" ||
-				path == "/api/updates/check") {
-				return next(c)
-			}
+			// POST endpoints /api/ingest, /api/ingest/sync, /api/updates/check
+			// now require authentication — removed public access to prevent
+			// unauthenticated resource exhaustion via document ingestion.
 
 			// Extract API key from header
 			auth := c.Request().Header.Get("Authorization")
@@ -174,7 +169,6 @@ func RateLimitMiddleware(limiter *cache.DistributedRateLimiter, cfg *config.Conf
 				strings.HasSuffix(requestPath, ".png") ||
 				strings.HasSuffix(requestPath, ".jpg") ||
 				strings.HasSuffix(requestPath, ".ico") ||
-				strings.HasSuffix(requestPath, ".json") ||
 				strings.HasSuffix(requestPath, ".woff") ||
 				strings.HasSuffix(requestPath, ".woff2") ||
 				strings.HasSuffix(requestPath, ".ttf") {
