@@ -83,15 +83,17 @@ func (e *ReviewEngine) Run(ctx context.Context, screenshotPath string) (*Report,
 		latency := time.Since(start).Milliseconds()
 
 		iter := &Iteration{
-			ID:         genID(),
-			ReviewID:   reviewID,
-			BackendUsed: resp.BackendUsed,
-			ModelUsed:   resp.ModelUsed,
-			PromptType:  promptType,
-			RawResponse: resp.RawText,
-			Confidence:  resp.Confidence,
-			LatencyMs:   latency,
-			CreatedAt:   time.Now(),
+			ID:           genID(),
+			ReviewID:     reviewID,
+			BackendUsed:  resp.BackendUsed,
+			ModelUsed:    resp.ModelUsed,
+			PromptType:   promptType,
+			RawResponse:  resp.RawText,
+			Confidence:   resp.Confidence,
+			LatencyMs:    latency,
+			InputTokens:  resp.InputTokens,
+			OutputTokens: resp.OutputTokens,
+			CreatedAt:    time.Now(),
 		}
 		if err != nil {
 			iter.RawResponse = err.Error()
@@ -158,15 +160,17 @@ func (e *ReviewEngine) Iterate(ctx context.Context, reviewID string) (*Report, e
 	latency := time.Since(start).Milliseconds()
 
 	iter := &Iteration{
-		ID:         genID(),
-		ReviewID:   reviewID,
-		BackendUsed: resp.BackendUsed,
-		ModelUsed:   resp.ModelUsed,
-		PromptType:  "manual_iterate",
-		RawResponse: resp.RawText,
-		Confidence:  resp.Confidence,
-		LatencyMs:   latency,
-		CreatedAt:   time.Now(),
+		ID:           genID(),
+		ReviewID:     reviewID,
+		BackendUsed:  resp.BackendUsed,
+		ModelUsed:    resp.ModelUsed,
+		PromptType:   "manual_iterate",
+		RawResponse:  resp.RawText,
+		Confidence:   resp.Confidence,
+		LatencyMs:    latency,
+		InputTokens:  resp.InputTokens,
+		OutputTokens: resp.OutputTokens,
+		CreatedAt:    time.Now(),
 	}
 	if err != nil {
 		iter.RawResponse = err.Error()
