@@ -18,6 +18,7 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 	"github.com/thearchitectit/guardrail-mcp/internal/audit"
+	"github.com/thearchitectit/guardrail-mcp/internal/budget"
 	"github.com/thearchitectit/guardrail-mcp/internal/notifications"
 	"github.com/thearchitectit/guardrail-mcp/internal/cache"
 	"github.com/thearchitectit/guardrail-mcp/internal/config"
@@ -39,6 +40,8 @@ type MCPServer struct {
 	visionTools       *VisionTools
 	webhookStore      *database.WebhookStore
 	webhookDispatcher *notifications.Dispatcher
+	budgetStore       *database.BudgetStore
+	budgetGovernor    *budget.Governor
 }
 
 // SetWebhookStore sets the webhook store for notification tools.
@@ -49,6 +52,12 @@ func (s *MCPServer) SetWebhookStore(store *database.WebhookStore) {
 // SetWebhookDispatcher sets the webhook dispatcher for notification delivery.
 func (s *MCPServer) SetWebhookDispatcher(dispatcher *notifications.Dispatcher) {
 	s.webhookDispatcher = dispatcher
+}
+
+// SetBudget sets the budget store and governor for budget management tools.
+func (s *MCPServer) SetBudget(store *database.BudgetStore, governor *budget.Governor) {
+	s.budgetStore = store
+	s.budgetGovernor = governor
 }
 
 // NewServer creates a new MCP server instance
@@ -702,6 +711,11 @@ func (s *MCPServer) setupHandlers() {
 			tools = append(tools, s.notificationToolList()...)
 		}
 
+		// Budget management tools
+		if s.budgetStore != nil {
+			tools = append(tools, s.budgetToolList()...)
+		}
+
 		return &mcp.ListToolsResult{
 			Tools: tools,
 		}, nil
@@ -838,6 +852,17 @@ func (s *MCPServer) handleToolCall(ctx context.Context, name string, args map[st
 		return s.handleDeleteWebhook(ctx, args)
 	case "get_webhook_deliveries":
 		return s.handleGetWebhookDeliveries(ctx, args)
+	// Budget management tools
+	case "configure_budget":
+		return s.handleConfigureBudget(ctx, args)
+	case "get_budget_status":
+		return s.handleGetBudgetStatus(ctx, args)
+	case "list_budgets":
+		return s.handleListBudgets(ctx, args)
+	case "get_budget_history":
+		return s.handleGetBudgetHistory(ctx, args)
+	case "delete_budget":
+		return s.handleDeleteBudget(ctx, args)
 	default:
 		return nil, fmt.Errorf("unknown tool: %s", name)
 	}
