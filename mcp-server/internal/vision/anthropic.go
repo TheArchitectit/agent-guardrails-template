@@ -90,11 +90,13 @@ func (c *AnthropicClient) ReviewImage(ctx context.Context, imageBase64 string, p
 	findings, confidence := parseFindings(raw)
 
 	return &ReviewResponse{
-		Findings:    findings,
-		Confidence:  confidence,
-		RawText:     raw,
-		ModelUsed:   c.model,
-		BackendUsed: "anthropic",
+		Findings:     findings,
+		Confidence:   confidence,
+		RawText:      raw,
+		ModelUsed:    c.model,
+		BackendUsed:  "anthropic",
+		InputTokens:  resp.Usage.InputTokens,
+		OutputTokens: resp.Usage.OutputTokens,
 	}, nil
 }
 
@@ -154,4 +156,8 @@ type anthropicResponse struct {
 	Content []struct {
 		Text string `json:"text"`
 	} `json:"content"`
+	Usage struct {
+		InputTokens  int64 `json:"input_tokens"`
+		OutputTokens int64 `json:"output_tokens"`
+	} `json:"usage"`
 }

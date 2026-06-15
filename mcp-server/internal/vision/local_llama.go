@@ -90,11 +90,13 @@ func (c *LocalLlamaClient) ReviewImage(ctx context.Context, imageBase64 string, 
 	findings, confidence := parseFindings(raw)
 
 	return &ReviewResponse{
-		Findings:    findings,
-		Confidence:  confidence,
-		RawText:     raw,
-		ModelUsed:   c.model,
-		BackendUsed: "local_llama",
+		Findings:     findings,
+		Confidence:   confidence,
+		RawText:      raw,
+		ModelUsed:    c.model,
+		BackendUsed:  "local_llama",
+		InputTokens:  resp.Usage.PromptTokens,
+		OutputTokens: resp.Usage.CompletionTokens,
 	}, nil
 }
 
@@ -166,6 +168,10 @@ type openAIChatResponse struct {
 			Content string `json:"content"`
 		} `json:"message"`
 	} `json:"choices"`
+	Usage struct {
+		PromptTokens     int64 `json:"prompt_tokens"`
+		CompletionTokens int64 `json:"completion_tokens"`
+	} `json:"usage"`
 }
 
 // parseFindings extracts structured findings from raw model text.

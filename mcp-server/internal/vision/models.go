@@ -36,6 +36,8 @@ type Iteration struct {
 	FindingsJSON json.RawMessage `json:"findings_json" db:"findings_json"`
 	Confidence   float64         `json:"confidence" db:"confidence"`
 	LatencyMs    int64           `json:"latency_ms" db:"latency_ms"`
+	InputTokens  int64           `json:"input_tokens" db:"input_tokens"`
+	OutputTokens int64           `json:"output_tokens" db:"output_tokens"`
 	CreatedAt    time.Time       `json:"created_at" db:"created_at"`
 }
 
@@ -60,11 +62,13 @@ type Finding struct {
 
 // ReviewResponse is the output of a single inference call.
 type ReviewResponse struct {
-	Findings   []Finding `json:"findings"`
-	Confidence float64   `json:"confidence"`
-	RawText    string    `json:"raw_text"`
-	ModelUsed  string    `json:"model_used"`
-	BackendUsed string   `json:"backend_used"`
+	Findings     []Finding `json:"findings"`
+	Confidence   float64   `json:"confidence"`
+	RawText      string    `json:"raw_text"`
+	ModelUsed    string    `json:"model_used"`
+	BackendUsed  string    `json:"backend_used"`
+	InputTokens  int64     `json:"input_tokens"`
+	OutputTokens int64     `json:"output_tokens"`
 }
 
 // HealthStatus reports the health of an inference backend.
