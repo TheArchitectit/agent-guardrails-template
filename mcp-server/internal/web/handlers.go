@@ -7,6 +7,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -1454,4 +1455,43 @@ func isValidSlug(slug string) bool {
 		}
 	}
 	return true
+}
+
+// apiDocs serves the Scalar API reference UI
+func (s *Server) apiDocs(c echo.Context) error {
+	return c.HTML(http.StatusOK, `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Guardrail MCP Server — API Reference</title>
+  <style>body { margin: 0; }</style>
+</head>
+<body>
+  <script
+    id="api-reference"
+    data-url="/openapi.yaml"
+    data-configuration='{"theme":"purple"}'
+  ></script>
+  <script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference"></script>
+</body>
+</html>`)
+}
+
+// openAPISpec serves the OpenAPI 3.1 YAML specification
+func (s *Server) openAPISpec(c echo.Context) error {
+	// Try to serve from the docs directory relative to the binary
+	paths := []string{
+		"docs/openapi.yaml",
+		"internal/web/../../docs/openapi.yaml",
+	}
+	for _, p := range paths {
+		if _, err := os.Stat(p); err == nil {
+			return c.File(p)
+		}
+	}
+	// Fallback: embedded inline error
+	return c.JSON(http.StatusNotFound, map[string]string{
+		"error": "openapi.yaml not found — ensure docs/openapi.yaml exists relative to the binary",
+	})
 }
