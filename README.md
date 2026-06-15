@@ -2,7 +2,7 @@
 
 > AI-first safety framework for agents building software at high velocity. Guardrails don't slow you down — they're your license to move fast.
 
-[![Version](https://img.shields.io/badge/version-v3.1.0-blue.svg)](./CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-v3.2.0-blue.svg)](./CHANGELOG.md)
 [![Go Implementation](https://img.shields.io/badge/Implementation-Go-blue.svg?style=flat&logo=go)](https://golang.org)
 [![WCAG 3.0+](https://img.shields.io/badge/Accessibility-WCAG_3.0+_Silver-green.svg)](docs/accessibility/ACCESSIBILITY_GUIDE.md)
 [![Spatial Computing](https://img.shields.io/badge/Spatial-XR/VR/AR-blue.svg)](docs/spatial/SPATIAL_COMPUTING_UI.md)
@@ -18,11 +18,15 @@
 | Capability | What It Does |
 |-----------|-------------|
 | **Real-Time Guardrail Enforcement** | Go MCP server validates every bash command, file edit, git operation, and commit before execution |
+| **CI/CD Policy Enforcement** | `POST /api/v1/policy/check` endpoint for gating PRs on guardrail violations — with line/column precision |
+| **Webhook Notifications** | Real-time violation and halt event delivery via HMAC-signed webhooks with circuit breaker protection |
+| **Token Budget Ledger** | Track AI API costs across Claude/GPT models, set team budgets, get alerts when thresholds are crossed |
+| **Agent Lifecycle Management** | State machine (idle→planning→active→review→release) with transition validation and audit trails |
 | **Multi-Agent Orchestration** | 10-part AI-Powered Development 2026 guide covering MoA (Mixture of Agents), swarm intelligence, and autonomous tool use |
 | **Cross-Platform IDE Integration** | Native skills and rules for Claude Code, Cursor, OpenCode, Windsurf, and GitHub Copilot — not generic prompts |
 | **3D Game Development Suite** | Engine-agnostic guardrails (Godot, Unity, Unreal), XR/VR/AR comfort zones, mathematical foundations, AI-debuggable architecture |
 | **Token-Efficient Documentation** | 68+ modular docs (500-line max), INDEX_MAP keyword lookup, HEADER_MAP section navigation, `.claudeignore` for context savings |
-| **Production Infrastructure** | PostgreSQL 16 + Redis 7, CI/CD validation, secret scanning, regression prevention, test/production separation |
+| **Production Infrastructure** | PostgreSQL 16 + Redis 7, Docker Compose, CI/CD validation, 22-pattern secret scanning, regression prevention |
 | **14 Language Examples** | Go, Rust, TypeScript, Python, Java, GDScript, Scala, R, C#, C++, PHP, Ruby, Swift, Dart/Flutter |
 | **Ethical & Accessible by Default** | WCAG 3.0+ Silver compliance, dark pattern prevention, XR comfort zones, monetization ethics, multiplayer safety |
 
@@ -185,17 +189,24 @@ The **Model Context Protocol Server** provides real-time guardrail enforcement �
 
 | Feature | Details |
 |---------|---------|
-| **17 MCP Tools** | Session init, bash/file/git validation, scope checking, regression prevention, team management |
+| **32 MCP Tools** | Session, bash/file/git validation, scope, regression, team, webhooks (5), budget (5), lifecycle (5) |
 | **8 MCP Resources** | Quick reference, active rules, documentation access |
 | **Web UI** | Dashboard, document browser, rules management, failure registry |
+| **REST API** | 31 endpoints including `/api/v1/policy/check` for CI/CD enforcement |
+| **API Docs** | OpenAPI 3.1 spec + Scalar explorer at `/docs` |
 | **Endpoints** | SSE stream (`/mcp/v1/sse`), JSON-RPC (`/mcp/v1/message`), Web UI (`/web`) |
 
 ```bash
-# Deploy
+# Quick start with Docker Compose
+cp .env.example .env  # Edit with your API keys
+cd mcp-server && make compose-up
+
+# Or deploy production
 cd mcp-server && docker compose -f deploy/podman-compose.yml up -d
 
 # Verify
-curl http://your-server:8095/health/ready
+curl http://localhost:8081/health/ready
+curl http://localhost:8081/docs  # API explorer
 ```
 
 See [mcp-server/README.md](mcp-server/README.md) for full setup, API docs, and troubleshooting.
@@ -271,6 +282,9 @@ agent-guardrails-template/
 │   └── sprints/                 # Task framework and templates
 │
 ├── mcp-server/                  ← Go MCP server (PostgreSQL + Redis)
+│   ├── docs/openapi.yaml        # OpenAPI 3.1 spec (31 endpoints)
+│   └── internal/budget/         # Token budget ledger
+├── docker-compose.yml           ← Local dev stack (postgres, redis, mcp-server)
 ├── examples/                    ← 14 language implementations
 ├── skills/shared-prompts/       ← Four Laws, halt conditions, vibe coding
 ├── scripts/                     ← Setup and utility tools
