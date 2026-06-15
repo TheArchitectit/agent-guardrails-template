@@ -1,0 +1,1270 @@
+openapi: 3.1.0
+info:
+  title: Guardrail MCP Server API
+  version: 2.6.0
+  description: |
+    REST API for the Guardrail MCP Enforcement Server — an AI guardrail platform
+    for safe, governed AI-assisted development.
+
+    ## Authentication
+    Most endpoints require a Bearer token (API key). Health and version endpoints are public.
+
+    ```
+    Authorization: Bearer <your-api-key>
+    ```
+
+    ## Rate Limiting
+    All authenticated endpoints are rate-limited. Limits are returned in response headers:
+    - `X-RateLimit-Limit` — max requests per window
+    - `X-RateLimit-Remaining` — remaining requests
+    - `X-RateLimit-Reset` — reset timestamp
+  contact:
+    name: Guardrail MCP
+    url: https://github.com/TheArchitectit/agent-guardrails-template
+  license:
+    name: MIT
+
+servers:
+  - url: http://localhost:8081
+    description: Local development (Web UI port)
+  - url: http://localhost:8080
+    description: Local development (MCP port)
+
+tags:
+  - name: Health
+    description: Health check and version endpoints
+  - name: Policy
+    description: Policy enforcement for CI/CD
+  - name: Rules
+    description: Prevention rule management
+  - name: Documents
+    description: Guardrail document management
+  - name: Projects
+    description: Project management
+  - name: Failures
+    description: Failure event tracking
+  - name: Validation
+    description: Content validation
+  - name: IDE
+    description: IDE integration endpoints
+  - name: Ingest
+    description: Document ingestion
+  - name: Updates
+    description: Version update checking
+
+paths:
+  /health/live:
+    get:
+      tags: [Health]
+      summary: Liveness probe
+      description: Returns 200 if the server is alive. Used by container orchestrators.
+      operationId: healthLive
+      security: []
+      responses:
+        "200":
+          description: Server is alive
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+
+  /health/ready:
+    get:
+      tags: [Health]
+      summary: Readiness probe
+      description: Returns 200 if the server is ready to accept traffic (DB connected, caches warm).
+      operationId: healthReady
+      security: []
+      responses:
+        "200":
+          description: Server is ready
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+        "503":
+          description: Server is not ready
+
+  /version:
+    get:
+      tags: [Health]
+      summary: Version information
+      operationId: versionInfo
+      security: []
+      responses:
+        "200":
+          description: Version info
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  version:
+                    type: string
+                    example: "v2.6.0"
+                  buildTime:
+                    type: string
+                    example: "2026-01-15T10:30:00Z"
+                  gitCommit:
+                    type: string
+                    example: "abc1234"
+
+  /metrics:
+    get:
+      tags: [Health]
+      summary: Prometheus metrics
+      operationId: metrics
+      security: []
+      responses:
+        "200":
+          description: Prometheus metrics in text format
+          content:
+            text/plain:
+              schema:
+                type: string
+
+  /api/v1/policy/check:
+    post:
+      tags: [Policy]
+      summary: Check content against policies
+      description: |
+        Evaluates content against active guardrail policies.
+        Designed for CI/CD pipelines to gate PRs on policy violations.
+        Returns detailed violations with rule IDs, severity, line numbers, and column positions.
+      operationId: policyCheck
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PolicyCheckRequest"
+      responses:
+        "200":
+          description: Policy check result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PolicyCheckResponse"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+
+  /api/documents:
+    get:
+      tags: [Documents]
+      summary: List guardrail documents
+      operationId: listDocuments
+      parameters:
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/LimitParam"
+      responses:
+        "200":
+          description: Document list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DocumentListResponse"
+
+  /api/documents/search:
+    get:
+      tags: [Documents]
+      summary: Search documents
+      operationId: searchDocuments
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+        - $ref: "#/components/parameters/LimitParam"
+      responses:
+        "200":
+          description: Search results
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DocumentListResponse"
+
+  /api/documents/{id}:
+    get:
+      tags: [Documents]
+      summary: Get a document
+      operationId: getDocument
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      responses:
+        "200":
+          description: Document details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Document"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    put:
+      tags: [Documents]
+      summary: Update a document
+      operationId: updateDocument
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DocumentUpdateRequest"
+      responses:
+        "200":
+          description: Document updated
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/rules:
+    get:
+      tags: [Rules]
+      summary: List prevention rules
+      operationId: listRules
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: severity
+          in: query
+          schema:
+            type: string
+        - name: enabled
+          in: query
+          schema:
+            type: boolean
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/LimitParam"
+      responses:
+        "200":
+          description: Rule list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RuleListResponse"
+    post:
+      tags: [Rules]
+      summary: Create a prevention rule
+      operationId: createRule
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RuleCreateRequest"
+      responses:
+        "201":
+          description: Rule created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PreventionRule"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/rules/{id}:
+    get:
+      tags: [Rules]
+      summary: Get a rule
+      operationId: getRule
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      responses:
+        "200":
+          description: Rule details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PreventionRule"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    put:
+      tags: [Rules]
+      summary: Update a rule
+      operationId: updateRule
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RuleUpdateRequest"
+      responses:
+        "200":
+          description: Rule updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PreventionRule"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [Rules]
+      summary: Delete a rule
+      operationId: deleteRule
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      responses:
+        "200":
+          description: Rule deleted
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/rules/{id}/toggle:
+    patch:
+      tags: [Rules]
+      summary: Toggle rule enabled/disabled
+      operationId: toggleRule
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      responses:
+        "200":
+          description: Rule toggled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PreventionRule"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/projects:
+    get:
+      tags: [Projects]
+      summary: List projects
+      operationId: listProjects
+      responses:
+        "200":
+          description: Project list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  projects:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Project"
+                  count:
+                    type: integer
+    post:
+      tags: [Projects]
+      summary: Create a project
+      operationId: createProject
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProjectCreateRequest"
+      responses:
+        "201":
+          description: Project created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Project"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/projects/{id}:
+    get:
+      tags: [Projects]
+      summary: Get a project
+      operationId: getProject
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      responses:
+        "200":
+          description: Project details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Project"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    put:
+      tags: [Projects]
+      summary: Update a project
+      operationId: updateProject
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProjectCreateRequest"
+      responses:
+        "200":
+          description: Project updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Project"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [Projects]
+      summary: Delete a project
+      operationId: deleteProject
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      responses:
+        "200":
+          description: Project deleted
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/failures:
+    get:
+      tags: [Failures]
+      summary: List failure events
+      operationId: listFailures
+      parameters:
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/LimitParam"
+      responses:
+        "200":
+          description: Failure list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  failures:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/FailureEntry"
+                  total:
+                    type: integer
+    post:
+      tags: [Failures]
+      summary: Create a failure event
+      operationId: createFailure
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FailureCreateRequest"
+      responses:
+        "201":
+          description: Failure created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FailureEntry"
+
+  /api/failures/{id}:
+    get:
+      tags: [Failures]
+      summary: Get a failure event
+      operationId: getFailure
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      responses:
+        "200":
+          description: Failure details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FailureEntry"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    put:
+      tags: [Failures]
+      summary: Update a failure event
+      operationId: updateFailure
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FailureUpdateRequest"
+      responses:
+        "200":
+          description: Failure updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FailureEntry"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/stats:
+    get:
+      tags: [Validation]
+      summary: Server statistics
+      operationId: getStats
+      responses:
+        "200":
+          description: Server stats
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total_rules:
+                    type: integer
+                  total_violations:
+                    type: integer
+                  total_sessions:
+                    type: integer
+                  uptime:
+                    type: string
+                  version:
+                    type: string
+
+  /api/validate:
+    post:
+      tags: [Validation]
+      summary: Validate content against rules
+      operationId: validateContent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ValidateRequest"
+      responses:
+        "200":
+          description: Validation result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationResult"
+
+  /api/ingest/upload:
+    post:
+      tags: [Ingest]
+      summary: Upload guardrail documents
+      operationId: uploadFiles
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                files:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+      responses:
+        "200":
+          description: Upload result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IngestResult"
+
+  /api/ingest/sync:
+    post:
+      tags: [Ingest]
+      summary: Sync repository documents
+      operationId: syncRepo
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                repo_url:
+                  type: string
+                branch:
+                  type: string
+      responses:
+        "200":
+          description: Sync result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IngestResult"
+
+  /api/ingest/status:
+    get:
+      tags: [Ingest]
+      summary: Ingest status
+      operationId: getIngestStatus
+      responses:
+        "200":
+          description: Ingest status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  last_sync:
+                    type: string
+                    format: date-time
+                  total_documents:
+                    type: integer
+
+  /api/ingest/orphans:
+    get:
+      tags: [Ingest]
+      summary: List orphaned documents
+      operationId: listOrphans
+      responses:
+        "200":
+          description: Orphan list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  orphans:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Document"
+
+  /api/ingest/orphans/{id}:
+    delete:
+      tags: [Ingest]
+      summary: Delete an orphaned document
+      operationId: deleteOrphan
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      responses:
+        "200":
+          description: Orphan deleted
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/updates/status:
+    get:
+      tags: [Updates]
+      summary: Update status
+      operationId: getUpdateStatus
+      responses:
+        "200":
+          description: Update status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  current_version:
+                    type: string
+                  latest_version:
+                    type: string
+                  update_available:
+                    type: boolean
+
+  /api/updates/check:
+    post:
+      tags: [Updates]
+      summary: Check for updates
+      operationId: checkForUpdates
+      responses:
+        "200":
+          description: Update check result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  update_available:
+                    type: boolean
+                  latest_version:
+                    type: string
+                  download_url:
+                    type: string
+
+  /ide/health:
+    get:
+      tags: [IDE]
+      summary: IDE health check
+      operationId: ideHealth
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: IDE health status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+
+  /ide/validate/file:
+    post:
+      tags: [IDE]
+      summary: Validate a file
+      operationId: validateFile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ValidateFileRequest"
+      responses:
+        "200":
+          description: File validation result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationResult"
+
+  /ide/validate/selection:
+    post:
+      tags: [IDE]
+      summary: Validate a code selection
+      operationId: validateSelection
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ValidateSelectionRequest"
+      responses:
+        "200":
+          description: Selection validation result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationResult"
+
+  /ide/rules:
+    get:
+      tags: [IDE]
+      summary: Get IDE rule set
+      operationId: getIDERules
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: IDE rules
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  rules:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/PreventionRule"
+
+  /ide/quick-reference:
+    get:
+      tags: [IDE]
+      summary: Quick reference guide
+      operationId: getQuickReference
+      responses:
+        "200":
+          description: Quick reference content
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  title:
+                    type: string
+                  content:
+                    type: string
+                  sections:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        title:
+                          type: string
+                        content:
+                          type: string
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      description: |
+        API key passed as Bearer token. Obtain from server configuration.
+
+  parameters:
+    IdParam:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    PageParam:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    LimitParam:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 50
+
+  responses:
+    Unauthorized:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    RateLimited:
+      description: Rate limit exceeded
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+          description: Seconds until rate limit resets
+
+  schemas:
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "healthy"
+        service:
+          type: string
+          example: "guardrail-mcp-web"
+        version:
+          type: string
+          example: "v2.6.0"
+        uptime:
+          type: string
+          example: "2h30m"
+        timestamp:
+          type: string
+          format: date-time
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          example: "resource not found"
+        code:
+          type: integer
+          example: 404
+
+    PolicyCheckRequest:
+      type: object
+      required:
+        - input
+      properties:
+        input:
+          type: string
+          description: Content to check against guardrail policies
+        file_path:
+          type: string
+          description: Optional file path context
+        language:
+          type: string
+          description: "Optional programming language hint (e.g. go, python)"
+        categories:
+          type: array
+          items:
+            type: string
+            enum: [bash, git, file_edit]
+          description: "Filter rules by category. Empty = all categories."
+
+    PolicyCheckResponse:
+      type: object
+      properties:
+        passed:
+          type: boolean
+          description: True if no violations were found
+        violations:
+          type: array
+          items:
+            $ref: "#/components/schemas/PolicyViolation"
+        checked_at:
+          type: string
+          format: date-time
+        duration_ms:
+          type: integer
+          description: Elapsed time in milliseconds
+        rules_evaluated:
+          type: integer
+          description: Number of rules that were evaluated
+
+    PolicyViolation:
+      type: object
+      properties:
+        rule_id:
+          type: string
+          example: "bash-dang-001"
+        rule_name:
+          type: string
+          example: "No rm -rf /"
+        severity:
+          type: string
+          enum: [critical, error, warning, info]
+        message:
+          type: string
+          example: "Recursive delete of root is forbidden"
+        category:
+          type: string
+          example: "bash"
+        matched_pattern:
+          type: string
+          example: "rm\\s+-rf\\s+/"
+        line:
+          type: integer
+          example: 42
+        column:
+          type: integer
+          example: 1
+
+    PreventionRule:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        rule_id:
+          type: string
+          example: "bash-dang-001"
+        name:
+          type: string
+          example: "No rm -rf /"
+        pattern:
+          type: string
+          example: "rm\\s+-rf\\s+/"
+        message:
+          type: string
+        severity:
+          type: string
+          enum: [critical, error, warning, info]
+        category:
+          type: string
+        enabled:
+          type: boolean
+        document_id:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    RuleListResponse:
+      type: object
+      properties:
+        rules:
+          type: array
+          items:
+            $ref: "#/components/schemas/PreventionRule"
+        total:
+          type: integer
+
+    RuleCreateRequest:
+      type: object
+      required:
+        - rule_id
+        - name
+        - pattern
+        - severity
+        - category
+      properties:
+        rule_id:
+          type: string
+        name:
+          type: string
+        pattern:
+          type: string
+        message:
+          type: string
+        severity:
+          type: string
+          enum: [critical, error, warning, info]
+        category:
+          type: string
+        document_id:
+          type: string
+
+    RuleUpdateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        pattern:
+          type: string
+        message:
+          type: string
+        severity:
+          type: string
+          enum: [critical, error, warning, info]
+        category:
+          type: string
+        enabled:
+          type: boolean
+
+    Document:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        slug:
+          type: string
+        content:
+          type: string
+        category:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    DocumentListResponse:
+      type: object
+      properties:
+        documents:
+          type: array
+          items:
+            $ref: "#/components/schemas/Document"
+        total:
+          type: integer
+
+    DocumentUpdateRequest:
+      type: object
+      properties:
+        title:
+          type: string
+        content:
+          type: string
+        category:
+          type: string
+
+    Project:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        slug:
+          type: string
+          description: "URL-safe project identifier"
+        description:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    ProjectCreateRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+        slug:
+          type: string
+          pattern: "^[a-zA-Z0-9_-]+$"
+          maxLength: 100
+        description:
+          type: string
+
+    FailureEntry:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        project_id:
+          type: string
+          format: uuid
+        agent_name:
+          type: string
+        failure_type:
+          type: string
+          enum: [compilation, runtime, test, lint, violation]
+        description:
+          type: string
+        context:
+          type: string
+        severity:
+          type: string
+          enum: [critical, error, warning, info]
+        created_at:
+          type: string
+          format: date-time
+
+    FailureCreateRequest:
+      type: object
+      required:
+        - project_id
+        - failure_type
+        - description
+      properties:
+        project_id:
+          type: string
+          format: uuid
+        agent_name:
+          type: string
+        failure_type:
+          type: string
+          enum: [compilation, runtime, test, lint, violation]
+        description:
+          type: string
+        context:
+          type: string
+        severity:
+          type: string
+          enum: [critical, error, warning, info]
+
+    FailureUpdateRequest:
+      type: object
+      properties:
+        description:
+          type: string
+        context:
+          type: string
+        severity:
+          type: string
+          enum: [critical, error, warning, info]
+
+    ValidationResult:
+      type: object
+      properties:
+        passed:
+          type: boolean
+        violations:
+          type: array
+          items:
+            $ref: "#/components/schemas/ValidationViolation"
+        total_rules:
+          type: integer
+        checked_at:
+          type: string
+          format: date-time
+
+    ValidationViolation:
+      type: object
+      properties:
+        rule_id:
+          type: string
+        rule_name:
+          type: string
+        severity:
+          type: string
+          enum: [critical, error, warning, info]
+        message:
+          type: string
+        category:
+          type: string
+        match:
+          type: string
+        line:
+          type: integer
+        column:
+          type: integer
+
+    ValidateRequest:
+      type: object
+      required:
+        - content
+      properties:
+        content:
+          type: string
+        file_path:
+          type: string
+        language:
+          type: string
+        agent_name:
+          type: string
+
+    ValidateFileRequest:
+      type: object
+      required:
+        - file_path
+        - content
+      properties:
+        file_path:
+          type: string
+        content:
+          type: string
+        language:
+          type: string
+
+    ValidateSelectionRequest:
+      type: object
+      required:
+        - content
+      properties:
+        content:
+          type: string
+        language:
+          type: string
+        file_path:
+          type: string
+        start_line:
+          type: integer
+
+    IngestResult:
+      type: object
+      properties:
+        success:
+          type: boolean
+        documents_processed:
+          type: integer
+        rules_extracted:
+          type: integer
+        errors:
+          type: array
+          items:
+            type: string
+
+security:
+  - BearerAuth: []
