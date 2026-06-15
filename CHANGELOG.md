@@ -10,6 +10,93 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [3.2.0] - 2026-06-14
+
+### Release: Platform Review Sprint — 7 Features, All P0 Fixes
+
+**Type:** Minor Version Bump (new features + security hardening)
+**Branch:** `feature/platform-review-june-2026` (14 commits)
+**Review:** [Platform Review](docs/reviews/PLATFORM_REVIEW_2026-06-14.md) | [Implementation Report](docs/reviews/IMPLEMENTATION_REPORT_2026-06-14.md)
+
+#### Added
+
+- **CI/CD Enforcement Pipeline** — `POST /api/v1/policy/check`
+  - Checks content against active guardrail policies with line/column precision
+  - Category filtering (bash, git, file_edit), audit logged
+  - New models: `PolicyCheckRequest`, `PolicyCheckResponse`, `PolicyViolation`
+
+- **Webhook Notification System** — 5 MCP tools + database store
+  - HMAC-SHA256 signed payloads with configurable secret per webhook
+  - 3-attempt retry with exponential backoff, circuit breaker per URL (sony/gobreaker)
+  - Fire-and-forget goroutines (non-blocking EventBus)
+  - Events: `violation.detected`, `halt.triggered`, `budget.exceeded`
+  - MCP tools: `configure_webhook`, `test_webhook`, `list_webhooks`, `delete_webhook`, `get_webhook_deliveries`
+
+- **Token Budget Ledger & Cost Governor** — 5 MCP tools + vision pipeline instrumentation
+  - Pricing table for Claude 3.5 Sonnet, Claude 3 Opus, Claude 3 Haiku, GPT-4o, GPT-4-turbo, GPT-3.5-turbo, local-llama
+  - Budget configs with token/cost limits, daily/weekly/monthly periods, alert thresholds
+  - Vision pipeline now tracks `InputTokens`/`OutputTokens` from Anthropic, OpenAI, and local LLaMa responses
+  - EventBus integration: emits `budget.exceeded` when alert threshold crossed
+  - MCP tools: `configure_budget`, `get_budget_status`, `list_budgets`, `get_budget_history`, `delete_budget`
+
+- **Agent Lifecycle State Machine** — 5 MCP tools + audit trail
+  - States: `idle` → `planning` → `active` → `review` → `release` (or `halted`)
+  - Validated transitions with full audit trail in `agent_state_transitions` table
+  - Admin override (`force_agent_state`) with required justification
+  - MCP tools: `create_agent_session`, `transition_agent_state`, `get_agent_state`, `list_agent_sessions`, `force_agent_state`
+
+- **OpenAPI 3.1 Specification + Scalar API Explorer**
+  - Full spec covering all 31 REST endpoints across 10 tags
+  - Schema definitions for all request/response types
+  - Scalar API reference UI served at `/docs` (no auth required)
+  - Raw spec at `/openapi.yaml`
+
+- **Docker Compose Local Development Stack**
+  - PostgreSQL 16 + Redis 7 + MCP server with health checks
+  - Environment-driven config from `.env` file
+  - Makefile targets: `compose-up`, `compose-down`, `compose-logs`, `compose-ps`, `compose-restart`
+
+- **Database Migrations** — 3 new migrations
+  - `014`: `webhook_configs`, `webhook_deliveries` (webhook notifications)
+  - `015`: `budget_configs`, `budget_entries` (token budget tracking)
+  - `016`: `agent_sessions`, `agent_state_transitions` (agent lifecycle)
+
+- **15 New MCP Tools** (total: 32)
+  - 5 webhook tools, 5 budget tools, 5 lifecycle tools
+
+#### Fixed
+
+- **Build broken** — removed unused `log/slog` and `sync` imports in `domain/cqrs.go`
+- **Duplicate function** — removed duplicate `buildToolResult` from `mcp/server.go`
+- **Dead halt condition** — `len(criticalEvents) < 0` always false, changed to `> 0`
+- **SSRF (4 vectors)** — added `safeReadFile()` helper with path traversal validation in `mcp/tools_extended.go`
+- **ReDoS** — exported `validation.CompilePattern()`, replaced raw `regexp.Compile` in `web/handlers.go`
+- **Unauthenticated endpoints** — `/api/ingest`, `/api/ingest/sync`, `/api/updates/check` now require auth
+- **File extension bypass** — removed `.json` from public file extension allowlist in middleware
+- **Session token entropy** — increased from 64-bit to 192-bit, added `rand.Read` error check
+- **Secrets scanner gaps** — expanded from 7 to 22 patterns (added GCP, Azure, Stripe, npm, PyPI, Hugging Face, DB connection strings, SendGrid, Twilio, Mailgun)
+
+#### Changed
+
+- **README.md** — updated version badge to v3.2.0, capability table expanded with CI/CD enforcement, webhooks, budget ledger, lifecycle management
+- **INDEX_MAP.md** — added 10 new entries for all new features and documentation
+- **`.env.example`** — added `JWT_SECRET`, `REDIS_PASSWORD`, Docker Compose instructions
+
+#### Stats
+
+| Metric | Value |
+|--------|-------|
+| Commits | 14 |
+| New files | 24 |
+| Modified files | 27 |
+| Lines added | ~4,227 |
+| New MCP tools | 15 (17 → 32) |
+| New database tables | 6 |
+| Security fixes | 8 |
+| Secret patterns | 7 → 22 |
+
+---
+
 ## [3.1.0] - 2026-05-12
 
 ### Release: Structural Reorganization & README Update
