@@ -19,6 +19,7 @@ import (
 	"github.com/thearchitectit/guardrail-mcp/internal/config"
 	"github.com/thearchitectit/guardrail-mcp/internal/database"
 	mcpServer "github.com/thearchitectit/guardrail-mcp/internal/mcp"
+	"github.com/thearchitectit/guardrail-mcp/internal/notifications"
 	"github.com/thearchitectit/guardrail-mcp/internal/validation"
 	"github.com/thearchitectit/guardrail-mcp/internal/web"
 )
@@ -121,6 +122,13 @@ func main() {
 	// Create MCP server
 	haltEventStore := database.NewHaltEventStore(db)
 	mcpSrv := mcpServer.NewMCPServer(cfg, db, redisClient, auditLogger, validationEngine, fileReadStore, taskAttemptStore, haltEventStore)
+
+	// Initialize webhook notifications
+	webhookStore := database.NewWebhookStore(db)
+	webhookDispatcher := notifications.NewDispatcher(webhookStore)
+	mcpSrv.SetWebhookStore(webhookStore)
+	mcpSrv.SetWebhookDispatcher(webhookDispatcher)
+	slog.Info("Webhook notifications initialized")
 
 	// Register vision HTTP routes on the web server if vision is enabled
 	if vt := mcpSrv.VisionTools(); vt != nil {
