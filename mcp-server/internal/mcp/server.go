@@ -42,6 +42,7 @@ type MCPServer struct {
 	webhookDispatcher *notifications.Dispatcher
 	budgetStore       *database.BudgetStore
 	budgetGovernor    *budget.Governor
+	agentStateStore   *database.AgentStateStore
 }
 
 // SetWebhookStore sets the webhook store for notification tools.
@@ -58,6 +59,11 @@ func (s *MCPServer) SetWebhookDispatcher(dispatcher *notifications.Dispatcher) {
 func (s *MCPServer) SetBudget(store *database.BudgetStore, governor *budget.Governor) {
 	s.budgetStore = store
 	s.budgetGovernor = governor
+}
+
+// SetAgentStateStore sets the agent state store for lifecycle tools.
+func (s *MCPServer) SetAgentStateStore(store *database.AgentStateStore) {
+	s.agentStateStore = store
 }
 
 // NewServer creates a new MCP server instance
@@ -716,6 +722,11 @@ func (s *MCPServer) setupHandlers() {
 			tools = append(tools, s.budgetToolList()...)
 		}
 
+		// Agent lifecycle tools
+		if s.agentStateStore != nil {
+			tools = append(tools, s.lifecycleToolList()...)
+		}
+
 		return &mcp.ListToolsResult{
 			Tools: tools,
 		}, nil
@@ -863,6 +874,17 @@ func (s *MCPServer) handleToolCall(ctx context.Context, name string, args map[st
 		return s.handleGetBudgetHistory(ctx, args)
 	case "delete_budget":
 		return s.handleDeleteBudget(ctx, args)
+	// Agent lifecycle tools
+	case "create_agent_session":
+		return s.handleCreateAgentSession(ctx, args)
+	case "transition_agent_state":
+		return s.handleTransitionAgentState(ctx, args)
+	case "get_agent_state":
+		return s.handleGetAgentState(ctx, args)
+	case "list_agent_sessions":
+		return s.handleListAgentSessions(ctx, args)
+	case "force_agent_state":
+		return s.handleForceAgentState(ctx, args)
 	default:
 		return nil, fmt.Errorf("unknown tool: %s", name)
 	}
