@@ -197,6 +197,10 @@ func (s *Server) setupRoutes() {
 	// Policy enforcement (CI/CD)
 	api.POST("/v1/policy/check", s.policyCheck)
 
+	// API documentation (no auth required)
+	s.echo.GET("/docs", s.apiDocs)
+	s.echo.GET("/openapi.yaml", s.openAPISpec)
+
 	// IDE API endpoints
 	ide := s.echo.Group("/ide")
 	ide.GET("/health", s.ideHealth)
