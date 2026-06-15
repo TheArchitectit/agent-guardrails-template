@@ -17,8 +17,9 @@ type cachedRegex struct {
 	lastAccess time.Time
 }
 
-// getCachedRegex retrieves or compiles a regex pattern
-func getCachedRegex(pattern string) (*regexp.Regexp, error) {
+// CompilePattern retrieves or compiles a regex pattern with caching and size limits.
+// Use this instead of regexp.Compile to prevent ReDoS and avoid recompilation.
+func CompilePattern(pattern string) (*regexp.Regexp, error) {
 	// Fast path: check cache first
 	if cached, ok := regexCache.Load(pattern); ok {
 		cr := cached.(*cachedRegex)
@@ -59,7 +60,7 @@ func SafeRegex(pattern string, input string, timeout time.Duration) (bool, error
 		}()
 
 		// Use cached regex instead of compiling each time
-		re, err := getCachedRegex(pattern)
+		re, err := CompilePattern(pattern)
 		if err != nil {
 			select {
 			case resultChan <- false:
@@ -99,7 +100,7 @@ func ValidatePattern(pattern string) error {
 	}
 
 	// Try to compile (and cache)
-	if _, err := getCachedRegex(pattern); err != nil {
+	if _, err := CompilePattern(pattern); err != nil {
 		return err
 	}
 
