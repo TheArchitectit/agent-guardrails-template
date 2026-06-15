@@ -84,11 +84,13 @@ func (c *OpenAIClient) ReviewImage(ctx context.Context, imageBase64 string, prom
 	findings, confidence := parseFindings(raw)
 
 	return &ReviewResponse{
-		Findings:    findings,
-		Confidence:  confidence,
-		RawText:     raw,
-		ModelUsed:   c.model,
-		BackendUsed: "openai",
+		Findings:     findings,
+		Confidence:   confidence,
+		RawText:      raw,
+		ModelUsed:    c.model,
+		BackendUsed:  "openai",
+		InputTokens:  resp.Usage.PromptTokens,
+		OutputTokens: resp.Usage.CompletionTokens,
 	}, nil
 }
 
