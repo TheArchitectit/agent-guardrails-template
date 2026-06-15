@@ -57,9 +57,18 @@
 | copilot | CLCODE_INTEGRATION.md | docs/ | GitHub Copilot instructions (see Claude Code) |
 | cody | CLCODE_INTEGRATION.md | docs/ | Cody context configuration (see Claude Code) |
 | mcp-server | MCP_SERVER_PLAN.md | docs/plans/ | MCP server implementation plan |
-| mcp-api | API.md | mcp-server/ | MCP server REST API documentation |
+| mcp-api | openapi.yaml | mcp-server/docs/ | MCP server REST API (OpenAPI 3.1 spec, 31 endpoints) |
 | mcp-changelog | CHANGELOG.md | mcp-server/ | MCP server version history |
 | guardrail-platform | MCP_SERVER_PLAN.md | docs/plans/ | Guardrail enforcement platform |
+| platform-review | PLATFORM_REVIEW_2026-06-14.md | docs/reviews/ | June 2026 total platform review — architecture, bugs, features |
+| implementation-report | IMPLEMENTATION_REPORT_2026-06-14.md | docs/reviews/ | Sprint implementation report — all 3 sprints, 13 commits, 7 features |
+| openapi-spec | openapi.yaml | mcp-server/docs/ | OpenAPI 3.1 spec for all 31 REST endpoints |
+| api-explorer | /docs | (served at runtime) | Scalar API reference UI (no auth required) |
+| policy-check | /api/v1/policy/check | (REST endpoint) | CI/CD enforcement — POST content against guardrail policies |
+| docker-compose | docker-compose.yml | ./ | Local dev stack: PostgreSQL, Redis, MCP server |
+| webhook-docs | tools_notifications.go | mcp-server/internal/mcp/ | 5 MCP tools: configure/test/list/delete/get_deliveries |
+| budget-docs | tools_budget.go | mcp-server/internal/mcp/ | 5 MCP tools: configure/status/list/history/delete |
+| lifecycle-docs | tools_lifecycle.go | mcp-server/internal/mcp/ | 5 MCP tools: create/transition/get/list/force session |
 | team-tools | TEAM_TOOLS.md | docs/ | Team layout management MCP tools reference (Go implementation) |
 | team-structure | TEAM_STRUCTURE.md | docs/ | 12-team enterprise structure documentation |
 | python-migration | PYTHON_TO_GO_MIGRATION.md | docs/ | Python to Go migration guide for developers |
