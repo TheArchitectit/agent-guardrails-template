@@ -93,6 +93,22 @@ docker-down: ## Stop docker-compose services
 docker-logs: ## View docker-compose logs
 	podman-compose -f deploy/podman-compose.yml logs -f
 
+# Docker Compose (local dev)
+compose-up: ## Start all services with docker-compose
+	docker compose -f ../docker-compose.yml up -d --build
+
+compose-down: ## Stop docker-compose services
+	docker compose -f ../docker-compose.yml down
+
+compose-logs: ## View docker-compose logs
+	docker compose -f ../docker-compose.yml logs -f
+
+compose-ps: ## List running docker-compose services
+	docker compose -f ../docker-compose.yml ps
+
+compose-restart: ## Restart mcp-server only (keeps DB/Redis running)
+	docker compose -f ../docker-compose.yml restart mcp-server
+
 # Database migrations
 migrate-up: ## Run database migrations up
 	@if [ -z "$(DATABASE_URL)" ]; then \
