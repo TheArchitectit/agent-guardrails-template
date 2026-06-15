@@ -7,7 +7,6 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
-	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -18,6 +17,7 @@ import (
 	"github.com/thearchitectit/guardrail-mcp/internal/ingest"
 	"github.com/thearchitectit/guardrail-mcp/internal/models"
 	"github.com/thearchitectit/guardrail-mcp/internal/security"
+	"github.com/thearchitectit/guardrail-mcp/internal/validation"
 	"github.com/thearchitectit/guardrail-mcp/internal/updates"
 )
 
@@ -1308,8 +1308,8 @@ func validateContentAgainstRules(filePath, content, language string, rules []mod
 			continue
 		}
 
-		// Compile regex pattern
-		re, err := regexp.Compile(rule.Pattern)
+		// Compile regex pattern with caching and ReDoS protection
+		re, err := validation.CompilePattern(rule.Pattern)
 		if err != nil {
 			slog.Warn("Invalid rule pattern", "rule_id", rule.RuleID, "error", err)
 			continue
