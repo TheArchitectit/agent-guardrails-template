@@ -294,6 +294,9 @@ const (
 	// Notification events
 	EventViolationDetected EventType = "violation.detected"
 	EventHaltTriggered     EventType = "halt.triggered"
+
+	// Budget events
+	EventBudgetExceeded EventType = "budget.exceeded"
 )
 
 // Event represents a domain event
