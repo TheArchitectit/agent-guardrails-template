@@ -1,0 +1,131 @@
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: guardrail-redis
+    restart: unless-stopped
+    command: >
+      sh -c "
+        echo 'requirepass '$${REDIS_PASSWORD} > /usr/local/etc/redis/redis.conf &&
+        echo 'maxmemory 256mb' >> /usr/local/etc/redis/redis.conf &&
+        echo 'maxmemory-policy allkeys-lru' >> /usr/local/etc/redis/redis.conf &&
+        redis-server /usr/local/etc/redis/redis.conf
+      "
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-changeme}
+    volumes:
+      - redis_data:/data
+    networks:
+      - guardrails-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-changeme}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: guardrail-postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=${DB_USER:-guardrail}
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-changeme}
+      - POSTGRES_DB=${DB_NAME:-guardrails}
+      - PGDATA=/var/lib/postgresql/data/pgdata
+    command: >
+      postgres
+        -c max_connections=100
+        -c shared_buffers=256MB
+        -c effective_cache_size=768MB
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    networks:
+      - guardrails-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-guardrail} -d ${DB_NAME:-guardrails}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  mcp-server:
+    build:
+      context: .
+      dockerfile: mcp-server/deploy/Dockerfile
+      args:
+        - VERSION=${VERSION:-dev}
+        - BUILD_TIME=${BUILD_TIME:-unknown}
+        - GIT_COMMIT=${GIT_COMMIT:-unknown}
+    image: guardrail-mcp:${VERSION:-latest}
+    container_name: guardrail-mcp-server
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${MCP_PORT:-8080}:8080"
+      - "127.0.0.1:${WEB_PORT:-8081}:8081"
+    environment:
+      # Server
+      - MCP_PORT=8080
+      - WEB_PORT=8081
+      - WEB_ENABLED=${WEB_ENABLED:-true}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - REQUEST_TIMEOUT=${REQUEST_TIMEOUT:-30s}
+      - SHUTDOWN_TIMEOUT=${SHUTDOWN_TIMEOUT:-30s}
+      - PRODUCTION_MODE=${PRODUCTION_MODE:-false}
+      # Database
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=${DB_NAME:-guardrails}
+      - DB_USER=${DB_USER:-guardrail}
+      - DB_PASSWORD=${DB_PASSWORD:-changeme}
+      - DB_SSLMODE=${DB_SSLMODE:-disable}
+      # Redis
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-changeme}
+      - REDIS_USE_TLS=false
+      # Security (REQUIRED — override in .env)
+      - MCP_API_KEY=${MCP_API_KEY:?Set MCP_API_KEY in .env}
+      - IDE_API_KEY=${IDE_API_KEY:?Set IDE_API_KEY in .env}
+      - JWT_SECRET=${JWT_SECRET:?Set JWT_SECRET in .env}
+      - JWT_ISSUER=${JWT_ISSUER:-guardrail-mcp}
+      - JWT_EXPIRY=${JWT_EXPIRY:-15m}
+      # Rate Limiting
+      - RATE_LIMIT_MCP=${RATE_LIMIT_MCP:-1000}
+      - RATE_LIMIT_IDE=${RATE_LIMIT_IDE:-500}
+      - RATE_LIMIT_SESSION=${RATE_LIMIT_SESSION:-100}
+      - RATE_LIMIT_WINDOW=${RATE_LIMIT_WINDOW:-1m}
+      # Cache
+      - CACHE_TTL_RULES=${CACHE_TTL_RULES:-5m}
+      - CACHE_TTL_DOCS=${CACHE_TTL_DOCS:-10m}
+      - CACHE_TTL_SEARCH=${CACHE_TTL_SEARCH:-2m}
+      # Feature Flags
+      - ENABLE_VALIDATION=${ENABLE_VALIDATION:-true}
+      - ENABLE_METRICS=${ENABLE_METRICS:-true}
+      - ENABLE_AUDIT_LOGGING=${ENABLE_AUDIT_LOGGING:-true}
+      - ENABLE_CACHE=${ENABLE_CACHE:-true}
+    healthcheck:
+      test: ["CMD", "/server", "--health-check"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  pg_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  guardrails-net:
+    driver: bridge
