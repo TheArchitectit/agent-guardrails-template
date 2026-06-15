@@ -194,6 +194,9 @@ func (s *Server) setupRoutes() {
 	api.GET("/ingest/orphans", s.listOrphans)
 	api.DELETE("/ingest/orphans/:id", s.deleteOrphan)
 
+	// Policy enforcement (CI/CD)
+	api.POST("/v1/policy/check", s.policyCheck)
+
 	// IDE API endpoints
 	ide := s.echo.Group("/ide")
 	ide.GET("/health", s.ideHealth)
