@@ -1283,6 +1283,88 @@ func (s *Server) getQuickReference(c echo.Context) error {
 	})
 }
 
+// policyCheck handles POST /api/v1/policy/check — CI/CD enforcement endpoint
+func (s *Server) policyCheck(c echo.Context) error {
+	var req models.PolicyCheckRequest
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid request body"})
+	}
+
+	if req.Input == "" {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "input is required"})
+	}
+
+	ctx := c.Request().Context()
+	start := time.Now()
+
+	// Load active rules, optionally filtered by category
+	rules, err := s.ruleStore.GetActiveRules(ctx)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to load rules"})
+	}
+
+	// Filter by categories if specified
+	if len(req.Categories) > 0 {
+		categorySet := make(map[string]bool, len(req.Categories))
+		for _, cat := range req.Categories {
+			categorySet[cat] = true
+		}
+		filtered := make([]models.PreventionRule, 0, len(rules))
+		for _, rule := range rules {
+			if categorySet[rule.Category] || rule.Category == "all" {
+				filtered = append(filtered, rule)
+			}
+		}
+		rules = filtered
+	}
+
+	// Compile patterns and check for violations
+	var violations []models.PolicyViolation
+	for _, rule := range rules {
+		if !rule.Enabled || rule.Pattern == "" {
+			continue
+		}
+
+		re, err := validation.CompilePattern(rule.Pattern)
+		if err != nil {
+			slog.Warn("Invalid rule pattern in policy check", "rule_id", rule.RuleID, "error", err)
+			continue
+		}
+
+		lines := strings.Split(req.Input, "\n")
+		for lineNum, line := range lines {
+			matches := re.FindAllStringIndex(line, -1)
+			for _, match := range matches {
+				violations = append(violations, models.PolicyViolation{
+					RuleID:         rule.RuleID,
+					RuleName:       rule.Name,
+					Severity:       string(rule.Severity),
+					Message:        rule.Message,
+					Category:       rule.Category,
+					MatchedPattern: rule.Pattern,
+					Line:           lineNum + 1,
+					Column:         match[0] + 1,
+				})
+			}
+		}
+	}
+
+	duration := time.Since(start)
+	elapsedMs := int(duration.Milliseconds())
+
+	// Audit log
+	keyHash := getAPIKeyHash(c)
+	s.auditLogger.LogValidation(ctx, keyHash, "policy_check", len(violations) == 0, len(violations))
+
+	return c.JSON(http.StatusOK, models.PolicyCheckResponse{
+		Passed:     len(violations) == 0,
+		Violations: violations,
+		CheckedAt:  time.Now().UTC(),
+		DurationMs: elapsedMs,
+		RulesCount: len(rules),
+	})
+}
+
 // validateContentAgainstRules checks content against prevention rules and returns violations
 type ValidationViolation struct {
 	RuleID   string `json:"rule_id"`
