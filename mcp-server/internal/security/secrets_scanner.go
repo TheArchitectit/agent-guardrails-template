@@ -50,6 +50,76 @@ var secretPatterns = []SecretPattern{
 		Pattern:     regexp.MustCompile(`eyJ[a-zA-Z0-9_-]*\.eyJ[a-zA-Z0-9_-]*\.[a-zA-Z0-9_-]*`),
 		Description: "JSON Web Token",
 	},
+	{
+		Name:        "GCP Service Account Key",
+		Pattern:     regexp.MustCompile(`"type":\s*"service_account"`),
+		Description: "GCP service account JSON key",
+	},
+	{
+		Name:        "Azure Connection String",
+		Pattern:     regexp.MustCompile(`(?i)DefaultEndpointsProtocol=https?;AccountName=[^;]+;AccountKey=`),
+		Description: "Azure Storage connection string",
+	},
+	{
+		Name:        "Azure AD Token",
+		Pattern:     regexp.MustCompile(`(?i)Bearer\s+eyJ[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+`),
+		Description: "Azure AD bearer token",
+	},
+	{
+		Name:        "Stripe Secret Key",
+		Pattern:     regexp.MustCompile(`sk_(live|test)_[0-9a-zA-Z]{24,}`),
+		Description: "Stripe API secret key",
+	},
+	{
+		Name:        "Stripe Publishable Key",
+		Pattern:     regexp.MustCompile(`pk_(live|test)_[0-9a-zA-Z]{24,}`),
+		Description: "Stripe publishable key",
+	},
+	{
+		Name:        "npm Token",
+		Pattern:     regexp.MustCompile(`npm_[A-Za-z0-9]{36}`),
+		Description: "npm access token",
+	},
+	{
+		Name:        "PyPI Token",
+		Pattern:     regexp.MustCompile(`pypi-[A-Za-z0-9_-]{50,}`),
+		Description: "PyPI API token",
+	},
+	{
+		Name:        "Hugging Face Token",
+		Pattern:     regexp.MustCompile(`hf_[A-Za-z0-9]{34,}`),
+		Description: "Hugging Face API token",
+	},
+	{
+		Name:        "PostgreSQL Connection String",
+		Pattern:     regexp.MustCompile(`postgres(ql)?://[^:]+:[^@]+@[^/\s]+`),
+		Description: "PostgreSQL connection string with embedded password",
+	},
+	{
+		Name:        "MySQL Connection String",
+		Pattern:     regexp.MustCompile(`mysql://[^:]+:[^@]+@[^/\s]+`),
+		Description: "MySQL connection string with embedded password",
+	},
+	{
+		Name:        "MongoDB Connection String",
+		Pattern:     regexp.MustCompile(`mongodb(\+srv)?://[^:]+:[^@]+@[^/\s]+`),
+		Description: "MongoDB connection string with embedded password",
+	},
+	{
+		Name:        "SendGrid API Key",
+		Pattern:     regexp.MustCompile(`SG\.[A-Za-z0-9_-]{22}\.[A-Za-z0-9_-]{43}`),
+		Description: "SendGrid API key",
+	},
+	{
+		Name:        "Twilio Auth Token",
+		Pattern:     regexp.MustCompile(`(?i)twilio.*auth[_-]?token.*[0-9a-f]{32}`),
+		Description: "Twilio auth token",
+	},
+	{
+		Name:        "Mailgun API Key",
+		Pattern:     regexp.MustCompile(`key-[0-9a-zA-Z]{32}`),
+		Description: "Mailgun API key",
+	},
 }
 
 // ScanResult represents a detected secret
