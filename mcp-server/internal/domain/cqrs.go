@@ -2,8 +2,6 @@ package domain
 
 import (
 	"context"
-	"log/slog"
-	"sync"
 	"time"
 
 	"github.com/google/uuid"
