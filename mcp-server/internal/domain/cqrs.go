@@ -290,6 +290,10 @@ const (
 	EventRuleDeleted      EventType = "rule.deleted"
 	EventRuleToggled      EventType = "rule.toggled"
 	EventCacheInvalidated EventType = "cache.invalidated"
+
+	// Notification events
+	EventViolationDetected EventType = "violation.detected"
+	EventHaltTriggered     EventType = "halt.triggered"
 )
 
 // Event represents a domain event
