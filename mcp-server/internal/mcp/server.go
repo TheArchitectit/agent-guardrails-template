@@ -850,8 +850,12 @@ func (s *MCPServer) handleInitSession(ctx context.Context, args map[string]inter
 	userID, _ := args["user_id"].(string)
 	env, _ := args["environment"].(string)
 
-	token := make([]byte, 8)
-	rand.Read(token)
+	token := make([]byte, 24) // 192 bits — sufficient entropy for session tokens
+	if _, err := rand.Read(token); err != nil {
+		return buildToolResult(map[string]interface{}{
+			"error": "failed to generate session token",
+		}, true)
+	}
 	sessionID := hex.EncodeToString(token)
 
 	result := models.SessionInfo{
