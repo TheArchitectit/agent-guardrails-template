@@ -17,6 +17,27 @@ import (
 	"github.com/thearchitectit/guardrail-mcp/internal/models"
 )
 
+// safeReadFile reads a file only if the path is within the current working directory.
+// Rejects path traversal (..) and paths that escape the working directory root.
+func safeReadFile(path string) ([]byte, error) {
+	if strings.Contains(path, "..") {
+		return nil, fmt.Errorf("path traversal not allowed: %s", path)
+	}
+	cleaned := filepath.Clean(path)
+	abs, err := filepath.Abs(cleaned)
+	if err != nil {
+		return nil, fmt.Errorf("invalid path: %w", err)
+	}
+	cwd, err := os.Getwd()
+	if err != nil {
+		return nil, fmt.Errorf("cannot determine working directory: %w", err)
+	}
+	if !strings.HasPrefix(abs, cwd+string(filepath.Separator)) && abs != cwd {
+		return nil, fmt.Errorf("path outside working directory: %s", abs)
+	}
+	return os.ReadFile(abs)
+}
+
 // handleValidateScope checks if a file path is within authorized scope
 func (s *MCPServer) handleValidateScope(ctx context.Context, args map[string]interface{}) (*mcp.CallToolResult, error) {
 	filePath, _ := args["file_path"].(string)
@@ -264,7 +285,7 @@ func (s *MCPServer) handleCheckTestProdSeparation(ctx context.Context, args map[
 
 	// Read file content if it exists
 	content := ""
-	if data, err := os.ReadFile(filePath); err == nil {
+	if data, err := safeReadFile(filePath); err == nil {
 		content = string(data)
 	}
 
@@ -785,7 +806,7 @@ func (s *MCPServer) handleCheckHaltConditions(ctx context.Context, args map[stri
 	// Check 2: Check for critical halt events
 	haltStore := database.NewHaltEventStore(s.db)
 	criticalEvents, err := haltStore.GetCriticalPending(ctx, sessionToken)
-	if err == nil && len(criticalEvents) < 0 {
+	if err == nil && len(criticalEvents) > 0 {
 		for _, event := range criticalEvents {
 			if event.Severity == string(models.HaltSeverityCritical) {
 				haltReasons = append(haltReasons, fmt.Sprintf("Critical halt: %s - %s", event.HaltType, event.Description))
@@ -1596,7 +1617,7 @@ func (s *MCPServer) handleVerifyFixesIntact(ctx context.Context, args map[string
 
 // Helper function to read file content
 func (s *MCPServer) readFileContent(filePath string) (string, error) {
-	data, err := os.ReadFile(filePath)
+	data, err := safeReadFile(filePath)
 	if err != nil {
 		return "", fmt.Errorf("failed to read file: %w", err)
 	}
@@ -2113,7 +2134,7 @@ func (s *MCPServer) handleScanCommitPayload(ctx context.Context, args map[string
 
 		// Scan for secrets in file content
 		if scanSecrets {
-			content, err := os.ReadFile(filePath)
+			content, err := safeReadFile(filePath)
 			if err == nil {
 				contentStr := string(content)
 				lines := strings.Split(contentStr, "\n")
@@ -2191,7 +2212,7 @@ func (s *MCPServer) handleDetectMergeConflicts(ctx context.Context, args map[str
 		}
 
 		// Read file content
-		content, err := os.ReadFile(filePath)
+		content, err := safeReadFile(filePath)
 		if err != nil {
 			continue // Skip unreadable files
 		}
