@@ -18,6 +18,7 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 	"github.com/thearchitectit/guardrail-mcp/internal/audit"
+	"github.com/thearchitectit/guardrail-mcp/internal/notifications"
 	"github.com/thearchitectit/guardrail-mcp/internal/cache"
 	"github.com/thearchitectit/guardrail-mcp/internal/config"
 	"github.com/thearchitectit/guardrail-mcp/internal/database"
@@ -28,14 +29,26 @@ import (
 
 // MCPServer handles MCP protocol requests
 type MCPServer struct {
-	mcpServer   *server.MCPServer
-	db          *database.DB
-	cache       *cache.Cache
-	metrics     *metrics.Metrics
-	audit       *audit.AuditLogger
-	validator   *validation.Engine
-	config      *config.Config
-	visionTools *VisionTools
+	mcpServer         *server.MCPServer
+	db                *database.DB
+	cache             *cache.Cache
+	metrics           *metrics.Metrics
+	audit             *audit.AuditLogger
+	validator         *validation.Engine
+	config            *config.Config
+	visionTools       *VisionTools
+	webhookStore      *database.WebhookStore
+	webhookDispatcher *notifications.Dispatcher
+}
+
+// SetWebhookStore sets the webhook store for notification tools.
+func (s *MCPServer) SetWebhookStore(store *database.WebhookStore) {
+	s.webhookStore = store
+}
+
+// SetWebhookDispatcher sets the webhook dispatcher for notification delivery.
+func (s *MCPServer) SetWebhookDispatcher(dispatcher *notifications.Dispatcher) {
+	s.webhookDispatcher = dispatcher
 }
 
 // NewServer creates a new MCP server instance
@@ -684,6 +697,11 @@ func (s *MCPServer) setupHandlers() {
 			tools = append(tools, s.visionTools.visionToolList()...)
 		}
 
+		// Webhook notification tools
+		if s.webhookStore != nil {
+			tools = append(tools, s.notificationToolList()...)
+		}
+
 		return &mcp.ListToolsResult{
 			Tools: tools,
 		}, nil
@@ -809,6 +827,17 @@ func (s *MCPServer) handleToolCall(ctx context.Context, name string, args map[st
 		return s.handleTeamHealth(ctx, args)
 	case "guardrail_install_skills":
 		return s.handleInstallSkills(ctx, args)
+	// Webhook notification tools
+	case "configure_webhook":
+		return s.handleConfigureWebhook(ctx, args)
+	case "test_webhook":
+		return s.handleTestWebhook(ctx, args)
+	case "list_webhooks":
+		return s.handleListWebhooks(ctx, args)
+	case "delete_webhook":
+		return s.handleDeleteWebhook(ctx, args)
+	case "get_webhook_deliveries":
+		return s.handleGetWebhookDeliveries(ctx, args)
 	default:
 		return nil, fmt.Errorf("unknown tool: %s", name)
 	}
