@@ -814,25 +814,8 @@ func (s *MCPServer) handleToolCall(ctx context.Context, name string, args map[st
 	}
 }
 
-// buildToolResult is a helper to centralize formatting of MCP tool returns
-func buildToolResult(data interface{}, isJson bool) (*mcp.CallToolResult, error) {
-	var text string
-	if isJson {
-		j, _ := json.MarshalIndent(data, "", "  ")
-		text = string(j)
-	} else {
-		text = fmt.Sprintf("%v", data)
-	}
-
-	return &mcp.CallToolResult{
-		Content: []mcp.CallToolContent{
-			{
-				Type: "text",
-				Text: text,
-			},
-		},
-	}, nil
-}
+// buildToolResult removed — use the version in tools_extended.go
+// which takes (result interface{}, isError bool)
 
 func (s *MCPServer) handleInitSession(ctx context.Context, args map[string]interface{}) (*mcp.CallToolResult, error) {
 	userID, _ := args["user_id"].(string)
@@ -849,7 +832,7 @@ func (s *MCPServer) handleInitSession(ctx context.Context, args map[string]inter
 		StartTime:   time.Now(),
 	}
 
-	return buildToolResult(result, true)
+	return buildToolResult(result, false)
 }
 
 // Serve HTTP requests (SSE for MCP)
@@ -884,5 +867,5 @@ func (s *MCPServer) handleGetContext(ctx context.Context, args map[string]interf
 		"timestamp":       time.Now().Format(time.RFC3339),
 	}
 
-	return buildToolResult(result, true)
+	return buildToolResult(result, false)
 }
