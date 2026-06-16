@@ -10,7 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
-## [3.2.0] - 2026-06-14
+## [3.2.0] - 2026-06-16
 
 ### Release: Platform Review Sprint — 7 Features, All P0 Fixes
 
