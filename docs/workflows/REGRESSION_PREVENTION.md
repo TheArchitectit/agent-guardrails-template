@@ -207,7 +207,10 @@ cat .guardrails/pre-work-check.md
 **Step 2: Run Regression Check**
 ```bash
 python scripts/regression_check.py --all
+# TypeScript / JS projects without Python can use the Node fallback:
+node scripts/guardrails-scan.mjs   # scans extensions/ + src/ for critical/error rules
 ```
+
 
 **Step 3: Check Registry for Your Files**
 ```bash
