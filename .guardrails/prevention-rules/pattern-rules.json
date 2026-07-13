@@ -1,7 +1,7 @@
 {
   "$schema": "./pattern-rules.schema.json",
-  "description": "Pattern-based prevention rules for regression detection",
-  "version": "2.1.0",
+  "description": "Pattern-based prevention rules for regression detection (added PREVENT-PI-* rules for TypeScript/pi extensions)",
+  "version": "2.2.0",
   "rules": [
     {
       "rule_id": "PREVENT-001",
@@ -111,7 +111,7 @@
       "enabled": true,
       "pattern": "def\\s+\\w+\\([^)]*\\b\\w+\\s*[:=]\\s*(\\[\\]|\\{\\}|set\\(\\))",
       "forbidden_context": null,
-      "message": "Mutable default argument (list/dict/set) — shared across calls, causes subtle bugs",
+      "message": "Mutable default argument (list/dict/set) \u2014 shared across calls, causes subtle bugs",
       "severity": "error",
       "file_glob": [
         "*.py"
@@ -137,7 +137,7 @@
       "enabled": true,
       "pattern": "go\\s+func",
       "forbidden_context": "context",
-      "message": "Goroutine launched without context — cannot be cancelled or tracked",
+      "message": "Goroutine launched without context \u2014 cannot be cancelled or tracked",
       "severity": "warning",
       "file_glob": [
         "*.go"
@@ -278,7 +278,7 @@
       "enabled": true,
       "pattern": "(TODO|FIXME|HACK|XXX|WORKAROUND)[^\\d]*$",
       "forbidden_context": "(#[0-9]|issue|ticket|JIRA)",
-      "message": "TODO/FIXME without ticket reference — will be forgotten",
+      "message": "TODO/FIXME without ticket reference \u2014 will be forgotten",
       "severity": "info",
       "file_glob": [
         "*"
@@ -328,7 +328,7 @@
       "enabled": true,
       "pattern": "Access-Control-Allow-Origin\\s*[:*]\\s*\\*",
       "forbidden_context": null,
-      "message": "CORS wildcard detected — allows any origin to access the API",
+      "message": "CORS wildcard detected \u2014 allows any origin to access the API",
       "severity": "error",
       "file_glob": [
         "*.py",
@@ -404,7 +404,7 @@
       "enabled": true,
       "pattern": ".*",
       "forbidden_context": null,
-      "message": "No .dockerignore file found — entire context sent to Docker daemon",
+      "message": "No .dockerignore file found \u2014 entire context sent to Docker daemon",
       "severity": "info",
       "file_glob": [
         "Dockerfile",
@@ -424,6 +424,59 @@
         "*.gd"
       ],
       "suggestion": "Add return type: func get_score() -> int:"
+    },
+    {
+      "rule_id": "PREVENT-PI-001",
+      "name": "Dropping messages without anchor-floor guard",
+      "enabled": true,
+      "pattern": "messages\\.slice\\(\\s*0\\s*,",
+      "forbidden_context": "without.*(anchor|keepRecent|preserveRecent|safeDrop|computeDropRange|dropBefore)",
+      "message": "Dropping a prefix of messages (messages.slice(0, N)) must preserve the last N user messages (anchor-floor) \u2014 use boundary.dropBefore() which applies the guard. Fires only when no anchor logic is present.",
+      "severity": "warning",
+      "file_glob": [
+        "*.ts"
+      ],
+      "suggestion": "Use src/boundary.ts dropBefore(messages, keepFrom, anchorUserMessages) so the anchor floor + tool-pair invariants are enforced."
+    },
+    {
+      "rule_id": "PREVENT-PI-002",
+      "name": "Splitting a toolCall/toolResult pair at a boundary",
+      "enabled": true,
+      "pattern": "(keep_from|dropEnd|dropStart|safeDrop|messages\\.slice\\()",
+      "forbidden_context": "without.*(ToolUse|ToolResult|tool_call|pair|computeDropRange|dropBefore)",
+      "message": "Compaction boundary must not split an assistant toolCall from its following toolResult (OpenAI-compat 400). The engine guard lives in src/boundary.ts; runtime drops in extensions/ must use it.",
+      "severity": "critical",
+      "file_glob": [
+        "extensions/**/*.ts"
+      ],
+      "suggestion": "Use src/boundary.ts computeDropRange/dropBefore which walks the boundary back if the first preserved message is a ToolResult without a preceding ToolUse."
+    },
+    {
+      "rule_id": "PREVENT-PI-003",
+      "name": "Injecting compacted context as role:system",
+      "enabled": true,
+      "pattern": "role:\\s*[\"']system[\"']",
+      "forbidden_context": null,
+      "message": "pi Message has no 'system' role. Inject compacted context via before_agent_start systemPrompt, not a system message.",
+      "severity": "critical",
+      "file_glob": [
+        "*.ts"
+      ],
+      "suggestion": "Return { systemPrompt } from before_agent_start, or prepend a UserMessage."
+    },
+    {
+      "rule_id": "PREVENT-PI-004",
+      "name": "Network calls in extension (must stay local)",
+      "enabled": true,
+      "pattern": "(fetch\\(|https?://|new (WebSocket|net\\.)|XMLHttpRequest|child_process)",
+      "forbidden_context": null,
+      "message": "pi-mega-compact must run fully local \u2014 no remote MCP server or network calls at runtime.",
+      "severity": "critical",
+      "file_glob": [
+        "extensions/**/*.ts",
+        "src/**/*.ts"
+      ],
+      "suggestion": "Keep compaction + vector store on local disk; remove network calls. (Config may still read a URL, but runtime must not fetch.)"
     }
   ]
 }
