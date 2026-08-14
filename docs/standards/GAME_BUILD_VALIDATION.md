@@ -1,5 +1,11 @@
 # Game Build Validation - Guardrail Integration
 
+> **⚠️ PLANNED — NOT YET IMPLEMENTED**
+>
+> The `guardrail_validate_game_build` MCP tool described in this document is not yet registered in the MCP server. This document serves as the design specification for a future feature.
+
+---
+
 > Automated game engine project validation as an MCP guardrail tool
 
 ---

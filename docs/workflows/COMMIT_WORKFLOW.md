@@ -278,6 +278,8 @@ TodoWrite: [in_progress] "Update tests"
 
 ## MCP Checkpoint Integration
 
+> **⚠️ PLANNED — NOT YET IMPLEMENTED:** MCP checkpointing tools are not yet available in the server. The workflow below describes the intended design.
+
 When using MCP checkpointing:
 
 ```
