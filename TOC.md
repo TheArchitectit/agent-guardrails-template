@@ -17,16 +17,16 @@
 
 | File | Lines | Required? | Purpose |
 |------|-------|-----------|---------|
-| **README.md** | ~150 | YES | Project overview and quick start |
-| **INDEX_MAP.md** | 170 | YES | Master navigation - find docs by keyword |
-| **HEADER_MAP.md** | 408 | YES | Section headers with line numbers |
-| **TOC.md** | ~280 | YES | Complete file listing and organization |
-| **CLAUDE.md** | 29 | Recommended | Optimized context for Claude Code CLI |
-| **CONTRIBUTING.md** | ~200 | YES | How to contribute |
+| **README.md** | 359 | YES | Project overview and quick start |
+| **INDEX_MAP.md** | 395 | YES | Master navigation - find docs by keyword |
+| **HEADER_MAP.md** | 1033 | YES | Section headers with line numbers |
+| **TOC.md** | 280 | YES | Complete file listing and organization |
+| **CLAUDE.md** | 59 | Recommended | Optimized context for Claude Code CLI |
+| **CONTRIBUTING.md** | 370 | YES | How to contribute |
 | **.claudeignore** | ~20 | Recommended | Token-saving ignore rules |
-| **CHANGELOG.md** | 238 | YES | Release notes archive |
+| **CHANGELOG.md** | 1034 | YES | Release notes archive |
 | **LICENSE** | - | YES | BSD-3-Clause license |
-| **.gitignore** | ~100 | Recommended | Common ignore patterns |
+| **.gitignore** | ~60 | Recommended | Common ignore patterns |
 
 ---
 
@@ -36,10 +36,10 @@
 
 | File | Lines | Sections | Purpose |
 |------|-------|----------|---------|
-| **AGENT_GUARDRAILS.md** | 267 | 13 | Core safety protocols (MANDATORY) |
-| **HOW_TO_APPLY.md** | 432 | 5 | How to apply template with example prompts |
-| **QUICK_SETUP.md** | ~270 | 5 | 5-minute setup guide |
-| **STATUS.md** | ~120 | 4 | Project status and version |
+| **AGENT_GUARDRAILS.md** | 319 | 13 | Core safety protocols (MANDATORY) |
+| **HOW_TO_APPLY.md** | 434 | 5 | How to apply template with example prompts |
+| **QUICK_SETUP.md** | 344 | 5 | 5-minute setup guide |
+| **STATUS.md** | 130 | 4 | Project status and version |
 | **AGENTS_AND_SKILLS_SETUP.md** | ~200 | 6 | Setup guide for Claude Code/OpenCode |
 | **CLCODE_INTEGRATION.md** | ~250 | 7 | Claude Code skills and hooks integration |
 | **OPENCODE_INTEGRATION.md** | ~300 | 8 | OpenCode agents and skills integration |
@@ -49,47 +49,56 @@
 
 | File | Lines | Key Sections | Purpose |
 |------|-------|--------------|---------|
-| **INDEX.md** | 126 | 5 | Workflow navigation hub |
-| **AGENT_EXECUTION.md** | 280 | 6 | Execution protocol and rollback |
-| **AGENT_ESCALATION.md** | 300 | 6 | Audit requirements and escalation |
-| **AGENT_REVIEW_PROTOCOL.md** | 605 | 12 | Post-work agent/LLM review |
-| **TESTING_VALIDATION.md** | 303 | 9 | Validation protocols and checks |
-| **COMMIT_WORKFLOW.md** | 328 | 8 | Commit timing and message format |
-| **DOCUMENTATION_UPDATES.md** | ~250 | 5 | Post-sprint doc updates |
-| **GIT_PUSH_PROCEDURES.md** | 323 | 8 | Push safety and verification |
-| **BRANCH_STRATEGY.md** | ~200 | 6 | Git branching conventions |
-| **CODE_REVIEW.md** | 348 | 7 | Code review and escalation |
-| **MCP_CHECKPOINTING.md** | ~280 | 7 | MCP server checkpointing |
+| **INDEX.md** | 151 | 5 | Workflow navigation hub |
+| **AGENT_EXECUTION.md** | 546 | 6 | Execution protocol and rollback |
+| **AGENT_ESCALATION.md** | 415 | 6 | Audit requirements and escalation |
+| **AGENT_REVIEW_PROTOCOL.md** | 638 | 12 | Post-work agent/LLM review |
+| **TESTING_VALIDATION.md** | 304 | 9 | Validation protocols and checks |
+| **COMMIT_WORKFLOW.md** | 333 | 8 | Commit timing and message format |
+| **DOCUMENTATION_UPDATES.md** | 302 | 5 | Post-sprint doc updates |
+| **GIT_PUSH_PROCEDURES.md** | 324 | 8 | Push safety and verification |
+| **BRANCH_STRATEGY.md** | 341 | 6 | Git branching conventions |
+| **CODE_REVIEW.md** | 359 | 7 | Code review and escalation |
+| **MCP_CHECKPOINTING.md** | 372 | 7 | MCP server checkpointing |
+| **REGRESSION_PREVENTION.md** | 536 | 10 | Bug tracking and regression prevention |
 
-**Total:** 11 workflow documents (INDEX.md + 10 guides)
+**Total:** 12 workflow documents (INDEX.md + 11 guides)
 
 ### Standards (`docs/standards/`)
 
 | File | Lines | Key Sections | Purpose |
 |------|-------|--------------|---------|
-| **INDEX.md** | 89 | 4 | Standards navigation hub |
-| **TEST_PRODUCTION_SEPARATION.md** | 558 | 12 | Test/production isolation (MANDATORY) |
+| **INDEX.md** | 128 | 4 | Standards navigation hub |
+| **TEST_PRODUCTION_SEPARATION.md** | 559 | 12 | Test/production isolation (MANDATORY) |
 | **PROJECT_CONTEXT_TEMPLATE.md** | 376 | 9 | Project Bible - stack, style, forbidden patterns |
 | **ADVERSARIAL_TESTING.md** | 510 | 12 | Breaker agent, fuzz testing, attack checklists |
 | **DEPENDENCY_GOVERNANCE.md** | 483 | 8 | Package allow-list, license compliance |
 | **INFRASTRUCTURE_STANDARDS.md** | 546 | 11 | IaC, Terraform, no-ClickOps, drift detection |
 | **OPERATIONAL_PATTERNS.md** | 667 | 12 | Health checks, circuit breakers, retry, rate limiting |
-| **MODULAR_DOCUMENTATION.md** | 330 | 8 | 500-line max rule and structure |
-| **LOGGING_PATTERNS.md** | ~280 | 7 | Array-based logging format |
-| **LOGGING_INTEGRATION.md** | ~250 | 7 | External logging hooks |
-| **API_SPECIFICATIONS.md** | ~300 | 6 | OpenAPI vs OpenSpec guidance |
+| **MODULAR_DOCUMENTATION.md** | 331 | 8 | 500-line max rule and structure |
+| **LOGGING_PATTERNS.md** | 357 | 7 | Array-based logging format |
+| **LOGGING_INTEGRATION.md** | 464 | 7 | External logging hooks |
+| **API_SPECIFICATIONS.md** | 421 | 6 | OpenAPI vs OpenSpec guidance |
+| **PROMPTING_GUIDE.md** | 984 | 10 | Master prompting techniques |
+| **CROSS_CUTTING_2026.md** | 288 | 5 | Cross-cutting concerns for 2026 |
+| **GAME_BUILD_VALIDATION.md** | 202 | 7 | Game build validation (planned) |
 
-**Total:** 11 standards documents (INDEX.md + 10 guides)
+**Total:** 14 standards documents (INDEX.md + 13 guides)
 
 ### Sprints (`docs/sprints/`)
 
 | File | Lines | Key Sections | Purpose |
 |------|-------|--------------|---------|
-| **INDEX.md** | 31 | 3 | Sprint navigation hub |
-| **SPRINT_TEMPLATE.md** | 515 | 15 | Task execution template |
+| **INDEX.md** | 69 | 3 | Sprint navigation hub |
+| **SPRINT_TEMPLATE.md** | 532 | 15 | Task execution template |
 | **SPRINT_GUIDE.md** | 270 | 9 | How to write sprints |
+| **SPRINT_001_MCP_GAP_IMPLEMENTATION.md** | 514 | 10 | Sprint: MCP gap implementation |
+| **SPRINT_002_WEB_UI_IMPLEMENTATION.md** | 771 | 15 | Sprint: Web UI implementation |
+| **SPRINT_003_DOCUMENTATION_PARITY.md** | 754 | 12 | Sprint: Documentation parity |
+| **SPRINT_005_PRECOMMIT_SAFETY.md** | 396 | 8 | Sprint: Pre-commit safety |
+| **SPRINT_006_CUSTOM_ADVISOR_ROLES.md** | 1059 | 15 | Sprint: Custom advisor roles |
 
-**Total:** 3 sprint documents
+**Total:** 8 sprint documents
 
 ### UI/UX & Accessibility (`docs/`)
 
@@ -203,14 +212,14 @@ Each language example includes:
 
 | Category | Files | Min Lines | Max Lines | Average Lines |
 |----------|-------|-----------|-----------|--------------|
-| Root | 7 | 29 | 408 | ~150 |
-| docs/ | 3 | 238 | 432 | ~333 |
-| docs/workflows/ | 11 | ~200 | ~605 | ~320 |
-| docs/standards/ | 11 | ~250 | ~667 | ~400 |
-| docs/sprints/ | 3 | 31 | 515 | ~272 |
+| Root | 7 | 59 | 1034 | ~500 |
+| docs/ | 8 | 130 | 984 | ~400 |
+| docs/workflows/ | 12 | 151 | 638 | ~370 |
+| docs/standards/ | 14 | 128 | 984 | ~450 |
+| docs/sprints/ | 8 | 69 | 1059 | ~550 |
 | .github/ | 3 | ~50 | ~150 | ~100 |
-| examples/ | 53 | ~30 | ~150 | ~40 |
-| **TOTAL** | **91** | **29** | **667** | **~110** |
+| examples/ | ~50 | ~30 | ~200 | ~50 |
+| **TOTAL** | ~100 | 59 | 1059 | ~350 |
 
 ---
 
@@ -222,18 +231,23 @@ All documents comply with the 500-line maximum rule:
 
 | Document | Lines | Status |
 |----------|-------|--------|
-| README.md | ~150 | ✅ |
-| AGENT_GUARDRAILS.md | 267 | ✅ |
-| HOW_TO_APPLY.md | 432 | ✅ |
-| TEST_PRODUCTION_SEPARATION.md | 558 | ⚠️ Exceeds - needs split |
-| AGENT_REVIEW_PROTOCOL.md | 605 | ⚠️ Exceeds - needs split |
-| INFRASTRUCTURE_STANDARDS.md | 546 | ⚠️ Exceeds - needs split |
-| OPERATIONAL_PATTERNS.md | 667 | ⚠️ Exceeds - needs split |
-| All other workflows | ~280 average | ✅ |
-| All other standards | ~380 average | ✅ |
-| All sprints | ~270 average | ✅ |
+| README.md | 359 | ✅ |
+| AGENT_GUARDRAILS.md | 319 | ✅ |
+| HOW_TO_APPLY.md | 434 | ✅ |
+| TEST_PRODUCTION_SEPARATION.md | 559 | Exceeds - needs split |
+| AGENT_REVIEW_PROTOCOL.md | 638 | Exceeds - needs split |
+| AGENT_EXECUTION.md | 546 | Exceeds - needs split |
+| REGRESSION_PREVENTION.md | 536 | Exceeds - needs split |
+| INFRASTRUCTURE_STANDARDS.md | 546 | Exceeds - needs split |
+| OPERATIONAL_PATTERNS.md | 667 | Exceeds - needs split |
+| ADVERSARIAL_TESTING.md | 510 | Exceeds - needs split |
+| PROMPTING_GUIDE.md | 984 | Exceeds - needs split |
+| SPRINT_002_WEB_UI_IMPLEMENTATION.md | 771 | Exceeds - needs split |
+| SPRINT_003_DOCUMENTATION_PARITY.md | 754 | Exceeds - needs split |
+| SPRINT_006_CUSTOM_ADVISOR_ROLES.md | 1059 | Exceeds - needs split |
+| All other docs | <500 | ✅ |
 
-**Note:** 4 documents exceed the 500-line limit. They will be split in a future release.
+**Note:** 11 documents exceed the 500-line limit. They will be split in a future release.
 
 ---
 
@@ -265,7 +279,7 @@ All documents comply with the 500-line maximum rule:
 
 All files follow these conventions:
 
-- **Line limit:** 500 lines (except TEST_PRODUCTION_SEPARATION.md pending split)
+- **Line limit:** 500 lines (11 docs currently exceed — see Compliance Status above)
 - **Markdown:** CommonMark with GitHub extensions
 - **Headers:** Level 1 (H1) for title, Level 2 (H2) for sections
 - **Code blocks:** Backtick fences with language identifier

@@ -1,36 +1,12 @@
 # Project Status - Guardrail MCP Server
 
-**Last Updated:** 2026-03-14
+**Last Updated:** 2026-08-14
 **Branch:** main
-**Current Version:** v2.8.0
+**Current Version:** v3.2.0
 
 ---
 
 ## Completed Sprints
-
-### Sprint 004: Document Ingestion System - COMPLETED
-- **Status:** ✅ COMPLETE
-- **Date Completed:** 2026-02-09
-- **Team:** 4 parallel agents
-
-**Implemented:**
-- Database migrations for ingest tracking
-- Markdown parser with YAML frontmatter support
-- Ingest service (repo sync + file upload)
-- Update checker (Docker + Guardrail versions)
-- Web UI file upload with drag-and-drop
-- Update notifier with daily checks
-
-**API Endpoints:**
-- POST /api/ingest/upload - File upload
-- POST /api/ingest/sync - Repo sync
-- GET /api/ingest/status - Sync status
-- GET /api/ingest/orphans - Orphaned docs
-- DELETE /api/ingest/orphans/:id - Delete orphan
-- GET /api/updates/status - Check updates
-- POST /api/updates/check - Trigger check
-
----
 
 ### Sprint 001: MCP Gap Implementation - COMPLETED
 - **Status:** ✅ COMPLETE
@@ -55,27 +31,55 @@
 - 3 CSS files (variables, components, layout)
 - Hash-based routing
 
-**Known Issues/Enhancements:**
-| Item | Priority | Status |
-|------|----------|--------|
-| Missing createFailure() method | High | ✅ Fixed |
-| Missing --sidebar-width-mobile | Medium | ✅ Fixed |
-| Missing slideIn keyframes | Low | Already exists |
-| Tooltip component | Low | Not implemented |
-| Dropdown menu component | Low | Not implemented |
-| 404 page | Low | Redirects to dashboard |
+---
+
+### Sprint 003: Documentation Parity - COMPLETED
+- **Status:** ✅ COMPLETE
+- **Date Completed:** v2.9.0 era
+- **Focus:** Align documentation with implementation
+
+**Delivered:**
+- API documentation updated to match implementation
+- Web UI user guide added
+- All MCP tools and resources documented
+- README updated with deployment instructions
 
 ---
 
-### Sprint 003: Documentation Parity - PENDING
-- **Status:** ⏳ NOT STARTED
-- **Focus:** Align documentation with implementation
+### Sprint 004: Document Ingestion System - COMPLETED
+- **Status:** ✅ COMPLETE
+- **Date Completed:** 2026-02-09
+- **Team:** 4 parallel agents
 
-**Planned Work:**
-- Update API documentation to match implementation
-- Add Web UI user guide
-- Document all MCP tools and resources
-- Update README with deployment instructions
+**Implemented:**
+- Database migrations for ingest tracking
+- Markdown parser with YAML frontmatter support
+- Ingest service (repo sync + file upload)
+- Update checker (Docker + Guardrail versions)
+- Web UI file upload with drag-and-drop
+- Update notifier with daily checks
+
+---
+
+## v3.2.0 Platform Review Sprint - COMPLETED
+
+- **Status:** ✅ COMPLETE
+- **Released:** 2026-06-16
+- **Scope:** Platform review sprint — 7 new features + P0 bug fixes
+- **MCP Server Port:** mcp-go v0.4.0 → v0.58.0
+
+**7 Features Delivered:**
+1. CI/CD Enforcement Pipeline
+2. Webhook Notification System
+3. Token Budget Ledger & Cost Governor (incl. vision pipeline instrumentation)
+4. Agent Lifecycle State Machine (incl. audit trail)
+5. OpenAPI 3.1 Specification + Scalar API Explorer
+6. Platform review P0 bug fixes (all resolved)
+7. Additional sprint hardening (budget, lifecycle, review gates)
+
+**References:**
+- [docs/reviews/PLATFORM_REVIEW_2026-06-14.md](docs/reviews/PLATFORM_REVIEW_2026-06-14.md)
+- [docs/reviews/IMPLEMENTATION_REPORT_2026-06-14.md](docs/reviews/IMPLEMENTATION_REPORT_2026-06-14.md)
 
 ---
 
@@ -84,9 +88,9 @@
 **your-server (0.0.0.0):**
 - MCP Port: 8094
 - Web UI Port: 8095
-- Version: v1.11.7
+- Version: v3.2.0
 - Status: ✅ Running
-- Features: Ingest system, update notifications, file upload, auth fixes, comprehensive documentation
+- Features: Ingest system, update notifications, file upload, auth fixes, platform review sprint (CI/CD, webhooks, token budget ledger, lifecycle state machine, OpenAPI 3.1), mcp-go v0.58.0
 
 **Web UI Access:**
 - URL: http://0.0.0.0:8095/web/
@@ -113,37 +117,14 @@
 
 ## Next Steps
 
-1. **Sprint 003: Documentation Parity**
-   - Update API.md with all endpoints
-   - Add Web UI user guide
-   - Update CHANGELOG
+1. **Enforce 500-Line File Limit**
+   - Audit all docs and source files for the 500-line maximum
+   - Split any over-limit files (refactor into sections + update INDEX_MAP/HEADER_MAP)
 
-2. **Optional Enhancements**
-   - Add tooltip component
-   - Add dropdown menu component
-   - Implement 404 page
-   - Add light theme support
+2. **Dead Code Cleanup**
+   - Remove unused functions, endpoints, and components flagged during review
+   - Verify no orphaned references remain after removal
 
----
-
-## Agent Team Reviews Completed
-
-| Agent | Focus | Status |
-|-------|-------|--------|
-| API Review | api.js endpoints | ✅ 26/26 complete |
-| Pages Review | 6 SPA pages | ✅ All complete |
-| Components Review | 5 components | ✅ All complete |
-| Design System Review | CSS files | ✅ 85% complete |
-| Routing Review | Router + app.js | ✅ Complete |
-
----
-
-## Git Commits
-
-| Commit | Description |
-|--------|-------------|
-| 4dbb19a | fix(web-ui): add missing API endpoint and CSS variable |
-| 7b01d34 | docs: mark Sprint 001 as completed |
-| 771a977 | fix(models): fix database type scanning issues |
-| 08354a5 | fix(web-ui): CORS preflight and JS fixes |
-| 1be578f | fix(web-ui): fix SPA fallback route blocking static files |
+3. **Maintenance**
+   - Keep docs in parity with implementation (see Sprint 003 discipline)
+   - Continue platform review follow-through for new feature hardening
