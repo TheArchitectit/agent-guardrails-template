@@ -29,19 +29,19 @@ func (s *MCPServer) handleCheckUncertainty(ctx context.Context, args map[string]
 	// Validate required parameters
 	if sessionToken == "" {
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: `{"error": "Missing required parameter 'session_token'"}`}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: `{"error": "Missing required parameter 'session_token'"}`}},
 			IsError: true,
 		}, nil
 	}
 	if currentTask == "" {
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: `{"error": "Missing required parameter 'current_task'"}`}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: `{"error": "Missing required parameter 'current_task'"}`}},
 			IsError: true,
 		}, nil
 	}
 	if selfAssessment == "" {
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: `{"error": "Missing required parameter 'self_assessment'"}`}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: `{"error": "Missing required parameter 'self_assessment'"}`}},
 			IsError: true,
 		}, nil
 	}
@@ -74,7 +74,7 @@ func (s *MCPServer) handleCheckUncertainty(ctx context.Context, args map[string]
 	// Save uncertainty record
 	if err := s.uncertaintyStore.SaveUncertaintyRecord(record); err != nil {
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: fmt.Sprintf(`{"error": "Failed to save uncertainty record: %v"}`, err)}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: fmt.Sprintf(`{"error": "Failed to save uncertainty record: %v"}`, err)}},
 			IsError: true,
 		}, nil
 	}

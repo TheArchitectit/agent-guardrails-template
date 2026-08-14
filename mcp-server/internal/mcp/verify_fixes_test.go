@@ -24,7 +24,7 @@ func TestVerifyFixesIntact(t *testing.T) {
 
 	// Create a mock server for testing
 	s := &MCPServer{
-		sessions: make(map[string]*Session),
+		sessions: make(map[string]*models.Session),
 	}
 
 	// Test that error is returned when session_token is missing
@@ -45,12 +45,11 @@ func TestVerifyFixesIntact(t *testing.T) {
 
 	// Test with valid session
 	sessionID := "test-session-123"
-	s.sessions[sessionID] = &Session{
-		ID:           sessionID,
+	s.sessions[sessionID] = &models.Session{
+		Token:        sessionID,
 		ProjectSlug:  "test-project",
 		AgentType:    "claude-code",
 		CreatedAt:    time.Now(),
-		LastActivity: time.Now(),
 	}
 
 	args2 := map[string]interface{}{

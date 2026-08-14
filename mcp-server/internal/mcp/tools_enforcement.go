@@ -22,7 +22,7 @@ func (s *MCPServer) handleLogViolation(ctx context.Context, args map[string]inte
 
 	if sessionToken == "" || ruleID == "" || message == "" {
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: `{"error":"session_token, rule_id, and message are required"}`}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: `{"error":"session_token, rule_id, and message are required"}`}},
 			IsError: true,
 		}, nil
 	}
@@ -34,7 +34,7 @@ func (s *MCPServer) handleLogViolation(ctx context.Context, args map[string]inte
 
 	if !exists {
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: `{"error":"Invalid session token"}`}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: `{"error":"Invalid session token"}`}},
 			IsError: true,
 		}, nil
 	}
@@ -80,7 +80,7 @@ func (s *MCPServer) handleLogViolation(ctx context.Context, args map[string]inte
 		}
 		resultJSON, _ := json.Marshal(result)
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: string(resultJSON)}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: string(resultJSON)}},
 			IsError: true,
 		}, nil
 	}
@@ -94,7 +94,7 @@ func (s *MCPServer) handleLogViolation(ctx context.Context, args map[string]inte
 		}
 		resultJSON, _ := json.Marshal(result)
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: string(resultJSON)}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: string(resultJSON)}},
 			IsError: true,
 		}, nil
 	}
@@ -109,6 +109,6 @@ func (s *MCPServer) handleLogViolation(ctx context.Context, args map[string]inte
 	}
 	resultJSON, _ := json.Marshal(result)
 	return &mcp.CallToolResult{
-		Content: []interface{}{mcp.TextContent{Type: "text", Text: string(resultJSON)}},
+		Content: []mcp.Content{mcp.TextContent{Type: "text", Text: string(resultJSON)}},
 	}, nil
 }

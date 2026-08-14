@@ -131,7 +131,7 @@ func (vt *VisionToolSet) visionToolList() []mcp.Tool {
 			Description: "Trigger an immediate screenshot capture from the running Godot game",
 			InputSchema: mcp.ToolInputSchema{
 				Type: "object",
-				Properties: mcp.ToolInputSchemaProperties{},
+				Properties: map[string]any{},
 			},
 		},
 		{
@@ -139,7 +139,7 @@ func (vt *VisionToolSet) visionToolList() []mcp.Tool {
 			Description: "Submit a screenshot image path for vision analysis. Returns structured findings.",
 			InputSchema: mcp.ToolInputSchema{
 				Type: "object",
-				Properties: mcp.ToolInputSchemaProperties{
+				Properties: map[string]any{
 					"path": map[string]interface{}{
 						"type":        "string",
 						"description": "Absolute path to the screenshot file (PNG or JPG)",
@@ -152,7 +152,7 @@ func (vt *VisionToolSet) visionToolList() []mcp.Tool {
 			Description: "Run another review round on an existing review ID with additional context",
 			InputSchema: mcp.ToolInputSchema{
 				Type: "object",
-				Properties: mcp.ToolInputSchemaProperties{
+				Properties: map[string]any{
 					"review_id": map[string]interface{}{
 						"type":        "string",
 						"description": "Review ID from a previous analyze_screenshot call",
@@ -165,7 +165,7 @@ func (vt *VisionToolSet) visionToolList() []mcp.Tool {
 			Description: "Retrieve the full documented report for a review including all findings and iterations",
 			InputSchema: mcp.ToolInputSchema{
 				Type: "object",
-				Properties: mcp.ToolInputSchemaProperties{
+				Properties: map[string]any{
 					"review_id": map[string]interface{}{
 						"type":        "string",
 						"description": "Review ID",
@@ -178,7 +178,7 @@ func (vt *VisionToolSet) visionToolList() []mcp.Tool {
 			Description: "Check the health of the vision pipeline backends (local llama + fallbacks)",
 			InputSchema: mcp.ToolInputSchema{
 				Type:       "object",
-				Properties: mcp.ToolInputSchemaProperties{},
+				Properties: map[string]any{},
 			},
 		},
 		{
@@ -186,7 +186,7 @@ func (vt *VisionToolSet) visionToolList() []mcp.Tool {
 			Description: "Full visual guardrail check: capture → review → document → validate against 3D guardrails",
 			InputSchema: mcp.ToolInputSchema{
 				Type: "object",
-				Properties: mcp.ToolInputSchemaProperties{
+				Properties: map[string]any{
 					"path": map[string]interface{}{
 						"type":        "string",
 						"description": "Optional path to screenshot. If omitted, triggers capture first.",
@@ -207,7 +207,7 @@ func (vt *VisionToolSet) dispatch(ctx context.Context, name string, args map[str
 	case "vision_capture_screenshot":
 		msg := vt.watcher.TriggerCapture()
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: msg}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: msg}},
 		}, nil
 
 	case "vision_analyze_screenshot":
@@ -221,7 +221,7 @@ func (vt *VisionToolSet) dispatch(ctx context.Context, name string, args map[str
 		}
 		out, _ := json.MarshalIndent(report, "", "  ")
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: string(out)}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: string(out)}},
 		}, nil
 
 	case "vision_iterate_review":
@@ -235,7 +235,7 @@ func (vt *VisionToolSet) dispatch(ctx context.Context, name string, args map[str
 		}
 		out, _ := json.MarshalIndent(report, "", "  ")
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: string(out)}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: string(out)}},
 		}, nil
 
 	case "vision_get_report":
@@ -249,7 +249,7 @@ func (vt *VisionToolSet) dispatch(ctx context.Context, name string, args map[str
 		}
 		out, _ := json.MarshalIndent(report, "", "  ")
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: string(out)}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: string(out)}},
 		}, nil
 
 	case "vision_check_health":
@@ -259,7 +259,7 @@ func (vt *VisionToolSet) dispatch(ctx context.Context, name string, args map[str
 		}
 		out, _ := json.MarshalIndent(status, "", "  ")
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: string(out)}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: string(out)}},
 		}, nil
 
 	case "vision_guardrail_check":
@@ -280,18 +280,11 @@ func (vt *VisionToolSet) dispatch(ctx context.Context, name string, args map[str
 			"validation": validation,
 		}, "", "  ")
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: string(out)}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: string(out)}},
 		}, nil
 
 	default:
 		return nil, fmt.Errorf("unknown vision tool: %s", name)
-	}
-}
-
-func errorResult(msg string) *mcp.CallToolResult {
-	return &mcp.CallToolResult{
-		Content: []interface{}{mcp.TextContent{Type: "text", Text: msg}},
-		IsError: true,
 	}
 }
 
