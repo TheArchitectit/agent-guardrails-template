@@ -18,11 +18,11 @@
 | File | Lines | Required? | Purpose |
 |------|-------|-----------|---------|
 | **README.md** | ~150 | YES | Project overview and quick start |
-| **QUICK_SETUP.md** | ~270 | **YES** | **5-minute setup guide** ⭐ |
-| **PROMPTING_GUIDE.md** | ~500 | **YES** | **Master prompting techniques** ⭐ |
 | **INDEX_MAP.md** | 170 | YES | Master navigation - find docs by keyword |
 | **HEADER_MAP.md** | 408 | YES | Section headers with line numbers |
+| **TOC.md** | ~280 | YES | Complete file listing and organization |
 | **CLAUDE.md** | 29 | Recommended | Optimized context for Claude Code CLI |
+| **CONTRIBUTING.md** | ~200 | YES | How to contribute |
 | **.claudeignore** | ~20 | Recommended | Token-saving ignore rules |
 | **CHANGELOG.md** | 238 | YES | Release notes archive |
 | **LICENSE** | - | YES | BSD-3-Clause license |
@@ -38,6 +38,8 @@
 |------|-------|----------|---------|
 | **AGENT_GUARDRAILS.md** | 267 | 13 | Core safety protocols (MANDATORY) |
 | **HOW_TO_APPLY.md** | 432 | 5 | How to apply template with example prompts |
+| **QUICK_SETUP.md** | ~270 | 5 | 5-minute setup guide |
+| **STATUS.md** | ~120 | 4 | Project status and version |
 | **AGENTS_AND_SKILLS_SETUP.md** | ~200 | 6 | Setup guide for Claude Code/OpenCode |
 | **CLCODE_INTEGRATION.md** | ~250 | 7 | Claude Code skills and hooks integration |
 | **OPENCODE_INTEGRATION.md** | ~300 | 8 | OpenCode agents and skills integration |

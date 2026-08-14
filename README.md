@@ -62,7 +62,7 @@ git clone https://github.com/TheArchitectit/agent-guardrails-template.git
 cd agent-guardrails-template
 ```
 
-Then see [QUICK_SETUP.md](QUICK_SETUP.md) for the 5-minute setup, or [HOW_TO_APPLY.md](docs/HOW_TO_APPLY.md) to apply guardrails to an existing repo.
+Then see [QUICK_SETUP.md](docs/QUICK_SETUP.md) for the 5-minute setup, or [HOW_TO_APPLY.md](docs/HOW_TO_APPLY.md) to apply guardrails to an existing repo.
 
 ---
 
@@ -253,24 +253,24 @@ Multi-language implementation examples demonstrating guardrails patterns:
 ```
 agent-guardrails-template/
 ├── README.md                    ← You are here
-├── QUICK_SETUP.md               ← 5-minute setup guide
-├── PROMPTING_GUIDE.md           ← Effective prompting for AI development
 ├── INDEX_MAP.md / HEADER_MAP.md ← Token-efficient navigation
+├── TOC.md                       ← Complete file listing
 ├── CLAUDE.md                    ← Claude Code CLI context
+├── CONTRIBUTING.md              ← How to contribute
 ├── CHANGELOG.md                 ← Release notes
 │
 ├── docs/
 │   ├── AGENT_GUARDRAILS.md      # Core safety protocols (MANDATORY)
 │   ├── HOW_TO_APPLY.md          # Apply template to your repo
-│   ├── ai-dev/                  # AI-assisted development patterns 
-│   ├── state/                   # State management patterns 
-│   ├── generative/              # Generative asset safety 
-│   ├── monetization/            # Monetization guardrails 
-│   ├── multiplayer/             # Multiplayer safety 
-│   ├── analytics/               # Analytics ethics 
-│   ├── deployment/              # Cross-platform deployment 
-│   ├── game-design/             # 2026 game design guardrails
-│   │   └── 3d/                  # 3D game development docs (v3.0.0)
+│   ├── QUICK_SETUP.md           # 5-minute setup guide
+│   ├── STATUS.md                # Project status
+│   ├── ai-dev/                  # AI-assisted development patterns
+│   ├── state/                   # State management patterns
+│   ├── generative/              # Generative asset safety
+│   ├── monetization/            # Monetization guardrails
+│   ├── multiplayer/             # Multiplayer safety
+│   ├── analytics/               # Analytics ethics
+│   ├── deployment/              # Cross-platform deployment
 │   ├── ui-ux/                   # UI/UX component standards
 │   ├── accessibility/           # WCAG 3.0+ compliance
 │   ├── spatial/                 # XR/VR/AR patterns
@@ -298,24 +298,25 @@ agent-guardrails-template/
 | Metric | Count |
 |--------|-------|
 | **Documentation Files** | 68+ |
-| **Guardrail Categories** | 7 (safety, game design, commerce, social, analytics, deployment, generative) |
+| **Guardrail Categories** | 6 (safety, commerce, social, analytics, deployment, generative) |
 | **Workflows** | 10 documents |
 | **Standards** | 11 documents |
-| **Example Languages** | 14 (Go, TS, Rust, Python, Java, Swift, Dart, GDScript, Scala, R, C#, C++, PHP, Ruby) |
-| **MCP Tools** | 17 |
-| **MCP Resources** | 8 |
+| **Example Languages** | 13 (Go, TS, Rust, Python, Java, Swift, Dart, Scala, R, C#, C++, PHP, Ruby) |
+| **MCP Tools** | 56 |
+| **MCP Resources** | 11 |
 | **Supported AI Models** | 30+ LLM families |
-| **Implementation** | Go 1.23+ |
+| **Implementation** | Go 1.25+ |
 | **Infrastructure** | PostgreSQL 16, Redis 7, Docker/Podman |
 
 ---
 
 ## Version History
 
-**Current:** v3.1.0 (2026-05-12)
+**Current:** v3.2.0 (2026-06-16)
 
 | Version | Date | Highlights |
 |---------|------|------------|
+| **v3.2.0** | 2026-06-16 | Platform review sprint: 7 features, all P0 fixes, mcp-go v0.58.0 |
 | **v3.1.0** | 2026-05-12 | Structural reorganization: split docs into 3d/ subfolder, README link fixes, stats update |
 | **v3.0.0** | 2026-05-12 | 3D game development suite, AI-Powered Development 2026 guide, Hermes 2026 dossier |
 | **v2.9.0** | 2026-05-08 | AI tool integration suite (Claude Code, Cursor, Windsurf, Copilot, OpenCode) |
@@ -348,7 +349,7 @@ Help keep this project going — use a referral link below and both of us get cr
 | [**Synthetic**](https://synthetic.new/?referral=UAWqkKQQLFkzMkY) | $10 in credits | Subscribe → both get $10 credit | `UAWqkKQQLFkzMkY` |
 ---
 
-**v3.1.0** · AI-First Rapid Development Framework · [Get Started →](QUICK_SETUP.md)
+**v3.2.0** · AI-First Rapid Development Framework · [Get Started →](docs/QUICK_SETUP.md)
 
 
 ## ☁️ Cloud Credits
