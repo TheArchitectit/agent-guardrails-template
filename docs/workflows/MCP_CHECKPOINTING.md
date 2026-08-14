@@ -1,5 +1,11 @@
 # MCP Auto Checkpoint Documentation
 
+> **⚠️ PLANNED — NOT YET IMPLEMENTED**
+>
+> The checkpoint MCP tools (`create_checkpoint`, `list_checkpoints`, `restore_checkpoint`) described in this document are not yet implemented in the MCP server. This document serves as the design specification for a future feature.
+
+---
+
 > Integration with MCP servers for automatic checkpointing.
 
 **Related:** [COMMIT_WORKFLOW.md](./COMMIT_WORKFLOW.md) | [ROLLBACK_PROCEDURES.md](./ROLLBACK_PROCEDURES.md)
