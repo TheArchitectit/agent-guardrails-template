@@ -16,7 +16,7 @@ func (s *MCPServer) lifecycleToolList() []mcp.Tool {
 			Description: "Create a new agent session in idle state. The agent must transition through planning → active → review → release lifecycle.",
 			InputSchema: mcp.ToolInputSchema{
 				Type: "object",
-				Properties: mcp.ToolInputSchemaProperties{
+				Properties: map[string]any{
 					"team_id": map[string]interface{}{
 						"type":        "string",
 						"description": "Team ID the agent belongs to",
@@ -38,7 +38,7 @@ func (s *MCPServer) lifecycleToolList() []mcp.Tool {
 			Description: "Move an agent to a new lifecycle state. Valid transitions: idle→planning, planning→active|idle, active→review|halted|idle, review→release|active|halted, release→idle, halted→idle.",
 			InputSchema: mcp.ToolInputSchema{
 				Type: "object",
-				Properties: mcp.ToolInputSchemaProperties{
+				Properties: map[string]any{
 					"session_id": map[string]interface{}{
 						"type":        "string",
 						"description": "Agent session ID",
@@ -65,7 +65,7 @@ func (s *MCPServer) lifecycleToolList() []mcp.Tool {
 			Description: "Get the current state and recent transition history of an agent session.",
 			InputSchema: mcp.ToolInputSchema{
 				Type: "object",
-				Properties: mcp.ToolInputSchemaProperties{
+				Properties: map[string]any{
 					"session_id": map[string]interface{}{
 						"type":        "string",
 						"description": "Agent session ID",
@@ -79,7 +79,7 @@ func (s *MCPServer) lifecycleToolList() []mcp.Tool {
 			Description: "List all agent sessions for a team, showing current states.",
 			InputSchema: mcp.ToolInputSchema{
 				Type: "object",
-				Properties: mcp.ToolInputSchemaProperties{
+				Properties: map[string]any{
 					"team_id": map[string]interface{}{
 						"type":        "string",
 						"description": "Team ID to list sessions for",
@@ -93,7 +93,7 @@ func (s *MCPServer) lifecycleToolList() []mcp.Tool {
 			Description: "Admin override: force an agent to any state, bypassing transition validation. Requires justification.",
 			InputSchema: mcp.ToolInputSchema{
 				Type: "object",
-				Properties: mcp.ToolInputSchemaProperties{
+				Properties: map[string]any{
 					"session_id": map[string]interface{}{
 						"type":        "string",
 						"description": "Agent session ID",

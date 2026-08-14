@@ -8,12 +8,13 @@ import (
 	"testing"
 
 	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/thearchitectit/guardrail-mcp/internal/models"
 )
 
 // mockMCPServer creates a minimal MCPServer for testing
 func mockMCPServer() *MCPServer {
 	return &MCPServer{
-		sessions: make(map[string]*Session),
+		sessions: make(map[string]*models.Session),
 	}
 }
 

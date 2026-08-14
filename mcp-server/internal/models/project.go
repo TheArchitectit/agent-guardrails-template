@@ -60,6 +60,15 @@ type Session struct {
 	ExpiresAt     time.Time `json:"expires_at"`
 }
 
+// SessionInfo represents an active guardrail session created via init_session.
+// It carries the lightweight session identity returned by handleInitSession.
+type SessionInfo struct {
+	SessionID   string    `json:"session_id"`
+	UserID      string    `json:"user_id"`
+	Environment string    `json:"environment"`
+	StartTime   time.Time `json:"start_time"`
+}
+
 // Validate checks if the project is valid for creation/update
 func (p *Project) Validate() error {
 	if p.Name == "" {

@@ -64,7 +64,7 @@ func (s *MCPServer) handleGetPreventionRules(ctx context.Context, args map[strin
 	rules, err := s.loadPatternRules()
 	if err != nil {
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: fmt.Sprintf(`{"error":"%v"}`, err)}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: fmt.Sprintf(`{"error":"%v"}`, err)}},
 			IsError: true,
 		}, nil
 	}
@@ -88,7 +88,7 @@ func (s *MCPServer) handleGetPreventionRules(ctx context.Context, args map[strin
 		"total": len(rules),
 	})
 	return &mcp.CallToolResult{
-		Content: []interface{}{mcp.TextContent{Type: "text", Text: string(resultJSON)}},
+		Content: []mcp.Content{mcp.TextContent{Type: "text", Text: string(resultJSON)}},
 	}, nil
 }
 
@@ -99,7 +99,7 @@ func (s *MCPServer) handleCheckPattern(ctx context.Context, args map[string]inte
 
 	if content == "" {
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: `{"error":"content parameter required"}`}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: `{"error":"content parameter required"}`}},
 			IsError: true,
 		}, nil
 	}
@@ -107,7 +107,7 @@ func (s *MCPServer) handleCheckPattern(ctx context.Context, args map[string]inte
 	rules, err := s.loadPatternRules()
 	if err != nil {
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: fmt.Sprintf(`{"error":"%v"}`, err)}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: fmt.Sprintf(`{"error":"%v"}`, err)}},
 			IsError: true,
 		}, nil
 	}
@@ -179,7 +179,7 @@ func (s *MCPServer) handleCheckPattern(ctx context.Context, args map[string]inte
 		"rules_checked": len(rules),
 	})
 	return &mcp.CallToolResult{
-		Content: []interface{}{mcp.TextContent{Type: "text", Text: string(resultJSON)}},
+		Content: []mcp.Content{mcp.TextContent{Type: "text", Text: string(resultJSON)}},
 	}, nil
 }
 

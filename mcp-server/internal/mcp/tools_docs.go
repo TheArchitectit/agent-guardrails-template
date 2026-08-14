@@ -16,7 +16,7 @@ func (s *MCPServer) handleGetStandard(ctx context.Context, args map[string]inter
 	name, _ := args["name"].(string)
 	if name == "" {
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: `{"error":"name parameter required"}`}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: `{"error":"name parameter required"}`}},
 			IsError: true,
 		}, nil
 	}
@@ -35,7 +35,7 @@ func (s *MCPServer) handleGetStandard(ctx context.Context, args map[string]inter
 		entries, readErr := os.ReadDir(filepath.Join(repoPath, "docs", "standards"))
 		if readErr != nil {
 			return &mcp.CallToolResult{
-				Content: []interface{}{mcp.TextContent{Type: "text", Text: fmt.Sprintf(`{"error":"Standard not found: %s"}`, name)}},
+				Content: []mcp.Content{mcp.TextContent{Type: "text", Text: fmt.Sprintf(`{"error":"Standard not found: %s"}`, name)}},
 				IsError: true,
 			}, nil
 		}
@@ -62,7 +62,7 @@ func (s *MCPServer) handleGetStandard(ctx context.Context, args map[string]inter
 			}
 			resultJSON, _ := json.Marshal(result)
 			return &mcp.CallToolResult{
-				Content: []interface{}{mcp.TextContent{Type: "text", Text: string(resultJSON)}},
+				Content: []mcp.Content{mcp.TextContent{Type: "text", Text: string(resultJSON)}},
 				IsError: true,
 			}, nil
 		}
@@ -75,7 +75,7 @@ func (s *MCPServer) handleGetStandard(ctx context.Context, args map[string]inter
 	}
 	resultJSON, _ := json.Marshal(result)
 	return &mcp.CallToolResult{
-		Content: []interface{}{mcp.TextContent{Type: "text", Text: string(resultJSON)}},
+		Content: []mcp.Content{mcp.TextContent{Type: "text", Text: string(resultJSON)}},
 	}, nil
 }
 
@@ -84,7 +84,7 @@ func (s *MCPServer) handleGetWorkflow(ctx context.Context, args map[string]inter
 	name, _ := args["name"].(string)
 	if name == "" {
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: `{"error":"name parameter required"}`}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: `{"error":"name parameter required"}`}},
 			IsError: true,
 		}, nil
 	}
@@ -122,7 +122,7 @@ func (s *MCPServer) handleGetWorkflow(ctx context.Context, args map[string]inter
 			}
 			resultJSON, _ := json.Marshal(result)
 			return &mcp.CallToolResult{
-				Content: []interface{}{mcp.TextContent{Type: "text", Text: string(resultJSON)}},
+				Content: []mcp.Content{mcp.TextContent{Type: "text", Text: string(resultJSON)}},
 				IsError: true,
 			}, nil
 		}
@@ -135,7 +135,7 @@ func (s *MCPServer) handleGetWorkflow(ctx context.Context, args map[string]inter
 	}
 	resultJSON, _ := json.Marshal(result)
 	return &mcp.CallToolResult{
-		Content: []interface{}{mcp.TextContent{Type: "text", Text: string(resultJSON)}},
+		Content: []mcp.Content{mcp.TextContent{Type: "text", Text: string(resultJSON)}},
 	}, nil
 }
 
@@ -144,7 +144,7 @@ func (s *MCPServer) handleSearchDocs(ctx context.Context, args map[string]interf
 	query, _ := args["query"].(string)
 	if query == "" {
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: `{"error":"query parameter required"}`}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: `{"error":"query parameter required"}`}},
 			IsError: true,
 		}, nil
 	}
@@ -248,6 +248,6 @@ func (s *MCPServer) handleSearchDocs(ctx context.Context, args map[string]interf
 		"total":   len(results),
 	})
 	return &mcp.CallToolResult{
-		Content: []interface{}{mcp.TextContent{Type: "text", Text: string(resultJSON)}},
+		Content: []mcp.Content{mcp.TextContent{Type: "text", Text: string(resultJSON)}},
 	}, nil
 }

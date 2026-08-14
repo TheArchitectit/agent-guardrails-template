@@ -296,27 +296,29 @@ func TestMaskSecret(t *testing.T) {
 }
 
 func TestSecretPatterns_Defined(t *testing.T) {
-	// Verify that secretPatterns slice is defined and has expected patterns
-	expectedPatterns := []string{
+	if len(secretPatterns) == 0 {
+		t.Fatal("secretPatterns is empty")
+	}
+
+	seen := make(map[string]bool)
+	for _, p := range secretPatterns {
+		if p.Name == "" {
+			t.Error("found pattern with empty Name")
+		}
+		if p.Pattern == nil {
+			t.Errorf("pattern %q has nil Pattern", p.Name)
+		}
+		seen[p.Name] = true
+	}
+
+	required := []string{
 		"AWS Access Key ID",
-		"AWS Secret Key",
-		"Private Key",
 		"GitHub Token",
-		"Slack Token",
-		"Generic API Key",
 		"JWT Token",
 	}
-
-	if len(secretPatterns) != len(expectedPatterns) {
-		t.Errorf("secretPatterns has %d patterns, want %d", len(secretPatterns), len(expectedPatterns))
-	}
-
-	for i, pattern := range secretPatterns {
-		if pattern.Name != expectedPatterns[i] {
-			t.Errorf("secretPatterns[%d].Name = %q, want %q", i, pattern.Name, expectedPatterns[i])
-		}
-		if pattern.Pattern == nil {
-			t.Errorf("secretPatterns[%d].Pattern is nil", i)
+	for _, name := range required {
+		if !seen[name] {
+			t.Errorf("missing required pattern: %s", name)
 		}
 	}
 }

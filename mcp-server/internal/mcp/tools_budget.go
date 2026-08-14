@@ -17,7 +17,7 @@ func (s *MCPServer) budgetToolList() []mcp.Tool {
 			Description: "Set or update token budget limits for a team/model combination",
 			InputSchema: mcp.ToolInputSchema{
 				Type: "object",
-				Properties: mcp.ToolInputSchemaProperties{
+				Properties: map[string]any{
 					"team_id": map[string]interface{}{
 						"type":        "string",
 						"description": "Team ID to set budget for",
@@ -52,7 +52,7 @@ func (s *MCPServer) budgetToolList() []mcp.Tool {
 			Description: "Get current token/cost usage against budget limits for a team/model",
 			InputSchema: mcp.ToolInputSchema{
 				Type: "object",
-				Properties: mcp.ToolInputSchemaProperties{
+				Properties: map[string]any{
 					"team_id": map[string]interface{}{
 						"type":        "string",
 						"description": "Team ID",
@@ -70,7 +70,7 @@ func (s *MCPServer) budgetToolList() []mcp.Tool {
 			Description: "List all budget configurations for a team",
 			InputSchema: mcp.ToolInputSchema{
 				Type: "object",
-				Properties: mcp.ToolInputSchemaProperties{
+				Properties: map[string]any{
 					"team_id": map[string]interface{}{
 						"type":        "string",
 						"description": "Team ID to list budgets for",
@@ -84,7 +84,7 @@ func (s *MCPServer) budgetToolList() []mcp.Tool {
 			Description: "Get token usage history for a team",
 			InputSchema: mcp.ToolInputSchema{
 				Type: "object",
-				Properties: mcp.ToolInputSchemaProperties{
+				Properties: map[string]any{
 					"team_id": map[string]interface{}{
 						"type":        "string",
 						"description": "Team ID",
@@ -102,7 +102,7 @@ func (s *MCPServer) budgetToolList() []mcp.Tool {
 			Description: "Delete a budget configuration",
 			InputSchema: mcp.ToolInputSchema{
 				Type: "object",
-				Properties: mcp.ToolInputSchemaProperties{
+				Properties: map[string]any{
 					"budget_id": map[string]interface{}{
 						"type":        "string",
 						"description": "Budget config ID to delete",
