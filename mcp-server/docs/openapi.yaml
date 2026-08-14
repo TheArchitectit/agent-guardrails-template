@@ -326,22 +326,94 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
-  /api/rules/{id}/toggle:
-    patch:
+  /api/rules/sync:
+    post:
       tags: [Rules]
-      summary: Toggle rule enabled/disabled
-      operationId: toggleRule
-      parameters:
-        - $ref: "#/components/parameters/IdParam"
+      summary: Sync rules from repository directories
+      operationId: syncRules
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                repo_url:
+                  type: string
+                  description: Git repository URL to sync from
       responses:
         "200":
-          description: Rule toggled
+          description: Sync completed
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/PreventionRule"
-        "404":
-          $ref: "#/components/responses/NotFound"
+                type: object
+                properties:
+                  synced:
+                    type: integer
+                  errors:
+                    type: array
+                    items:
+                      type: string
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/rules/sync/status:
+    get:
+      tags: [Rules]
+      summary: Get rule sync status
+      operationId: getRuleSyncStatus
+      responses:
+        "200":
+          description: Sync status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  last_sync:
+                    type: string
+                    format: date-time
+                  status:
+                    type: string
+                  synced_count:
+                    type: integer
+                  error_count:
+                    type: integer
+
+  /api/rules/sync/upload:
+    post:
+      tags: [Rules]
+      summary: Trigger rule sync from uploaded files
+      operationId: triggerRuleSyncFromUpload
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                files:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+      responses:
+        "200":
+          description: Sync triggered from upload
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  synced:
+                    type: integer
+                  errors:
+                    type: array
+                    items:
+                      type: string
+        "400":
+          $ref: "#/components/responses/BadRequest"
 
   /api/projects:
     get:
