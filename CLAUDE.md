@@ -27,11 +27,11 @@
 These constraints enable flow state. Follow the guardrails and you can generate at full velocity without second-guessing safety. Constraints aren't friction — they're your fast lane.
 
 **Quick Links:**
-- [2026_GAME_DESIGN.md](docs/game-design/2026_GAME_DESIGN.md) - Game design guardrails
 - [2026_UI_UX_STANDARD.md](docs/ui-ux/2026_UI_UX_STANDARD.md) - UI component standards
 - [ACCESSIBILITY_GUIDE.md](docs/accessibility/ACCESSIBILITY_GUIDE.md) - WCAG 3.0+ guide
 - [SPATIAL_COMPUTING_UI.md](docs/spatial/SPATIAL_COMPUTING_UI.md) - XR/VR/AR patterns
 - [ETHICAL_ENGAGEMENT.md](docs/ethical/ETHICAL_ENGAGEMENT.md) - Dark pattern prevention
+- Game design docs moved to separate private repo
 
 ## 1. Context & Setup
 * **Stack Detection**: Read configuration files (package.json, requirements.txt, Makefile, etc) to determine stack. Do NOT read lockfiles.

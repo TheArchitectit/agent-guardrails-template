@@ -21,7 +21,7 @@ Demonstrates Agent Guardrails integration with Godot Engine for game development
 | `accessibility_manager.gd` | Accessibility features for game interfaces |
 
 ## Related Documents
-- [2026_GAME_DESIGN.md](../../../docs/game-design/2026_GAME_DESIGN.md) — Game design guardrails
+- 2026_GAME_DESIGN.md (moved to private game-design repo) — Game design guardrails
 - [SPATIAL_COMPUTING_UI.md](../../../docs/spatial/SPATIAL_COMPUTING_UI.md) — XR/VR/AR patterns
 - [ETHICAL_ENGAGEMENT.md](../../../docs/ethical/ETHICAL_ENGAGEMENT.md) — Dark pattern prevention
 - [ACCESSIBILITY_GUIDE.md](../../../docs/accessibility/ACCESSIBILITY_GUIDE.md) — WCAG 3.0+ guide
