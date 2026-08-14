@@ -1,6 +1,7 @@
 package mcp
 
 import (
+	"encoding/json"
 	"os"
 )
 
@@ -11,11 +12,18 @@ func (s *MCPServer) getRepoPath() string {
 	if path := os.Getenv("GUARDRAILS_REPO_PATH"); path != "" {
 		return path
 	}
-	// Default: one level up from mcp-server directory
-	// (repo root contains docs/ and .guardrails/)
 	path, err := os.Getwd()
 	if err != nil {
 		return "."
 	}
 	return path
+}
+
+// jsonEscapeString escapes a string for safe embedding in JSON string literals.
+func jsonEscapeString(s string) string {
+	b, err := json.Marshal(s)
+	if err != nil {
+		return s
+	}
+	return string(b[1 : len(b)-1])
 }

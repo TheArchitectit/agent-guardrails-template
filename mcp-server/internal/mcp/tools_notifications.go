@@ -16,7 +16,7 @@ func (s *MCPServer) notificationToolList() []mcp.Tool {
 			Description: "Create or update a webhook endpoint for receiving violation and halt notifications",
 			InputSchema: mcp.ToolInputSchema{
 				Type: "object",
-				Properties: mcp.ToolInputSchemaProperties{
+				Properties: map[string]any{
 					"team_id": map[string]interface{}{
 						"type":        "string",
 						"description": "Team ID to associate the webhook with",
@@ -51,7 +51,7 @@ func (s *MCPServer) notificationToolList() []mcp.Tool {
 			Description: "Send a test event to a configured webhook endpoint",
 			InputSchema: mcp.ToolInputSchema{
 				Type: "object",
-				Properties: mcp.ToolInputSchemaProperties{
+				Properties: map[string]any{
 					"webhook_id": map[string]interface{}{
 						"type":        "string",
 						"description": "Webhook ID to test",
@@ -65,7 +65,7 @@ func (s *MCPServer) notificationToolList() []mcp.Tool {
 			Description: "List all configured webhooks for a team",
 			InputSchema: mcp.ToolInputSchema{
 				Type: "object",
-				Properties: mcp.ToolInputSchemaProperties{
+				Properties: map[string]any{
 					"team_id": map[string]interface{}{
 						"type":        "string",
 						"description": "Team ID to list webhooks for",
@@ -79,7 +79,7 @@ func (s *MCPServer) notificationToolList() []mcp.Tool {
 			Description: "Delete a configured webhook endpoint",
 			InputSchema: mcp.ToolInputSchema{
 				Type: "object",
-				Properties: mcp.ToolInputSchemaProperties{
+				Properties: map[string]any{
 					"webhook_id": map[string]interface{}{
 						"type":        "string",
 						"description": "Webhook ID to delete",
@@ -93,7 +93,7 @@ func (s *MCPServer) notificationToolList() []mcp.Tool {
 			Description: "View recent webhook delivery history",
 			InputSchema: mcp.ToolInputSchema{
 				Type: "object",
-				Properties: mcp.ToolInputSchemaProperties{
+				Properties: map[string]any{
 					"webhook_id": map[string]interface{}{
 						"type":        "string",
 						"description": "Webhook ID to get deliveries for",

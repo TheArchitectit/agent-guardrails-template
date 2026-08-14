@@ -326,7 +326,7 @@ func (s *MCPServer) handleTeamInit(ctx context.Context, args map[string]interfac
 	if !ok || projectName == "" {
 		metrics.RecordTeamToolError("team_init", "validation_error")
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: "Error: project_name is required"}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: "Error: project_name is required"}},
 			IsError: true,
 		}, nil
 	}
@@ -334,7 +334,7 @@ func (s *MCPServer) handleTeamInit(ctx context.Context, args map[string]interfac
 	if err := validateProjectName(projectName); err != nil {
 		metrics.RecordTeamToolError("team_init", "validation_error")
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: err.Error()}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: err.Error()}},
 			IsError: true,
 		}, nil
 	}
@@ -345,7 +345,7 @@ func (s *MCPServer) handleTeamInit(ctx context.Context, args map[string]interfac
 		metrics.RecordTeamToolError("team_init", "go_error")
 		metrics.RecordTeamToolCall("team_init", false)
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: fmt.Sprintf("Error creating manager: %v", err)}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: fmt.Sprintf("Error creating manager: %v", err)}},
 			IsError: true,
 		}, nil
 	}
@@ -356,7 +356,7 @@ func (s *MCPServer) handleTeamInit(ctx context.Context, args map[string]interfac
 		metrics.RecordTeamToolError("team_init", "go_error")
 		metrics.RecordTeamToolCall("team_init", false)
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: fmt.Sprintf("Error initializing project: %v", err)}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: fmt.Sprintf("Error initializing project: %v", err)}},
 			IsError: true,
 		}, nil
 	}
@@ -365,7 +365,7 @@ func (s *MCPServer) handleTeamInit(ctx context.Context, args map[string]interfac
 	resultText := fmt.Sprintf("✅ Initialized project '%s' with %d teams", projectName, len(team.StandardTeams))
 	metrics.RecordTeamToolCall("team_init", true)
 	return &mcp.CallToolResult{
-		Content: []interface{}{mcp.TextContent{Type: "text", Text: resultText}},
+		Content: []mcp.Content{mcp.TextContent{Type: "text", Text: resultText}},
 	}, nil
 }
 
@@ -382,7 +382,7 @@ func (s *MCPServer) handleTeamList(ctx context.Context, args map[string]interfac
 	if !ok || projectName == "" {
 		metrics.RecordTeamToolError("team_list", "validation_error")
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: "Error: project_name is required"}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: "Error: project_name is required"}},
 			IsError: true,
 		}, nil
 	}
@@ -390,7 +390,7 @@ func (s *MCPServer) handleTeamList(ctx context.Context, args map[string]interfac
 	if err := validateProjectName(projectName); err != nil {
 		metrics.RecordTeamToolError("team_list", "validation_error")
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: err.Error()}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: err.Error()}},
 			IsError: true,
 		}, nil
 	}
@@ -401,7 +401,7 @@ func (s *MCPServer) handleTeamList(ctx context.Context, args map[string]interfac
 		metrics.RecordTeamToolError("team_list", "go_error")
 		metrics.RecordTeamToolCall("team_list", false)
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: fmt.Sprintf("Error creating manager: %v", err)}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: fmt.Sprintf("Error creating manager: %v", err)}},
 			IsError: true,
 		}, nil
 	}
@@ -411,7 +411,7 @@ func (s *MCPServer) handleTeamList(ctx context.Context, args map[string]interfac
 		metrics.RecordTeamToolError("team_list", "go_error")
 		metrics.RecordTeamToolCall("team_list", false)
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: fmt.Sprintf("Error loading project: %v", err)}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: fmt.Sprintf("Error loading project: %v", err)}},
 			IsError: true,
 		}, nil
 	}
@@ -421,7 +421,7 @@ func (s *MCPServer) handleTeamList(ctx context.Context, args map[string]interfac
 		if err := team.ValidatePhase(phase); err != nil {
 			metrics.RecordTeamToolError("team_list", "validation_error")
 			return &mcp.CallToolResult{
-				Content: []interface{}{mcp.TextContent{Type: "text", Text: fmt.Sprintf("Error: %v", err)}},
+				Content: []mcp.Content{mcp.TextContent{Type: "text", Text: fmt.Sprintf("Error: %v", err)}},
 				IsError: true,
 			}, nil
 		}
@@ -454,7 +454,7 @@ func (s *MCPServer) handleTeamList(ctx context.Context, args map[string]interfac
 	resultText := sb.String()
 	metrics.RecordTeamToolCall("team_list", true)
 	return &mcp.CallToolResult{
-		Content: []interface{}{mcp.TextContent{Type: "text", Text: resultText}},
+		Content: []mcp.Content{mcp.TextContent{Type: "text", Text: resultText}},
 	}, nil
 }
 
@@ -471,7 +471,7 @@ func (s *MCPServer) handleTeamAssign(ctx context.Context, args map[string]interf
 	if !ok || projectName == "" {
 		metrics.RecordTeamToolError("team_assign", "validation_error")
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: "Error: project_name is required"}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: "Error: project_name is required"}},
 			IsError: true,
 		}, nil
 	}
@@ -479,7 +479,7 @@ func (s *MCPServer) handleTeamAssign(ctx context.Context, args map[string]interf
 	if err := validateProjectName(projectName); err != nil {
 		metrics.RecordTeamToolError("team_assign", "validation_error")
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: err.Error()}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: err.Error()}},
 			IsError: true,
 		}, nil
 	}
@@ -491,7 +491,7 @@ func (s *MCPServer) handleTeamAssign(ctx context.Context, args map[string]interf
 		metrics.RecordTeamToolError("team_assign", "rate_limit_exceeded")
 		retryAfter := rateHeaders["X-RateLimit-Reset"]
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{
+			Content: []mcp.Content{mcp.TextContent{
 				Type: "text",
 				Text: fmt.Sprintf("Error: Rate limit exceeded. Retry after %s", retryAfter),
 			}},
@@ -503,7 +503,7 @@ func (s *MCPServer) handleTeamAssign(ctx context.Context, args map[string]interf
 	if !ok {
 		metrics.RecordTeamToolError("team_assign", "validation_error")
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: "Error: team_id is required"}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: "Error: team_id is required"}},
 			IsError: true,
 		}, nil
 	}
@@ -513,7 +513,7 @@ func (s *MCPServer) handleTeamAssign(ctx context.Context, args map[string]interf
 	if teamIDInt < 1 || teamIDInt > 12 {
 		metrics.RecordTeamToolError("team_assign", "validation_error")
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: "Error: team_id must be between 1 and 12"}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: "Error: team_id must be between 1 and 12"}},
 			IsError: true,
 		}, nil
 	}
@@ -522,7 +522,7 @@ func (s *MCPServer) handleTeamAssign(ctx context.Context, args map[string]interf
 	if !ok || roleName == "" {
 		metrics.RecordTeamToolError("team_assign", "validation_error")
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: "Error: role_name is required"}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: "Error: role_name is required"}},
 			IsError: true,
 		}, nil
 	}
@@ -530,7 +530,7 @@ func (s *MCPServer) handleTeamAssign(ctx context.Context, args map[string]interf
 	if err := validateRoleName(roleName); err != nil {
 		metrics.RecordTeamToolError("team_assign", "validation_error")
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: fmt.Sprintf("Error: %v", err)}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: fmt.Sprintf("Error: %v", err)}},
 			IsError: true,
 		}, nil
 	}
@@ -539,7 +539,7 @@ func (s *MCPServer) handleTeamAssign(ctx context.Context, args map[string]interf
 	if !ok || person == "" {
 		metrics.RecordTeamToolError("team_assign", "validation_error")
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: "Error: person is required"}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: "Error: person is required"}},
 			IsError: true,
 		}, nil
 	}
@@ -547,7 +547,7 @@ func (s *MCPServer) handleTeamAssign(ctx context.Context, args map[string]interf
 	if err := validatePersonName(person); err != nil {
 		metrics.RecordTeamToolError("team_assign", "validation_error")
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: fmt.Sprintf("Error: %v", err)}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: fmt.Sprintf("Error: %v", err)}},
 			IsError: true,
 		}, nil
 	}
@@ -558,7 +558,7 @@ func (s *MCPServer) handleTeamAssign(ctx context.Context, args map[string]interf
 		metrics.RecordTeamToolError("team_assign", "go_error")
 		metrics.RecordTeamToolCall("team_assign", false)
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: fmt.Sprintf("Error creating manager: %v", err)}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: fmt.Sprintf("Error creating manager: %v", err)}},
 			IsError: true,
 		}, nil
 	}
@@ -568,7 +568,7 @@ func (s *MCPServer) handleTeamAssign(ctx context.Context, args map[string]interf
 		metrics.RecordTeamToolError("team_assign", "go_error")
 		metrics.RecordTeamToolCall("team_assign", false)
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: fmt.Sprintf("Error loading project: %v", err)}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: fmt.Sprintf("Error loading project: %v", err)}},
 			IsError: true,
 		}, nil
 	}
@@ -578,7 +578,7 @@ func (s *MCPServer) handleTeamAssign(ctx context.Context, args map[string]interf
 		metrics.RecordTeamToolError("team_assign", "go_error")
 		metrics.RecordTeamToolCall("team_assign", false)
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: fmt.Sprintf("Error assigning role: %v", err)}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: fmt.Sprintf("Error assigning role: %v", err)}},
 			IsError: true,
 		}, nil
 	}
@@ -588,7 +588,7 @@ func (s *MCPServer) handleTeamAssign(ctx context.Context, args map[string]interf
 		person, roleName, teamIDInt, team.StandardTeams[teamIDInt].Name)
 	metrics.RecordTeamToolCall("team_assign", true)
 	return &mcp.CallToolResult{
-		Content: []interface{}{mcp.TextContent{Type: "text", Text: resultText}},
+		Content: []mcp.Content{mcp.TextContent{Type: "text", Text: resultText}},
 	}, nil
 }
 
@@ -605,7 +605,7 @@ func (s *MCPServer) handleTeamUnassign(ctx context.Context, args map[string]inte
 	if !ok || projectName == "" {
 		metrics.RecordTeamToolError("team_unassign", "validation_error")
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: "Error: project_name is required"}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: "Error: project_name is required"}},
 			IsError: true,
 		}, nil
 	}
@@ -613,7 +613,7 @@ func (s *MCPServer) handleTeamUnassign(ctx context.Context, args map[string]inte
 	if err := validateProjectName(projectName); err != nil {
 		metrics.RecordTeamToolError("team_unassign", "validation_error")
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: err.Error()}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: err.Error()}},
 			IsError: true,
 		}, nil
 	}
@@ -622,7 +622,7 @@ func (s *MCPServer) handleTeamUnassign(ctx context.Context, args map[string]inte
 	if !ok {
 		metrics.RecordTeamToolError("team_unassign", "validation_error")
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: "Error: team_id is required"}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: "Error: team_id is required"}},
 			IsError: true,
 		}, nil
 	}
@@ -632,7 +632,7 @@ func (s *MCPServer) handleTeamUnassign(ctx context.Context, args map[string]inte
 	if teamIDInt < 1 || teamIDInt > 12 {
 		metrics.RecordTeamToolError("team_unassign", "validation_error")
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: "Error: team_id must be between 1 and 12"}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: "Error: team_id must be between 1 and 12"}},
 			IsError: true,
 		}, nil
 	}
@@ -641,7 +641,7 @@ func (s *MCPServer) handleTeamUnassign(ctx context.Context, args map[string]inte
 	if !ok || roleName == "" {
 		metrics.RecordTeamToolError("team_unassign", "validation_error")
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: "Error: role_name is required"}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: "Error: role_name is required"}},
 			IsError: true,
 		}, nil
 	}
@@ -649,7 +649,7 @@ func (s *MCPServer) handleTeamUnassign(ctx context.Context, args map[string]inte
 	if err := validateRoleName(roleName); err != nil {
 		metrics.RecordTeamToolError("team_unassign", "validation_error")
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: fmt.Sprintf("Error: %v", err)}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: fmt.Sprintf("Error: %v", err)}},
 			IsError: true,
 		}, nil
 	}
@@ -660,7 +660,7 @@ func (s *MCPServer) handleTeamUnassign(ctx context.Context, args map[string]inte
 		metrics.RecordTeamToolError("team_unassign", "go_error")
 		metrics.RecordTeamToolCall("team_unassign", false)
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: fmt.Sprintf("Error creating manager: %v", err)}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: fmt.Sprintf("Error creating manager: %v", err)}},
 			IsError: true,
 		}, nil
 	}
@@ -670,7 +670,7 @@ func (s *MCPServer) handleTeamUnassign(ctx context.Context, args map[string]inte
 		metrics.RecordTeamToolError("team_unassign", "go_error")
 		metrics.RecordTeamToolCall("team_unassign", false)
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: fmt.Sprintf("Error loading project: %v", err)}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: fmt.Sprintf("Error loading project: %v", err)}},
 			IsError: true,
 		}, nil
 	}
@@ -680,7 +680,7 @@ func (s *MCPServer) handleTeamUnassign(ctx context.Context, args map[string]inte
 		metrics.RecordTeamToolError("team_unassign", "go_error")
 		metrics.RecordTeamToolCall("team_unassign", false)
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: fmt.Sprintf("Error unassigning role: %v", err)}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: fmt.Sprintf("Error unassigning role: %v", err)}},
 			IsError: true,
 		}, nil
 	}
@@ -690,7 +690,7 @@ func (s *MCPServer) handleTeamUnassign(ctx context.Context, args map[string]inte
 		roleName, teamIDInt, team.StandardTeams[teamIDInt].Name)
 	metrics.RecordTeamToolCall("team_unassign", true)
 	return &mcp.CallToolResult{
-		Content: []interface{}{mcp.TextContent{Type: "text", Text: resultText}},
+		Content: []mcp.Content{mcp.TextContent{Type: "text", Text: resultText}},
 	}, nil
 }
 
@@ -708,7 +708,7 @@ func (s *MCPServer) handleTeamStart(ctx context.Context, args map[string]interfa
 	if !ok || projectName == "" {
 		metrics.RecordTeamToolError("team_start", "validation_error")
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: "Error: project_name is required"}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: "Error: project_name is required"}},
 			IsError: true,
 		}, nil
 	}
@@ -716,7 +716,7 @@ func (s *MCPServer) handleTeamStart(ctx context.Context, args map[string]interfa
 	if err := validateProjectName(projectName); err != nil {
 		metrics.RecordTeamToolError("team_start", "validation_error")
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: err.Error()}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: err.Error()}},
 			IsError: true,
 		}, nil
 	}
@@ -725,7 +725,7 @@ func (s *MCPServer) handleTeamStart(ctx context.Context, args map[string]interfa
 	if !ok {
 		metrics.RecordTeamToolError("team_start", "validation_error")
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: "Error: team_id is required"}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: "Error: team_id is required"}},
 			IsError: true,
 		}, nil
 	}
@@ -735,7 +735,7 @@ func (s *MCPServer) handleTeamStart(ctx context.Context, args map[string]interfa
 	if teamIDInt < 1 || teamIDInt > 12 {
 		metrics.RecordTeamToolError("team_start", "validation_error")
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: "Error: team_id must be between 1 and 12"}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: "Error: team_id must be between 1 and 12"}},
 			IsError: true,
 		}, nil
 	}
@@ -752,7 +752,7 @@ func (s *MCPServer) handleTeamStart(ctx context.Context, args map[string]interfa
 		if !ok || reason == "" {
 			metrics.RecordTeamToolError("team_start", "validation_error")
 			return &mcp.CallToolResult{
-				Content: []interface{}{mcp.TextContent{Type: "text", Text: "Error: reason is required when using override"}},
+				Content: []mcp.Content{mcp.TextContent{Type: "text", Text: "Error: reason is required when using override"}},
 				IsError: true,
 			}, nil
 		}
@@ -764,7 +764,7 @@ func (s *MCPServer) handleTeamStart(ctx context.Context, args map[string]interfa
 		metrics.RecordTeamToolError("team_start", "go_error")
 		metrics.RecordTeamToolCall("team_start", false)
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: fmt.Sprintf("Error creating manager: %v", err)}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: fmt.Sprintf("Error creating manager: %v", err)}},
 			IsError: true,
 		}, nil
 	}
@@ -774,7 +774,7 @@ func (s *MCPServer) handleTeamStart(ctx context.Context, args map[string]interfa
 		metrics.RecordTeamToolError("team_start", "go_error")
 		metrics.RecordTeamToolCall("team_start", false)
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: fmt.Sprintf("Error loading project: %v", err)}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: fmt.Sprintf("Error loading project: %v", err)}},
 			IsError: true,
 		}, nil
 	}
@@ -784,7 +784,7 @@ func (s *MCPServer) handleTeamStart(ctx context.Context, args map[string]interfa
 		metrics.RecordTeamToolError("team_start", "go_error")
 		metrics.RecordTeamToolCall("team_start", false)
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: fmt.Sprintf("Error starting team: %v", err)}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: fmt.Sprintf("Error starting team: %v", err)}},
 			IsError: true,
 		}, nil
 	}
@@ -796,7 +796,7 @@ func (s *MCPServer) handleTeamStart(ctx context.Context, args map[string]interfa
 	}
 	metrics.RecordTeamToolCall("team_start", true)
 	return &mcp.CallToolResult{
-		Content: []interface{}{mcp.TextContent{Type: "text", Text: resultText}},
+		Content: []mcp.Content{mcp.TextContent{Type: "text", Text: resultText}},
 	}, nil
 }
 
@@ -813,7 +813,7 @@ func (s *MCPServer) handleTeamStatus(ctx context.Context, args map[string]interf
 	if !ok || projectName == "" {
 		metrics.RecordTeamToolError("team_status", "validation_error")
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: "Error: project_name is required"}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: "Error: project_name is required"}},
 			IsError: true,
 		}, nil
 	}
@@ -821,7 +821,7 @@ func (s *MCPServer) handleTeamStatus(ctx context.Context, args map[string]interf
 	if err := validateProjectName(projectName); err != nil {
 		metrics.RecordTeamToolError("team_status", "validation_error")
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: err.Error()}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: err.Error()}},
 			IsError: true,
 		}, nil
 	}
@@ -832,7 +832,7 @@ func (s *MCPServer) handleTeamStatus(ctx context.Context, args map[string]interf
 		metrics.RecordTeamToolError("team_status", "go_error")
 		metrics.RecordTeamToolCall("team_status", false)
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: fmt.Sprintf("Error creating manager: %v", err)}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: fmt.Sprintf("Error creating manager: %v", err)}},
 			IsError: true,
 		}, nil
 	}
@@ -842,7 +842,7 @@ func (s *MCPServer) handleTeamStatus(ctx context.Context, args map[string]interf
 		metrics.RecordTeamToolError("team_status", "go_error")
 		metrics.RecordTeamToolCall("team_status", false)
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: fmt.Sprintf("Error loading project: %v", err)}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: fmt.Sprintf("Error loading project: %v", err)}},
 			IsError: true,
 		}, nil
 	}
@@ -861,7 +861,7 @@ func (s *MCPServer) handleTeamStatus(ctx context.Context, args map[string]interf
 
 	metrics.RecordTeamToolCall("team_status", true)
 	return &mcp.CallToolResult{
-		Content: []interface{}{mcp.TextContent{Type: "text", Text: resultText}},
+		Content: []mcp.Content{mcp.TextContent{Type: "text", Text: resultText}},
 	}, nil
 }
 
@@ -878,7 +878,7 @@ func (s *MCPServer) handlePhaseGateCheck(ctx context.Context, args map[string]in
 	if !ok || projectName == "" {
 		metrics.RecordTeamToolError("phase_gate_check", "validation_error")
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: "Error: project_name is required"}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: "Error: project_name is required"}},
 			IsError: true,
 		}, nil
 	}
@@ -886,7 +886,7 @@ func (s *MCPServer) handlePhaseGateCheck(ctx context.Context, args map[string]in
 	if err := validateProjectName(projectName); err != nil {
 		metrics.RecordTeamToolError("phase_gate_check", "validation_error")
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: err.Error()}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: err.Error()}},
 			IsError: true,
 		}, nil
 	}
@@ -895,7 +895,7 @@ func (s *MCPServer) handlePhaseGateCheck(ctx context.Context, args map[string]in
 	if !ok {
 		metrics.RecordTeamToolError("phase_gate_check", "validation_error")
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: "Error: from_phase is required"}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: "Error: from_phase is required"}},
 			IsError: true,
 		}, nil
 	}
@@ -904,7 +904,7 @@ func (s *MCPServer) handlePhaseGateCheck(ctx context.Context, args map[string]in
 	if !ok {
 		metrics.RecordTeamToolError("phase_gate_check", "validation_error")
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: "Error: to_phase is required"}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: "Error: to_phase is required"}},
 			IsError: true,
 		}, nil
 	}
@@ -915,7 +915,7 @@ func (s *MCPServer) handlePhaseGateCheck(ctx context.Context, args map[string]in
 		metrics.RecordTeamToolError("phase_gate_check", "rules_error")
 		metrics.RecordTeamToolCall("phase_gate_check", false)
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{
+			Content: []mcp.Content{mcp.TextContent{
 				Type: "text",
 				Text: fmt.Sprintf("Error loading team rules: %v", err),
 			}},
@@ -930,7 +930,7 @@ func (s *MCPServer) handlePhaseGateCheck(ctx context.Context, args map[string]in
 		metrics.RecordTeamToolError("phase_gate_check", "gate_not_found")
 		metrics.RecordTeamToolCall("phase_gate_check", false)
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{
+			Content: []mcp.Content{mcp.TextContent{
 				Type: "text",
 				Text: fmt.Sprintf("No phase gate defined from phase %d to phase %d", int(fromPhase), int(toPhase)),
 			}},
@@ -953,7 +953,7 @@ func (s *MCPServer) handlePhaseGateCheck(ctx context.Context, args map[string]in
 
 	metrics.RecordTeamToolCall("phase_gate_check", true)
 	return &mcp.CallToolResult{
-		Content: []interface{}{mcp.TextContent{Type: "text", Text: response.String()}},
+		Content: []mcp.Content{mcp.TextContent{Type: "text", Text: response.String()}},
 	}, nil
 }
 
@@ -970,7 +970,7 @@ func (s *MCPServer) handleAgentTeamMap(ctx context.Context, args map[string]inte
 	if !ok || agentType == "" {
 		metrics.RecordTeamToolError("agent_team_map", "validation_error")
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: "Error: agent_type is required"}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: "Error: agent_type is required"}},
 			IsError: true,
 		}, nil
 	}
@@ -981,7 +981,7 @@ func (s *MCPServer) handleAgentTeamMap(ctx context.Context, args map[string]inte
 		metrics.RecordTeamToolError("agent_team_map", "rules_error")
 		metrics.RecordTeamToolCall("agent_team_map", false)
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{
+			Content: []mcp.Content{mcp.TextContent{
 				Type: "text",
 				Text: fmt.Sprintf("Error loading team rules: %v", err),
 			}},
@@ -994,7 +994,7 @@ func (s *MCPServer) handleAgentTeamMap(ctx context.Context, args map[string]inte
 		metrics.RecordTeamToolError("agent_team_map", "mapping_not_found")
 		metrics.RecordTeamToolCall("agent_team_map", false)
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{
+			Content: []mcp.Content{mcp.TextContent{
 				Type: "text",
 				Text: fmt.Sprintf("No team mapping found for agent type: %s", agentType),
 			}},
@@ -1016,7 +1016,7 @@ func (s *MCPServer) handleAgentTeamMap(ctx context.Context, args map[string]inte
 
 	metrics.RecordTeamToolCall("agent_team_map", true)
 	return &mcp.CallToolResult{
-		Content: []interface{}{mcp.TextContent{Type: "text", Text: result}},
+		Content: []mcp.Content{mcp.TextContent{Type: "text", Text: result}},
 	}, nil
 }
 
@@ -1033,7 +1033,7 @@ func (s *MCPServer) handleTeamSizeValidate(ctx context.Context, args map[string]
 	if !ok || projectName == "" {
 		metrics.RecordTeamToolError("team_size_validate", "validation_error")
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: "Error: project_name is required"}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: "Error: project_name is required"}},
 			IsError: true,
 		}, nil
 	}
@@ -1041,7 +1041,7 @@ func (s *MCPServer) handleTeamSizeValidate(ctx context.Context, args map[string]
 	if err := validateProjectName(projectName); err != nil {
 		metrics.RecordTeamToolError("team_size_validate", "validation_error")
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: err.Error()}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: err.Error()}},
 			IsError: true,
 		}, nil
 	}
@@ -1052,7 +1052,7 @@ func (s *MCPServer) handleTeamSizeValidate(ctx context.Context, args map[string]
 		metrics.RecordTeamToolError("team_size_validate", "go_error")
 		metrics.RecordTeamToolCall("team_size_validate", false)
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: fmt.Sprintf("Error creating manager: %v", err)}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: fmt.Sprintf("Error creating manager: %v", err)}},
 			IsError: true,
 		}, nil
 	}
@@ -1082,7 +1082,7 @@ func (s *MCPServer) handleTeamSizeValidate(ctx context.Context, args map[string]
 		resultText := fmt.Sprintf("❌ Team size validation failed:\n%s", strings.Join(violations, "\n"))
 		metrics.RecordTeamToolCall("team_size_validate", false)
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: resultText}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: resultText}},
 			IsError: true,
 		}, nil
 	}
@@ -1090,7 +1090,7 @@ func (s *MCPServer) handleTeamSizeValidate(ctx context.Context, args map[string]
 	resultText := fmt.Sprintf("✅ All teams in project '%s' have valid sizes (4-6 members)", projectName)
 	metrics.RecordTeamToolCall("team_size_validate", true)
 	return &mcp.CallToolResult{
-		Content: []interface{}{mcp.TextContent{Type: "text", Text: resultText}},
+		Content: []mcp.Content{mcp.TextContent{Type: "text", Text: resultText}},
 	}, nil
 }
 
@@ -1143,7 +1143,7 @@ func (s *MCPServer) handleTeamDelete(ctx context.Context, args map[string]interf
 	if !ok || projectName == "" {
 		metrics.RecordTeamToolError("team_delete", "validation_error")
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: "Error: project_name is required"}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: "Error: project_name is required"}},
 			IsError: true,
 		}, nil
 	}
@@ -1151,7 +1151,7 @@ func (s *MCPServer) handleTeamDelete(ctx context.Context, args map[string]interf
 	if err := validateProjectName(projectName); err != nil {
 		metrics.RecordTeamToolError("team_delete", "validation_error")
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: err.Error()}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: err.Error()}},
 			IsError: true,
 		}, nil
 	}
@@ -1160,7 +1160,7 @@ func (s *MCPServer) handleTeamDelete(ctx context.Context, args map[string]interf
 	if !ok {
 		metrics.RecordTeamToolError("team_delete", "validation_error")
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: "Error: team_id is required"}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: "Error: team_id is required"}},
 			IsError: true,
 		}, nil
 	}
@@ -1170,7 +1170,7 @@ func (s *MCPServer) handleTeamDelete(ctx context.Context, args map[string]interf
 	if teamIDInt < 1 || teamIDInt > 12 {
 		metrics.RecordTeamToolError("team_delete", "validation_error")
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: "Error: team_id must be between 1 and 12"}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: "Error: team_id must be between 1 and 12"}},
 			IsError: true,
 		}, nil
 	}
@@ -1187,7 +1187,7 @@ func (s *MCPServer) handleTeamDelete(ctx context.Context, args map[string]interf
 		metrics.RecordTeamToolError("team_delete", "go_error")
 		metrics.RecordTeamToolCall("team_delete", false)
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: fmt.Sprintf("Error creating manager: %v", err)}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: fmt.Sprintf("Error creating manager: %v", err)}},
 			IsError: true,
 		}, nil
 	}
@@ -1198,14 +1198,14 @@ func (s *MCPServer) handleTeamDelete(ctx context.Context, args map[string]interf
 		// Check if this is just a confirmation required error
 		if strings.Contains(err.Error(), "requires confirmation") {
 			return &mcp.CallToolResult{
-				Content: []interface{}{mcp.TextContent{Type: "text", Text: "⚠️  Deletion requires confirmation. Set confirmed=true to proceed."}},
+				Content: []mcp.Content{mcp.TextContent{Type: "text", Text: "⚠️  Deletion requires confirmation. Set confirmed=true to proceed."}},
 			}, nil
 		}
 		resultText := fmt.Sprintf("Error deleting team: %v", err)
 		metrics.RecordTeamToolError("team_delete", "go_error")
 		metrics.RecordTeamToolCall("team_delete", false)
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: resultText}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: resultText}},
 			IsError: true,
 		}, nil
 	}
@@ -1214,7 +1214,7 @@ func (s *MCPServer) handleTeamDelete(ctx context.Context, args map[string]interf
 	resultText := fmt.Sprintf("✅ Deleted team %d from project '%s'", teamIDInt, projectName)
 	metrics.RecordTeamToolCall("team_delete", true)
 	return &mcp.CallToolResult{
-		Content: []interface{}{mcp.TextContent{Type: "text", Text: resultText}},
+		Content: []mcp.Content{mcp.TextContent{Type: "text", Text: resultText}},
 	}, nil
 }
 
@@ -1231,7 +1231,7 @@ func (s *MCPServer) handleProjectDelete(ctx context.Context, args map[string]int
 	if !ok || projectName == "" {
 		metrics.RecordTeamToolError("project_delete", "validation_error")
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: "Error: project_name is required"}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: "Error: project_name is required"}},
 			IsError: true,
 		}, nil
 	}
@@ -1239,7 +1239,7 @@ func (s *MCPServer) handleProjectDelete(ctx context.Context, args map[string]int
 	if err := validateProjectName(projectName); err != nil {
 		metrics.RecordTeamToolError("project_delete", "validation_error")
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: err.Error()}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: err.Error()}},
 			IsError: true,
 		}, nil
 	}
@@ -1256,7 +1256,7 @@ func (s *MCPServer) handleProjectDelete(ctx context.Context, args map[string]int
 		metrics.RecordTeamToolError("project_delete", "go_error")
 		metrics.RecordTeamToolCall("project_delete", false)
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: fmt.Sprintf("Error creating manager: %v", err)}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: fmt.Sprintf("Error creating manager: %v", err)}},
 			IsError: true,
 		}, nil
 	}
@@ -1267,14 +1267,14 @@ func (s *MCPServer) handleProjectDelete(ctx context.Context, args map[string]int
 		// Check if this is just a confirmation required error
 		if strings.Contains(err.Error(), "requires confirmation") {
 			return &mcp.CallToolResult{
-				Content: []interface{}{mcp.TextContent{Type: "text", Text: "⚠️  Project deletion requires confirmation. Set confirmed=true to proceed."}},
+				Content: []mcp.Content{mcp.TextContent{Type: "text", Text: "⚠️  Project deletion requires confirmation. Set confirmed=true to proceed."}},
 			}, nil
 		}
 		resultText := fmt.Sprintf("Error deleting project: %v", err)
 		metrics.RecordTeamToolError("project_delete", "go_error")
 		metrics.RecordTeamToolCall("project_delete", false)
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: resultText}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: resultText}},
 			IsError: true,
 		}, nil
 	}
@@ -1283,7 +1283,7 @@ func (s *MCPServer) handleProjectDelete(ctx context.Context, args map[string]int
 	resultText := fmt.Sprintf("✅ Deleted project '%s'", projectName)
 	metrics.RecordTeamToolCall("project_delete", true)
 	return &mcp.CallToolResult{
-		Content: []interface{}{mcp.TextContent{Type: "text", Text: resultText}},
+		Content: []mcp.Content{mcp.TextContent{Type: "text", Text: resultText}},
 	}, nil
 }
 
@@ -1301,7 +1301,7 @@ func (s *MCPServer) handleTeamHealth(ctx context.Context, args map[string]interf
 		if err := validateProjectName(name); err != nil {
 			metrics.RecordTeamToolError("team_health", "validation_error")
 			return &mcp.CallToolResult{
-				Content: []interface{}{mcp.TextContent{Type: "text", Text: err.Error()}},
+				Content: []mcp.Content{mcp.TextContent{Type: "text", Text: err.Error()}},
 				IsError: true,
 			}, nil
 		}
@@ -1321,7 +1321,7 @@ func (s *MCPServer) handleTeamHealth(ctx context.Context, args map[string]interf
 		resultText := fmt.Sprintf("✅ Team Manager Health:\n%s", string(healthJSON))
 		metrics.RecordTeamToolCall("team_health", true)
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: resultText}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: resultText}},
 		}, nil
 	}
 
@@ -1335,7 +1335,7 @@ func (s *MCPServer) handleTeamHealth(ctx context.Context, args map[string]interf
 		metrics.RecordTeamToolError("team_health", "go_error")
 		metrics.RecordTeamToolCall("team_health", false)
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: resultText}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: resultText}},
 			IsError: true,
 		}, nil
 	}
@@ -1343,7 +1343,7 @@ func (s *MCPServer) handleTeamHealth(ctx context.Context, args map[string]interf
 	resultText := fmt.Sprintf("✅ Team Manager Health:\n%s", string(healthJSON))
 	metrics.RecordTeamToolCall("team_health", true)
 	return &mcp.CallToolResult{
-		Content: []interface{}{mcp.TextContent{Type: "text", Text: resultText}},
+		Content: []mcp.Content{mcp.TextContent{Type: "text", Text: resultText}},
 	}, nil
 }
 
