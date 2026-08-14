@@ -130,8 +130,8 @@ Use when the agent is generating, modifying, or reviewing code/assets for a 3D g
 
 ## References
 
-- `docs/game-design/3D_GAME_DEVELOPMENT.md` — Full guardrails
-- `docs/game-design/3D_MATHEMATICAL_FOUNDATIONS.md` — Math reference
-- `docs/game-design/3D_MODULE_ARCHITECTURE.md` — Architecture blueprint
-- `docs/game-design/AI_DEBUGGABLE_3D_ARCHITECTURE.md` — AI debugging patterns
-- `docs/game-design/3D_GUARDREL_PROPOSALS_V1.2.md` — New rule proposals
+- `3D_GAME_DEVELOPMENT.md` (private repo) — Full guardrails
+- `3D_MATHEMATICAL_FOUNDATIONS.md` (private repo) — Math reference
+- `3D_MODULE_ARCHITECTURE.md` (private repo) — Architecture blueprint
+- `AI_DEBUGGABLE_3D_ARCHITECTURE.md` (private repo) — AI debugging patterns
+- `3D_GUARDREL_PROPOSALS_V1.2.md` (private repo) — New rule proposals

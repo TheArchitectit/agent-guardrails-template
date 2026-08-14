@@ -51,7 +51,7 @@ STOP and ask user when:
 
 ## References
 
-- `docs/game-design/3D_GAME_DEVELOPMENT.md`
-- `docs/game-design/3D_MATHEMATICAL_FOUNDATIONS.md`
-- `docs/game-design/3D_MODULE_ARCHITECTURE.md`
-- `docs/game-design/AI_DEBUGGABLE_3D_ARCHITECTURE.md`
+- `3D_GAME_DEVELOPMENT.md` (private game-design repo)
+- `3D_MATHEMATICAL_FOUNDATIONS.md` (private game-design repo)
+- `3D_MODULE_ARCHITECTURE.md` (private game-design repo)
+- `AI_DEBUGGABLE_3D_ARCHITECTURE.md` (private game-design repo)
