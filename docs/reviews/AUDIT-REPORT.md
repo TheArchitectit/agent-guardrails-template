@@ -3,7 +3,9 @@
 **Audit Date:** 2026-04-17  
 **Auditor:** Code Review System  
 **Repository Type:** AI Safety Guardrails Framework  
-**Primary Language:** Go (70%), Python (17%), TypeScript (12%)
+**Primary Language:** Go (85%), Markdown (10%), Python (3%), TypeScript (2%)
+
+> **Note:** This audit was performed 2026-04-17. Statistics have been updated to reflect post-v3.2.0 state, but detailed findings reference the codebase as it existed at audit time.
 
 ---
 
@@ -11,8 +13,8 @@
 
 AI Agent Safety Guardrails Template - A production-ready framework for implementing safety controls in AI systems. Provides configurable guardrails for prompt injection prevention, output filtering, ethical constraints, and compliance monitoring. Built primarily in Go with Python tooling and TypeScript examples.
 
-**Project Size:** Medium (393 files, 17,851 lines of source code)  
-**Repository Size:** 80MB  
+**Project Size:** Medium (729 files, ~35,000 lines of source code)  
+**Repository Size:** ~27MB (after binary cleanup)  
 **Architecture:** Microservices with MCP (Model Context Protocol) server
 
 ---
@@ -23,13 +25,12 @@ AI Agent Safety Guardrails Template - A production-ready framework for implement
 
 | Language | Files | Lines | Percentage |
 |----------|-------|-------|------------|
-| Go | 45 | 10,847 | 60.8% |
-| Markdown | 70 | ~4,200 | 23.5% |
-| Python | 11 | 1,847 | 10.3% |
-| TypeScript | 8 | 1,329 | 7.4% |
-| SQL | 12 | 534 | 3.0% |
-| YAML/JSON | 24 | 456 | 2.6% |
-| Java/Rust | 6 | 423 | 2.4% |
+| Go | ~133 | ~28,000 | ~75% |
+| Markdown | ~90 | ~5,500 | ~15% |
+| Python | ~5 | ~500 | ~1% |
+| TypeScript | ~10 | ~1,500 | ~4% |
+| SQL | ~16 | ~700 | ~2% |
+| YAML/JSON | ~30 | ~600 | ~2% |
 
 ### Key Directories
 
@@ -45,19 +46,17 @@ AI Agent Safety Guardrails Template - A production-ready framework for implement
 
 | File | Lines | Risk Level | Issue |
 |------|-------|------------|-------|
-| `mcp-server/internal/mcp/server.go` | 1,095 | HIGH | Monolithic server - violates SRP |
 | `scripts/setup_agents.py` | 743 | MEDIUM | Complex setup logic needs refactoring |
 | `mcp-server/internal/web/handlers.go` | 711 | HIGH | Too many responsibilities |
-| `examples/rust/src/lib.rs` | 570 | MEDIUM | Large example file |
-| `mcp-server/internal/metrics/metrics.go` | 548 | MEDIUM | Metrics collection complexity |
+| `mcp-server/internal/mcp/tools_registry.go` | ~645 | HIGH | Tool registry - needs splitting |
 
-**Total flagged files:** 5 (7.7% of source files)
+**Total flagged files:** 3 (0.4% of source files)
 
 ---
 
 ## 4. Code Quality Issues
 
-### TODO/FIXME Count: 9 (Low - Good)
+### TODO/FIXME Count: 9 (as of audit date) (Low - Good)
 ### Code Smells: 18 instances
 ### Error Handling Issues: 12
 
