@@ -74,5 +74,5 @@ After updating the image, recreate the `guardrail-mcp-server` container to pick 
 ## Links
 
 - Changelog: `CHANGELOG.md`
-- MCP changelog: `mcp-server/CHANGELOG.md`
+- MCP changelog: `CHANGELOG.md (root)`
 - MCP server docs: `mcp-server/README.md`
