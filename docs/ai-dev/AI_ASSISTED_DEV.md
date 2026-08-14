@@ -323,4 +323,4 @@ func AISafeOperation[T any](operation func() (T, error), rollback func(), risk R
 | [ACCESSIBILITY_GUIDE.md](../accessibility/ACCESSIBILITY_GUIDE.md) | WCAG 3.0+ compliance |
 | [ETHICAL_ENGAGEMENT.md](../ethical/ETHICAL_ENGAGEMENT.md) | Dark pattern prevention |
 | [STATE_MANAGEMENT.md](../state/STATE_MANAGEMENT.md) | State architecture patterns |
-| [PROMPTING_GUIDE.md](../../PROMPTING_GUIDE.md) | Effective prompting for AI development |
+| [PROMPTING_GUIDE.md](../standards/PROMPTING_GUIDE.md) | Effective prompting for AI development |
