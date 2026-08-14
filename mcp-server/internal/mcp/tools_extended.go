@@ -223,7 +223,7 @@ func (s *MCPServer) handlePreventRegression(ctx context.Context, args map[string
 	failures, err := failStore.GetActiveByFiles(ctx, files)
 	if err != nil {
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: fmt.Sprintf("Failed to check failures: %v", err)}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: fmt.Sprintf("Failed to check failures: %v", err)}},
 			IsError: true,
 		}, nil
 	}
@@ -400,13 +400,13 @@ func buildToolResult(result interface{}, isError bool) (*mcp.CallToolResult, err
 	resultJSON, err := json.Marshal(result)
 	if err != nil {
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: fmt.Sprintf("Internal error: failed to format result: %v", err)}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: fmt.Sprintf("Internal error: failed to format result: %v", err)}},
 			IsError: true,
 		}, nil
 	}
 
 	return &mcp.CallToolResult{
-		Content: []interface{}{mcp.TextContent{Type: "text", Text: string(resultJSON)}},
+		Content: []mcp.Content{mcp.TextContent{Type: "text", Text: string(resultJSON)}},
 		IsError: isError,
 	}, nil
 }
@@ -459,7 +459,7 @@ func (s *MCPServer) handleVerifyFileRead(ctx context.Context, args map[string]in
 			Valid:     true,
 			WasRead:   false,
 			Message:   "File has not been read",
-			SessionID: session.ID,
+			SessionID: session.Token,
 			FilePath:  filePath,
 		}
 		return buildToolResult(result, false)
@@ -470,7 +470,7 @@ func (s *MCPServer) handleVerifyFileRead(ctx context.Context, args map[string]in
 		Valid:     true,
 		WasRead:   true,
 		ReadAt:    record.ReadAt.Format(time.RFC3339),
-		SessionID: session.ID,
+		SessionID: session.Token,
 		FilePath:  filePath,
 	}
 	return buildToolResult(result, false)
@@ -489,14 +489,14 @@ func (s *MCPServer) handleRecordFileRead(ctx context.Context, args map[string]in
 	// Validate required parameters
 	if sessionToken == "" {
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: `{"success":false,"error":"session_token is required"}`}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: `{"success":false,"error":"session_token is required"}`}},
 			IsError: true,
 		}, nil
 	}
 
 	if filePath == "" {
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: `{"success":false,"error":"file_path is required"}`}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: `{"success":false,"error":"file_path is required"}`}},
 			IsError: true,
 		}, nil
 	}
@@ -508,7 +508,7 @@ func (s *MCPServer) handleRecordFileRead(ctx context.Context, args map[string]in
 
 	if !exists {
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: `{"success":false,"error":"Invalid session token"}`}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: `{"success":false,"error":"Invalid session token"}`}},
 			IsError: true,
 		}, nil
 	}
@@ -519,14 +519,14 @@ func (s *MCPServer) handleRecordFileRead(ctx context.Context, args map[string]in
 	if err != nil {
 		slog.Error("Failed to record file read", "error", err, "session_token", sessionToken, "file_path", filePath)
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: fmt.Sprintf(`{"success":false,"error":"Failed to record file read: %s"}`, jsonEscapeString(err.Error()))}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: fmt.Sprintf(`{"success":false,"error":"Failed to record file read: %s"}`, jsonEscapeString(err.Error()))}},
 			IsError: true,
 		}, nil
 	}
 
 	// Return success confirmation
 	return &mcp.CallToolResult{
-		Content: []interface{}{mcp.TextContent{Type: "text", Text: fmt.Sprintf(`{"success":true,"session_token":"%s","file_path":"%s","recorded_at":"%s"}`, jsonEscapeString(sessionToken), jsonEscapeString(filePath), time.Now().Format(time.RFC3339))}},
+		Content: []mcp.Content{mcp.TextContent{Type: "text", Text: fmt.Sprintf(`{"success":true,"session_token":"%s","file_path":"%s","recorded_at":"%s"}`, jsonEscapeString(sessionToken), jsonEscapeString(filePath), time.Now().Format(time.RFC3339))}},
 	}, nil
 }
 
@@ -547,7 +547,7 @@ func (s *MCPServer) handleRecordAttempt(ctx context.Context, args map[string]int
 	// Validate required parameters
 	if sessionToken == "" {
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: `{"valid":false,"error":"session_token is required"}`}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: `{"valid":false,"error":"session_token is required"}`}},
 			IsError: true,
 		}, nil
 	}
@@ -567,7 +567,7 @@ func (s *MCPServer) handleRecordAttempt(ctx context.Context, args map[string]int
 
 	if !exists {
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: `{"valid":false,"error":"Invalid session token"}`}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: `{"valid":false,"error":"Invalid session token"}`}},
 			IsError: true,
 		}, nil
 	}
@@ -575,7 +575,7 @@ func (s *MCPServer) handleRecordAttempt(ctx context.Context, args map[string]int
 	// Check if taskAttemptStore is available
 	if s.taskAttemptStore == nil {
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: `{"valid":false,"error":"Task attempt store not available"}`}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: `{"valid":false,"error":"Task attempt store not available"}`}},
 			IsError: true,
 		}, nil
 	}
@@ -585,7 +585,7 @@ func (s *MCPServer) handleRecordAttempt(ctx context.Context, args map[string]int
 	if err != nil {
 		slog.Error("Failed to record attempt", "error", err, "session_token", sessionToken)
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: fmt.Sprintf(`{"valid":false,"error":"Failed to record attempt: %s"}`, jsonEscapeString(err.Error()))}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: fmt.Sprintf(`{"valid":false,"error":"Failed to record attempt: %s"}`, jsonEscapeString(err.Error()))}},
 			IsError: true,
 		}, nil
 	}
@@ -606,7 +606,7 @@ func (s *MCPServer) handleRecordAttempt(ctx context.Context, args map[string]int
 	)
 
 	return &mcp.CallToolResult{
-		Content: []interface{}{mcp.TextContent{Type: "text", Text: response}},
+		Content: []mcp.Content{mcp.TextContent{Type: "text", Text: response}},
 	}, nil
 }
 
@@ -625,7 +625,7 @@ func (s *MCPServer) handleValidateThreeStrikes(ctx context.Context, args map[str
 	// Validate required parameters
 	if sessionToken == "" {
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: `{"valid":false,"error":"session_token is required"}`}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: `{"valid":false,"error":"session_token is required"}`}},
 			IsError: true,
 		}, nil
 	}
@@ -637,7 +637,7 @@ func (s *MCPServer) handleValidateThreeStrikes(ctx context.Context, args map[str
 
 	if !exists {
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: `{"valid":false,"error":"Invalid session token"}`}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: `{"valid":false,"error":"Invalid session token"}`}},
 			IsError: true,
 		}, nil
 	}
@@ -645,7 +645,7 @@ func (s *MCPServer) handleValidateThreeStrikes(ctx context.Context, args map[str
 	// Check if taskAttemptStore is available
 	if s.taskAttemptStore == nil {
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: `{"valid":false,"error":"Task attempt store not available"}`}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: `{"valid":false,"error":"Task attempt store not available"}`}},
 			IsError: true,
 		}, nil
 	}
@@ -655,7 +655,7 @@ func (s *MCPServer) handleValidateThreeStrikes(ctx context.Context, args map[str
 	if err != nil {
 		slog.Error("Failed to get three strikes status", "error", err, "session_token", sessionToken)
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: fmt.Sprintf(`{"valid":false,"error":"Failed to check status: %s"}`, jsonEscapeString(err.Error()))}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: fmt.Sprintf(`{"valid":false,"error":"Failed to check status: %s"}`, jsonEscapeString(err.Error()))}},
 			IsError: true,
 		}, nil
 	}
@@ -681,7 +681,7 @@ func (s *MCPServer) handleValidateThreeStrikes(ctx context.Context, args map[str
 	)
 
 	return &mcp.CallToolResult{
-		Content: []interface{}{mcp.TextContent{Type: "text", Text: response}},
+		Content: []mcp.Content{mcp.TextContent{Type: "text", Text: response}},
 	}, nil
 }
 
@@ -692,7 +692,7 @@ func (s *MCPServer) handleResetAttempts(ctx context.Context, args map[string]int
 		if r := recover(); r != nil {
 			slog.Error("Panic in handleResetAttempts", "recover", r)
 			result = &mcp.CallToolResult{
-				Content: []interface{}{mcp.TextContent{Type: "text", Text: `{"valid":false,"error":"Internal server error"}`}},
+				Content: []mcp.Content{mcp.TextContent{Type: "text", Text: `{"valid":false,"error":"Internal server error"}`}},
 				IsError: true,
 			}
 		}
@@ -704,7 +704,7 @@ func (s *MCPServer) handleResetAttempts(ctx context.Context, args map[string]int
 	// Validate required parameters
 	if sessionToken == "" {
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: `{"valid":false,"error":"session_token is required"}`}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: `{"valid":false,"error":"session_token is required"}`}},
 			IsError: true,
 		}, nil
 	}
@@ -716,7 +716,7 @@ func (s *MCPServer) handleResetAttempts(ctx context.Context, args map[string]int
 
 	if !exists {
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: `{"valid":false,"error":"Invalid session token"}`}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: `{"valid":false,"error":"Invalid session token"}`}},
 			IsError: true,
 		}, nil
 	}
@@ -724,7 +724,7 @@ func (s *MCPServer) handleResetAttempts(ctx context.Context, args map[string]int
 	// Check if taskAttemptStore is available
 	if s.taskAttemptStore == nil {
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: `{"valid":false,"error":"Task attempt store not available"}`}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: `{"valid":false,"error":"Task attempt store not available"}`}},
 			IsError: true,
 		}, nil
 	}
@@ -738,7 +738,7 @@ func (s *MCPServer) handleResetAttempts(ctx context.Context, args map[string]int
 	if resolveErr != nil {
 		slog.Error("Failed to reset attempts", "error", resolveErr, "session_token", sessionToken)
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: fmt.Sprintf(`{"valid":false,"error":"Failed to reset attempts: %s"}`, jsonEscapeString(resolveErr.Error()))}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: fmt.Sprintf(`{"valid":false,"error":"Failed to reset attempts: %s"}`, jsonEscapeString(resolveErr.Error()))}},
 			IsError: true,
 		}, nil
 	}
@@ -751,7 +751,7 @@ func (s *MCPServer) handleResetAttempts(ctx context.Context, args map[string]int
 	)
 
 	return &mcp.CallToolResult{
-		Content: []interface{}{mcp.TextContent{Type: "text", Text: response}},
+		Content: []mcp.Content{mcp.TextContent{Type: "text", Text: response}},
 	}, nil
 }
 
@@ -770,7 +770,7 @@ func (s *MCPServer) handleCheckHaltConditions(ctx context.Context, args map[stri
 	// Validate required parameters
 	if sessionToken == "" {
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: `{"halt":false,"error":"session_token is required"}`}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: `{"halt":false,"error":"session_token is required"}`}},
 			IsError: true,
 		}, nil
 	}
@@ -782,7 +782,7 @@ func (s *MCPServer) handleCheckHaltConditions(ctx context.Context, args map[stri
 
 	if !exists {
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: `{"halt":false,"error":"Invalid session token"}`}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: `{"halt":false,"error":"Invalid session token"}`}},
 			IsError: true,
 		}, nil
 	}
@@ -843,7 +843,7 @@ func (s *MCPServer) handleCheckHaltConditions(ctx context.Context, args map[stri
 	if len(haltReasons) == 0 {
 		response := `{"halt":false,"reasons":[],"severity":"none","action":"Continue","message":"No halt conditions detected"}`
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: response}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: response}},
 		}, nil
 	}
 
@@ -863,7 +863,7 @@ func (s *MCPServer) handleCheckHaltConditions(ctx context.Context, args map[stri
 	)
 
 	return &mcp.CallToolResult{
-		Content: []interface{}{mcp.TextContent{Type: "text", Text: response}},
+		Content: []mcp.Content{mcp.TextContent{Type: "text", Text: response}},
 	}, nil
 }
 
@@ -893,7 +893,7 @@ func (s *MCPServer) handleRecordHalt(ctx context.Context, args map[string]interf
 		if r := recover(); r != nil {
 			slog.Error("Panic in handleRecordHalt", "recover", r)
 			result = &mcp.CallToolResult{
-				Content: []interface{}{mcp.TextContent{Type: "text", Text: `{"success":false,"error":"Internal server error"}`}},
+				Content: []mcp.Content{mcp.TextContent{Type: "text", Text: `{"success":false,"error":"Internal server error"}`}},
 				IsError: true,
 			}
 		}
@@ -908,14 +908,14 @@ func (s *MCPServer) handleRecordHalt(ctx context.Context, args map[string]interf
 	// Validate required parameters
 	if sessionToken == "" {
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: `{"success":false,"error":"session_token is required"}`}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: `{"success":false,"error":"session_token is required"}`}},
 			IsError: true,
 		}, nil
 	}
 
 	if haltType == "" {
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: `{"success":false,"error":"halt_type is required"}`}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: `{"success":false,"error":"halt_type is required"}`}},
 			IsError: true,
 		}, nil
 	}
@@ -935,7 +935,7 @@ func (s *MCPServer) handleRecordHalt(ctx context.Context, args map[string]interf
 
 	if !exists {
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: `{"success":false,"error":"Invalid session token"}`}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: `{"success":false,"error":"Invalid session token"}`}},
 			IsError: true,
 		}, nil
 	}
@@ -943,7 +943,7 @@ func (s *MCPServer) handleRecordHalt(ctx context.Context, args map[string]interf
 	// Check if database is available
 	if s.db == nil {
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: `{"success":false,"error":"Database not available"}`}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: `{"success":false,"error":"Database not available"}`}},
 			IsError: true,
 		}, nil
 	}
@@ -962,7 +962,7 @@ func (s *MCPServer) handleRecordHalt(ctx context.Context, args map[string]interf
 	if haltErr != nil {
 		slog.Error("Failed to record halt", "error", haltErr, "session_token", sessionToken)
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: fmt.Sprintf(`{"success":false,"error":"Failed to record halt: %s"}`, jsonEscapeString(haltErr.Error()))}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: fmt.Sprintf(`{"success":false,"error":"Failed to record halt: %s"}`, jsonEscapeString(haltErr.Error()))}},
 			IsError: true,
 		}, nil
 	}
@@ -974,7 +974,7 @@ func (s *MCPServer) handleRecordHalt(ctx context.Context, args map[string]interf
 	)
 
 	return &mcp.CallToolResult{
-		Content: []interface{}{mcp.TextContent{Type: "text", Text: response}},
+		Content: []mcp.Content{mcp.TextContent{Type: "text", Text: response}},
 	}, nil
 }
 
@@ -987,14 +987,14 @@ func (s *MCPServer) handleAcknowledgeHalt(ctx context.Context, args map[string]i
 	// Validate required parameters
 	if sessionToken == "" {
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: `{"success":false,"error":"session_token is required"}`}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: `{"success":false,"error":"session_token is required"}`}},
 			IsError: true,
 		}, nil
 	}
 
 	if haltID == "" {
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: `{"success":false,"error":"halt_id is required"}`}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: `{"success":false,"error":"halt_id is required"}`}},
 			IsError: true,
 		}, nil
 	}
@@ -1010,7 +1010,7 @@ func (s *MCPServer) handleAcknowledgeHalt(ctx context.Context, args map[string]i
 
 	if !exists {
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: `{"success":false,"error":"Invalid session token"}`}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: `{"success":false,"error":"Invalid session token"}`}},
 			IsError: true,
 		}, nil
 	}
@@ -1019,7 +1019,7 @@ func (s *MCPServer) handleAcknowledgeHalt(ctx context.Context, args map[string]i
 	haltUUID := uuid.UUID{}
 	if err := haltUUID.UnmarshalBinary([]byte(haltID)); err != nil {
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: `{"success":false,"error":"Invalid halt_id format"}`}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: `{"success":false,"error":"Invalid halt_id format"}`}},
 			IsError: true,
 		}, nil
 	}
@@ -1030,7 +1030,7 @@ func (s *MCPServer) handleAcknowledgeHalt(ctx context.Context, args map[string]i
 	if err != nil {
 		slog.Error("Failed to acknowledge halt", "error", err, "halt_id", haltID)
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: fmt.Sprintf(`{"success":false,"error":"Failed to acknowledge halt: %s"}`, jsonEscapeString(err.Error()))}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: fmt.Sprintf(`{"success":false,"error":"Failed to acknowledge halt: %s"}`, jsonEscapeString(err.Error()))}},
 			IsError: true,
 		}, nil
 	}
@@ -1043,7 +1043,7 @@ func (s *MCPServer) handleAcknowledgeHalt(ctx context.Context, args map[string]i
 	)
 
 	return &mcp.CallToolResult{
-		Content: []interface{}{mcp.TextContent{Type: "text", Text: response}},
+		Content: []mcp.Content{mcp.TextContent{Type: "text", Text: response}},
 	}, nil
 }
 
@@ -1497,7 +1497,7 @@ func (s *MCPServer) handleVerifyFixesIntact(ctx context.Context, args map[string
 	failures, err := failStore.GetActiveByFiles(ctx, []string{filePath})
 	if err != nil {
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: fmt.Sprintf("Failed to check failures: %v", err)}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: fmt.Sprintf("Failed to check failures: %v", err)}},
 			IsError: true,
 		}, nil
 	}

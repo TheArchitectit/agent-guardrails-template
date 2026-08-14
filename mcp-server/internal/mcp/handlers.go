@@ -9,14 +9,12 @@ read operations (evaluation) from write operations (logging, rule management).
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log/slog"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/thearchitectit/guardrail-mcp/internal/domain"
 )
@@ -59,7 +57,7 @@ func NewGuardrailHandlers(
 	h.listRulesHandler = domain.NewListRulesHandler(ruleRepo)
 
 	// Wire command handlers
-	h.createRuleHandler = domain.NewCreateRuleHandler(ruleRepo, bus, cache, matcher)
+	h.createRuleHandler = domain.NewCreateRuleHandler(ruleRepo, bus, matcher)
 	h.logViolationHandler = domain.NewLogViolationHandler(auditLogger)
 
 	return h
@@ -81,7 +79,7 @@ func (h *GuardrailHandlers) ValidateBash(ctx context.Context, command string) (*
 	}
 
 	return &mcp.CallToolResult{
-		Content: []interface{}{mcp.TextContent{
+		Content: []mcp.Content{mcp.TextContent{
 			Type: "text",
 			Text: formatValidationResult(result, command),
 		}},
@@ -112,7 +110,7 @@ func (h *GuardrailHandlers) ValidateGit(ctx context.Context, command string, isF
 	}
 
 	return &mcp.CallToolResult{
-		Content: []interface{}{mcp.TextContent{
+		Content: []mcp.Content{mcp.TextContent{
 			Type: "text",
 			Text: formatValidationResult(result, command),
 		}},
@@ -135,7 +133,7 @@ func (h *GuardrailHandlers) ValidateFileEdit(ctx context.Context, filePath, cont
 	}
 
 	return &mcp.CallToolResult{
-		Content: []interface{}{mcp.TextContent{
+		Content: []mcp.Content{mcp.TextContent{
 			Type: "text",
 			Text: formatValidationResultWithFile(result, filePath, len(content)),
 		}},
@@ -272,7 +270,7 @@ func hexChar(n byte) byte {
 
 func errorResult(msg string) *mcp.CallToolResult {
 	return &mcp.CallToolResult{
-		Content: []interface{}{mcp.TextContent{Type: "text", Text: msg}},
+		Content: []mcp.Content{mcp.TextContent{Type: "text", Text: msg}},
 		IsError: true,
 	}
 }

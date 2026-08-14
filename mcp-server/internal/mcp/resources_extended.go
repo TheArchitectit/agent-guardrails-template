@@ -23,10 +23,10 @@ func (s *MCPServer) readAgentGuardrailsResource(ctx context.Context, uri string)
 	}
 
 	return &mcp.ReadResourceResult{
-		Contents: []interface{}{
+		Contents: []mcp.ResourceContents{
 			mcp.TextResourceContents{
-				Uri:      uri,
-				MimeType: "text/markdown",
+				URI:      uri,
+				MIMEType: "text/markdown",
 				Text:     string(content),
 			},
 		},
@@ -49,10 +49,10 @@ func (s *MCPServer) readWorkflowsResource(ctx context.Context, uri string) (*mcp
 	if err != nil {
 		// Return just the index if we can't read directory
 		return &mcp.ReadResourceResult{
-			Contents: []interface{}{
+			Contents: []mcp.ResourceContents{
 				mcp.TextResourceContents{
-					Uri:      uri,
-					MimeType: "text/markdown",
+					URI:      uri,
+					MIMEType: "text/markdown",
 					Text:     indexContent,
 				},
 			},
@@ -75,10 +75,10 @@ func (s *MCPServer) readWorkflowsResource(ctx context.Context, uri string) (*mcp
 	}
 
 	return &mcp.ReadResourceResult{
-		Contents: []interface{}{
+		Contents: []mcp.ResourceContents{
 			mcp.TextResourceContents{
-				Uri:      uri,
-				MimeType: "text/markdown",
+				URI:      uri,
+				MIMEType: "text/markdown",
 				Text:     sb.String(),
 			},
 		},
@@ -101,10 +101,10 @@ func (s *MCPServer) readStandardsResource(ctx context.Context, uri string) (*mcp
 	if err != nil {
 		// Return just the index if we can't read directory
 		return &mcp.ReadResourceResult{
-			Contents: []interface{}{
+			Contents: []mcp.ResourceContents{
 				mcp.TextResourceContents{
-					Uri:      uri,
-					MimeType: "text/markdown",
+					URI:      uri,
+					MIMEType: "text/markdown",
 					Text:     indexContent,
 				},
 			},
@@ -127,10 +127,10 @@ func (s *MCPServer) readStandardsResource(ctx context.Context, uri string) (*mcp
 	}
 
 	return &mcp.ReadResourceResult{
-		Contents: []interface{}{
+		Contents: []mcp.ResourceContents{
 			mcp.TextResourceContents{
-				Uri:      uri,
-				MimeType: "text/markdown",
+				URI:      uri,
+				MIMEType: "text/markdown",
 				Text:     sb.String(),
 			},
 		},
@@ -145,10 +145,10 @@ func (s *MCPServer) readFourLawsResource(ctx context.Context, uri string) (*mcp.
 	}
 
 	return &mcp.ReadResourceResult{
-		Contents: []interface{}{
+		Contents: []mcp.ResourceContents{
 			mcp.TextResourceContents{
-				Uri:      uri,
-				MimeType: "text/markdown",
+				URI:      uri,
+				MIMEType: "text/markdown",
 				Text:     string(content),
 			},
 		},
@@ -163,10 +163,10 @@ func (s *MCPServer) readHaltConditionsResource(ctx context.Context, uri string) 
 	}
 
 	return &mcp.ReadResourceResult{
-		Contents: []interface{}{
+		Contents: []mcp.ResourceContents{
 			mcp.TextResourceContents{
-				Uri:      uri,
-				MimeType: "text/markdown",
+				URI:      uri,
+				MIMEType: "text/markdown",
 				Text:     string(content),
 			},
 		},
@@ -181,10 +181,10 @@ func (s *MCPServer) readPreWorkChecklistResource(ctx context.Context, uri string
 	}
 
 	return &mcp.ReadResourceResult{
-		Contents: []interface{}{
+		Contents: []mcp.ResourceContents{
 			mcp.TextResourceContents{
-				Uri:      uri,
-				MimeType: "text/markdown",
+				URI:      uri,
+				MIMEType: "text/markdown",
 				Text:     string(content),
 			},
 		},
@@ -231,10 +231,10 @@ If uncertain, ASK before pushing.
 `
 
 	return &mcp.ReadResourceResult{
-		Contents: []interface{}{
+		Contents: []mcp.ResourceContents{
 			mcp.TextResourceContents{
-				Uri:      uri,
-				MimeType: "text/markdown",
+				URI:      uri,
+				MIMEType: "text/markdown",
 				Text:     content,
 			},
 		},
@@ -307,10 +307,10 @@ HALT immediately if:
 `
 
 	return &mcp.ReadResourceResult{
-		Contents: []interface{}{
+		Contents: []mcp.ResourceContents{
 			mcp.TextResourceContents{
-				Uri:      uri,
-				MimeType: "text/markdown",
+				URI:      uri,
+				MIMEType: "text/markdown",
 				Text:     content,
 			},
 		},
@@ -327,10 +327,10 @@ func (s *MCPServer) readAvailableAdvisorsResource(ctx context.Context, uri strin
 	}
 
 	return &mcp.ReadResourceResult{
-		Contents: []interface{}{
+		Contents: []mcp.ResourceContents{
 			mcp.TextResourceContents{
-				Uri:      uri,
-				MimeType: "application/json",
+				URI:      uri,
+				MIMEType: "application/json",
 				Text:     string(content),
 			},
 		},
@@ -352,10 +352,10 @@ func (s *MCPServer) readAdvisorDetailResource(ctx context.Context, uri string, a
 	}
 
 	return &mcp.ReadResourceResult{
-		Contents: []interface{}{
+		Contents: []mcp.ResourceContents{
 			mcp.TextResourceContents{
-				Uri:      uri,
-				MimeType: "application/json",
+				URI:      uri,
+				MIMEType: "application/json",
 				Text:     string(content),
 			},
 		},

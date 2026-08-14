@@ -62,7 +62,7 @@ func (s *MCPServer) handleDetectLanguage(ctx context.Context, args map[string]in
 				info.Found = true
 				resultJSON, _ := json.Marshal(info)
 				return &mcp.CallToolResult{
-					Content: []interface{}{mcp.TextContent{Type: "text", Text: string(resultJSON)}},
+					Content: []mcp.Content{mcp.TextContent{Type: "text", Text: string(resultJSON)}},
 				}, nil
 			}
 		} else if _, err := os.Stat(checkPath); err == nil {
@@ -70,13 +70,13 @@ func (s *MCPServer) handleDetectLanguage(ctx context.Context, args map[string]in
 			info.Found = true
 			resultJSON, _ := json.Marshal(info)
 			return &mcp.CallToolResult{
-				Content: []interface{}{mcp.TextContent{Type: "text", Text: string(resultJSON)}},
+				Content: []mcp.Content{mcp.TextContent{Type: "text", Text: string(resultJSON)}},
 			}, nil
 		}
 	}
 
 	return &mcp.CallToolResult{
-		Content: []interface{}{mcp.TextContent{Type: "text", Text: `{"error":"No language detected","found":false}`}},
+		Content: []mcp.Content{mcp.TextContent{Type: "text", Text: `{"error":"No language detected","found":false}`}},
 		IsError: true,
 	}, nil
 }
@@ -86,7 +86,7 @@ func (s *MCPServer) handleGetLanguageProfile(ctx context.Context, args map[strin
 	language, _ := args["language"].(string)
 	if language == "" {
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: `{"error":"language parameter required"}`}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: `{"error":"language parameter required"}`}},
 			IsError: true,
 		}, nil
 	}
@@ -126,7 +126,7 @@ func (s *MCPServer) handleGetLanguageProfile(ctx context.Context, args map[strin
 		}
 		resultJSON, _ := json.Marshal(result)
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: string(resultJSON)}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: string(resultJSON)}},
 			IsError: true,
 		}, nil
 	}
@@ -137,7 +137,7 @@ func (s *MCPServer) handleGetLanguageProfile(ctx context.Context, args map[strin
 	content, err := os.ReadFile(profilePath)
 	if err != nil {
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: fmt.Sprintf(`{"error":"Profile file not found: %s"}`, profileFile)}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: fmt.Sprintf(`{"error":"Profile file not found: %s"}`, profileFile)}},
 			IsError: true,
 		}, nil
 	}
@@ -148,7 +148,7 @@ func (s *MCPServer) handleGetLanguageProfile(ctx context.Context, args map[strin
 	}
 	resultJSON, _ := json.Marshal(result)
 	return &mcp.CallToolResult{
-		Content: []interface{}{mcp.TextContent{Type: "text", Text: string(resultJSON)}},
+		Content: []mcp.Content{mcp.TextContent{Type: "text", Text: string(resultJSON)}},
 	}, nil
 }
 
@@ -185,7 +185,7 @@ func (s *MCPServer) handleListLanguages(ctx context.Context, args map[string]int
 		"total":     len(languages),
 	})
 	return &mcp.CallToolResult{
-		Content: []interface{}{mcp.TextContent{Type: "text", Text: string(resultJSON)}},
+		Content: []mcp.Content{mcp.TextContent{Type: "text", Text: string(resultJSON)}},
 	}, nil
 }
 
@@ -197,7 +197,7 @@ func (s *MCPServer) handleValidateLanguageRules(ctx context.Context, args map[st
 
 	if language == "" || content == "" {
 		return &mcp.CallToolResult{
-			Content: []interface{}{mcp.TextContent{Type: "text", Text: `{"error":"language and content parameters required"}`}},
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: `{"error":"language and content parameters required"}`}},
 			IsError: true,
 		}, nil
 	}
@@ -322,6 +322,6 @@ func (s *MCPServer) handleValidateLanguageRules(ctx context.Context, args map[st
 	}
 	resultJSON, _ := json.Marshal(result)
 	return &mcp.CallToolResult{
-		Content: []interface{}{mcp.TextContent{Type: "text", Text: string(resultJSON)}},
+		Content: []mcp.Content{mcp.TextContent{Type: "text", Text: string(resultJSON)}},
 	}, nil
 }
