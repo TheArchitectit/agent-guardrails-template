@@ -86,31 +86,6 @@
 | log-failure | log_failure.py | scripts/ | CLI tool to log bugs to failure registry |
 | regression-check | regression_check.py | scripts/ | Pre-commit regression pattern scanner |
 | prevention-rules | pattern-rules.json | .guardrails/prevention-rules/ | Regex patterns to prevent regressions |
-| game-design | 2026_GAME_DESIGN.md | docs/game-design/ | Agent-GDUI-2026 game design guardrails, XR/VR comfort zones |
-| 3d-guardrails | 3D_GAME_DEVELOPMENT.md | docs/game-design/3d/ | 3D game development guardrails v1.0, engine-agnostic |
-| 3d-proposals | 3D_GUARDREL_PROPOSALS_V1.2.md | docs/game-design/3d/ | Proposed v1.2 additions from Hermes 2026 AI Dossier |
-| 3d-math | 3D_MATHEMATICAL_FOUNDATIONS.md | docs/game-design/3d/ | Linear algebra, quaternions, collision math reference |
-| 3d-architecture | 3D_MODULE_ARCHITECTURE.md | docs/game-design/3d/ | Module architecture for LLM-to-3D-engine bridging |
-| ai-debuggable | AI_DEBUGGABLE_3D_ARCHITECTURE.md | docs/game-design/3d/ | AI-debuggable 3D patterns for autonomous troubleshooting |
-| ai-2026-guide | AI_DEV_2026_PART01_INTRO_AND_FOUNDATIONS.md | docs/game-design/ | AI-Powered Development 2026: 10-part comprehensive guide series |
-| ai-2026-prompting | AI_DEV_2026_PART02_PROMPTING.md | docs/game-design/ | Part 2 — Prompt Engineering for Code |
-| ai-2026-context | AI_DEV_2026_PART03_CONTEXT_AND_ITERATION.md | docs/game-design/ | Part 3 — Context & Iterative Development |
-| ai-2026-quality | AI_DEV_2026_PART04_QUALITY_AND_ARCHITECTURE.md | docs/game-design/ | Part 4 — Quality & Architecture |
-| ai-2026-legacy | AI_DEV_2026_PART05_LEGACY_AND_AGENTS.md | docs/game-design/ | Part 5 — Legacy Refactoring & Agent Paradigm |
-| ai-2026-building | AI_DEV_2026_PART06_BUILDING_AGENTS.md | docs/game-design/ | Part 6 — Building Agents & Tool Use |
-| ai-2026-multi | AI_DEV_2026_PART07_MULTI_AGENT_SYSTEMS.md | docs/game-design/ | Part 7 — Multi-Agent Systems |
-| ai-2026-security | AI_DEV_2026_PART08_SECURITY_ETHICS_FUTURE.md | docs/game-design/ | Part 8 — Security, Ethics & Future |
-| ai-2026-appendices | AI_DEV_2026_PART09_APPENDICES_ABC.md | docs/game-design/ | Part 9 — Appendices A, B & C |
-| ai-2026-moa | AI_DEV_2026_PART10_APPENDIX_D.md | docs/game-design/ | Part 10 — Appendix D: Complete MoA Reference |
-| hermes-dossier | HERMES_2026_PART01_INTRO_AND_EXECUTIVE.md | docs/game-design/3d/ | AI in 3D Game Development 2026: 9-part intelligence dossier |
-| hermes-assets | HERMES_2026_PART02_ASSETS_AND_ENGINES.md | docs/game-design/3d/ | Part 2 — 3D Asset Generation & Engine Integration |
-| hermes-world | HERMES_2026_PART03_WORLD_AND_RENDERING.md | docs/game-design/3d/ | Part 3 — World Generation & Neural Rendering |
-| hermes-npcs | HERMES_2026_PART04_NPCS_AND_ANIMATION.md | docs/game-design/3d/ | Part 4 — NPCs, Dialogue & Animation |
-| hermes-code | HERMES_2026_PART05_CODE_AND_PHYSICS.md | docs/game-design/3d/ | Part 5 — Code Generation & Neural Physics |
-| hermes-qa | HERMES_2026_PART06_QA_AND_BUSINESS.md | docs/game-design/3d/ | Part 6 — QA, Testing & Business Landscape |
-| hermes-legal | HERMES_2026_PART07_LEGAL_AND_CASES.md | docs/game-design/3d/ | Part 7 — Legal, Ethics & Case Studies |
-| hermes-future | HERMES_2026_PART08_DEEP_DIVES_AND_FUTURE.md | docs/game-design/3d/ | Part 8 — Technology Deep-Dives & Future Outlook |
-| hermes-appendices | HERMES_2026_PART09_APPENDICES.md | docs/game-design/3d/ | Part 9 — Appendices |
 | ui-ux | 2026_UI_UX_STANDARD.md | docs/ui-ux/ | UI/UX component standards, design tokens, interaction states |
 | accessibility | ACCESSIBILITY_GUIDE.md | docs/accessibility/ | WCAG 3.0+ compliance, conformance levels, testing methods |
 | spatial | SPATIAL_COMPUTING_UI.md | docs/spatial/ | XR/VR/AR UI patterns, comfort zones, latency requirements |
@@ -137,7 +112,6 @@
 | deployment | CROSS_PLATFORM_DEPLOYMENT.md | docs/deployment/ | Cross-platform deployment, app store compliance, CI/CD |
 | vibe-coding | vibe-coding.md | skills/shared-prompts/ | Canonical vibe coding principles for rapid AI development |
 | flutter-examples | examples/flutter/cross-platform/ | examples/flutter/ | Flutter guardrails: ethical widgets, accessibility wrappers |
-| godot-examples | examples/gdscript/godot-game/ | examples/gdscript/ | Godot GDScript: comfort zones, ethical UI, accessibility |
 
 ---
 
@@ -170,7 +144,7 @@
 | **examples/** | Multi-language guardrails implementation examples | When exploring code examples |
 | **regression-prevention/** | Bug tracking & regression prevention examples | When logging bugs or creating prevention rules |
 | **mcp-server/API.md** | Complete REST API reference for MCP server | When integrating with MCP server |
-| **mcp-server/CHANGELOG.md** | MCP server version history | When tracking MCP server updates |
+| **CHANGELOG.md** | MCP server version history (merged into root CHANGELOG.md) | When tracking version history |
 | **SPRINT_TEMPLATE.md** | Copy-paste template for new sprints | When creating tasks |
 | **SPRINT_GUIDE.md** | Best practices for writing sprints | When writing sprint docs |
 | **PROJECT_CONTEXT_TEMPLATE.md** | Project Bible - stack, style, forbidden patterns | When setting up new project |
@@ -184,31 +158,6 @@
 | **OPENCODE_INTEGRATION.md** | OpenCode agents and skills integration | When using OpenCode |
 | **CURSOR_INTEGRATION.md** | Cursor rules and guardrails integration | When using Cursor |
 | **GENERIC_LLM_INTEGRATION.md** | Generic/local LLM configuration (Ollama, vLLM, etc.) | When using custom LLMs |
-| **2026_GAME_DESIGN.md** | Game design guardrails, XR comfort zones, platform budgets | When building game interfaces or spatial UIs |
-| **3D_GAME_DEVELOPMENT.md** | 3D game dev guardrails v1.0: engine-agnostic, asset pipeline, physics | When building 3D games with AI assistance |
-| **3D_GUARDREL_PROPOSALS_V1.2.md** | Proposed v1.2 additions: neural fields, procedural geometry, AI NPCs | When reviewing next-gen 3D guardrails |
-| **3D_MATHEMATICAL_FOUNDATIONS.md** | Linear algebra, quaternions, collision math for AI-generated 3D code | When generating 3D math code |
-| **3D_MODULE_ARCHITECTURE.md** | Module architecture bridging LLMs with deterministic 3D engines | When architecting 3D game systems |
-| **AI_DEBUGGABLE_3D_ARCHITECTURE.md** | Patterns enabling AI agents to debug 3D features autonomously | When designing debuggable 3D systems |
-| **AI_DEV_2026_PART01_INTRO_AND_FOUNDATIONS.md** | AI-Powered Development 2026 Part 1: Introduction & Foundations | When starting the AI 2026 guide series |
-| **AI_DEV_2026_PART02_PROMPTING.md** | AI-Powered Development 2026 Part 2: Prompt Engineering for Code | When learning prompt engineering |
-| **AI_DEV_2026_PART03_CONTEXT_AND_ITERATION.md** | AI-Powered Development 2026 Part 3: Context & Iterative Development | When managing context windows and iteration |
-| **AI_DEV_2026_PART04_QUALITY_AND_ARCHITECTURE.md** | AI-Powered Development 2026 Part 4: Quality & Architecture | When debugging, testing, and architecting with AI |
-| **AI_DEV_2026_PART05_LEGACY_AND_AGENTS.md** | AI-Powered Development 2026 Part 5: Legacy & Agent Paradigm | When refactoring legacy code or moving to agents |
-| **AI_DEV_2026_PART06_BUILDING_AGENTS.md** | AI-Powered Development 2026 Part 6: Building Agents & Tool Use | When building custom development agents |
-| **AI_DEV_2026_PART07_MULTI_AGENT_SYSTEMS.md** | AI-Powered Development 2026 Part 7: Multi-Agent Systems | When implementing MoA and agent swarms |
-| **AI_DEV_2026_PART08_SECURITY_ETHICS_FUTURE.md** | AI-Powered Development 2026 Part 8: Security, Ethics & Future | When evaluating responsible AI development |
-| **AI_DEV_2026_PART09_APPENDICES_ABC.md** | AI-Powered Development 2026 Part 9: Appendices A, B & C | When referencing prompt patterns, local environments, case studies |
-| **AI_DEV_2026_PART10_APPENDIX_D.md** | AI-Powered Development 2026 Part 10: Appendix D — Complete MoA Reference | When implementing MoA pipelines |
-| **HERMES_2026_PART01_INTRO_AND_EXECUTIVE.md** | AI in 3D Game Development 2026 Part 1: Introduction & Executive Summary | When starting the dossier series |
-| **HERMES_2026_PART02_ASSETS_AND_ENGINES.md** | AI in 3D Game Development 2026 Part 2: 3D Asset Generation & Engine Integration | When researching AI asset pipelines |
-| **HERMES_2026_PART03_WORLD_AND_RENDERING.md** | AI in 3D Game Development 2026 Part 3: World Generation & Neural Rendering | When researching procedural worlds and rendering |
-| **HERMES_2026_PART04_NPCS_AND_ANIMATION.md** | AI in 3D Game Development 2026 Part 4: NPCs, Dialogue & Animation | When researching AI characters and motion |
-| **HERMES_2026_PART05_CODE_AND_PHYSICS.md** | AI in 3D Game Development 2026 Part 5: Code Generation & Neural Physics | When researching AI code gen and simulation |
-| **HERMES_2026_PART06_QA_AND_BUSINESS.md** | AI in 3D Game Development 2026 Part 6: QA, Testing & Business Landscape | When researching AI QA and market trends |
-| **HERMES_2026_PART07_LEGAL_AND_CASES.md** | AI in 3D Game Development 2026 Part 7: Legal, Ethics & Case Studies | When researching legal and ethical implications |
-| **HERMES_2026_PART08_DEEP_DIVES_AND_FUTURE.md** | AI in 3D Game Development 2026 Part 8: Technology Deep-Dives & Future Outlook | When researching specific tools and future predictions |
-| **HERMES_2026_PART09_APPENDICES.md** | AI in 3D Game Development 2026 Part 9: Appendices | When referencing glossary, tools, and sources |
 | **2026_UI_UX_STANDARD.md** | UI/UX component patterns, design tokens, animation | When implementing UI components |
 | **ACCESSIBILITY_GUIDE.md** | WCAG 3.0+ compliance, perceptual/cognitive/physical a11y | When ensuring accessibility compliance |
 | **SPATIAL_COMPUTING_UI.md** | XR/VR/AR layout patterns, comfort zones, latency | When building spatial computing interfaces |
@@ -222,7 +171,6 @@
 | **CROSS_PLATFORM_DEPLOYMENT.md** | App store compliance matrix, CI/CD, feature flags, progressive rollout | When deploying across platforms |
 | **vibe-coding.md** | Canonical vibe coding principles (5 principles) | When establishing rapid development culture |
 | **examples/flutter/cross-platform/** | Flutter guardrails: config, ethical widgets, accessibility wrappers | When implementing Flutter guardrails |
-| **examples/gdscript/godot-game/** | Godot GDScript: comfort zones, ethical UI, accessibility manager | When implementing Godot GDScript guardrails |
 
 ---
 
@@ -273,32 +221,7 @@
 - `INFRASTRUCTURE_STANDARDS.md` - IaC and Terraform standards
 - `OPERATIONAL_PATTERNS.md` - Health checks, circuit breakers, retry
 
-### 2026 Game Design & UI/UX
-- `2026_GAME_DESIGN.md` - Game design guardrails, XR/VR comfort zones, platform rules
-- `3D_GAME_DEVELOPMENT.md` - 3D game development guardrails v1.0, engine-agnostic patterns
-- `3D_GUARDREL_PROPOSALS_V1.2.md` - Proposed v1.2 additions from Hermes 2026 AI Dossier review
-- `3D_MATHEMATICAL_FOUNDATIONS.md` - Linear algebra, quaternions, collision math reference
-- `3D_MODULE_ARCHITECTURE.md` - Module architecture for LLM-to-3D-engine bridging
-- `AI_DEBUGGABLE_3D_ARCHITECTURE.md` - AI-debuggable patterns for autonomous 3D troubleshooting
-- `AI_DEV_2026_PART01_INTRO_AND_FOUNDATIONS.md` - Part 1: Introduction & Foundations
-- `AI_DEV_2026_PART02_PROMPTING.md` - Part 2: Prompt Engineering for Code
-- `AI_DEV_2026_PART03_CONTEXT_AND_ITERATION.md` - Part 3: Context & Iterative Development
-- `AI_DEV_2026_PART04_QUALITY_AND_ARCHITECTURE.md` - Part 4: Quality & Architecture
-- `AI_DEV_2026_PART05_LEGACY_AND_AGENTS.md` - Part 5: Legacy & Agent Paradigm
-- `AI_DEV_2026_PART06_BUILDING_AGENTS.md` - Part 6: Building Agents & Tool Use
-- `AI_DEV_2026_PART07_MULTI_AGENT_SYSTEMS.md` - Part 7: Multi-Agent Systems
-- `AI_DEV_2026_PART08_SECURITY_ETHICS_FUTURE.md` - Part 8: Security, Ethics & Future
-- `AI_DEV_2026_PART09_APPENDICES_ABC.md` - Part 9: Appendices A, B & C
-- `AI_DEV_2026_PART10_APPENDIX_D.md` - Part 10: Appendix D — Complete MoA Reference
-- `HERMES_2026_PART01_INTRO_AND_EXECUTIVE.md` - Part 1: Introduction & Executive Summary
-- `HERMES_2026_PART02_ASSETS_AND_ENGINES.md` - Part 2: 3D Asset Generation & Engine Integration
-- `HERMES_2026_PART03_WORLD_AND_RENDERING.md` - Part 3: World Generation & Neural Rendering
-- `HERMES_2026_PART04_NPCS_AND_ANIMATION.md` - Part 4: NPCs, Dialogue & Animation
-- `HERMES_2026_PART05_CODE_AND_PHYSICS.md` - Part 5: Code Generation & Neural Physics
-- `HERMES_2026_PART06_QA_AND_BUSINESS.md` - Part 6: QA, Testing & Business Landscape
-- `HERMES_2026_PART07_LEGAL_AND_CASES.md` - Part 7: Legal, Ethics & Case Studies
-- `HERMES_2026_PART08_DEEP_DIVES_AND_FUTURE.md` - Part 8: Technology Deep-Dives & Future Outlook
-- `HERMES_2026_PART09_APPENDICES.md` - Part 9: Appendices
+### UI/UX & Accessibility
 - `2026_UI_UX_STANDARD.md` - UI/UX component standards, design tokens, responsive patterns
 - `ACCESSIBILITY_GUIDE.md` - WCAG 3.0+ conformance (Bronze/Silver/Gold), automated testing
 - `SPATIAL_COMPUTING_UI.md` - XR/VR/AR comfort zones, latency, depth layering, interaction
@@ -360,8 +283,6 @@ agent-guardrails-template/
 │       ├── SPRINT_TEMPLATE.md
 │       ├── SPRINT_GUIDE.md
 │       └── archive/
-│   ├── game-design/
-│   │   └── 2026_GAME_DESIGN.md      # Game design guardrails, XR comfort
 │   ├── ui-ux/
 │   │   └── 2026_UI_UX_STANDARD.md   # UI/UX components, design tokens
 │   ├── accessibility/
@@ -432,30 +353,6 @@ agent-guardrails-template/
 | Prevention rules index | RULES_INDEX_MAP.md |
 | MCP tools reference | MCP_TOOLS_REFERENCE.md |
 | Pattern authoring | RULE_PATTERNS_GUIDE.md |
-| Game design guardrails | 2026_GAME_DESIGN.md |
-| 3D game development guardrails | 3D_GAME_DEVELOPMENT.md |
-| 3D math reference | 3D_MATHEMATICAL_FOUNDATIONS.md |
-| 3D architecture blueprint | 3D_MODULE_ARCHITECTURE.md |
-| AI-debuggable 3D patterns | AI_DEBUGGABLE_3D_ARCHITECTURE.md |
-| AI development 2026 guide | AI_DEV_2026_PART01_INTRO_AND_FOUNDATIONS.md |
-| AI 2026 prompt engineering | AI_DEV_2026_PART02_PROMPTING.md |
-| AI 2026 context & iteration | AI_DEV_2026_PART03_CONTEXT_AND_ITERATION.md |
-| AI 2026 quality & architecture | AI_DEV_2026_PART04_QUALITY_AND_ARCHITECTURE.md |
-| AI 2026 legacy & agents | AI_DEV_2026_PART05_LEGACY_AND_AGENTS.md |
-| AI 2026 building agents | AI_DEV_2026_PART06_BUILDING_AGENTS.md |
-| AI 2026 multi-agent systems | AI_DEV_2026_PART07_MULTI_AGENT_SYSTEMS.md |
-| AI 2026 security & ethics | AI_DEV_2026_PART08_SECURITY_ETHICS_FUTURE.md |
-| AI 2026 appendices | AI_DEV_2026_PART09_APPENDICES_ABC.md |
-| AI 2026 MoA reference | AI_DEV_2026_PART10_APPENDIX_D.md |
-| AI in 3D games dossier | HERMES_2026_PART01_INTRO_AND_EXECUTIVE.md |
-| Hermes assets & engines | HERMES_2026_PART02_ASSETS_AND_ENGINES.md |
-| Hermes world & rendering | HERMES_2026_PART03_WORLD_AND_RENDERING.md |
-| Hermes NPCs & animation | HERMES_2026_PART04_NPCS_AND_ANIMATION.md |
-| Hermes code & physics | HERMES_2026_PART05_CODE_AND_PHYSICS.md |
-| Hermes QA & business | HERMES_2026_PART06_QA_AND_BUSINESS.md |
-| Hermes legal & cases | HERMES_2026_PART07_LEGAL_AND_CASES.md |
-| Hermes deep-dives & future | HERMES_2026_PART08_DEEP_DIVES_AND_FUTURE.md |
-| Hermes appendices | HERMES_2026_PART09_APPENDICES.md |
 | UI/UX component standards | 2026_UI_UX_STANDARD.md |
 | Accessibility (WCAG 3.0+) | ACCESSIBILITY_GUIDE.md |
 | Spatial computing / XR / VR | SPATIAL_COMPUTING_UI.md |
@@ -465,8 +362,8 @@ agent-guardrails-template/
 
 **Authored by:** TheArchitectit
 **Document Owner:** Project Maintainers
-**Last Updated:** 2026-05-12
-**Document Count:** 103 (excluding INDEX files)
+**Last Updated:** 2026-08-14
+**Document Count:** See TOC.md for current document count
 **Line Count:** ~280
 
 ---
