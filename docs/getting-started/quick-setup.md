@@ -266,8 +266,8 @@ Install Python if needed: https://python.org
 
 ### Learn More
 
-- **For AI Safety:** Read [AGENT_GUARDRAILS.md](docs/AGENT_GUARDRAILS.md)
-- **For Teams:** Read [HOW_TO_APPLY.md](docs/HOW_TO_APPLY.md) to apply to existing repos
+- **For AI Safety:** Read [AGENT_GUARDRAILS.md](agent-guardrails.md)
+- **For Teams:** Read [HOW_TO_APPLY.md](how-to-apply.md) to apply to existing repos
 - **For Customization:** Edit `.claude/skills/guardrails-enforcer/SKILL.md` or `.opencode/skills/guardrails-enforcer/SKILL.md`
 
 ### Apply to Your Own Repository

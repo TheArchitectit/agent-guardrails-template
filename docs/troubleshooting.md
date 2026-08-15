@@ -682,9 +682,9 @@ curl -s -X POST http://localhost:8094/mcp \
 ### Self-Service Resources
 
 1. **Documentation:**
-   - [TEAM_TOOLS.md](./TEAM_TOOLS.md) - Tool reference
-   - [AGENT_GUARDRAILS.md](./AGENT_GUARDRAILS.md) - Safety protocols
-   - [TEAM_STRUCTURE.md](./TEAM_STRUCTURE.md) - Team definitions
+   - [TEAM_TOOLS.md](teams/team-tools.md) - Tool reference
+   - [AGENT_GUARDRAILS.md](getting-started/agent-guardrails.md) - Safety protocols
+   - [TEAM_STRUCTURE.md](teams/team-structure.md) - Team definitions
 
 2. **Error Code Lookup:**
    - See TEAM_TOOLS.md Error Handling section

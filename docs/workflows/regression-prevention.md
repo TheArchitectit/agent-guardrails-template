@@ -2,7 +2,7 @@
 
 > Comprehensive guide to preventing bug reintroduction using the failure registry and prevention rules.
 
-**Related:** [AGENT_GUARDRAILS.md](../AGENT_GUARDRAILS.md) | [AGENT_EXECUTION.md](./AGENT_EXECUTION.md) | [AGENT_REVIEW_PROTOCOL.md](./AGENT_REVIEW_PROTOCOL.md)
+**Related:** [AGENT_GUARDRAILS.md](../getting-started/agent-guardrails.md) | [AGENT_EXECUTION.md](agent-execution.md) | [AGENT_REVIEW_PROTOCOL.md](agent-review-protocol.md)
 
 ---
 
@@ -527,10 +527,10 @@ python scripts/log_failure.py --resolve FAIL-xxx
 ---
 
 **Related Documents:**
-- [AGENT_GUARDRAILS.md](../AGENT_GUARDRAILS.md) - Core safety protocols
-- [AGENT_EXECUTION.md](./AGENT_EXECUTION.md) - Execution protocol
-- [AGENT_REVIEW_PROTOCOL.md](./AGENT_REVIEW_PROTOCOL.md) - Review checklist
-- [TESTING_VALIDATION.md](./TESTING_VALIDATION.md) - Testing requirements
+- [AGENT_GUARDRAILS.md](../getting-started/agent-guardrails.md) - Core safety protocols
+- [AGENT_EXECUTION.md](agent-execution.md) - Execution protocol
+- [AGENT_REVIEW_PROTOCOL.md](agent-review-protocol.md) - Review checklist
+- [TESTING_VALIDATION.md](testing-validation.md) - Testing requirements
 
 ---
 

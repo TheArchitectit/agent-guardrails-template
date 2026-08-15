@@ -2,7 +2,7 @@
 
 > **MANDATORY**: All testing infrastructure must be fully isolated from production.
 
-**Related:** [AGENT_GUARDRAILS.md](../AGENT_GUARDRAILS.md) | [CODE_REVIEW.md](../workflows/CODE_REVIEW.md)
+**Related:** [AGENT_GUARDRAILS.md](../getting-started/agent-guardrails.md) | [CODE_REVIEW.md](../workflows/code-review.md)
 
 ---
 

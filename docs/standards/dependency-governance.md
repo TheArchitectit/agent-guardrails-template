@@ -2,7 +2,7 @@
 
 > **Control the supply chain.** Only approved packages may be used.
 
-**Related:** [PROJECT_CONTEXT_TEMPLATE.md](./PROJECT_CONTEXT_TEMPLATE.md) | [AGENT_GUARDRAILS.md](../AGENT_GUARDRAILS.md)
+**Related:** [PROJECT_CONTEXT_TEMPLATE.md](project-context-template.md) | [AGENT_GUARDRAILS.md](../getting-started/agent-guardrails.md)
 
 ---
 

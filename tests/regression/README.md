@@ -292,7 +292,7 @@ cat .guardrails/failure-registry.jsonl
 ---
 
 **Related Documents:**
-- [REGRESSION_PREVENTION.md](../../docs/workflows/REGRESSION_PREVENTION.md) - Full regression prevention protocol
+- [REGRESSION_PREVENTION.md](../../docs/workflows/regression-prevention.md) - Full regression prevention protocol
 - [.guardrails/pre-work-check.md](../../.guardrails/pre-work-check.md) - Pre-work checklist
 - [.guardrails/failure-registry.jsonl](../../.guardrails/failure-registry.jsonl) - Bug database
 

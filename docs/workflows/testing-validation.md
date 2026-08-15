@@ -2,7 +2,7 @@
 
 > Double-check all work before committing.
 
-**Related:** [AGENT_GUARDRAILS.md](../AGENT_GUARDRAILS.md) | [COMMIT_WORKFLOW.md](./COMMIT_WORKFLOW.md)
+**Related:** [AGENT_GUARDRAILS.md](../getting-started/agent-guardrails.md) | [COMMIT_WORKFLOW.md](commit-workflow.md)
 
 ---
 
@@ -268,7 +268,7 @@ TODO ITEM START
 [If fail] → ROLLBACK → Report → Stop
 ```
 
-See [COMMIT_WORKFLOW.md](./COMMIT_WORKFLOW.md) for commit procedures.
+See [COMMIT_WORKFLOW.md](commit-workflow.md) for commit procedures.
 
 ---
 

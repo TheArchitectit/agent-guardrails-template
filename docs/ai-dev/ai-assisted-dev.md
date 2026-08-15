@@ -317,10 +317,10 @@ func AISafeOperation[T any](operation func() (T, error), rollback func(), risk R
 
 | Document | Purpose |
 |----------|---------|
-| [AGENT_GUARDRAILS.md](../AGENT_GUARDRAILS.md) | Core safety protocols (The Four Laws) |
+| [AGENT_GUARDRAILS.md](../getting-started/agent-guardrails.md) | Core safety protocols (The Four Laws) |
 | [2026_GAME_DESIGN.md](../game-design/2026_GAME_DESIGN.md) | Game design guardrails |
-| [2026_UI_UX_STANDARD.md](../ui-ux/2026_UI_UX_STANDARD.md) | UI component patterns |
-| [ACCESSIBILITY_GUIDE.md](../accessibility/ACCESSIBILITY_GUIDE.md) | WCAG 3.0+ compliance |
-| [ETHICAL_ENGAGEMENT.md](../ethical/ETHICAL_ENGAGEMENT.md) | Dark pattern prevention |
-| [STATE_MANAGEMENT.md](../state/STATE_MANAGEMENT.md) | State architecture patterns |
-| [PROMPTING_GUIDE.md](../standards/PROMPTING_GUIDE.md) | Effective prompting for AI development |
+| [2026_UI_UX_STANDARD.md](../ui-ux/ui-ux-standard.md) | UI component patterns |
+| [ACCESSIBILITY_GUIDE.md](../accessibility/accessibility-guide.md) | WCAG 3.0+ compliance |
+| [ETHICAL_ENGAGEMENT.md](../ethical/ethical-engagement.md) | Dark pattern prevention |
+| [STATE_MANAGEMENT.md](../state/state-management.md) | State architecture patterns |
+| [PROMPTING_GUIDE.md](../standards/prompting-guide.md) | Effective prompting for AI development |

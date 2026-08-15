@@ -2,7 +2,7 @@
 
 > Recovery and undo operations for all scenarios.
 
-**Related:** [AGENT_GUARDRAILS.md](../AGENT_GUARDRAILS.md) | [COMMIT_WORKFLOW.md](./COMMIT_WORKFLOW.md)
+**Related:** [AGENT_GUARDRAILS.md](../getting-started/agent-guardrails.md) | [COMMIT_WORKFLOW.md](commit-workflow.md)
 
 ---
 

@@ -295,8 +295,8 @@ func StripPII(data map[string]any) map[string]any {
 
 | Document | Purpose |
 |----------|---------|
-| [ETHICAL_ENGAGEMENT.md](../ethical/ETHICAL_ENGAGEMENT.md) | Dark pattern prevention |
-| [MONETIZATION_GUARDRAILS.md](../monetization/MONETIZATION_GUARDRAILS.md) | Economy tracking ethics |
-| [MULTIPLAYER_SAFETY.md](../multiplayer/MULTIPLAYER_SAFETY.md) | Player data in social systems |
-| [AI_ASSISTED_DEV.md](../ai-dev/AI_ASSISTED_DEV.md) | AI development approval gates |
-| [GENERATIVE_ASSET_SAFETY.md](../generative/GENERATIVE_ASSET_SAFETY.md) | Generated content provenance |
+| [ETHICAL_ENGAGEMENT.md](../ethical/ethical-engagement.md) | Dark pattern prevention |
+| [MONETIZATION_GUARDRAILS.md](../monetization/monetization-guardrails.md) | Economy tracking ethics |
+| [MULTIPLAYER_SAFETY.md](../multiplayer/multiplayer-safety.md) | Player data in social systems |
+| [AI_ASSISTED_DEV.md](../ai-dev/ai-assisted-dev.md) | AI development approval gates |
+| [GENERATIVE_ASSET_SAFETY.md](../generative/generative-asset-safety.md) | Generated content provenance |

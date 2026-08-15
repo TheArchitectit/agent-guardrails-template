@@ -27,16 +27,16 @@
 These constraints enable flow state. Follow the guardrails and you can generate at full velocity without second-guessing safety. Constraints aren't friction — they're your fast lane.
 
 **Quick Links:**
-- [2026_UI_UX_STANDARD.md](docs/ui-ux/2026_UI_UX_STANDARD.md) - UI component standards
-- [ACCESSIBILITY_GUIDE.md](docs/accessibility/ACCESSIBILITY_GUIDE.md) - WCAG 3.0+ guide
-- [SPATIAL_COMPUTING_UI.md](docs/spatial/SPATIAL_COMPUTING_UI.md) - XR/VR/AR patterns
-- [ETHICAL_ENGAGEMENT.md](docs/ethical/ETHICAL_ENGAGEMENT.md) - Dark pattern prevention
+- [2026_UI_UX_STANDARD.md](docs/ui-ux/ui-ux-standard.md) - UI component standards
+- [ACCESSIBILITY_GUIDE.md](docs/accessibility/accessibility-guide.md) - WCAG 3.0+ guide
+- [SPATIAL_COMPUTING_UI.md](docs/spatial/spatial-computing-ui.md) - XR/VR/AR patterns
+- [ETHICAL_ENGAGEMENT.md](docs/ethical/ethical-engagement.md) - Dark pattern prevention
 - Game design docs moved to separate private repo
 
 ## 1. Context & Setup
 * **Stack Detection**: Read configuration files (package.json, requirements.txt, Makefile, etc) to determine stack. Do NOT read lockfiles.
 * **Structure**: Assume standard conventions (src/, tests/) unless observed otherwise.
-* **Guardrails**: Read [docs/AGENT_GUARDRAILS.md](docs/AGENT_GUARDRAILS.md) before any code changes.
+* **Guardrails**: Read [docs/AGENT_GUARDRAILS.md](docs/getting-started/agent-guardrails.md) before any code changes.
 
 ## 2. Token-Saving Rules (STRICT)
 
@@ -51,7 +51,7 @@ These constraints enable flow state. Follow the guardrails and you can generate 
 ## 3. Workflow
 * **Tests**: Run ONLY relevant tests.
 * **Edits**: Prefer small, single-file edits.
-* **Commits**: Commit after each to-do item (see [COMMIT_WORKFLOW.md](docs/workflows/COMMIT_WORKFLOW.md)).
+* **Commits**: Commit after each to-do item (see [COMMIT_WORKFLOW.md](docs/workflows/commit-workflow.md)).
 * **Checkpoints**: Use MCP checkpoints before/after critical operations.
 
 ## 4. Documentation Standards

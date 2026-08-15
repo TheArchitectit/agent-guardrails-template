@@ -258,12 +258,12 @@ set statusline+=%{guardrail#Statusline()}
 
 ## Contributing
 
-See [TEAM_STRUCTURE.md](./TEAM_STRUCTURE.md) for team organization and [IDE_EXTENSIONS_PLAN.md](./IDE_EXTENSIONS_PLAN.md) for roadmap.
+See [TEAM_STRUCTURE.md](ide-team-structure.md) for team organization and [IDE_EXTENSIONS_PLAN.md](./IDE_EXTENSIONS_PLAN.md) for roadmap.
 
 ## Resources
 
 - **Plan:** [IDE_EXTENSIONS_PLAN.md](./IDE_EXTENSIONS_PLAN.md)
-- **Team:** [TEAM_STRUCTURE.md](./TEAM_STRUCTURE.md)
+- **Team:** [TEAM_STRUCTURE.md](ide-team-structure.md)
 - **Testing:** [TESTING_GUIDE.md](./TESTING_GUIDE.md)
 - **MCP Server:** `/mcp-server/`
 
