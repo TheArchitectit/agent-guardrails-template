@@ -419,7 +419,7 @@ interface Violation {
 - **VS Code API:** https://code.visualstudio.com/api
 - **JetBrains SDK:** https://plugins.jetbrains.com/docs/intellij/
 - **Neovim Lua:** https://neovim.io/doc/user/lua.html
-- **MCP Server API:** `/mcp-server/API.md`
+- **MCP Server API:** `/mcp-server/api.md`
 
 ---
 

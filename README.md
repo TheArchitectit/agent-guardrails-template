@@ -175,7 +175,7 @@ curl http://localhost:8081/docs  # API explorer
 ```
 
 See [mcp-server/README.md](mcp-server/README.md) for full setup, API docs, and troubleshooting.
-See [DEPLOYMENT_GUIDE.md](mcp-server/DEPLOYMENT_GUIDE.md) for production deployment.
+See [DEPLOYMENT_GUIDE.md](mcp-server/deployment-guide.md) for production deployment.
 
 ---
 

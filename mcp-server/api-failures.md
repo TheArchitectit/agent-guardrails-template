@@ -1,6 +1,6 @@
 # Failure Registry API
 
-> See [API.md](API.md) for base URLs, authentication, and shared conventions.
+> See [API.md](api.md) for base URLs, authentication, and shared conventions.
 
 ## GET /api/failures
 

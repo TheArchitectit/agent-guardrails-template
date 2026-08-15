@@ -25,8 +25,8 @@ echo "✓ All required files present"
 
 # Check README
 echo "[2/5] Checking documentation..."
-if [ ! -f "README.md" ] && [ ! -f "INSTALL.md" ]; then
-    echo "WARNING: No README.md or INSTALL.md found"
+if [ ! -f "README.md" ] && [ ! -f "install.md" ]; then
+    echo "WARNING: No README.md or install.md found"
 fi
 echo "✓ Documentation check complete"
 

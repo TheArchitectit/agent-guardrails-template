@@ -81,7 +81,7 @@
 - [ ] Added to Slack channel
 - [ ] GitHub access granted
 - [ ] Local dev environment setup
-- [ ] Read IDE_EXTENSIONS_PLAN.md
+- [ ] Read extensions-plan.md
 - [ ] Met with Platform Lead
 - [ ] Assigned mentor (if needed)
 

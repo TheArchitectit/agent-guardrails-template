@@ -92,9 +92,9 @@ Plug 'TheArchitectit/guardrail.vim'
 
 ```
 ide/
-├── IDE_EXTENSIONS_PLAN.md     # Master plan document
-├── TEAM_STRUCTURE.md          # Team organization
-├── TESTING_GUIDE.md           # Testing documentation
+├── extensions-plan.md         # Master plan document
+├── ide-team-structure.md      # Team organization
+├── testing-guide.md           # Testing documentation
 ├── README.md                  # This file
 ├── vscode-extension/          # VS Code extension (P0)
 │   ├── package.json
@@ -191,7 +191,7 @@ IDE Extensions
 
 ### Testing
 
-See [TESTING_GUIDE.md](./TESTING_GUIDE.md) for comprehensive testing documentation.
+See [TESTING_GUIDE.md](./testing-guide.md) for comprehensive testing documentation.
 
 ### Commands
 
@@ -258,13 +258,13 @@ set statusline+=%{guardrail#Statusline()}
 
 ## Contributing
 
-See [TEAM_STRUCTURE.md](ide-team-structure.md) for team organization and [IDE_EXTENSIONS_PLAN.md](./IDE_EXTENSIONS_PLAN.md) for roadmap.
+See [TEAM_STRUCTURE.md](ide-team-structure.md) for team organization and [IDE_EXTENSIONS_PLAN.md](./extensions-plan.md) for roadmap.
 
 ## Resources
 
-- **Plan:** [IDE_EXTENSIONS_PLAN.md](./IDE_EXTENSIONS_PLAN.md)
+- **Plan:** [IDE_EXTENSIONS_PLAN.md](./extensions-plan.md)
 - **Team:** [TEAM_STRUCTURE.md](ide-team-structure.md)
-- **Testing:** [TESTING_GUIDE.md](./TESTING_GUIDE.md)
+- **Testing:** [TESTING_GUIDE.md](./testing-guide.md)
 - **MCP Server:** `/mcp-server/`
 
 ## License

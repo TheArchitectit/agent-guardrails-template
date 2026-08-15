@@ -495,7 +495,7 @@ A: Command Palette → "Preferences: Open User Settings (JSON)", remove guardrai
 ## Resources
 
 - **Issues:** https://github.com/TheArchitectit/agent-guardrails-template/issues
-- **Plan:** `ide/IDE_EXTENSIONS_PLAN.md`
+- **Plan:** `ide/extensions-plan.md`
 - **Source:** `ide/vscode-extension/src/`
 
 ---
