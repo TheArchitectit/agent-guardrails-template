@@ -1,33 +1,27 @@
 # Guardrail MCP Server
 
-A Model Context Protocol (MCP) server for enforcing guardrails across AI coding assistants and IDE extensions.
+An MCP (Model Context Protocol) server that enforces guardrails across AI
+coding assistants and IDE extensions. Written in Go — the old Python
+implementation was retired back in v2.6.0.
 
 [![Go Implementation](https://img.shields.io/badge/Implementation-Go-blue.svg?style=flat&logo=go)](https://golang.org)
-[![Version](https://img.shields.io/badge/version-v3.1.0-blue.svg)](./CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-v3.3.0-blue.svg)](../CHANGELOG.md)
 
-> **Go Implementation:** All code is written in Go. Package location: `mcp-server/internal/`
-> **Migration:** Python implementation deprecated as of v2.6.0. See [../docs/PYTHON_MIGRATION.md](../docs/PYTHON_MIGRATION.md).
+## Things worth knowing before you deploy
 
-## 🚨 Critical Deployment Information
+A few requirements the config validation will enforce anyway, listed here so
+you don't get blindsided by error messages:
 
-**Deployment Status:** ✅ Successfully deployed to your-server (0.0.0.0:8095/8096)
+- **MCP_API_KEY and IDE_API_KEY** need 32+ characters with a mix of uppercase,
+  lowercase, and digits. `openssl rand -hex` won't cut it (lowercase only) —
+  use `openssl rand -base64`.
+- **JWT_SECRET** needs 32+ bytes with real entropy. `openssl rand -hex 64`
+  works fine.
+- **JWT_ROTATION_HOURS** takes a duration with a unit suffix, e.g. `168h`.
+- Containers talk to each other over the compose network by service name —
+  don't point `DB_HOST` at `localhost`.
 
-**Schema Validation Error Fixed:**
-- Changed server name from `guardrail-mcp` to `guardrail_mcp` (line 101 in `internal/mcp/server.go`)
-- This fixes the MCP framework's schema validation error that was blocking Claude Code from using the guardrail tools
-
-**Postgres Permission Issues Fixed:**
-- Added `user: "70:70"` to postgres service configuration
-- Removed security constraints to allow proper container initialization
-
-**Configuration Requirements:**
-- MCP_API_KEY and IDE_API_KEY must be 32+ characters with mixed case and digits
-- JWT_SECRET must be at least 32 bytes long
-- JWT_ROTATION_HOURS must include 'h' unit (e.g., `168h`)
-- Use localhost for container communication within pod
-
-**Complete Deployment Guide:**
-See [DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md) for step-by-step deployment instructions.
+The full walkthrough is in [DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md).
 
 ## Architecture
 
@@ -55,21 +49,10 @@ Deployment host (or local VM)
 
 ### Prerequisites
 
-- Go 1.23+
+- Go 1.25+
 - Podman or Docker
 - PostgreSQL 16 (if running without compose)
 - Redis 7 (if running without compose)
-
-### Important: Read Deployment Guide First
-
-**Before deploying, read [DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md)** - This contains critical fixes discovered during your-server deployment that are required for the MCP server to work correctly.
-
-Key fixes include:
-- Server name must use underscores, not dashes (schema validation fix)
-- Postgres must run as user 70:70 (permission fix)
-- API keys must be 32+ characters with mixed case and digits
-- JWT_SECRET must be at least 32 bytes
-- Use pod networking for container communication
 
 ### Configuration
 
@@ -83,9 +66,10 @@ cp .env.example .env
 2. Generate security keys:
 
 ```bash
-export MCP_API_KEY=$(openssl rand -hex 32)
-export IDE_API_KEY=$(openssl rand -hex 32)
-export JWT_SECRET=$(openssl rand -hex 32)
+# base64, not hex — the API key validator wants mixed case + digits
+export MCP_API_KEY=$(openssl rand -base64 48)
+export IDE_API_KEY=$(openssl rand -base64 48)
+export JWT_SECRET=$(openssl rand -hex 64)
 export DB_PASSWORD=$(openssl rand -base64 32)
 export REDIS_PASSWORD=$(openssl rand -base64 32)
 ```
@@ -131,45 +115,96 @@ make vuln
 
 ### Deployment
 
-For detailed deployment instructions (recommended for production), see [DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md).
+The short version: copy `.env.example` to `.env`, fill in the required values,
+and bring the stack up. PostgreSQL, Redis, and the MCP server all run as
+containers. For production hardening and the long-form walkthrough, see
+[DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md).
 
-**Quick Start:**
+The compose file reads variables from the `.env` in the same directory. If you
+keep your `.env` somewhere else, pass it explicitly with `--env-file /path/to/.env`
+— otherwise you'll get confusing "variable is not set" warnings.
+
+One thing worth knowing up front: by default the stack only listens on
+localhost. That's deliberate. If you need the server reachable from another
+machine (a Tailscale IP, a second network interface, etc.), set `BIND_ADDR` in
+your `.env` — but don't expose it on `0.0.0.0` without putting real auth in
+front of it.
+
+#### If you're a human doing this by hand
+
+Docker:
 
 ```bash
-# Build container
-make docker-build
+cp .env.example .env        # edit in your secrets, ports, etc.
 
-# Start all services (PostgreSQL, Redis, MCP Server)
-make docker-up
-
-# View logs
-make docker-logs
-
-# Stop services
-make docker-down
-```
-
-Docker-only equivalent (without Podman tooling):
-
-```bash
-# Build image
-docker build -t guardrail-mcp:latest -f deploy/Dockerfile .
-
-# Start all services from compose file
 docker compose -f deploy/podman-compose.yml up -d --build
-
-# View logs
-docker compose -f deploy/podman-compose.yml logs -f
-
-# Stop services
-docker compose -f deploy/podman-compose.yml down
+docker compose -f deploy/podman-compose.yml ps      # wait for everything to be healthy
+docker compose -f deploy/podman-compose.yml logs -f mcp-server
 ```
 
-Alternative Docker compose file used by testers:
+Podman works with the same commands (the Docker-compatible CLI reads the same
+compose file):
 
 ```bash
-docker compose -f deploy/docker-compose.example.yml up -d --build
-docker compose -f deploy/docker-compose.example.yml ps
+podman compose -f deploy/podman-compose.yml up -d --build
+podman compose -f deploy/podman-compose.yml ps
+```
+
+Or if you prefer `podman-compose`:
+
+```bash
+podman-compose -f deploy/podman-compose.yml up -d --build
+```
+
+Give it a minute on first run — PostgreSQL has to initialize its data volume
+and the migrations need to apply before the MCP server's health check passes.
+
+#### If you're an agent doing this
+
+Same commands, but mind the details that trip you up:
+
+1. **Never commit or log the `.env`.** Secrets go in environment variables at runtime, not in files you write into the repo.
+2. The compose file lives in `deploy/`, so relative-path assumptions break — always pass `--env-file` if your `.env` isn't next to it.
+3. Ports are bound to `BIND_ADDR` (default `127.0.0.1`). Verify with `curl` against that address, not against a hostname you're guessing at.
+4. Check container health before testing endpoints: `docker compose -f deploy/podman-compose.yml ps`. If `mcp-server` isn't `healthy`, read its logs before retrying blindly.
+
+#### Verifying it works
+
+```bash
+# Web UI health (default ports: MCP 8080, Web 8081)
+curl -s http://localhost:8081/health/ready
+
+# MCP endpoint — stateless JSON-RPC, no session setup needed
+curl -s -X POST http://localhost:8080/mcp \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "initialize",
+    "params": {
+      "protocolVersion": "2024-11-05",
+      "capabilities": {},
+      "clientInfo": { "name": "test", "version": "1.0" }
+    }
+  }'
+```
+
+You should get a JSON-RPC response naming the server and listing its
+capabilities. If you get a 404 on `/mcp`, you're running an older build — the
+stateless endpoint landed in v3.3.0.
+
+#### Useful commands
+
+```bash
+# Stop everything (keeps your data volumes)
+docker compose -f deploy/podman-compose.yml down
+
+# Stop and wipe data volumes too
+docker compose -f deploy/podman-compose.yml down -v
+
+# Restart just the MCP server after rebuilding
+docker compose -f deploy/podman-compose.yml up -d --build mcp-server
 ```
 
 ## API Endpoints
@@ -260,17 +295,36 @@ The MCP server implements the Model Context Protocol for AI assistant integratio
 
 ### MCP Tools
 
+The server registers 35 tools. The core validation set:
+
 - `guardrail_init_session` - Initialize a validation session for a project
-- `guardrail_validate_bash` - Validate bash command against forbidden patterns
-- `guardrail_validate_file_edit` - Validate file edit operation
-- `guardrail_validate_git_operation` - Validate git command against guardrails
-- `guardrail_pre_work_check` - Run pre-work checklist from failure registry
+- `guardrail_validate_bash` - Validate bash commands against forbidden patterns
+- `guardrail_validate_file_edit` - Validate file edit operations
+- `guardrail_validate_git_operation` - Validate git commands against guardrails
+- `guardrail_validate_commit` / `guardrail_validate_push` - Commit and push validation
+- `guardrail_validate_scope` - Scope-check file changes against the task
+- `guardrail_pre_work_check` - Run the pre-work checklist from the failure registry
 - `guardrail_get_context` - Get guardrail context for the session's project
+- `guardrail_prevent_regression` / `guardrail_verify_fixes_intact` - Regression prevention
+- `guardrail_check_halt_conditions` / `guardrail_acknowledge_halt` - Halt conditions
+- `guardrail_check_test_prod_separation` - Test/production isolation checks
+- `guardrail_team_*` - Team management (init, list, assign, remove, health, config)
+- `guardrail_record_*` / `guardrail_reset_attempts` - Attempt and halt recording
+
+Use the `tools/list` method over `/mcp` for the full list with schemas.
 
 ### MCP Resources
 
-- `guardrail://quick-reference` - Quick reference card for guardrails
-- `guardrail://rules/active` - Currently active prevention rules
+11 resources exposed via `resources/list`:
+
+- `guardrail://agent-guardrails` - Core guardrail rules
+- `guardrail://four-laws` - The Four Laws of Agent Safety
+- `guardrail://halt-conditions` - When to stop and ask
+- `guardrail://quick-reference` - Quick reference card
+- `guardrail://git-safety` - Git safety rules
+- `guardrail://standards`, `guardrail://workflows` - Standards and workflow docs
+- `guardrail://config`, `guardrail://stats` - Server configuration and stats
+- `guardrail://advisors`, `guardrail://pre-work-check`, `guardrail://test-prod-separation`
 
 ### Connecting to MCP Server
 
@@ -371,34 +425,17 @@ See [API.md](API.md) for complete API documentation.
 
 **Solution:**
 - Check data state:
-  - `curl -s http://localhost:8096/api/stats`
+  - `curl -s http://localhost:8081/api/stats`
   - If `rules_count` or `projects_count` is `0`, run rule sync and seed a project.
 - Trigger rule sync:
-  - `curl -X POST http://localhost:8096/api/rules/sync -H "Authorization: Bearer $MCP_API_KEY" -H "Content-Type: application/json" -d '{"force":true}'`
-  - `curl -s http://localhost:8096/api/rules/sync/status`
+  - `curl -X POST http://localhost:8081/api/rules/sync -H "Authorization: Bearer $MCP_API_KEY" -H "Content-Type: application/json" -d '{"force":true}'`
+  - `curl -s http://localhost:8081/api/rules/sync/status`
 - Ensure the project used by `guardrail_init_session` has `active_rules` populated.
 - Verify categories for command enforcement:
   - `guardrail_validate_bash` evaluates `bash` (and compatible legacy categories) plus `all`.
   - `guardrail_validate_git_operation` evaluates `git` (and compatible legacy categories) plus `all`.
   - Rules intended to apply globally should use category `all`.
 - Re-test using MCP `initialize` -> `guardrail_init_session` -> `guardrail_validate_bash`/`guardrail_validate_git_operation` and confirm `rules_evaluated > 0`.
-
-### Schema Validation Error (Critical!)
-
-**Error:**
-```
-Invalid schema for function 'guardrails_guardrail_pre_work_check':
-In context=('properties', 'affected_files'), array schema missing items
-```
-
-**Cause:** Server name contains dashes/hyphens
-
-**Solution:** Change server name from "guardrail-mcp" to "guardrail_mcp" in `internal/mcp/server.go` line 101:
-```go
-s.mcpServer = server.NewDefaultServer("guardrail_mcp", "1.0.0")
-```
-
-See [DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md) for complete deployment instructions.
 
 ### Database Migration Failures
 
@@ -428,65 +465,29 @@ cat .env | grep -E "(API_KEY|PASSWORD|SECRET)"
 
 ## License
 
-MIT
+BSD-3-Clause — see [../LICENSE](../LICENSE).
 
 ---
 
-## Deployment Status
+### Client configuration example
 
-**Version:** v3.1.0
-**Deployment Date:** 2026-02-15
-**Deployed To:** your-server (0.0.0.0:8095/8096)
-**Status:** ✅ Successfully deployed and verified
-**Implementation:** Go (mcp-server/internal/)
+Once the server is running, point your MCP client at it:
 
-### What Was Fixed During Deployment
-
-1. **Schema Validation Error** ✅ FIXED
-   - Changed server name from `guardrail-mcp` to `guardrail_mcp` (line 101 in `internal/mcp/server.go`)
-   - This fixes the MCP framework's schema validation error that was blocking Claude Code from using the guardrail tools
-
-2. **Postgres Permission Issues** ✅ FIXED
-   - Added `user: "70:70"` to postgres service configuration
-   - Removed security constraints to allow proper container initialization
-
-3. **Configuration Requirements** ✅ UPDATED
-   - MCP_API_KEY and IDE_API_KEY must be 32+ characters with mixed case and digits
-   - JWT_SECRET must be at least 32 bytes long
-   - JWT_ROTATION_HOURS must include 'h' unit (e.g., `168h`)
-   - Use localhost for container communication within pod
-
-### Verification Checklist
-
-- ✅ Postgres running and healthy (localhost:5432)
-- ✅ Redis running and healthy (localhost:6379)
-- ✅ MCP server started successfully
-- ✅ Database connected
-- ✅ Redis connected
-- ✅ MCP endpoint responding (port 8095)
-- ✅ Web UI responding (port 8096)
-- ✅ Server name correctly set to `guardrail_mcp` (with underscore)
-
-### For Testers
-
-**your-server Connection Info:**
-- **MCP Endpoint:** http://0.0.0.0:8095/mcp
-- **Web UI:** http://0.0.0.0:8096
-- **API Key:** your-api-key (example - use your own)
-
-**OpenCode Configuration:**
 ```jsonc
 {
   "mcpServers": {
     "guardrails": {
       "type": "remote",
-      "url": "http://0.0.0.0:8095/mcp",
+      "url": "http://your-server-host:8080/mcp",
       "headers": {
-        "Authorization": "Bearer your-api-key"
+        "Authorization": "Bearer <your-MCP_API_KEY>"
       }
     }
   }
 }
 ```
 
-See [DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md) for complete deployment instructions and troubleshooting.
+Replace `your-server-host` and the API key with your own values.
+
+See [DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md) for the full deployment
+walkthrough and more troubleshooting.

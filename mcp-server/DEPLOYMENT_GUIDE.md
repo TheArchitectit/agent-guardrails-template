@@ -1,25 +1,25 @@
 # Guardrail MCP Server Deployment Guide
 
-**Version:** v3.1.0
-**Last Updated:** 2026-05-12
-**Tested On:** your-server (RHEL Server with Podman), Docker Desktop (Windows 11), Ubuntu 24.04
+**Version:** v3.3.0
+**Last Updated:** 2026-08-15
+**Tested On:** RHEL server with Podman, Docker Desktop (Windows 11), Ubuntu 24.04
 
 ## Overview
 
-This guide provides step-by-step instructions for deploying the Guardrail MCP Server to production, including all fixes applied during the your-server deployment.
+This guide provides step-by-step instructions for deploying the Guardrail MCP Server to production, including all fixes discovered while deploying to production.
 
 ## Prerequisites
 
 - RHEL or compatible Linux distribution
 - Podman or Docker installed
 - Access to deployment server via SSH
-- Go 1.23+ (for building from source)
+- Go 1.25+ (for building from source)
 - PostgreSQL 16 (or use containerized version)
 - Redis 7 (or use containerized version)
 
 ## Deployment Summary
 
-### What Was Fixed During your-server Deployment
+### What Was Fixed During Production Deployment
 
 1. **Schema Validation Error** - Changed server name from "guardrail-mcp" to "guardrail_mcp" to fix MCP framework validation issues
 2. **Postgres Permission Issues** - Removed security constraints and added `user: "70:70"` for postgres
@@ -28,74 +28,86 @@ This guide provides step-by-step instructions for deploying the Guardrail MCP Se
 
 ## Quick Deploy
 
-### 1. Update your-server IP in .env
+### 1. Set the bind address in .env
+
+By default the stack binds to `127.0.0.1` (localhost only). If you need the
+server reachable from another machine, set `BIND_ADDR` to the interface you
+want to expose — for example a Tailscale IP or a private-network address.
 
 ```bash
-# Update your-server IP in .env
-localhost status | grep localhost
-sed -i 's/your-server=.*/your-server=0.0.0.0/' .env
+# Only do this if you need remote access; leave unset for localhost-only
+sed -i 's/^BIND_ADDR=.*/BIND_ADDR=127.0.0.1/' .env
 ```
 
 ### 2. Build and Deploy
 
+Generate real secrets first — never use checked-in or guessable values:
+
 ```bash
-cd /home/deploy-user/mcp-server
+DB_PASSWORD=$(openssl rand -base64 24)
+REDIS_PASSWORD=$(openssl rand -base64 24)
+MCP_API_KEY=$(openssl rand -base64 48)   # mixed case + digits required
+IDE_API_KEY=$(openssl rand -base64 48)
+JWT_SECRET=$(openssl rand -hex 64)
+```
 
-# Load environment variables
-export $(cat .env | grep -v '^#' | grep -v '^$' | xargs)
+Then build and run:
 
-# Build Docker image
+```bash
+cd /opt/guardrail-mcp
+
+# Build image
 podman build \
-  --build-arg VERSION=v3.1.0 \
+  --build-arg VERSION=v3.3.0 \
   --build-arg BUILD_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ) \
   --build-arg GIT_COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo 'unknown') \
   -f deploy/Dockerfile \
-  -t guardrail-mcp:v3.1.0 .
+  -t guardrail-mcp:v3.3.0 .
 
-# Create pod with port mappings
-podman pod create --name guardrail-pod -p 8095:8095 -p 8096:8096
+# Create pod with port mappings (MCP and Web UI)
+podman pod create --name guardrail-pod -p 8080:8080 -p 8081:8081
 
-# Start postgres (with user 70:70 to avoid permission issues)
+# Start postgres (user 70:70 matches the postgres user in the alpine image)
 podman run -d --pod guardrail-pod --name guardrail-postgres \
   --user 70:70 \
   -e POSTGRES_USER=guardrail \
-  -e POSTGRES_PASSWORD=example-db-password \
-  -e POSTGRES_DB=guardrail \
+  -e POSTGRES_PASSWORD="$DB_PASSWORD" \
+  -e POSTGRES_DB=guardrails \
   -v guardrail_pg_data:/var/lib/postgresql/data \
   docker.io/library/postgres:16-alpine
 
 # Wait for postgres to be ready
 sleep 5
 
-# Start redis
+# Start redis (config via CLI flags — no config file in the alpine image)
 podman run -d --pod guardrail-pod --name guardrail-redis \
-  -e REDIS_PASSWORD=example-redis-password \
   docker.io/library/redis:7-alpine \
-  redis-server --requirepass example-redis-password --maxmemory 256mb --maxmemory-policy allkeys-lru
+  redis-server --requirepass "$REDIS_PASSWORD" --maxmemory 256mb --maxmemory-policy allkeys-lru
 
-# Start MCP server
+# Start MCP server (pod networking: containers reach each other via localhost)
 podman run -d --pod guardrail-pod --name guardrail-mcp-server \
-  -e REDIS_PASSWORD=example-redis-password \
-  -e MCP_PORT=8095 \
-  -e WEB_PORT=8096 \
-  -e WEB_ENABLED=true \
-  -e LOG_LEVEL=info \
+  -e MCP_PORT=8080 \
+  -e WEB_PORT=8081 \
   -e DB_HOST=localhost \
   -e DB_PORT=5432 \
-  -e DB_NAME=guardrail \
+  -e DB_NAME=guardrails \
   -e DB_USER=guardrail \
-  -e DB_PASSWORD=example-db-password \
+  -e DB_PASSWORD="$DB_PASSWORD" \
   -e DB_SSLMODE=disable \
   -e REDIS_HOST=localhost \
   -e REDIS_PORT=6379 \
-  -e MCP_API_KEY=your-api-key \
-  -e IDE_API_KEY=your-api-key \
-  -e JWT_SECRET=Dev-JWT-Secret-789-Longer-32bytes \
+  -e REDIS_PASSWORD="$REDIS_PASSWORD" \
+  -e MCP_API_KEY="$MCP_API_KEY" \
+  -e IDE_API_KEY="$IDE_API_KEY" \
+  -e JWT_SECRET="$JWT_SECRET" \
   -e JWT_ISSUER=guardrail-mcp \
   -e JWT_EXPIRY=15m \
   -e JWT_ROTATION_HOURS=168h \
-  localhost/guardrail-mcp:v3.1.0
+  localhost/guardrail-mcp:v3.3.0
 ```
+
+> Prefer not to manage pods by hand? The compose path in
+> [README.md](./README.md#deployment) handles all of the above in one command.
 
 ## Windows Docker Desktop Deployment
 
@@ -137,14 +149,14 @@ docker compose -f deploy/docker-compose.example.yml logs -f
 
 | Service | URL |
 |---------|-----|
-| Web UI | http://localhost:8095 |
-| Health Check | http://localhost:8095/health/ready |
-| MCP StreamableHTTP | http://localhost:8095/mcp |
+| Web UI | http://localhost:8081 |
+| Health Check | http://localhost:8081/health/ready |
+| MCP StreamableHTTP | http://localhost:8080/mcp |
 
 ### Windows-Specific Notes
 
 - **Firewall:** Docker Desktop may prompt for firewall rules. Allow private network access.
-- **Port conflicts:** If ports 8095/8096 are in use, edit `.env` to change `MCP_PORT` and `WEB_PORT`.
+- **Port conflicts:** If ports 8080/8081 are in use, edit `.env` to change `MCP_PORT` and `WEB_PORT`.
 - **WSL2 file paths:** For best performance, keep project files inside WSL2 filesystem (`\\wsl$\Ubuntu\home\...`) rather than Windows mounts.
 - **PowerShell execution policy:** If scripts fail, run `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser`.
 
@@ -156,80 +168,91 @@ docker compose -f deploy/docker-compose.example.yml logs -f
 
 ```bash
 # Create deployment directory
-mkdir -p /home/deploy-user/mcp-server
-cd /home/deploy-user/mcp-server
+mkdir -p /opt/guardrail-mcp
+cd /opt/guardrail-mcp
 
 # Copy code from repository (if not already there)
-scp -r /path/to/agent-guardrails-template/mcp-server/* deploy-user@0.0.0.0:/home/deploy-user/mcp-server/
+scp -r /path/to/agent-guardrails-template/mcp-server/* deploy@your-server:/opt/guardrail-mcp/
 
-# Create .env file
-cat > .env << 'EOF'
+# Create .env file — generate real secrets, never use checked-in values
+DB_PASSWORD=$(openssl rand -base64 24)
+REDIS_PASSWORD=$(openssl rand -base64 24)
+MCP_API_KEY=$(openssl rand -base64 48)
+IDE_API_KEY=$(openssl rand -base64 48)
+JWT_SECRET=$(openssl rand -hex 64)
+
+cat > .env << EOF
 # =============================================================================
 # Server Configuration
 # =============================================================================
-MCP_PORT=8095
-WEB_PORT=8096
+MCP_PORT=8080
+WEB_PORT=8081
 WEB_ENABLED=true
 LOG_LEVEL=info
 REQUEST_TIMEOUT=30s
 SHUTDOWN_TIMEOUT=30s
+# Bind address — leave unset (or 127.0.0.1) for localhost-only.
+# Set to a specific interface IP if you need the server reachable off-box.
+# BIND_ADDR=127.0.0.1
 
 # =============================================================================
 # Database Configuration
 # =============================================================================
-DB_HOST=localhost
+DB_HOST=postgres
 DB_PORT=5432
-DB_NAME=guardrail
+DB_NAME=guardrails
 DB_USER=guardrail
-DB_PASSWORD=example-db-password
+DB_PASSWORD=${DB_PASSWORD}
 DB_SSLMODE=disable
 
 # =============================================================================
 # Redis Configuration
 # =============================================================================
-REDIS_HOST=localhost
+REDIS_HOST=redis
 REDIS_PORT=6379
-REDIS_PASSWORD=example-redis-password
+REDIS_PASSWORD=${REDIS_PASSWORD}
 REDIS_USE_TLS=false
 
 # =============================================================================
 # Security Configuration
 # =============================================================================
 # IMPORTANT: These keys MUST be at least 32 characters long
-# Must contain mix of uppercase, lowercase, and digits
-MCP_API_KEY=your-api-key
-IDE_API_KEY=your-api-key
+# and contain a mix of uppercase, lowercase, and digits.
+MCP_API_KEY=${MCP_API_KEY}
+IDE_API_KEY=${IDE_API_KEY}
 
-# JWT Configuration - Must be at least 32 bytes long
-JWT_SECRET=Dev-JWT-Secret-789-Longer-32bytes
+# JWT Configuration — must be at least 32 bytes of real entropy
+JWT_SECRET=${JWT_SECRET}
 JWT_ISSUER=guardrail-mcp
 JWT_EXPIRY=15m
 JWT_ROTATION_HOURS=168h
 EOF
+
+chmod 600 .env
 ```
 
 ### Step 2: Apply Schema Fix
 
-**Critical Fix:** The MCP framework (mark3labs/mcp-go v0.4.0) has issues with dashes/hyphens in server names. This causes schema validation errors.
+**Critical Fix:** The MCP framework has historically had issues with dashes/hyphens in server names — this causes schema validation errors on tool registration. The server name should use underscores.
 
 ```bash
 # Check current server name
-grep 'NewDefaultServer' internal/mcp/server.go
+grep 'NewMCPServer' internal/mcp/server.go
 
-# Should show: server.NewDefaultServer("guardrail_mcp", "v3.1.0")
-# NOT: server.NewDefaultServer("guardrail-mcp", "v3.1.0")
+# Should show: server.NewMCPServer("guardrail_mcp", ...)
+# NOT: server.NewMCPServer("guardrail-mcp", ...)
 
 # If it shows "guardrail-mcp", change it:
-sed -i 's/server.NewDefaultServer("guardrail-mcp"/server.NewDefaultServer("guardrail_mcp"/' internal/mcp/server.go
+sed -i 's/server.NewMCPServer("guardrail-mcp"/server.NewMCPServer("guardrail_mcp"/' internal/mcp/server.go
 ```
 
 ### Step 3: Build Docker Image
 
 ```bash
-cd /home/deploy-user/mcp-server
+cd /opt/guardrail-mcp
 
 # Set build variables
-VERSION=v3.1.0
+VERSION=v3.3.0
 BUILD_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 GIT_COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo 'unknown')
 
@@ -247,7 +270,9 @@ podman images | grep guardrail-mcp
 
 ### Step 4: Create Pod and Start Containers
 
-Using pod networking ensures containers can communicate via localhost:
+Using pod networking ensures containers can communicate via localhost. Export
+the secrets you generated in the Quick Deploy section first
+(`DB_PASSWORD`, `REDIS_PASSWORD`, `MCP_API_KEY`, `IDE_API_KEY`, `JWT_SECRET`).
 
 ```bash
 # Remove existing containers (if any)
@@ -256,14 +281,14 @@ podman rm guardrail-postgres guardrail-redis guardrail-mcp-server 2>/dev/null
 podman pod rm guardrail-pod 2>/dev/null
 
 # Create new pod with port mappings
-podman pod create --name guardrail-pod -p 8095:8095 -p 8096:8096
+podman pod create --name guardrail-pod -p 8080:8080 -p 8081:8081
 
 # Start postgres (critical: use user 70:70 to avoid permission issues)
 podman run -d --pod guardrail-pod --name guardrail-postgres \
   --user 70:70 \
   -e POSTGRES_USER=guardrail \
-  -e POSTGRES_PASSWORD=example-db-password \
-  -e POSTGRES_DB=guardrail \
+  -e POSTGRES_PASSWORD="$DB_PASSWORD" \
+  -e POSTGRES_DB=guardrails \
   -v guardrail_pg_data:/var/lib/postgresql/data \
   docker.io/library/postgres:16-alpine
 
@@ -276,35 +301,34 @@ podman ps | grep guardrail-postgres
 
 # Start redis
 podman run -d --pod guardrail-pod --name guardrail-redis \
-  -e REDIS_PASSWORD=example-redis-password \
   docker.io/library/redis:7-alpine \
-  redis-server --requirepass example-redis-password --maxmemory 256mb --maxmemory-policy allkeys-lru
+  redis-server --requirepass "$REDIS_PASSWORD" --maxmemory 256mb --maxmemory-policy allkeys-lru
 
 # Wait for redis to start
 sleep 3
 
 # Start MCP server
 podman run -d --pod guardrail-pod --name guardrail-mcp-server \
-  -e REDIS_PASSWORD=example-redis-password \
-  -e MCP_PORT=8095 \
-  -e WEB_PORT=8096 \
+  -e MCP_PORT=8080 \
+  -e WEB_PORT=8081 \
   -e WEB_ENABLED=true \
   -e LOG_LEVEL=info \
   -e DB_HOST=localhost \
   -e DB_PORT=5432 \
-  -e DB_NAME=guardrail \
+  -e DB_NAME=guardrails \
   -e DB_USER=guardrail \
-  -e DB_PASSWORD=example-db-password \
+  -e DB_PASSWORD="$DB_PASSWORD" \
   -e DB_SSLMODE=disable \
   -e REDIS_HOST=localhost \
   -e REDIS_PORT=6379 \
-  -e MCP_API_KEY=your-api-key \
-  -e IDE_API_KEY=your-api-key \
-  -e JWT_SECRET=Dev-JWT-Secret-789-Longer-32bytes \
+  -e REDIS_PASSWORD="$REDIS_PASSWORD" \
+  -e MCP_API_KEY="$MCP_API_KEY" \
+  -e IDE_API_KEY="$IDE_API_KEY" \
+  -e JWT_SECRET="$JWT_SECRET" \
   -e JWT_ISSUER=guardrail-mcp \
   -e JWT_EXPIRY=15m \
   -e JWT_ROTATION_HOURS=168h \
-  localhost/guardrail-mcp:v3.1.0
+  localhost/guardrail-mcp:v3.3.0
 ```
 
 ### Step 5: Verify Deployment
@@ -322,102 +346,108 @@ podman logs guardrail-mcp-server 2>&1 | tail -20
 # Should show:
 # - "Database connected"
 # - "Redis connected"
-# - "Starting web server" on 0.0.0.0:8096
-# - "Starting MCP server" on 0.0.0.0:8095
-# - "Starting MCP StreamableHTTP server" on 0.0.0.0:8095
+# - "Starting web server" on :8081
+# - "Starting MCP server" on :8080
 
-# Test MCP endpoint (from your-server)
-curl -s http://localhost:8095/mcp 2>&1
+# Test the MCP endpoint — initialize over stateless StreamableHTTP
+curl -s -X POST http://localhost:8080/mcp \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}}}'
 
-# Should return: {"message":"Missing authorization header"}
-# (This is expected - it means the server is responding)
+# Should return a JSON-RPC response with server capabilities
 
-# Test with API key
-curl -s -H 'Authorization: Bearer your-api-key' \
-  http://localhost:8095/mcp 2>&1
-
-# Test Web UI
-curl -s http://localhost:8096/ 2>&1 | head -10
+# Test Web UI health
+curl -s http://localhost:8081/health/ready
 ```
 
 ## Configuration Requirements
 
 ### Critical Settings
 
-These settings were identified as critical during your-server deployment:
+These settings were identified as critical during real production deployments:
 
 1. **API Keys must be 32+ characters with mixed case and digits**
    ```bash
-   # GOOD (32 chars, mixed case and digits):
-   MCP_API_KEY=your-api-key
-   
+   # GOOD — generate with openssl (base64 gives mixed case + digits):
+   MCP_API_KEY=$(openssl rand -base64 48)
+
+   # BAD (lowercase-only hex fails the mixed-case check):
+   MCP_API_KEY=$(openssl rand -hex 32)
+
    # BAD (too short, no digits):
    MCP_API_KEY=dev-key-short
    ```
 
-2. **JWT_SECRET must be at least 32 bytes**
+2. **JWT_SECRET must be at least 32 bytes with real entropy**
    ```bash
-   # GOOD (33 bytes):
-   JWT_SECRET=Dev-JWT-Secret-789-Longer-32bytes
-   
-   # BAD (too short):
-   JWT_SECRET=short-secret
+   # GOOD — random hex passes the Shannon-entropy check:
+   JWT_SECRET=$(openssl rand -hex 64)
+
+   # BAD (human-readable phrase fails the entropy check):
+   JWT_SECRET=this-is-my-jwt-secret-phrase
    ```
 
 3. **JWT_ROTATION_HOURS must include 'h' unit**
    ```bash
    # GOOD:
    JWT_ROTATION_HOURS=168h
-   
+
    # BAD (missing 'h'):
    JWT_ROTATION_HOURS=168
    ```
 
-4. **Postgres must run as user 70:70**
-   ```bash
-   # Add to postgres service in compose file:
-   user: "70:70"
+4. **Postgres and Redis need specific security settings in compose**
+   ```yaml
+   # postgres: no no-new-privileges (its entrypoint drops root via setuid);
+   # minimal capability set for first-run volume init:
+   cap_drop: [ALL]
+   cap_add: [CHOWN, SETGID, SETUID, DAC_OVERRIDE, FOWNER]
+
+   # redis: run as the image's redis user, config via CLI flags
+   user: "999:1000"
    ```
 
 5. **Server name must use underscores, not dashes**
    ```bash
-   # In internal/mcp/server.go line 101:
+   # In internal/mcp/server.go:
    # GOOD:
-   s.mcpServer = server.NewDefaultServer("guardrail_mcp", "v3.1.0")
-   
+   server.NewMCPServer("guardrail_mcp", ...)
+
    # BAD (causes schema validation error):
-   s.mcpServer = server.NewDefaultServer("guardrail-mcp", "v3.1.0")
+   server.NewMCPServer("guardrail-mcp", ...)
    ```
 
 ### Environment Variables Reference
 
 ```bash
 # Server Configuration
-MCP_PORT=8095                    # External MCP port (maps to internal 8080)
-WEB_PORT=8096                    # External Web UI port (maps to internal 8081)
+MCP_PORT=8080                    # External MCP port (maps to internal 8080)
+WEB_PORT=8081                    # External Web UI port (maps to internal 8081)
 WEB_ENABLED=true                 # Enable Web UI
 LOG_LEVEL=info                   # Log level: debug, info, warn, error
 REQUEST_TIMEOUT=30s              # Request timeout
 SHUTDOWN_TIMEOUT=30s             # Graceful shutdown timeout
+# BIND_ADDR=127.0.0.1            # Interface to bind ports on (default: localhost-only)
 
 # Database Configuration
-DB_HOST=localhost                # Database host (use localhost for pod networking)
+DB_HOST=postgres                 # Database host (service name in compose; localhost for pod networking)
 DB_PORT=5432                     # Database port
-DB_NAME=guardrail                # Database name
+DB_NAME=guardrails               # Database name
 DB_USER=guardrail                # Database user
-DB_PASSWORD=example-db-password         # Database password (must be secure!)
+DB_PASSWORD=<generate>           # openssl rand -base64 24 — never check this in
 DB_SSLMODE=disable               # SSL mode: disable, require, verify-full
 
 # Redis Configuration
-REDIS_HOST=localhost             # Redis host (use localhost for pod networking)
+REDIS_HOST=redis                 # Redis host (service name in compose; localhost for pod networking)
 REDIS_PORT=6379                  # Redis port
-REDIS_PASSWORD=example-redis-password          # Redis password (must be secure!)
+REDIS_PASSWORD=<generate>        # openssl rand -base64 24 — never check this in
 REDIS_USE_TLS=false              # Use TLS for Redis
 
 # Security Configuration (Critical: must meet requirements)
-MCP_API_KEY=your-api-key  # 32+ chars, mixed case+digits
-IDE_API_KEY=your-api-key   # 32+ chars, mixed case+digits
-JWT_SECRET=Dev-JWT-Secret-789-Longer-32bytes       # 32+ bytes long
+MCP_API_KEY=<generate>           # openssl rand -base64 48 — 32+ chars, mixed case+digits
+IDE_API_KEY=<generate>           # openssl rand -base64 48 — 32+ chars, mixed case+digits
+JWT_SECRET=<generate>            # openssl rand -hex 64 — 32+ bytes of entropy
 JWT_ISSUER=guardrail-mcp      # JWT issuer
 JWT_EXPIRY=15m                # JWT expiration
 JWT_ROTATION_HOURS=168h       # JWT rotation (MUST include 'h')
@@ -447,19 +477,26 @@ CORS_MAX_AGE=86400            # CORS max age
 
 ## Docker Compose Configuration
 
-### Working Configuration (your-server Deployment)
+### Working Configuration (Reference)
 
 ```yaml
-version: "3.8"
-
 services:
   redis:
     image: docker.io/library/redis:7-alpine
-    container_name: guardrail-redis
     restart: unless-stopped
-    command: redis-server --requirepass example-redis-password --maxmemory 256mb --maxmemory-policy allkeys-lru
-    environment:
-      - REDIS_PASSWORD=example-redis-password
+    # redis:7-alpine has no config dir — pass settings as CLI flags.
+    # Run as the image's redis user so no setuid drop is needed.
+    command:
+      - redis-server
+      - --requirepass
+      - ${REDIS_PASSWORD}
+      - --maxmemory
+      - 256mb
+      - --maxmemory-policy
+      - allkeys-lru
+    user: "999:1000"
+    volumes:
+      - redis_data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
       interval: 10s
@@ -468,16 +505,18 @@ services:
       start_period: 10s
 
   postgres:
-    container_name: guardrail-postgres
     image: docker.io/library/postgres:16-alpine
     restart: unless-stopped
-    user: "70:70"  # CRITICAL: Prevents permission errors
     environment:
       - POSTGRES_USER=${DB_USER}
       - POSTGRES_PASSWORD=${DB_PASSWORD}
       - POSTGRES_DB=${DB_NAME}
     volumes:
       - pg_data:/var/lib/postgresql/data
+    # NOTE: no-new-privileges must NOT be set — the entrypoint drops
+    # root -> postgres via setuid. These caps cover first-run volume init:
+    cap_drop: [ALL]
+    cap_add: [CHOWN, SETGID, SETUID, DAC_OVERRIDE, FOWNER]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
       interval: 10s
@@ -487,7 +526,6 @@ services:
 
   mcp-server:
     image: guardrail-mcp:${VERSION:-latest}
-    container_name: guardrail-mcp-server
     restart: unless-stopped
     depends_on:
       postgres:
@@ -495,15 +533,12 @@ services:
       redis:
         condition: service_healthy
     ports:
-      - "8095:8095"  # MCP - external port
-      - "8096:8096"  # Web UI - external port
+      - "${BIND_ADDR:-127.0.0.1}:${MCP_PORT:-8080}:8080"  # MCP
+      - "${BIND_ADDR:-127.0.0.1}:${WEB_PORT:-8081}:8081"  # Web UI
     environment:
-      # Use localhost for pod networking
-      - DB_HOST=localhost
-      - DB_PORT=5432
-      - REDIS_HOST=localhost
-      - REDIS_PORT=6379
-      # All other environment variables from .env
+      - DB_HOST=postgres
+      - REDIS_HOST=redis
+      # ... remaining config from .env (see deploy/podman-compose.yml)
     read_only: true
     user: "65532:65532"
 
@@ -519,41 +554,58 @@ volumes:
 ❌ **DON'T use dashes in server name:**
 ```go
 // WRONG - causes schema validation error:
-s.mcpServer = server.NewDefaultServer("guardrail-mcp", "v3.1.0")
+server.NewMCPServer("guardrail-mcp", ...)
 ```
 
 ✅ **DO use underscores:**
 ```go
 // CORRECT:
-s.mcpServer = server.NewDefaultServer("guardrail_mcp", "v3.1.0")
+server.NewMCPServer("guardrail_mcp", ...)
 ```
 
-❌ **DON'T forget postgres user:**
+❌ **DON'T set no-new-privileges on postgres:**
 ```yaml
-# WRONG - causes permission errors:
+# WRONG - blocks the entrypoint's setuid drop, container crash-loops:
 postgres:
-  image: postgres:16-alpine
-  # Missing user specification
+  security_opt:
+    - no-new-privileges:true
 ```
 
-✅ **DO specify postgres user:**
+✅ **DO let postgres drop privileges itself:**
+```yaml
+# CORRECT - minimal caps, no no-new-privileges:
+postgres:
+  cap_drop: [ALL]
+  cap_add: [CHOWN, SETGID, SETUID, DAC_OVERRIDE, FOWNER]
+```
+
+❌ **DON'T mount a redis config file:**
+```yaml
+# WRONG - redis:7-alpine has no /usr/local/etc/redis directory:
+redis:
+  volumes:
+    - ./redis.conf:/usr/local/etc/redis/redis.conf
+```
+
+✅ **DO pass config as CLI flags:**
 ```yaml
 # CORRECT:
-postgres:
-  image: postgres:16-alpine
-  user: "70:70"  # Required for proper permissions
+redis:
+  command: [redis-server, --requirepass, "${REDIS_PASSWORD}"]
 ```
 
 ❌ **DON'T use short/weak API keys:**
 ```bash
 # WRONG - too short, no digits:
 MCP_API_KEY=dev-key-short
+# WRONG - hex-only fails the mixed-case requirement:
+MCP_API_KEY=$(openssl rand -hex 32)
 ```
 
-✅ **DO use 32+ character mixed keys:**
+✅ **DO generate strong mixed-case keys:**
 ```bash
 # CORRECT:
-MCP_API_KEY=your-api-key
+MCP_API_KEY=$(openssl rand -base64 48)
 ```
 
 ## Testing the Deployment
@@ -561,9 +613,10 @@ MCP_API_KEY=your-api-key
 ### Test MCP Protocol
 
 ```bash
-# From your-server (localhost):
-curl -X POST http://localhost:8095/mcp \
+# From the host (localhost):
+curl -X POST http://localhost:8080/mcp \
   -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
   -d '{
     "jsonrpc": "2.0",
     "id": 1,
@@ -584,9 +637,9 @@ curl -X POST http://localhost:8095/mcp \
 ### Test Guardrail Tools
 
 ```bash
-# Test guardrail_validate_bash
-curl -X POST "http://localhost:8095/mcp" \
-  -H "Authorization: Bearer your-api-key" \
+# Test guardrail_validate_bash (replace YOUR_MCP_API_KEY with your key)
+curl -X POST "http://localhost:8080/mcp" \
+  -H "Authorization: Bearer YOUR_MCP_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "jsonrpc": "2.0",
@@ -606,12 +659,12 @@ curl -X POST "http://localhost:8095/mcp" \
 
 ```bash
 # Test Web UI is responding
-curl -s http://localhost:8096/ | head -10
+curl -s http://localhost:8081/ | head -10
 
 # Test API endpoints
-curl -s http://localhost:8096/api/rules | jq .
-curl -s http://localhost:8096/api/documents | jq .
-curl -s http://localhost:8096/api/stats | jq .
+curl -s http://localhost:8081/api/rules | jq .
+curl -s http://localhost:8081/api/documents | jq .
+curl -s http://localhost:8081/api/stats | jq .
 ```
 
 ## Troubleshooting Guide
@@ -629,11 +682,11 @@ In context=('properties', 'affected_files'), array schema missing items
 **Solution:**
 ```bash
 # Check server name
-grep 'NewDefaultServer' internal/mcp/server.go
+grep 'NewMCPServer' internal/mcp/server.go
 
-# Should show: server.NewDefaultServer("guardrail_mcp", "v3.1.0")
+# Should show: server.NewMCPServer("guardrail_mcp", "v3.3.0")
 # If not, fix it:
-sed -i 's/server.NewDefaultServer("guardrail-mcp"/server.NewDefaultServer("guardrail_mcp"/' internal/mcp/server.go
+sed -i 's/server.NewMCPServer("guardrail-mcp"/server.NewMCPServer("guardrail_mcp"/' internal/mcp/server.go
 
 # Rebuild and redeploy
 podman build -f deploy/Dockerfile -t guardrail-mcp:fixed .
@@ -685,10 +738,10 @@ podman logs guardrail-postgres
 # Verify credentials in .env match postgres environment
 # .env should have:
 DB_USER=guardrail
-DB_PASSWORD=example-db-password
+DB_PASSWORD=<same value used when the postgres container was created>
 # And postgres should have:
 POSTGRES_USER=guardrail
-POSTGRES_PASSWORD=example-db-password
+POSTGRES_PASSWORD=<same value>
 
 # Test connection from within container
 podman exec guardrail-postgres psql -U guardrail -d guardrail -c 'SELECT 1'
@@ -715,7 +768,7 @@ podman logs guardrail-redis
 podman pod inspect guardrail-pod | grep -A20 containers
 
 # Test redis connection
-podman exec guardrail-redis redis-cli -a example-redis-password ping
+podman exec guardrail-redis redis-cli -a "$REDIS_PASSWORD" ping
 # Should return: PONG
 ```
 
@@ -749,12 +802,12 @@ podman inspect guardrail-mcp-server | grep -A100 '"Env"'
 bind: address already in use
 ```
 
-**Cause:** Ports 8095 or 8096 are already in use
+**Cause:** Ports 8080 or 8081 are already in use
 
 **Solution:**
 ```bash
 # Check what's using the ports
-ss -tln | grep -E '8095|8096'
+ss -tln | grep -E '8080|8081'
 
 # Change ports in .env if needed:
 MCP_PORT=8097
@@ -779,15 +832,15 @@ podman pod create --name guardrail-pod -p 8097:8097 -p 8098:8098
 firewall-cmd --state
 
 # Open ports (if needed)
-sudo firewall-cmd --permanent --add-port=8095/tcp
-sudo firewall-cmd --permanent --add-port=8096/tcp
+sudo firewall-cmd --permanent --add-port=8080/tcp
+sudo firewall-cmd --permanent --add-port=8081/tcp
 sudo firewall-cmd --reload
 
 # Verify ports are open
 sudo firewall-cmd --list-ports
 
 # Test from remote machine
-curl -s http://0.0.0.0:8095/mcp
+curl -s http://your-server:8080/mcp
 ```
 
 ### Problem: YAML Syntax Errors in Compose File
@@ -820,10 +873,10 @@ After deployment, verify:
 - [ ] MCP server started: `podman logs guardrail-mcp-server | grep "Starting Guardrail MCP Server"`
 - [ ] Database connected: `podman logs guardrail-mcp-server | grep "Database connected"`
 - [ ] Redis connected: `podman logs guardrail-mcp-server | grep "Redis connected"`
-- [ ] MCP endpoint responding: `curl -s http://localhost:8095/mcp`
-- [ ] Web UI responding: `curl -s http://localhost:8096/`
-- [ ] API key authentication working: `curl -H 'Authorization: Bearer YOUR_KEY' http://localhost:8095/mcp`
-- [ ] Ports accessible from network: `curl http://0.0.0.0:8095/mcp`
+- [ ] MCP endpoint responding: `curl -s -X POST http://localhost:8080/mcp`
+- [ ] Web UI responding: `curl -s http://localhost:8081/health/ready`
+- [ ] API key authentication working: `curl -H 'Authorization: Bearer YOUR_KEY' http://localhost:8080/version`
+- [ ] Ports accessible from network: `curl http://your-server:8080/mcp`
 
 ## Maintenance
 
@@ -939,9 +992,9 @@ Add to `.opencode/oh-my-opencode.jsonc`:
   "mcpServers": {
     "guardrails": {
       "type": "remote",
-      "url": "http://0.0.0.0:8095/mcp",
+      "url": "http://your-server:8080/mcp",
       "headers": {
-        "Authorization": "Bearer your-api-key"
+        "Authorization": "Bearer YOUR_MCP_API_KEY"
       }
     }
   }
@@ -954,9 +1007,9 @@ Create `.env.opencode`:
 
 ```bash
 # MCP Server Connection
-export MCP_SERVER_URL=http://0.0.0.0:8095
-export MCP_API_KEY=your-api-key
-export IDE_API_KEY=your-api-key
+export MCP_SERVER_URL=http://your-server:8080
+export MCP_API_KEY=YOUR_MCP_API_KEY
+export IDE_API_KEY=YOUR_IDE_API_KEY
 
 # Local Configuration (for OpenCode)
 export GUARDRAILS_PROJECT_SLUG=your-project
@@ -983,7 +1036,7 @@ For issues or questions:
 ## Changelog
 
 ### 2026-02-13 - Initial Deployment Guide
-- Documented your-server deployment process
+- Documented production deployment process
 - Added schema validation error fix
 - Added postgres permission fix
 - Added configuration requirements
