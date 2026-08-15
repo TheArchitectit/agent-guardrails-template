@@ -1019,8 +1019,8 @@ export GUARDRAILS_AGENT_TYPE=opencode
 ## References
 
 - [MCP Server README](./README.md)
-- [API Documentation](./API.md)
-- [Security Review](./OBSERVABILITY_REVIEW.md)
+- [API Documentation](./api.md)
+- [Security Review](./observability-review.md)
 - [Dockerfile](./deploy/Dockerfile)
 - [Podman Compose](./deploy/podman-compose.yml)
 - [Kubernetes Deployment](./deploy/k8s-deployment.yaml)

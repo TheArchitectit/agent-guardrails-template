@@ -207,7 +207,7 @@ For the MCP server on Windows:
 
 # Deploy MCP server
 cd mcp-server
-# Use the Docker Compose instructions in DEPLOYMENT_GUIDE.md
+# Use the Docker Compose instructions in deployment-guide.md
 ```
 
 ### Windows-Specific Notes

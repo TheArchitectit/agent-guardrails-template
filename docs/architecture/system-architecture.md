@@ -177,7 +177,7 @@ flowchart TB
 
 By default ports bind to `127.0.0.1` via `BIND_ADDR`. Set `BIND_ADDR` to expose
 on another interface (e.g. a tailnet IP). See the
-[deployment guide](../../mcp-server/DEPLOYMENT_GUIDE.md).
+[deployment guide](../../mcp-server/deployment-guide.md).
 
 ### Production (scaled)
 

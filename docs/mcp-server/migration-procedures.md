@@ -216,7 +216,7 @@ curl -X POST http://localhost:8092/mcp/v1/message \
 
 ```bash
 # Setup PostgreSQL and Redis
-# See deployment guide in mcp-server/DEPLOYMENT_GUIDE.md
+# See deployment guide in mcp-server/deployment-guide.md
 
 # Create new environment file
 cat > .env.v1.9.0 << 'EOF'
