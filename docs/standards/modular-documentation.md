@@ -2,7 +2,7 @@
 
 > The 500-line rule and document organization.
 
-**Related:** [DOCUMENTATION_UPDATES.md](../workflows/documentation-updates.md) | [INDEX_MAP.md](../../INDEX_MAP.md)
+**Related:** [documentation-updates.md](../workflows/documentation-updates.md) | [INDEX_MAP.md](../../INDEX_MAP.md)
 
 ---
 
@@ -327,5 +327,3 @@ Or create DOC_C.md for shared content.
 
 **Authored by:** TheArchitectit
 **Document Owner:** Project Maintainers
-**Last Updated:** 2026-01-14
-**Line Count:** ~280

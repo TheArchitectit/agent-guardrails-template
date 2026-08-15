@@ -28,7 +28,7 @@ Fixes #
 
 ### Security
 - [ ] No secrets, credentials, or API keys in code
-- [ ] No .env files committed (see [SECRETS_MANAGEMENT.md](.github/SECRETS_MANAGEMENT.md))
+- [ ] No .env files committed (see [SECRETS_MANAGEMENT.md](SECRETS_MANAGEMENT.md))
 - [ ] Security-sensitive changes reviewed by team
 
 ### Documentation

@@ -564,7 +564,7 @@ flowchart TB
 ## Configuration Architecture
 
 > **Go Implementation:** All backend logic is implemented in Go. See `mcp-server/internal/` for package structure.
-> **Migration:** `team_manager.py` has been migrated to Go (v2.6.0). See [PYTHON_MIGRATION.md](PYTHON_MIGRATION.md).
+> **Migration:** `team_manager.py` has been migrated to Go (v2.6.0). See [python-to-go-migration.md](../mcp-server/python-to-go-migration.md).
 
 ### File Organization
 

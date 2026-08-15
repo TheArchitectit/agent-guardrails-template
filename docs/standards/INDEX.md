@@ -14,18 +14,18 @@ This directory contains documentation standards that ensure consistency, maintai
 
 | Document | Purpose | Key Rules |
 |----------|---------|-----------|
-| [TEST_PRODUCTION_SEPARATION.md](test-production-separation.md) | Test/production isolation | MANDATORY separation requirements |
-| [MODULAR_DOCUMENTATION.md](modular-documentation.md) | 500-line max rule | No doc over 500 lines |
-| [LOGGING_PATTERNS.md](logging-patterns.md) | Array-based logging | Standard log format |
-| [LOGGING_INTEGRATION.md](logging-integration.md) | External logging hooks | Hook interface spec |
-| [API_SPECIFICATIONS.md](api-specifications.md) | OpenAPI + OpenSpec | When to use each |
-| [CROSS_CUTTING_2026.md](cross-cutting-2026.md) | 2026 universal standards | SBOM, SLSA, AI code gen, OWASP |
+| [test-production-separation.md](test-production-separation.md) | Test/production isolation | MANDATORY separation requirements |
+| [modular-documentation.md](modular-documentation.md) | 500-line max rule | No doc over 500 lines |
+| [logging-patterns.md](logging-patterns.md) | Array-based logging | Standard log format |
+| [logging-integration.md](logging-integration.md) | External logging hooks | Hook interface spec |
+| [api-specifications.md](api-specifications.md) | OpenAPI + OpenSpec | When to use each |
+| [cross-cutting-2026.md](cross-cutting-2026.md) | 2026 universal standards | SBOM, SLSA, AI code gen, OWASP |
 
 ---
 
 ## Document Summaries
 
-### TEST_PRODUCTION_SEPARATION.md
+### test-production-separation.md
 Establishes mandatory standards for separating test and production environments. All testing code, data, services, and infrastructure must be completely isolated from production.
 
 **Key sections:**
@@ -37,7 +37,7 @@ Establishes mandatory standards for separating test and production environments.
 - Examples, patterns, and anti-patterns
 - Blocking violations checklist
 
-### MODULAR_DOCUMENTATION.md
+### modular-documentation.md
 Defines the 500-line maximum rule for all documentation files and provides strategies for splitting large documents.
 
 **Key sections:**
@@ -47,7 +47,7 @@ Defines the 500-line maximum rule for all documentation files and provides strat
 - Directory organization
 - Compliance checklist
 
-### LOGGING_PATTERNS.md
+### logging-patterns.md
 Establishes array-based structured logging patterns for agent operations.
 
 **Key sections:**
@@ -57,7 +57,7 @@ Establishes array-based structured logging patterns for agent operations.
 - Log array management
 - Output formats
 
-### LOGGING_INTEGRATION.md
+### logging-integration.md
 Defines hooks and interfaces for integrating with external logging systems.
 
 **Key sections:**
@@ -67,7 +67,7 @@ Defines hooks and interfaces for integrating with external logging systems.
 - Queue-based integration
 - Error handling
 
-### API_SPECIFICATIONS.md
+### api-specifications.md
 Guidance on choosing between OpenAPI and OpenSpec for API documentation.
 
 **Key sections:**
@@ -77,7 +77,7 @@ Guidance on choosing between OpenAPI and OpenSpec for API documentation.
 - Hybrid approach guidance
 - Template files
 
-### CROSS_CUTTING_2026.md
+### cross-cutting-2026.md
 Cross-cutting security and quality standards for ALL language profiles, reflecting 2026 best practices.
 
 **Key sections:**
@@ -93,24 +93,18 @@ Cross-cutting security and quality standards for ALL language profiles, reflecti
 
 ## Integration with Guardrails
 
-These standards support the [AGENT_GUARDRAILS.md](../getting-started/agent-guardrails.md) requirements for:
+These standards support the [agent-guardrails.md](../getting-started/agent-guardrails.md) requirements for:
 
-- **Test/production separation** → TEST_PRODUCTION_SEPARATION.md
-- **Audit requirements** → LOGGING_PATTERNS.md
-- **External integration** → LOGGING_INTEGRATION.md
-- **Documentation quality** → MODULAR_DOCUMENTATION.md
-- **API documentation** → API_SPECIFICATIONS.md
-- **2026 universal standards** → CROSS_CUTTING_2026.md
+- **Test/production separation** → test-production-separation.md
+- **Audit requirements** → logging-patterns.md
+- **External integration** → logging-integration.md
+- **Documentation quality** → modular-documentation.md
+- **API documentation** → api-specifications.md
+- **2026 universal standards** → cross-cutting-2026.md
 
 ---
 
 ## Related Documents
 
-- [AGENT_GUARDRAILS.md](../getting-started/agent-guardrails.md) - Mandatory safety protocols
-- [../workflows/INDEX.md](../workflows/INDEX.md) - Operational workflows
-- [../sprints/INDEX.md](../sprints/INDEX.md) - Sprint task framework
-
----
-
-**Last Updated:** 2026-04-16
-**Document Count:** 7
+- [agent-guardrails.md](../getting-started/agent-guardrails.md) - Mandatory safety protocols
+- [Workflows Index](../workflows/INDEX.md) - Operational workflows

@@ -41,7 +41,7 @@ The system manages 12 teams across 5 phases of the software development lifecycl
 - **Team 11:** Site Reliability Engineering (SRE)
 - **Team 12:** IT Operations & Support (NOC)
 
-For complete team details, see [TEAM_STRUCTURE.md](./TEAM_STRUCTURE.md).
+For complete team details, see [team-structure.md](./team-structure.md).
 
 ---
 
@@ -1189,9 +1189,9 @@ fi
 
 ## Related Documentation
 
-- [TEAM_STRUCTURE.md](./TEAM_STRUCTURE.md) - Complete team structure and role definitions
-- [../.guardrails/team-layout-rules.json](../.guardrails/team-layout-rules.json) - Machine-readable team layout rules
-- [AGENT_GUARDRAILS.md](./AGENT_GUARDRAILS.md) - Core safety protocols for agents
+- [team-structure.md](./team-structure.md) - Complete team structure and role definitions
+- [team-layout-rules.json](../../.guardrails/team-layout-rules.json) - Machine-readable team layout rules
+- [AGENT_GUARDRAILS.md](../getting-started/agent-guardrails.md) - Core safety protocols for agents
 
 ---
 

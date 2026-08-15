@@ -2,7 +2,7 @@
 
 > **Infrastructure as Code.** No ClickOps, only declarative definitions.
 
-**Related:** [AGENT_GUARDRAILS.md](../getting-started/agent-guardrails.md) | [OPERATIONAL_PATTERNS.md](operational-patterns.md)
+**Related:** [agent-guardrails.md](../getting-started/agent-guardrails.md) | [operational-patterns.md](operational-patterns.md)
 
 ---
 
@@ -542,5 +542,3 @@ jobs:
 
 **Authored by:** TheArchitectit
 **Document Owner:** Project Maintainers
-**Last Updated:** 2026-01-21
-**Line Count:** ~400

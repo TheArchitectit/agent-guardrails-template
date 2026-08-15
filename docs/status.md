@@ -97,7 +97,7 @@
 5. JWT secret validation rewritten (Shannon entropy replaces broken popcount check)
 6. ~53MB of committed binaries removed; game-design docs moved to private repo
 
-**Reference:** [docs/releases/v3.3.0.md](docs/releases/v3.3.0.md)
+**Reference:** [v3.3.0 release notes](releases/v3.3.0.md)
 
 ---
 

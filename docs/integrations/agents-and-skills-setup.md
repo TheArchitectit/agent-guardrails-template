@@ -408,9 +408,9 @@ guardrail_install_skills({ list_platforms: true })
 
 For the MCP server codebase that underpins these guardrails:
 
-- [ARCHITECTURE_CLEAN_CQRS.md](ARCHITECTURE_CLEAN_CQRS.md) — Full Clean Architecture + CQRS design
-- [skills/shared-prompts/clean-architecture.md](../skills/shared-prompts/clean-architecture.md) — Domain-first layering patterns
-- [skills/shared-prompts/cqrs.md](../skills/shared-prompts/cqrs.md) — Command/query separation patterns
+- [ARCHITECTURE_CLEAN_CQRS.md](../archive/architecture/ARCHITECTURE_CLEAN_CQRS.md) — Full Clean Architecture + CQRS design
+- [skills/shared-prompts/clean-architecture.md](../../skills/shared-prompts/clean-architecture.md) — Domain-first layering patterns
+- [skills/shared-prompts/cqrs.md](../../skills/shared-prompts/cqrs.md) — Command/query separation patterns
 
 ## Customization
 
@@ -486,7 +486,7 @@ touch /path/to/project/.claude/test && rm /path/to/project/.claude/test
 
 ## References
 
-- [AGENT_GUARDRAILS.md](AGENT_GUARDRAILS.md) — Core safety protocols
-- [COMMIT_WORKFLOW.md](workflows/COMMIT_WORKFLOW.md) — Commit standards
-- [TEST_PRODUCTION_SEPARATION.md](standards/TEST_PRODUCTION_SEPARATION.md) — Environment isolation
-- [AGENT_EXECUTION.md](workflows/AGENT_EXECUTION.md) — Execution protocols
+- [AGENT_GUARDRAILS.md](../getting-started/agent-guardrails.md) — Core safety protocols
+- [COMMIT_WORKFLOW.md](../workflows/commit-workflow.md) — Commit standards
+- [TEST_PRODUCTION_SEPARATION.md](../standards/test-production-separation.md) — Environment isolation
+- [AGENT_EXECUTION.md](../workflows/agent-execution.md) — Execution protocols

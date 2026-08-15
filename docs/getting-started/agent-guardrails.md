@@ -1,7 +1,5 @@
 # Agent Guardrails & Safety Protocols
 
-**Version:** 1.3
-**Last Updated:** 2026-01-21
 **Applies To:** ALL AI agents, LLMs, and automated systems operating on this codebase
 
 ---
@@ -51,7 +49,7 @@ When agents follow these laws, they don't need to pause for safety checks — sa
 
 ### The Four Laws of Agent Safety
 
-See [skills/shared-prompts/four-laws.md](../skills/shared-prompts/four-laws.md) for the complete Four Laws documentation.
+See [skills/shared-prompts/four-laws.md](../../skills/shared-prompts/four-laws.md) for the complete Four Laws documentation.
 
 **Quick Reference:**
 1. **Read Before Editing** - Never modify code without reading first
@@ -76,7 +74,7 @@ See [skills/shared-prompts/four-laws.md](../skills/shared-prompts/four-laws.md) 
 | 5 | **TEST/PROD SEPARATION** | Test infrastructure is separate from production | [ ] |
 | 6 | **BACKUP AWARENESS** | Know the rollback command before editing | [ ] |
 | 7 | **TEST BEFORE COMMIT** | All tests must pass before committing | [ ] |
-| 8 | **CHECK FAILURE REGISTRY** | Review known bugs for affected files ([.guardrails/pre-work-check.md](../.guardrails/pre-work-check.md)) | [ ] |
+| 8 | **CHECK FAILURE REGISTRY** | Review known bugs for affected files ([.guardrails/pre-work-check.md](../../.guardrails/pre-work-check.md)) | [ ] |
 | 9 | **VERIFY FIXES INTACT** | Confirm previous fixes not being undone | [ ] |
 
 ### Git Safety Rules
@@ -116,7 +114,7 @@ See [skills/shared-prompts/four-laws.md](../skills/shared-prompts/four-laws.md) 
 | **NO PROD CREDENTIALS IN TEST** | CRITICAL | Halt, rollback |
 | **ASK IF UNCERTAIN** | HIGH | Ask user before proceeding |
 
-**Full details:** See [TEST_PRODUCTION_SEPARATION.md](standards/TEST_PRODUCTION_SEPARATION.md)
+**Full details:** See [TEST_PRODUCTION_SEPARATION.md](../standards/test-production-separation.md)
 
 ---
 
@@ -272,48 +270,46 @@ OUT OF SCOPE (DO NOT TOUCH):
 
 ### Core Guardrails
 - **This document** - Core safety protocols (MANDATORY)
-- [TEST_PRODUCTION_SEPARATION.md](standards/TEST_PRODUCTION_SEPARATION.md) - Test/production isolation (MANDATORY)
-- [REGRESSION_PREVENTION.md](workflows/REGRESSION_PREVENTION.md) - Bug tracking and regression prevention
+- [TEST_PRODUCTION_SEPARATION.md](../standards/test-production-separation.md) - Test/production isolation (MANDATORY)
+- [REGRESSION_PREVENTION.md](../workflows/regression-prevention.md) - Bug tracking and regression prevention
 
 ### Regression Prevention
-- [.guardrails/pre-work-check.md](../.guardrails/pre-work-check.md) - MANDATORY pre-work checklist
-- [.guardrails/failure-registry.jsonl](../.guardrails/failure-registry.jsonl) - Bug database (JSONL format)
-- [scripts/log_failure.py](../scripts/log_failure.py) - CLI to log new failures
-- [scripts/regression_check.py](../scripts/regression_check.py) - Pre-commit regression scanner
+- [.guardrails/pre-work-check.md](../../.guardrails/pre-work-check.md) - MANDATORY pre-work checklist
+- [.guardrails/failure-registry.jsonl](../../.guardrails/failure-registry.jsonl) - Bug database (JSONL format)
+- [scripts/log_failure.py](../../scripts/log_failure.py) - CLI to log new failures
+- [scripts/regression_check.py](../../scripts/regression_check.py) - Pre-commit regression scanner
 
 ### Workflow Documentation
-- [AGENT_EXECUTION.md](workflows/AGENT_EXECUTION.md) - Execution protocol, rollback, Three Strikes Rule
-- [AGENT_REVIEW_PROTOCOL.md](workflows/AGENT_REVIEW_PROTOCOL.md) - Post-work agent/LLM review (RECOMMENDED)
-- [TESTING_VALIDATION.md](workflows/TESTING_VALIDATION.md) - Validation protocols
-- [COMMIT_WORKFLOW.md](workflows/COMMIT_WORKFLOW.md) - Commit guidelines
-- [GIT_PUSH_PROCEDURES.md](workflows/GIT_PUSH_PROCEDURES.md) - Push safety
-- [ROLLBACK_PROCEDURES.md](workflows/ROLLBACK_PROCEDURES.md) - Recovery operations
-- [MCP_CHECKPOINTING.md](workflows/MCP_CHECKPOINTING.md) - Checkpoint integration
+- [AGENT_EXECUTION.md](../workflows/agent-execution.md) - Execution protocol, rollback, Three Strikes Rule
+- [AGENT_REVIEW_PROTOCOL.md](../workflows/agent-review-protocol.md) - Post-work agent/LLM review (RECOMMENDED)
+- [TESTING_VALIDATION.md](../workflows/testing-validation.md) - Validation protocols
+- [COMMIT_WORKFLOW.md](../workflows/commit-workflow.md) - Commit guidelines
+- [GIT_PUSH_PROCEDURES.md](../workflows/git-push-procedures.md) - Push safety
+- [ROLLBACK_PROCEDURES.md](../workflows/rollback-procedures.md) - Recovery operations
+- [MCP_CHECKPOINTING.md](../workflows/mcp-checkpointing.md) - Checkpoint integration
 
 ### Agent Operations
-- [AGENT_ESCALATION.md](workflows/AGENT_ESCALATION.md) - Audit requirements and escalation
-- [CODE_REVIEW.md](workflows/CODE_REVIEW.md) - Code review process
+- [AGENT_ESCALATION.md](../workflows/agent-escalation.md) - Audit requirements and escalation
+- [CODE_REVIEW.md](../workflows/code-review.md) - Code review process
 
 ### Standards
-- [PROJECT_CONTEXT_TEMPLATE.md](standards/PROJECT_CONTEXT_TEMPLATE.md) - Project Bible template
-- [ADVERSARIAL_TESTING.md](standards/ADVERSARIAL_TESTING.md) - Breaker agent, fuzz testing
-- [DEPENDENCY_GOVERNANCE.md](standards/DEPENDENCY_GOVERNANCE.md) - Package allow-list
-- [INFRASTRUCTURE_STANDARDS.md](standards/INFRASTRUCTURE_STANDARDS.md) - IaC, Terraform, drift detection
-- [OPERATIONAL_PATTERNS.md](standards/OPERATIONAL_PATTERNS.md) - Health checks, circuit breakers
-- [LOGGING_PATTERNS.md](standards/LOGGING_PATTERNS.md) - Structured logging
-- [MODULAR_DOCUMENTATION.md](standards/MODULAR_DOCUMENTATION.md) - 500-line rule
+- [PROJECT_CONTEXT_TEMPLATE.md](../standards/project-context-template.md) - Project Bible template
+- [ADVERSARIAL_TESTING.md](../standards/adversarial-testing.md) - Breaker agent, fuzz testing
+- [DEPENDENCY_GOVERNANCE.md](../standards/dependency-governance.md) - Package allow-list
+- [INFRASTRUCTURE_STANDARDS.md](../standards/infrastructure-standards.md) - IaC, Terraform, drift detection
+- [OPERATIONAL_PATTERNS.md](../standards/operational-patterns.md) - Health checks, circuit breakers
+- [LOGGING_PATTERNS.md](../standards/logging-patterns.md) - Structured logging
+- [MODULAR_DOCUMENTATION.md](../standards/modular-documentation.md) - 500-line rule
 
 ### Sprint Framework
-- [Sprint Task Template](sprints/) - Task execution format
-- [SPRINT_GUIDE.md](sprints/SPRINT_GUIDE.md) - How to write sprints
+- [Sprint Task Template](../archive/sprints/) - Task execution format
+- [SPRINT_GUIDE.md](../archive/sprints/SPRINT_GUIDE.md) - How to write sprints
 
 ### Security
-- [SECRETS_MANAGEMENT.md](../.github/SECRETS_MANAGEMENT.md) - GitHub Secrets
+- [SECRETS_MANAGEMENT.md](../../.github/SECRETS_MANAGEMENT.md) - GitHub Secrets
 
 ---
 
 **Authored by:** TheArchitectit
 **Document Owner:** Project Maintainers
 **Review Cycle:** Monthly
-**Last Review:** 2026-01-21
-**Next Review:** 2026-02-21
