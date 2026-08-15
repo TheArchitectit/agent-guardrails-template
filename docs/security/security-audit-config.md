@@ -1,35 +1,22 @@
 # Security Audit: Configuration Files and Environment Handling
 
-**Audit Date:** 2026-02-08
-**Auditor:** Security Engineer
 **Scope:** mcp-server/ configuration files, environment handling, secrets management
-**Risk Rating:** HIGH - Multiple insecure defaults and secret exposure risks identified
-
----
 
 ## Executive Summary
 
-This audit identified **11 security issues** across configuration files, with severity ranging from Critical to Low. The primary concerns are insecure default values that could lead to production deployments without proper security hardening, and potential secret exposure in container environments.
-
-### Risk Distribution
-- **CRITICAL:** 2 issues
-- **HIGH:** 3 issues
-- **MEDIUM:** 4 issues
-- **LOW:** 2 issues
+**11 security issues** identified: 2 Critical, 3 High, 4 Medium, 2 Low. Primary concerns are insecure default values leading to unhardened production deployments, and secret exposure in container environments.
 
 ---
 
 ## Critical Issues
 
 ### 1. Database SSL Disabled by Default in Compose
-**File:** `/mnt/ollama/git/agent-guardrails-template/mcp-server/deploy/podman-compose.yml:144`
-**Risk:** CRITICAL
+**File:** `/mnt/ollama/git/agent-guardrails-template/mcp-server/deploy/podman-compose.yml:144` | **Risk:** CRITICAL
 
 ```yaml
 - DB_SSLMODE=${DB_SSLMODE:-disable}
 ```
 
-**Security Risk:**
 - Database connections default to unencrypted communication
 - Credentials and data transmitted in plaintext
 - Susceptible to man-in-the-middle attacks
@@ -43,19 +30,15 @@ This audit identified **11 security issues** across configuration files, with se
 - DB_SSLMODE=${DB_SSLMODE:-verify-full}
 ```
 
-**Remediation Priority:** IMMEDIATE
-
 ---
 
 ### 2. Redis Authentication Disabled by Default in Compose
-**File:** `/mnt/ollama/git/agent-guardrails-template/mcp-server/deploy/podman-compose.yml:149`
-**Risk:** CRITICAL
+**File:** `/mnt/ollama/git/agent-guardrails-template/mcp-server/deploy/podman-compose.yml:149` | **Risk:** CRITICAL
 
 ```yaml
 - REDIS_USE_TLS=${REDIS_USE_TLS:-false}
 ```
 
-**Security Risk:**
 - Redis connections default to unencrypted communication
 - Session data and cached secrets transmitted in plaintext
 - Redis password exposed in environment variables
@@ -68,16 +51,12 @@ This audit identified **11 security issues** across configuration files, with se
 - REDIS_TLS_VERIFY=${REDIS_TLS_VERIFY:-true}
 ```
 
-**Remediation Priority:** IMMEDIATE
-
 ---
 
 ## High Issues
 
 ### 3. Permissive CORS Default
-**File:** `/mnt/ollama/git/agent-guardrails-template/mcp-server/.env.example:39`
-**File:** `/mnt/ollama/git/agent-guardrails-template/mcp-server/deploy/podman-compose.yml:174`
-**Risk:** HIGH
+**File:** `/mnt/ollama/git/agent-guardrails-template/mcp-server/.env.example:39`, `mcp-server/deploy/podman-compose.yml:174` | **Risk:** HIGH
 
 ```bash
 # .env.example
@@ -87,11 +66,9 @@ CORS_ALLOWED_ORIGINS=*
 CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-*}
 ```
 
-**Security Risk:**
 - Allows cross-origin requests from any domain
 - Enables CSRF attacks against the API
 - Session hijacking via malicious websites
-- Violates principle of least privilege
 
 **Recommendation:**
 ```bash
@@ -107,24 +84,19 @@ func (c *Config) Validate() error {
 }
 ```
 
-**Remediation Priority:** HIGH
-
 ---
 
 ### 4. Redis Password Exposure in Health Check
-**File:** `/mnt/ollama/git/agent-guardrails-template/mcp-server/deploy/podman-compose.yml:39`
-**Risk:** HIGH
+**File:** `/mnt/ollama/git/agent-guardrails-template/mcp-server/deploy/podman-compose.yml:39` | **Risk:** HIGH
 
 ```yaml
 healthcheck:
   test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
 ```
 
-**Security Risk:**
 - Password visible in `docker inspect` output
 - Password appears in container logs if health check fails
 - Process listing may expose command with password
-- Container runtime history stores password in plain text
 
 **Recommendation:**
 ```yaml
@@ -140,13 +112,10 @@ healthcheck:
   test: ["CMD", "sh", "-c", "redis-cli -a \"$REDIS_PASSWORD\" ping | grep PONG"]
 ```
 
-**Remediation Priority:** HIGH
-
 ---
 
 ### 5. Placeholder Secrets Could Be Used in Production
-**File:** `/mnt/ollama/git/agent-guardrails-template/mcp-server/.env.example:102-109`
-**Risk:** HIGH
+**File:** `/mnt/ollama/git/agent-guardrails-template/mcp-server/.env.example:102-109` | **Risk:** HIGH
 
 ```bash
 MCP_API_KEY=generate_a_32_byte_random_key_here
@@ -154,15 +123,11 @@ IDE_API_KEY=generate_a_different_32_byte_random_key_here
 JWT_SECRET=generate_a_64_byte_random_secret_here_for_jwt_signing
 ```
 
-**Security Risk:**
 - Placeholder values may be accidentally used in production
 - No runtime validation to detect placeholder secrets
-- Weak entropy in placeholder strings
 - Predictable secrets enable authentication bypass
 
-**Recommendation:**
-Add validation in `/mnt/ollama/git/agent-guardrails-template/mcp-server/internal/config/config.go`:
-
+Add validation in `mcp-server/internal/config/config.go`:
 ```go
 func ValidateAPIKey(key, name string) error {
     // Existing validation...
@@ -189,28 +154,21 @@ func ValidateAPIKey(key, name string) error {
 }
 ```
 
-**Remediation Priority:** HIGH
-
 ---
 
 ## Medium Issues
 
 ### 6. Production Mode Defaults to False
-**File:** `/mnt/ollama/git/agent-guardrails-template/mcp-server/.env.example:182`
-**File:** `/mnt/ollama/git/agent-guardrails-template/mcp-server/deploy/podman-compose.yml:130`
-**Risk:** MEDIUM
+**File:** `/mnt/ollama/git/agent-guardrails-template/mcp-server/.env.example:182`, `mcp-server/deploy/podman-compose.yml:130` | **Risk:** MEDIUM
 
 ```bash
 PRODUCTION_MODE=false
 ```
 
-**Security Risk:**
 - Stricter security checks disabled by default
 - Debug features may be enabled unintentionally
-- Security headers not enforced
-- Rate limiting may be relaxed
+- Security headers not enforced; rate limiting may be relaxed
 
-**Recommendation:**
 Make `PRODUCTION_MODE` required with no default:
 ```bash
 # .env.example
@@ -227,30 +185,24 @@ func (c *Config) Validate() error {
 }
 ```
 
-**Remediation Priority:** MEDIUM
-
 ---
 
 ### 7. TLS Minimum Version Allows 1.2
-**File:** `/mnt/ollama/git/agent-guardrails-template/mcp-server/internal/config/config.go:75`
-**Risk:** MEDIUM
+**File:** `/mnt/ollama/git/agent-guardrails-template/mcp-server/internal/config/config.go:75` | **Risk:** MEDIUM
 
 ```go
 TLSMinVersion string `env:"TLS_MIN_VERSION" envDefault:"1.3"`
 ```
 
-**File:** `/mnt/ollama/git/agent-guardrails-template/mcp-server/internal/config/config.go:214-216`
-
+`mcp-server/internal/config/config.go:214-216`:
 ```go
 if c.TLSMinVersion != "1.2" && c.TLSMinVersion != "1.3" {
     return fmt.Errorf("TLS_MIN_VERSION must be 1.2 or 1.3, got %s", c.TLSMinVersion)
 }
 ```
 
-**Security Risk:**
 - TLS 1.2 has known vulnerabilities (POODLE, BEAST)
 - Allows downgrade attacks
-- TLS 1.3 should be minimum for production
 
 **Recommendation:**
 ```go
@@ -268,22 +220,17 @@ func (c *Config) Validate() error {
 }
 ```
 
-**Remediation Priority:** MEDIUM
-
 ---
 
 ### 8. Database Password in .env.example Uses Weak Placeholder
-**File:** `/mnt/ollama/git/agent-guardrails-template/mcp-server/.env.example:62`
-**Risk:** MEDIUM
+**File:** `/mnt/ollama/git/agent-guardrails-template/mcp-server/.env.example:62` | **Risk:** MEDIUM
 
 ```bash
 DB_PASSWORD=change_me_in_production
 ```
 
-**Security Risk:**
 - Weak placeholder may be used accidentally
 - No validation prevents this value in production
-- Common pattern that attackers test for
 
 **Recommendation:**
 ```bash
@@ -291,7 +238,6 @@ DB_PASSWORD=change_me_in_production
 DB_PASSWORD=  # REQUIRED: Generate strong password with: openssl rand -base64 32
 ```
 
-Add validation in config.go:
 ```go
 func (c *Config) Validate() error {
     weakPasswords := []string{
@@ -311,19 +257,15 @@ func (c *Config) Validate() error {
 }
 ```
 
-**Remediation Priority:** MEDIUM
-
 ---
 
 ### 9. JWT Rotation Period Too Long
-**File:** `/mnt/ollama/git/agent-guardrails-template/mcp-server/.env.example:112`
-**Risk:** MEDIUM
+**File:** `/mnt/ollama/git/agent-guardrails-template/mcp-server/.env.example:112` | **Risk:** MEDIUM
 
 ```bash
 JWT_ROTATION_HOURS=168  # 7 days
 ```
 
-**Security Risk:**
 - Long rotation period increases exposure window
 - Compromised tokens valid for extended period
 - No mechanism for emergency rotation
@@ -343,24 +285,18 @@ func ValidateTimeout(name string, value, min, max time.Duration) error {
 }
 ```
 
-**Remediation Priority:** MEDIUM
-
 ---
 
 ## Low Issues
 
 ### 10. Secrets Passed via Environment Variables in Compose
-**File:** `/mnt/ollama/git/agent-guardrails-template/mcp-server/deploy/podman-compose.yml:117-179`
-**Risk:** LOW
+**File:** `/mnt/ollama/git/agent-guardrails-template/mcp-server/deploy/podman-compose.yml:117-179` | **Risk:** LOW
 
-**Security Risk:**
 - Secrets visible in `docker inspect` output
 - Environment variables may be logged by orchestration tools
 - Process listing (`ps e`) exposes environment
 
-**Recommendation:**
-Use Docker secrets or external secret management:
-
+**Recommendation:** Use Docker secrets or external secret management:
 ```yaml
 services:
   mcp-server:
@@ -398,22 +334,16 @@ func loadSecretFromFile(envVar string) string {
 }
 ```
 
-**Remediation Priority:** LOW
-
 ---
 
 ### 11. No Cipher Suite Configuration for TLS
-**File:** `/mnt/ollama/git/agent-guardrails-template/mcp-server/internal/config/config.go:70-76`
-**Risk:** LOW
+**File:** `/mnt/ollama/git/agent-guardrails-template/mcp-server/internal/config/config.go:70-76` | **Risk:** LOW
 
-**Security Risk:**
 - Default cipher suites may include weak ciphers
 - No protection against SWEET32 or other cipher-based attacks
 - Missing forward secrecy enforcement
 
 **Recommendation:**
-Add cipher suite configuration:
-
 ```go
 // Config struct addition
 TLSCipherSuites []string `env:"TLS_CIPHER_SUITES" envDefault:"TLS_AES_256_GCM_SHA384,TLS_CHACHA20_POLY1305_SHA256,TLS_AES_128_GCM_SHA256"`
@@ -433,17 +363,12 @@ func (c *Config) Validate() error {
 }
 ```
 
-**Remediation Priority:** LOW
-
 ---
 
 ## Positive Security Findings
 
-The following security controls are properly implemented:
-
 ### 1. Secret Masking in Config
 **File:** `/mnt/ollama/git/agent-guardrails-template/mcp-server/internal/config/config.go:391-400`
-
 ```go
 func (c *Config) Masked() *Config {
     masked := *c
@@ -456,13 +381,8 @@ func (c *Config) Masked() *Config {
 }
 ```
 
-**Status:** GOOD - Proper secret masking for logging
-
----
-
 ### 2. Kubernetes Secrets Usage
 **File:** `/mnt/ollama/git/agent-guardrails-template/mcp-server/deploy/k8s-deployment.yaml:64-122`
-
 ```yaml
 - name: DB_PASSWORD
   valueFrom:
@@ -471,13 +391,8 @@ func (c *Config) Masked() *Config {
       key: password
 ```
 
-**Status:** GOOD - Proper Kubernetes secrets integration
-
----
-
 ### 3. Security Context in Kubernetes
 **File:** `/mnt/ollama/git/agent-guardrails-template/mcp-server/deploy/k8s-deployment.yaml:29-33,146-151`
-
 ```yaml
 securityContext:
   runAsNonRoot: true
@@ -491,31 +406,19 @@ securityContext:
       - ALL
 ```
 
-**Status:** GOOD - Proper security hardening
-
----
-
 ### 4. Network Policies
 **File:** `/mnt/ollama/git/agent-guardrails-template/mcp-server/deploy/k8s-deployment.yaml:218-260`
-
 ```yaml
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 ```
 
-**Status:** GOOD - Network segmentation properly configured
-
----
-
 ### 5. Non-root Container User
 **File:** `/mnt/ollama/git/agent-guardrails-template/mcp-server/deploy/Dockerfile:31-38`
-
 ```dockerfile
 FROM gcr.io/distroless/static:nonroot
 USER 65532:65532
 ```
-
-**Status:** GOOD - Principle of least privilege followed
 
 ---
 
@@ -591,7 +494,3 @@ PPROF_ENABLED=false
 RATE_LIMIT_MCP=1000
 RATE_LIMIT_IDE=500
 ```
-
----
-
-*End of Security Audit Report*

@@ -179,25 +179,6 @@ STEP 4: CLEANUP TEST CODE (optional)
    - Document test infrastructure
 ```
 
-### Anti-Pattern: Creating Test Code First
-
-```
-WRONG (FORBIDDEN):
-
-[Create test code]
-  → [Create test users in production DB]
-  → [Run tests on production data]
-  → [CORRUPTS PRODUCTION DATABASE]
-
-CORRECT:
-
-[Create production code]
-  → [Deploy to production]
-  → [Set up separate test environment]
-  → [Create test code]
-  → [Run tests in isolation]
-```
-
 ---
 
 ## TEST CODE LABELING REQUIREMENTS
@@ -298,44 +279,6 @@ OPTIONS:
 3. Other: [please specify]
 
 Please confirm which option is correct."
-```
-
-### Example Scenarios
-
-**Scenario 1: Database Uncertainty**
-
-```
-"UNCERTAINTY QUESTION:
-
-I see database connection: DATABASE_URL=postgres://user:pass@db:5432/app
-
-CONTEXT: Creating test infrastructure
-UNCERTAINTY: Is this test database or production database?
-CURRENT ASSUMPTION: This is test database based on local host
-QUESTION: Should I use this database for tests, or is there a separate test DB?
-
-OPTIONS:
-1. Use this database for tests (it's already isolated)
-2. Create separate test database (need separate instance)
-3. Other: please specify"
-```
-
-**Scenario 2: Test Code Placement**
-
-```
-"UNCERTAINTY QUESTION:
-
-I need to create test code for user authentication validation.
-
-CONTEXT: Adding authentication feature + tests
-UNCERTAINTY: Where should test code be placed?
-CURRENT ASSUMPTION: Create test/auth_test.py file
-QUESTION: Is this correct, or should tests be in a different location?
-
-OPTIONS:
-1. Create test/auth_test.py (standard)
-2. Add test code inline in auth.py (with @test-only labels)
-3. Other: please specify"
 ```
 
 ---
@@ -512,45 +455,3 @@ WHEN VIOLATION DETECTED:
 ```
 
 ---
-
-## QUICK REFERENCE
-
-```
-+------------------------------------------------------------------+
-|         TEST/PRODUCTION SEPARATION QUICK REFERENCE                |
-+------------------------------------------------------------------+
-| MANDATORY RULES:                                                 |
-|   1. Production code CREATED FIRST                               |
-|   2. All test infrastructure SEPARATE (DBs, services, users)     |
-|   3. If unsure, ASK THE USER                                     |
-+------------------------------------------------------------------+
-| CHECKLIST:                                                       |
-|   [ ] Production code exists first                               |
-|   [ ] Test DB is separate instance                               |
-|   [ ] Test services are separate endpoints                       |
-|   [ ] Test users have test_/qa_ prefixes                         |
-|   [ ] Test code labeled or removed                               |
-|   [ ] Config files clearly labeled by env                        |
-+------------------------------------------------------------------+
-| NEVER DO:                                                        |
-|   ✗ Create test users in production                             |
-|   ✗ Use production DB for tests                                 |
-|   ✗ Hardcode prod credentials in test code                      |
-|   ✗ Proceed when uncertain                                      |
-+------------------------------------------------------------------+
-| WHEN UNCERTAIN:                                                  |
-|   "I need clarification on test/production separation:"         |
-|   → Describe context and uncertainty                            |
-|   → Present options                                             |
-|   → Wait for user confirmation                                  |
-+------------------------------------------------------------------+
-| BLOCKING VIOLATIONS:                                             |
-|   Test code in prod, prod connections in test code               |
-|   → CI/CD blocks deployment if detected                          |
-+------------------------------------------------------------------+
-```
-
----
-
-**Authored by:** TheArchitectit
-**Document Owner:** Project Maintainers
