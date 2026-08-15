@@ -3,10 +3,13 @@ CREATE TYPE fix_type AS ENUM ('regex', 'code_change', 'config');
 CREATE TYPE verification_status AS ENUM ('confirmed', 'modified', 'removed');
 
 -- Create fix_verification_tracking table
+-- NOTE: failure_id references the failure_registry.failure_id *value*
+-- (VARCHAR), not its UUID primary key. The original REFERENCES
+-- failure_registry(id) was invalid (VARCHAR vs UUID type mismatch).
 CREATE TABLE fix_verification_tracking (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     session_id VARCHAR(255) NOT NULL,
-    failure_id VARCHAR(255) REFERENCES failure_registry(id),
+    failure_id VARCHAR(255) NOT NULL,
     fix_hash VARCHAR(64) NOT NULL, -- SHA256 hash
     file_path TEXT NOT NULL, -- where the fix lives
     fix_content TEXT, -- what the fix looks like
