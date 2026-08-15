@@ -2,7 +2,7 @@
 
 > Database schema and API design for `guardrail_enforce_halt_conditions` - the safety mechanism that stops agent execution when critical conditions are met.
 
-**Related:** [../skills/shared-prompts/halt-conditions.md](../skills/shared-prompts/halt-conditions.md) | [../docs/workflows/AGENT_EXECUTION.md](../docs/workflows/AGENT_EXECUTION.md)
+**Related:** [../skills/shared-prompts/halt-conditions.md](../skills/shared-prompts/halt-conditions.md) | [../docs/workflows/AGENT_EXECUTION.md](../workflows/agent-execution.md)
 
 ---
 
@@ -696,8 +696,8 @@ const result = await guardrail_acknowledge_halt({
 ## References
 
 - [halt-conditions.md](/skills/shared-prompts/halt-conditions.md) - Complete halt conditions list
-- [AGENT_EXECUTION.md](/docs/workflows/AGENT_EXECUTION.md) - Execution protocol and three strikes
-- [AGENT_GUARDRAILS.md](/docs/AGENT_GUARDRAILS.md) - Core safety protocols
+- [AGENT_EXECUTION.md](../workflows/agent-execution.md) - Execution protocol and three strikes
+- [AGENT_GUARDRAILS.md](../getting-started/agent-guardrails.md) - Core safety protocols
 
 ---
 

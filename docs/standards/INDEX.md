@@ -14,12 +14,12 @@ This directory contains documentation standards that ensure consistency, maintai
 
 | Document | Purpose | Key Rules |
 |----------|---------|-----------|
-| [TEST_PRODUCTION_SEPARATION.md](./TEST_PRODUCTION_SEPARATION.md) | Test/production isolation | MANDATORY separation requirements |
-| [MODULAR_DOCUMENTATION.md](./MODULAR_DOCUMENTATION.md) | 500-line max rule | No doc over 500 lines |
-| [LOGGING_PATTERNS.md](./LOGGING_PATTERNS.md) | Array-based logging | Standard log format |
-| [LOGGING_INTEGRATION.md](./LOGGING_INTEGRATION.md) | External logging hooks | Hook interface spec |
-| [API_SPECIFICATIONS.md](./API_SPECIFICATIONS.md) | OpenAPI + OpenSpec | When to use each |
-| [CROSS_CUTTING_2026.md](./CROSS_CUTTING_2026.md) | 2026 universal standards | SBOM, SLSA, AI code gen, OWASP |
+| [TEST_PRODUCTION_SEPARATION.md](test-production-separation.md) | Test/production isolation | MANDATORY separation requirements |
+| [MODULAR_DOCUMENTATION.md](modular-documentation.md) | 500-line max rule | No doc over 500 lines |
+| [LOGGING_PATTERNS.md](logging-patterns.md) | Array-based logging | Standard log format |
+| [LOGGING_INTEGRATION.md](logging-integration.md) | External logging hooks | Hook interface spec |
+| [API_SPECIFICATIONS.md](api-specifications.md) | OpenAPI + OpenSpec | When to use each |
+| [CROSS_CUTTING_2026.md](cross-cutting-2026.md) | 2026 universal standards | SBOM, SLSA, AI code gen, OWASP |
 
 ---
 
@@ -93,7 +93,7 @@ Cross-cutting security and quality standards for ALL language profiles, reflecti
 
 ## Integration with Guardrails
 
-These standards support the [AGENT_GUARDRAILS.md](../AGENT_GUARDRAILS.md) requirements for:
+These standards support the [AGENT_GUARDRAILS.md](../getting-started/agent-guardrails.md) requirements for:
 
 - **Test/production separation** → TEST_PRODUCTION_SEPARATION.md
 - **Audit requirements** → LOGGING_PATTERNS.md
@@ -106,7 +106,7 @@ These standards support the [AGENT_GUARDRAILS.md](../AGENT_GUARDRAILS.md) requir
 
 ## Related Documents
 
-- [AGENT_GUARDRAILS.md](../AGENT_GUARDRAILS.md) - Mandatory safety protocols
+- [AGENT_GUARDRAILS.md](../getting-started/agent-guardrails.md) - Mandatory safety protocols
 - [../workflows/INDEX.md](../workflows/INDEX.md) - Operational workflows
 - [../sprints/INDEX.md](../sprints/INDEX.md) - Sprint task framework
 

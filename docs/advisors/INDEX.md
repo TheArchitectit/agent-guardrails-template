@@ -364,6 +364,6 @@ Mark an advisor consultation as resolved.
 
 ## References
 
-- [AGENT_GUARDRAILS.md](../AGENT_GUARDRAILS.md) - Core safety protocols
-- [AGENTS_AND_SKILLS_SETUP.md](../AGENTS_AND_SKILLS_SETUP.md) - Agent configuration
-- [MCP_TOOLS_REFERENCE.md](../MCP_TOOLS_REFERENCE.md) - MCP tool documentation
+- [AGENT_GUARDRAILS.md](../getting-started/agent-guardrails.md) - Core safety protocols
+- [AGENTS_AND_SKILLS_SETUP.md](../integrations/agents-and-skills-setup.md) - Agent configuration
+- [MCP_TOOLS_REFERENCE.md](../mcp-server/tools-reference.md) - MCP tool documentation

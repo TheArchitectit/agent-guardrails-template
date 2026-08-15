@@ -20,7 +20,7 @@ Fixes #
 ## Checklist
 
 ### Code Quality
-- [ ] I have read the [Agent Guardrails](docs/AGENT_GUARDRAILS.md) (if AI-assisted)
+- [ ] I have read the [Agent Guardrails](../docs/getting-started/agent-guardrails.md) (if AI-assisted)
 - [ ] My code follows the project's style guidelines
 - [ ] I have performed a self-review of my code
 - [ ] I have added tests that prove my fix/feature works
@@ -35,7 +35,7 @@ Fixes #
 - [ ] I have updated documentation as needed
 - [ ] INDEX_MAP.md updated (if new docs added)
 - [ ] HEADER_MAP.md updated (if doc sections changed)
-- [ ] All docs under 500 lines (see [MODULAR_DOCUMENTATION.md](docs/standards/MODULAR_DOCUMENTATION.md))
+- [ ] All docs under 500 lines (see [MODULAR_DOCUMENTATION.md](../docs/standards/modular-documentation.md))
 
 ## Test Plan
 

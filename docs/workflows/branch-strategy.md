@@ -2,7 +2,7 @@
 
 > Git branching conventions and workflows.
 
-**Related:** [COMMIT_WORKFLOW.md](./COMMIT_WORKFLOW.md) | [GIT_PUSH_PROCEDURES.md](./GIT_PUSH_PROCEDURES.md)
+**Related:** [COMMIT_WORKFLOW.md](commit-workflow.md) | [GIT_PUSH_PROCEDURES.md](git-push-procedures.md)
 
 ---
 

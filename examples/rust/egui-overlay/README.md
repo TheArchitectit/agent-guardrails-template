@@ -167,8 +167,8 @@ cargo run
 
 ## Related Documentation
 
-- [AGENT_GUARDRAILS.md](../../docs/AGENT_GUARDRAILS.md) - Core safety protocols
-- [TEST_PRODUCTION_SEPARATION.md](../../docs/standards/TEST_PRODUCTION_SEPARATION.md) - Separation standards
+- [AGENT_GUARDRAILS.md](../../../docs/getting-started/agent-guardrails.md) - Core safety protocols
+- [TEST_PRODUCTION_SEPARATION.md](../../../docs/standards/test-production-separation.md) - Separation standards
 - [WEB_UI_IMPLEMENTATION.md](../../docs/sprints/SPRINT_002_WEB_UI_IMPLEMENTATION.md) - Web UI patterns
 
 ---

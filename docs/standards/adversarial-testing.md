@@ -2,7 +2,7 @@
 
 > **Break it before users do.** Systematic protocols for stress-testing AI-generated code.
 
-**Related:** [TESTING_VALIDATION.md](../workflows/TESTING_VALIDATION.md) | [AGENT_REVIEW_PROTOCOL.md](../workflows/AGENT_REVIEW_PROTOCOL.md)
+**Related:** [TESTING_VALIDATION.md](../workflows/testing-validation.md) | [AGENT_REVIEW_PROTOCOL.md](../workflows/agent-review-protocol.md)
 
 ---
 

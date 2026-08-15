@@ -2,7 +2,7 @@
 
 > Reference implementations demonstrating guardrails-compliant testing patterns.
 
-**Purpose:** These examples show how to implement the testing and validation protocols described in [AGENT_GUARDRAILS.md](../docs/AGENT_GUARDRAILS.md) across different programming languages.
+**Purpose:** These examples show how to implement the testing and validation protocols described in [AGENT_GUARDRAILS.md](../docs/getting-started/agent-guardrails.md) across different programming languages.
 
 ---
 
@@ -150,9 +150,9 @@ All examples follow:
 
 ## Related Documentation
 
-- [AGENT_GUARDRAILS.md](../docs/AGENT_GUARDRAILS.md) - Core safety protocols
-- [TEST_PRODUCTION_SEPARATION.md](../docs/standards/TEST_PRODUCTION_SEPARATION.md) - Separation standards
-- [TESTING_VALIDATION.md](../docs/workflows/TESTING_VALIDATION.md) - Validation protocols
+- [AGENT_GUARDRAILS.md](../docs/getting-started/agent-guardrails.md) - Core safety protocols
+- [TEST_PRODUCTION_SEPARATION.md](../docs/standards/test-production-separation.md) - Separation standards
+- [TESTING_VALIDATION.md](../docs/workflows/testing-validation.md) - Validation protocols
 - [SPRINT_TEMPLATE.md](../docs/sprints/SPRINT_TEMPLATE.md) - Language-specific commands
 
 ---

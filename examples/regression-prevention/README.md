@@ -2,7 +2,7 @@
 
 > Practical examples demonstrating the Bug Tracking & Regression Prevention System.
 
-**Related:** [../../docs/workflows/REGRESSION_PREVENTION.md](../../docs/workflows/REGRESSION_PREVENTION.md)
+**Related:** [../../docs/workflows/REGRESSION_PREVENTION.md](../../docs/workflows/regression-prevention.md)
 
 ---
 
@@ -113,7 +113,7 @@ Let us walk through a realistic scenario:
 
 ## See Also
 
-- [Full Protocol Documentation](../../docs/workflows/REGRESSION_PREVENTION.md)
+- [Full Protocol Documentation](../../docs/workflows/regression-prevention.md)
 - [Failure Registry](../../.guardrails/failure-registry.jsonl)
 - [Prevention Rules](../../.guardrails/prevention-rules/)
 - [Pre-Work Check](../../.guardrails/pre-work-check.md)

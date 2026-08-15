@@ -2,7 +2,7 @@
 
 > Array-based structured logging format.
 
-**Related:** [LOGGING_INTEGRATION.md](./LOGGING_INTEGRATION.md) | [AGENT_GUARDRAILS.md](../AGENT_GUARDRAILS.md)
+**Related:** [LOGGING_INTEGRATION.md](logging-integration.md) | [AGENT_GUARDRAILS.md](../getting-started/agent-guardrails.md)
 
 ---
 

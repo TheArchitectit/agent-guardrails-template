@@ -2,7 +2,7 @@
 
 > Detailed instructions for adding agent guardrails to existing or new repositories.
 
-**Related:** [AGENT_GUARDRAILS.md](../AGENT_GUARDRAILS.md) | [INDEX_MAP.md](../INDEX_MAP.md)
+**Related:** [AGENT_GUARDRAILS.md](agent-guardrails.md) | [INDEX_MAP.md](../INDEX_MAP.md)
 
 ---
 

@@ -22,7 +22,7 @@ flutter create my_app
 | `accessibility_wrapper.dart` | Accessibility enforcement for all generated widgets |
 
 ## Related Documents
-- [AI_ASSISTED_DEV.md](../../../docs/ai-dev/AI_ASSISTED_DEV.md) — AI development patterns
-- [ETHICAL_ENGAGEMENT.md](../../../docs/ethical/ETHICAL_ENGAGEMENT.md) — Dark pattern prevention
-- [ACCESSIBILITY_GUIDE.md](../../../docs/accessibility/ACCESSIBILITY_GUIDE.md) — WCAG 3.0+ guide
-- [CROSS_PLATFORM_DEPLOYMENT.md](../../../docs/deployment/CROSS_PLATFORM_DEPLOYMENT.md) — Platform compliance
+- [AI_ASSISTED_DEV.md](../../../docs/ai-dev/ai-assisted-dev.md) — AI development patterns
+- [ETHICAL_ENGAGEMENT.md](../../../docs/ethical/ethical-engagement.md) — Dark pattern prevention
+- [ACCESSIBILITY_GUIDE.md](../../../docs/accessibility/accessibility-guide.md) — WCAG 3.0+ guide
+- [CROSS_PLATFORM_DEPLOYMENT.md](../../../docs/deployment/cross-platform-deployment.md) — Platform compliance

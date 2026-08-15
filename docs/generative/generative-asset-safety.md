@@ -325,8 +325,8 @@ func SafeGenerate[T any](
 
 | Document | Purpose |
 |----------|---------|
-| [ETHICAL_ENGAGEMENT.md](../ethical/ETHICAL_ENGAGEMENT.md) | Dark pattern prevention |
-| [AI_ASSISTED_DEV.md](../ai-dev/AI_ASSISTED_DEV.md) | AI development approval gates |
-| [ANALYTICS_ETHICS.md](../analytics/ANALYTICS_ETHICS.md) | Data collection ethics |
-| [MONETIZATION_GUARDRAILS.md](../monetization/MONETIZATION_GUARDRAILS.md) | Economy and IAP ethics |
-| [ACCESSIBILITY_GUIDE.md](../accessibility/ACCESSIBILITY_GUIDE.md) | Accessible content generation |
+| [ETHICAL_ENGAGEMENT.md](../ethical/ethical-engagement.md) | Dark pattern prevention |
+| [AI_ASSISTED_DEV.md](../ai-dev/ai-assisted-dev.md) | AI development approval gates |
+| [ANALYTICS_ETHICS.md](../analytics/analytics-ethics.md) | Data collection ethics |
+| [MONETIZATION_GUARDRAILS.md](../monetization/monetization-guardrails.md) | Economy and IAP ethics |
+| [ACCESSIBILITY_GUIDE.md](../accessibility/accessibility-guide.md) | Accessible content generation |

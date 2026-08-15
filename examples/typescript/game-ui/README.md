@@ -140,9 +140,9 @@ Multiplayer lag compensation patterns
 
 ## Related Documents
 
-- [AGENT_GUARDRAILS.md](../../docs/AGENT_GUARDRAILS.md) - Mandatory safety protocols
-- [OPERATIONAL_PATTERNS.md](../../docs/standards/OPERATIONAL_PATTERNS.md) - Health checks, circuit breakers
-- [TEST_PRODUCTION_SEPARATION.md](../../docs/standards/TEST_PRODUCTION_SEPARATION.md) - Test/prod isolation
+- [AGENT_GUARDRAILS.md](../../../docs/getting-started/agent-guardrails.md) - Mandatory safety protocols
+- [OPERATIONAL_PATTERNS.md](../../../docs/standards/operational-patterns.md) - Health checks, circuit breakers
+- [TEST_PRODUCTION_SEPARATION.md](../../../docs/standards/test-production-separation.md) - Test/prod isolation
 
 ---
 

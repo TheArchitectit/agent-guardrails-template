@@ -2,7 +2,7 @@
 
 > Post-sprint documentation maintenance.
 
-**Related:** [MODULAR_DOCUMENTATION.md](../standards/MODULAR_DOCUMENTATION.md) | [COMMIT_WORKFLOW.md](./COMMIT_WORKFLOW.md)
+**Related:** [MODULAR_DOCUMENTATION.md](../standards/modular-documentation.md) | [COMMIT_WORKFLOW.md](commit-workflow.md)
 
 ---
 

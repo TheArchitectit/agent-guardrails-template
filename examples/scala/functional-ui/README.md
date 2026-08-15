@@ -104,9 +104,9 @@ scala-cli run procedural-gen.scala
 
 ## Related Documentation
 
-- [AGENT_GUARDRAILS.md](../../../docs/AGENT_GUARDRAILS.md) - Core safety protocols
-- [TEST_PRODUCTION_SEPARATION.md](../../../docs/standards/TEST_PRODUCTION_SEPARATION.md) - Test/production isolation
-- [ADVERSARIAL_TESTING.md](../../../docs/standards/ADVERSARIAL_TESTING.md) - Dark pattern detection
+- [AGENT_GUARDRAILS.md](../../../docs/getting-started/agent-guardrails.md) - Core safety protocols
+- [TEST_PRODUCTION_SEPARATION.md](../../../docs/standards/test-production-separation.md) - Test/production isolation
+- [ADVERSARIAL_TESTING.md](../../../docs/standards/adversarial-testing.md) - Dark pattern detection
 
 ---
 

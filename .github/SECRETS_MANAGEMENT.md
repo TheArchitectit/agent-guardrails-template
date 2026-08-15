@@ -2,7 +2,7 @@
 
 > Secure credential management with GitHub Secrets.
 
-**Related:** [AGENT_GUARDRAILS.md](../docs/AGENT_GUARDRAILS.md) | [LOGGING_INTEGRATION.md](../docs/standards/LOGGING_INTEGRATION.md)
+**Related:** [AGENT_GUARDRAILS.md](../docs/getting-started/agent-guardrails.md) | [LOGGING_INTEGRATION.md](../docs/standards/logging-integration.md)
 
 ---
 

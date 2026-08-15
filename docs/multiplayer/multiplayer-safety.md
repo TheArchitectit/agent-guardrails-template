@@ -269,8 +269,8 @@ func ProcessMessage(ctx context.Context, msg *ChatMessage, sender *User) (*Proce
 
 | Document | Purpose |
 |----------|---------|
-| [ETHICAL_ENGAGEMENT.md](../ethical/ETHICAL_ENGAGEMENT.md) | Dark pattern prevention |
-| [MONETIZATION_GUARDRAILS.md](../monetization/MONETIZATION_GUARDRAILS.md) | IAP and economy ethics |
-| [ANALYTICS_ETHICS.md](../analytics/ANALYTICS_ETHICS.md) | Player telemetry ethics |
-| [AI_ASSISTED_DEV.md](../ai-dev/AI_ASSISTED_DEV.md) | AI development approval gates |
-| [GENERATIVE_ASSET_SAFETY.md](../generative/GENERATIVE_ASSET_SAFETY.md) | Generated content safety |
+| [ETHICAL_ENGAGEMENT.md](../ethical/ethical-engagement.md) | Dark pattern prevention |
+| [MONETIZATION_GUARDRAILS.md](../monetization/monetization-guardrails.md) | IAP and economy ethics |
+| [ANALYTICS_ETHICS.md](../analytics/analytics-ethics.md) | Player telemetry ethics |
+| [AI_ASSISTED_DEV.md](../ai-dev/ai-assisted-dev.md) | AI development approval gates |
+| [GENERATIVE_ASSET_SAFETY.md](../generative/generative-asset-safety.md) | Generated content safety |

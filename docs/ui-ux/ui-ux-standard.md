@@ -343,9 +343,9 @@ func Button(w http.ResponseWriter, r *http.Request) {
 
 | Document | Purpose |
 |----------|---------|
-| [AI_ASSISTED_DEV.md](../ai-dev/AI_ASSISTED_DEV.md) | AI development patterns and prompt-to-UI scaffolding |
-| [STATE_MANAGEMENT.md](../state/STATE_MANAGEMENT.md) | Client/server state architecture |
-| [ACCESSIBILITY_GUIDE.md](../accessibility/ACCESSIBILITY_GUIDE.md) | Full WCAG 3.0+ compliance guide |
+| [AI_ASSISTED_DEV.md](../ai-dev/ai-assisted-dev.md) | AI development patterns and prompt-to-UI scaffolding |
+| [STATE_MANAGEMENT.md](../state/state-management.md) | Client/server state architecture |
+| [ACCESSIBILITY_GUIDE.md](../accessibility/accessibility-guide.md) | Full WCAG 3.0+ compliance guide |
 
 ---
 

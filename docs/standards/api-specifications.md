@@ -2,7 +2,7 @@
 
 > OpenAPI vs OpenSpec guidance.
 
-**Related:** [MODULAR_DOCUMENTATION.md](./MODULAR_DOCUMENTATION.md) | [DOCUMENTATION_UPDATES.md](../workflows/DOCUMENTATION_UPDATES.md)
+**Related:** [MODULAR_DOCUMENTATION.md](modular-documentation.md) | [DOCUMENTATION_UPDATES.md](../workflows/documentation-updates.md)
 
 ---
 

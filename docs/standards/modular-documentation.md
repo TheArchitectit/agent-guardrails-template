@@ -2,7 +2,7 @@
 
 > The 500-line rule and document organization.
 
-**Related:** [DOCUMENTATION_UPDATES.md](../workflows/DOCUMENTATION_UPDATES.md) | [INDEX_MAP.md](../../INDEX_MAP.md)
+**Related:** [DOCUMENTATION_UPDATES.md](../workflows/documentation-updates.md) | [INDEX_MAP.md](../../INDEX_MAP.md)
 
 ---
 

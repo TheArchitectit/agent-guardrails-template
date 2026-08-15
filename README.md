@@ -4,8 +4,8 @@
 
 [![Version](https://img.shields.io/badge/version-v3.3.0-blue.svg)](./CHANGELOG.md)
 [![Go Implementation](https://img.shields.io/badge/Implementation-Go-blue.svg?style=flat&logo=go)](https://golang.org)
-[![WCAG 3.0+](https://img.shields.io/badge/Accessibility-WCAG_3.0+_Silver-green.svg)](docs/accessibility/ACCESSIBILITY_GUIDE.md)
-[![Spatial Computing](https://img.shields.io/badge/Spatial-XR/VR/AR-blue.svg)](docs/spatial/SPATIAL_COMPUTING_UI.md)
+[![WCAG 3.0+](https://img.shields.io/badge/Accessibility-WCAG_3.0+_Silver-green.svg)](docs/accessibility/accessibility-guide.md)
+[![Spatial Computing](https://img.shields.io/badge/Spatial-XR/VR/AR-blue.svg)](docs/spatial/spatial-computing-ui.md)
 
 ---
 
@@ -62,7 +62,7 @@ git clone https://github.com/TheArchitectit/agent-guardrails-template.git
 cd agent-guardrails-template
 ```
 
-Then see [QUICK_SETUP.md](docs/QUICK_SETUP.md) for the 5-minute setup, or [HOW_TO_APPLY.md](docs/HOW_TO_APPLY.md) to apply guardrails to an existing repo.
+Then see [QUICK_SETUP.md](docs/getting-started/quick-setup.md) for the 5-minute setup, or [HOW_TO_APPLY.md](docs/getting-started/how-to-apply.md) to apply guardrails to an existing repo.
 
 ---
 
@@ -72,8 +72,8 @@ Then see [QUICK_SETUP.md](docs/QUICK_SETUP.md) for the 5-minute setup, or [HOW_T
 
 | Document | Purpose |
 |----------|---------|
-| [AGENT_GUARDRAILS.md](docs/AGENT_GUARDRAILS.md) | The Four Laws, forbidden actions, halt conditions |
-| [TEST_PRODUCTION_SEPARATION.md](docs/standards/TEST_PRODUCTION_SEPARATION.md) | Mandatory test/production isolation |
+| [AGENT_GUARDRAILS.md](docs/getting-started/agent-guardrails.md) | The Four Laws, forbidden actions, halt conditions |
+| [TEST_PRODUCTION_SEPARATION.md](docs/standards/test-production-separation.md) | Mandatory test/production isolation |
 | [four-laws.md](skills/shared-prompts/four-laws.md) | Canonical Four Laws prompt |
 | [halt-conditions.md](skills/shared-prompts/halt-conditions.md) | When to stop and ask |
 
@@ -81,16 +81,16 @@ Then see [QUICK_SETUP.md](docs/QUICK_SETUP.md) for the 5-minute setup, or [HOW_T
 
 | Document | Purpose |
 |----------|---------|
-| [AI_ASSISTED_DEV.md](docs/ai-dev/AI_ASSISTED_DEV.md) | Vibe coding workflow, decision matrix (ask/decide/halt), design-intent preservation |
-| [STATE_MANAGEMENT.md](docs/state/STATE_MANAGEMENT.md) | State architecture decision tree, client/server/offline/CRDT patterns |
-| [GENERATIVE_ASSET_SAFETY.md](docs/generative/GENERATIVE_ASSET_SAFETY.md) | AI content disclosure, C2PA metadata, procedural generation safety |
+| [AI_ASSISTED_DEV.md](docs/ai-dev/ai-assisted-dev.md) | Vibe coding workflow, decision matrix (ask/decide/halt), design-intent preservation |
+| [STATE_MANAGEMENT.md](docs/state/state-management.md) | State architecture decision tree, client/server/offline/CRDT patterns |
+| [GENERATIVE_ASSET_SAFETY.md](docs/generative/generative-asset-safety.md) | AI content disclosure, C2PA metadata, procedural generation safety |
 | [vibe-coding.md](skills/shared-prompts/vibe-coding.md) | Canonical vibe coding principles |
 
 ### AI Tool Integration
 
 | Document | Purpose |
 |----------|---------|
-| [AGENTS_AND_SKILLS_SETUP.md](docs/AGENTS_AND_SKILLS_SETUP.md) | Setup guide for Claude Code, Cursor, OpenCode, Windsurf, Copilot |
+| [AGENTS_AND_SKILLS_SETUP.md](docs/integrations/agents-and-skills-setup.md) | Setup guide for Claude Code, Cursor, OpenCode, Windsurf, Copilot |
 | [.claude/skills/](.claude/skills/) | 7 Claude Code skill files (guardrails-enforcer, commit-validator, etc.) |
 | [.claude/hooks/](.claude/hooks/) | Pre/post execution shell hooks |
 | [.cursor/rules/](.cursor/rules/) | 3 Cursor rules files |
@@ -106,10 +106,10 @@ Then see [QUICK_SETUP.md](docs/QUICK_SETUP.md) for the 5-minute setup, or [HOW_T
 
 | Document | Purpose |
 |----------|---------|
-| [2026_UI_UX_STANDARD.md](docs/ui-ux/2026_UI_UX_STANDARD.md) | UI component patterns, design tokens, responsive breakpoints |
-| [ACCESSIBILITY_GUIDE.md](docs/accessibility/ACCESSIBILITY_GUIDE.md) | WCAG 3.0+ compliance (Bronze/Silver/Gold) |
-| [SPATIAL_COMPUTING_UI.md](docs/spatial/SPATIAL_COMPUTING_UI.md) | XR/VR/AR UI patterns, comfort zones, latency requirements |
-| [ETHICAL_ENGAGEMENT.md](docs/ethical/ETHICAL_ENGAGEMENT.md) | Dark pattern taxonomy and automated prevention |
+| [2026_UI_UX_STANDARD.md](docs/ui-ux/ui-ux-standard.md) | UI component patterns, design tokens, responsive breakpoints |
+| [ACCESSIBILITY_GUIDE.md](docs/accessibility/accessibility-guide.md) | WCAG 3.0+ compliance (Bronze/Silver/Gold) |
+| [SPATIAL_COMPUTING_UI.md](docs/spatial/spatial-computing-ui.md) | XR/VR/AR UI patterns, comfort zones, latency requirements |
+| [ETHICAL_ENGAGEMENT.md](docs/ethical/ethical-engagement.md) | Dark pattern taxonomy and automated prevention |
 
 > Game design docs (2026_GAME_DESIGN, 3D game development, AI_DEV_2026 guide, Hermes 2026 dossier) live in the private [agent-guardrails-game-design](https://github.com/TheArchitectit/agent-guardrails-game-design) repo.
 
@@ -117,20 +117,20 @@ Then see [QUICK_SETUP.md](docs/QUICK_SETUP.md) for the 5-minute setup, or [HOW_T
 
 | Document | Purpose |
 |----------|---------|
-| [MONETIZATION_GUARDRAILS.md](docs/monetization/MONETIZATION_GUARDRAILS.md) | IAP ethics, loot box transparency, virtual economy balance |
-| [MULTIPLAYER_SAFETY.md](docs/multiplayer/MULTIPLAYER_SAFETY.md) | Chat moderation, matchmaking fairness, CSAM detection |
-| [ANALYTICS_ETHICS.md](docs/analytics/ANALYTICS_ETHICS.md) | Consent tiers, data minimization, A/B testing ethics |
-| [CROSS_PLATFORM_DEPLOYMENT.md](docs/deployment/CROSS_PLATFORM_DEPLOYMENT.md) | App store compliance matrix, CI/CD, feature flags |
+| [MONETIZATION_GUARDRAILS.md](docs/monetization/monetization-guardrails.md) | IAP ethics, loot box transparency, virtual economy balance |
+| [MULTIPLAYER_SAFETY.md](docs/multiplayer/multiplayer-safety.md) | Chat moderation, matchmaking fairness, CSAM detection |
+| [ANALYTICS_ETHICS.md](docs/analytics/analytics-ethics.md) | Consent tiers, data minimization, A/B testing ethics |
+| [CROSS_PLATFORM_DEPLOYMENT.md](docs/deployment/cross-platform-deployment.md) | App store compliance matrix, CI/CD, feature flags |
 
 ### Workflows & Standards
 
 | Document | Purpose |
 |----------|---------|
-| [AGENT_EXECUTION.md](docs/workflows/AGENT_EXECUTION.md) | Execution protocol, rollback, retry limits |
-| [COMMIT_WORKFLOW.md](docs/workflows/COMMIT_WORKFLOW.md) | When and how to commit |
-| [CODE_REVIEW.md](docs/workflows/CODE_REVIEW.md) | Review process and escalation |
-| [GIT_PUSH_PROCEDURES.md](docs/workflows/GIT_PUSH_PROCEDURES.md) | Push safety and verification |
-| [REGRESSION_PREVENTION.md](docs/workflows/REGRESSION_PREVENTION.md) | Failure registry, prevention rules |
+| [AGENT_EXECUTION.md](docs/workflows/agent-execution.md) | Execution protocol, rollback, retry limits |
+| [COMMIT_WORKFLOW.md](docs/workflows/commit-workflow.md) | When and how to commit |
+| [CODE_REVIEW.md](docs/workflows/code-review.md) | Review process and escalation |
+| [GIT_PUSH_PROCEDURES.md](docs/workflows/git-push-procedures.md) | Push safety and verification |
+| [REGRESSION_PREVENTION.md](docs/workflows/regression-prevention.md) | Failure registry, prevention rules |
 | [All workflows →](docs/workflows/INDEX.md) | 10 workflow documents |
 | [All standards →](docs/standards/INDEX.md) | 11 standards documents |
 
@@ -321,4 +321,4 @@ Or use one of the referral links below — you get credits, and so do we:
 
 ---
 
-**v3.3.0** · AI-First Rapid Development Framework · [Get Started →](docs/QUICK_SETUP.md)
+**v3.3.0** · AI-First Rapid Development Framework · [Get Started →](docs/getting-started/quick-setup.md)
