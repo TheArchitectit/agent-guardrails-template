@@ -68,8 +68,10 @@ BEGIN
 END;
 $$;
 
--- Create initial partitions for next 3 months
-SELECT * FROM ensure_future_partitions(3);
+-- NOTE: The original call to ensure_future_partitions(3) has been removed.
+-- failure_registry and audit_log are plain tables (see 001), so there are
+-- no partitions to create. The helper functions are retained in case
+-- partitioning is adopted in the future.
 
 -- Add comments
 COMMENT ON FUNCTION create_monthly_partition IS 'Creates a monthly partition for a partitioned table';

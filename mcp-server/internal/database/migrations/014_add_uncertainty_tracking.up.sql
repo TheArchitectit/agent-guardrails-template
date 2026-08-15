@@ -1,12 +1,16 @@
 -- Migration: Add uncertainty tracking table
 -- Description: Tracks uncertainty levels and decision-making context
+-- NOTE: Originally declared FKs to session_metadata(session_id) and
+-- tasks(task_id) — tables that do not exist in this schema, which made the
+-- migration fail on any fresh database. FKs removed. Migration 015 drops
+-- and recreates this table with the same (FK-free) shape.
 
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 CREATE TABLE IF NOT EXISTS uncertainty_tracking (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    session_id UUID NOT NULL REFERENCES session_metadata(session_id) ON DELETE CASCADE,
-    task_id UUID REFERENCES tasks(task_id) ON DELETE SET NULL,
+    session_id UUID NOT NULL,
+    task_id UUID,
     uncertainty_level VARCHAR(50) NOT NULL,
     decision_made TEXT,
     context_data JSONB,

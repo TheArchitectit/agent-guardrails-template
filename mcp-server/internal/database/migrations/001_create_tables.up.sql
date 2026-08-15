@@ -31,7 +31,10 @@ CREATE TABLE IF NOT EXISTS prevention_rules (
     updated_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
--- Failure registry table (partitioned by time)
+-- Failure registry table
+-- NOTE: Originally declared PARTITION BY RANGE (created_at), but PostgreSQL
+-- requires partitioned-table primary keys to include the partition column,
+-- so the table never actually got created. Plain table instead.
 CREATE TABLE IF NOT EXISTS failure_registry (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     failure_id VARCHAR(50) UNIQUE NOT NULL,
@@ -45,7 +48,7 @@ CREATE TABLE IF NOT EXISTS failure_registry (
     project_slug VARCHAR(100),
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP NOT NULL DEFAULT NOW()
-) PARTITION BY RANGE (created_at);
+);
 
 -- Projects table
 CREATE TABLE IF NOT EXISTS projects (
@@ -59,7 +62,9 @@ CREATE TABLE IF NOT EXISTS projects (
     updated_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
--- Audit log table (partitioned by time)
+-- Audit log table
+-- NOTE: Originally PARTITION BY RANGE (timestamp) — same partitioned-PK
+-- problem as failure_registry. Plain table instead.
 CREATE TABLE IF NOT EXISTS audit_log (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     event_id VARCHAR(50) NOT NULL,
@@ -74,11 +79,4 @@ CREATE TABLE IF NOT EXISTS audit_log (
     client_ip INET,
     request_id VARCHAR(50),
     created_at TIMESTAMP NOT NULL DEFAULT NOW()
-) PARTITION BY RANGE (timestamp);
-
--- Create initial partition for current month
-CREATE TABLE IF NOT EXISTS failure_registry_y2026m02 PARTITION OF failure_registry
-    FOR VALUES FROM ('2026-02-01') TO ('2026-03-01');
-
-CREATE TABLE IF NOT EXISTS audit_log_y2026m02 PARTITION OF audit_log
-    FOR VALUES FROM ('2026-02-01') TO ('2026-03-01');
+);
