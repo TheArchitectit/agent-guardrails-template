@@ -6,7 +6,7 @@
 
 ## Per-release DoD and gates (template; adjust per release)
 - Architecture and ADRs updated/created
-- Documentation: updated TOC/HEADER_MAP; modular docs; owner metadata present
+- Documentation: updated TOC and INDEX_MAP; modular docs; owner metadata present
 - Docs site: build passes lint and link checks
 - Security: SBOM generated; dependencies scanned; SAST/DAST checks run
 - Compliance: SOC 2/ISO mappings updated; data privacy/retention policies aligned

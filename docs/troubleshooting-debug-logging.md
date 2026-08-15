@@ -81,7 +81,7 @@ python mcp_server.py --debug --log-file .mcp/debug.log
 
 **Example:**
 ```
-2026-02-15 14:32:15 [INFO] [MCP] Server started on port 8094
+2026-02-15 14:32:15 [INFO] [MCP] Server started on port 8080
 2026-02-15 14:32:18 [DEBUG] [TEAM] Validating team assignment
 2026-02-15 14:32:18 [ERROR] [VALID] TEAM-002: Invalid team ID
 ```

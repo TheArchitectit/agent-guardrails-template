@@ -149,7 +149,7 @@ SPLITTING STRATEGY:
 
 4. Update cross-references
    - Fix all internal links
-   - Update INDEX_MAP.md and HEADER_MAP.md
+   - Update INDEX_MAP.md
 ```
 
 ### Split Example
@@ -289,7 +289,6 @@ Or create DOC_C.md for shared content.
 [ ] Title describes content accurately
 [ ] Related docs linked
 [ ] Added to INDEX_MAP.md
-[ ] Headers added to HEADER_MAP.md
 [ ] Added to directory INDEX.md
 [ ] No broken links
 [ ] Markdown renders correctly

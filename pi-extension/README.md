@@ -121,12 +121,12 @@ Close with `Esc` or `q`. Scroll with `j`/`k`.
 
 When the Go MCP server is available, the extension can proxy calls to it for enhanced enforcement:
 
-1. Configure the server endpoint in `config.json` under `mcpBinaryPath` (URL for SSE, command for stdio)
+1. Configure the server endpoint in `config.json` under `mcpBinaryPath` (URL for HTTP, command for stdio)
 2. Initialize a session with `guardrail_init` — the extension auto-connects
 3. Use `guardrail_mcp` with an `action` parameter to call any MCP server tool
 4. Reconnection uses exponential backoff (1s base, 30s max, 5 attempts)
 
-The Go server supports SSE/HTTP transport (default port 8094) and the extension auto-detects the transport type from the endpoint URL.
+The Go server speaks stateless StreamableHTTP (default port 8080, `POST /mcp`) and the extension auto-detects the transport type from the endpoint URL.
 
 ## Prompt Injection Defense
 
