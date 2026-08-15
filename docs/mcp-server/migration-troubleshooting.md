@@ -47,7 +47,7 @@ make migrate-up
 **Solution:**
 ```bash
 # Find and kill old process
-lsof -ti:8094 | xargs kill -9
+lsof -ti:8080 | xargs kill -9
 
 # Or use different port temporarily
 MCP_PORT=8096 ./mcp-server/cmd/server/server
@@ -60,11 +60,11 @@ MCP_PORT=8096 ./mcp-server/cmd/server/server
 **Solution:**
 ```bash
 # Update client configuration
-./scripts/update_client_configs.sh --new-port 8094 --new-path /mcp
+./scripts/update_client_configs.sh --new-port 8080 --new-path /mcp
 
 # Verify connectivity
 curl -H "Authorization: Bearer $API_KEY" \
-  http://localhost:8094/mcp/v1/health
+  http://localhost:8080/mcp/v1/health
 ```
 
 ---
@@ -79,7 +79,7 @@ echo "Verifying migration..."
 
 # Check server health
 echo -n "Health check: "
-curl -sf http://localhost:8094/mcp/v1/health && echo "PASS" || echo "FAIL"
+curl -sf http://localhost:8080/mcp/v1/health && echo "PASS" || echo "FAIL"
 
 # Check version
 echo -n "Version check: "
@@ -95,7 +95,7 @@ python scripts/validate_all_configs.py && echo "PASS" || echo "FAIL"
 
 # Test basic operation
 echo -n "Operation check: "
-curl -s -X POST http://localhost:8094/mcp \
+curl -s -X POST http://localhost:8080/mcp \
   -H "Content-Type: application/json" \
   -d '{"jsonrpc":"2.0","method":"tools/list"}' | grep -q "guardrail_team" && echo "PASS" || echo "FAIL"
 
