@@ -2,7 +2,7 @@
 
 > Standard task execution flow, rollback procedures, and error handling for AI agents.
 
-**Related:** [../AGENT_GUARDRAILS.md](../getting-started/agent-guardrails.md) | [TESTING_VALIDATION.md](testing-validation.md) | [AGENT_REVIEW_PROTOCOL.md](agent-review-protocol.md)
+**Related:** [../AGENT_GUARDRAILS.md](../getting-started/agent-guardrails.md) | [TESTING_VALIDATION.md](testing-validation.md) | [AGENT_REVIEW_PROTOCOL.md](agent-review-protocol.md) | [ROLLBACK_PROCEDURES.md](rollback-procedures.md) | [COMMIT_WORKFLOW.md](commit-workflow.md)
 
 ---
 
@@ -39,23 +39,6 @@ This document defines the standard execution protocol for AI agents, including t
 │    - Recommend: Start fresh session                         │
 │                                                              │
 └─────────────────────────────────────────────────────────────┘
-```
-
-### Why Three Strikes?
-
-```
-PROBLEM: Context Contamination
-
-When an agent fails repeatedly on the same task:
-1. Each failure adds incorrect context to the session
-2. Agent starts referencing its own failed attempts
-3. New attempts bias toward the same wrong approach
-4. Quality degrades exponentially
-
-SOLUTION: Hard stop after 3 attempts
-- Forces fresh perspective (new session)
-- Prevents infinite loops of same mistake
-- Escalates to human when agent is stuck
 ```
 
 ### Attempt Tracking
@@ -142,25 +125,6 @@ TRIGGERS FOR STABILIZATION MODE:
 │    - User explicitly exits stabilization mode               │
 │                                                              │
 └─────────────────────────────────────────────────────────────┘
-```
-
-### Stabilization Mode Directive
-
-```
-"We are entering STABILIZATION MODE.
-
-MISSION: Simplify and stabilize, not extend.
-
-For the next [X] tasks:
-- Do NOT add new features
-- Do NOT change architecture
-- Focus ONLY on:
-  * Removing complexity
-  * Adding tests
-  * Fixing obvious bugs
-  * Improving readability
-
-Report when ready to exit stabilization mode."
 ```
 
 ---
@@ -490,57 +454,3 @@ PRE-COMPLETION CHECKLIST:
 [ ] No accidental commits of production credentials
 ```
 
----
-
-## QUICK REFERENCE
-
-```
-+------------------------------------------------------------------+
-|              AGENT EXECUTION QUICK REFERENCE                      |
-+------------------------------------------------------------------+
-| RETRY LIMITS:                                                    |
-|   MAX_ATTEMPTS = 3 per task                                      |
-|   After 3 failures → HALT and escalate                          |
-|   Fresh session recommended after failures                       |
-+------------------------------------------------------------------+
-| EXECUTION FLOW:                                                  |
-|   1. Preparation → Verify preconditions → Execute → Validate     |
-|   2. If any check fails → ROLLBACK → Report → Stop               |
-|   3. If all checks pass → Commit → Report → Done                |
-+------------------------------------------------------------------+
-| ROLLBACK COMMANDS:                                               |
-|   Uncommitted: git checkout HEAD -- <file>                       |
-|   Committed:  git reset --soft HEAD~1                            |
-|   Pushed:    git revert HEAD                                     |
-+------------------------------------------------------------------+
-| ERROR HANDLING:                                                  |
-|   Syntax error → Rollback immediately                            |
-|   Test failure → Rollback immediately                            |
-|   Edit failed → Re-read and ask                                 |
-|   Unknown error → Rollback and report                            |
-+------------------------------------------------------------------+
-| STABILIZATION MODE:                                              |
-|   Only simplify, clean up, add tests                            |
-|   NO new features or architecture changes                       |
-+------------------------------------------------------------------+
-| COMMIT FORMAT:                                                   |
-|   <type>(<scope>): <description>                                |
-|   Authored by TheArchitectit                            |
-+------------------------------------------------------------------+
-```
-
----
-
-**Related Documents:**
-- [AGENT_GUARDRAILS.md](../getting-started/agent-guardrails.md) - Core safety protocols
-- [TESTING_VALIDATION.md](testing-validation.md) - Validation protocols
-- [ROLLBACK_PROCEDURES.md](rollback-procedures.md) - Recovery operations
-- [COMMIT_WORKFLOW.md](commit-workflow.md) - Commit guidelines
-- [AGENT_REVIEW_PROTOCOL.md](agent-review-protocol.md) - Post-work verification
-
----
-
-**Last Updated:** 2026-01-21
-**Authored by:** TheArchitectit
-**Document Owner:** Project Maintainers
-**Line Count:** ~280

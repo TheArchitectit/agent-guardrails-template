@@ -1,21 +1,10 @@
 # API Security Audit Report
 
-**Repository**: guardrail-mcp
-**Component**: mcp-server/internal/web/
-**Audit Date**: 2026-02-08
-**Auditor**: Security Engineer
+**Component:** mcp-server/internal/web/
 
 ## Executive Summary
 
 This audit covers the web layer of the guardrail-mcp server, focusing on authentication, authorization, rate limiting, CORS, input validation, and security headers. **3 Critical, 5 High, 4 Medium, and 3 Low severity issues** were identified.
-
-### Risk Overview
-| Severity | Count | Immediate Action Required |
-|----------|-------|--------------------------|
-| Critical | 3 | Yes |
-| High | 5 | Yes |
-| Medium | 4 | Recommended |
-| Low | 3 | Scheduled |
 
 ---
 
@@ -24,7 +13,7 @@ This audit covers the web layer of the guardrail-mcp server, focusing on authent
 ### 1. AUTH-BYPASS-001: Path Traversal in Authentication Bypass
 **File**: `/mnt/ollama/git/agent-guardrails-template/mcp-server/internal/web/middleware.go:21-28`
 
-**Issue**: The authentication middleware uses `c.Path()` to check if routes should be skipped, but `c.Path()` returns the *route pattern* (e.g., `/health/live`), not the actual request path. A request to `/health/live/../../../api/sensitive` would match the `/health/live` pattern, bypassing authentication.
+The authentication middleware uses `c.Path()` to check if routes should be skipped, but `c.Path()` returns the *route pattern* (e.g., `/health/live`), not the actual request path. A request to `/health/live/../../../api/sensitive` would match the `/health/live` pattern, bypassing authentication.
 
 ```go
 // VULNERABLE CODE
@@ -34,9 +23,8 @@ if path == "/health/live" || path == "/health/ready" || path == "/metrics" {
 }
 ```
 
-**Severity**: Critical
-**CVSS**: 9.1 (Critical)
-**Impact**: Complete authentication bypass, unauthorized API access
+**Severity**: Critical (CVSS 9.1) | **Impact**: Complete authentication bypass, unauthorized API access
+
 **Remediation**:
 ```go
 path := c.Request().URL.Path  // Use actual request path
@@ -54,7 +42,7 @@ if path == "/health/live" || path == "/health/ready" || path == "/metrics" {
 ### 2. RATE-001: Rate Limiting Bypass via IP Spoofing
 **File**: `/mnt/ollama/git/agent-guardrails-template/mcp-server/internal/web/middleware.go:105-108`
 
-**Issue**: When API key hash is not available, the middleware falls back to `c.RealIP()` for rate limiting. Echo's `RealIP()` extracts IP from `X-Forwarded-For`/`X-Real-IP` headers without validation, allowing attackers to spoof different IPs and bypass rate limits.
+When API key hash is not available, the middleware falls back to `c.RealIP()` for rate limiting. Echo's `RealIP()` extracts IP from `X-Forwarded-For`/`X-Real-IP` headers without validation, allowing attackers to spoof different IPs and bypass rate limits.
 
 ```go
 // VULNERABLE CODE
@@ -64,9 +52,8 @@ if !ok {
 }
 ```
 
-**Severity**: Critical
-**CVSS**: 8.2 (High)
-**Impact**: Rate limit bypass, potential DoS
+**Severity**: Critical (CVSS 8.2) | **Impact**: Rate limit bypass, potential DoS
+
 **Remediation**:
 ```go
 // Extract IP from trusted source only
@@ -90,16 +77,15 @@ func getClientIP(c echo.Context, trustProxy bool) string {
 ### 3. CORS-001: Overly Permissive CORS in Non-Production
 **File**: `/mnt/ollama/git/agent-guardrails-template/mcp-server/internal/web/server.go:87-102`
 
-**Issue**: In non-production mode, CORS allows `http://localhost:*` and `https://localhost:*`, which permits any localhost port. This allows malicious websites running on localhost to make authenticated cross-origin requests.
+In non-production mode, CORS allows `http://localhost:*` and `https://localhost:*`, which permits any localhost port. This allows malicious websites running on localhost to make authenticated cross-origin requests.
 
 ```go
 // VULNERABLE CODE - allows any localhost port
 corsOrigins = []string{"http://localhost:*", "https://localhost:*"}
 ```
 
-**Severity**: Critical
-**CVSS**: 7.5 (High)
-**Impact**: CSRF-style attacks from malicious localhost services
+**Severity**: Critical (CVSS 7.5) | **Impact**: CSRF-style attacks from malicious localhost services
+
 **Remediation**:
 ```go
 // Use specific allowed origins only
@@ -119,10 +105,10 @@ allowedOrigins := map[string]bool{
 ### 4. INPUT-001: Insufficient Input Validation on PATCH Endpoints
 **File**: `/mnt/ollama/git/agent-guardrails-template/mcp-server/internal/web/handlers.go:283-343`
 
-**Issue**: The `patchRule` handler accepts arbitrary fields in the request body without strict validation. While the struct defines expected fields, Echo's `Bind()` method will ignore unknown fields, potentially allowing injection of unexpected data.
+The `patchRule` handler accepts arbitrary fields in the request body without strict validation. While the struct defines expected fields, Echo's `Bind()` method will ignore unknown fields, potentially allowing injection of unexpected data.
 
-**Severity**: High
-**Impact**: Mass assignment vulnerability, data corruption
+**Severity**: High | **Impact**: Mass assignment vulnerability, data corruption
+
 **Remediation**:
 ```go
 // Use strict validation
@@ -147,10 +133,10 @@ if err := decoder.Decode(&req); err != nil {
 ### 5. INPUT-002: Missing Content-Type Validation
 **Files**: All handlers in `/mnt/ollama/git/agent-guardrails-template/mcp-server/internal/web/handlers.go`
 
-**Issue**: No Content-Type validation on requests. Endpoints accepting JSON don't verify `Content-Type: application/json`, allowing CSRF attacks through HTML forms or content type confusion attacks.
+No Content-Type validation on requests. Endpoints accepting JSON don't verify `Content-Type: application/json`, allowing CSRF attacks through HTML forms or content type confusion attacks.
 
-**Severity**: High
-**Impact**: CSRF attacks, content type confusion
+**Severity**: High | **Impact**: CSRF attacks, content type confusion
+
 **Remediation**:
 ```go
 // Add middleware for content type validation
@@ -177,7 +163,7 @@ func RequireContentType(contentTypes ...string) echo.MiddlewareFunc {
 ### 6. AUTH-002: Weak IDE Endpoint Authorization Logic
 **File**: `/mnt/ollama/git/agent-guardrails-template/mcp-server/internal/web/middleware.go:59-62`
 
-**Issue**: The endpoint restriction logic has a logical error. It checks if path starts with `/ide` and requires `ide` key type, but `mcp` key type is also allowed, making the restriction ineffective.
+The endpoint restriction logic has a logical error. It checks if path starts with `/ide` and requires `ide` key type, but `mcp` key type is also allowed, making the restriction ineffective.
 
 ```go
 // INEFFECTIVE CODE
@@ -186,8 +172,8 @@ if strings.HasPrefix(path, "/ide") && keyType != "ide" && keyType != "mcp" {
 }
 ```
 
-**Severity**: High
-**Impact**: Authorization bypass, privilege escalation
+**Severity**: High | **Impact**: Authorization bypass, privilege escalation
+
 **Remediation**:
 ```go
 // Proper endpoint authorization
@@ -208,10 +194,10 @@ case strings.HasPrefix(path, "/api/admin"):
 ### 7. SEC-001: Missing HSTS Header
 **File**: `/mnt/ollama/git/agent-guardrails-template/mcp-server/internal/web/server.go:246-270`
 
-**Issue**: The security headers middleware doesn't include `Strict-Transport-Security` (HSTS), allowing downgrade attacks when TLS is enabled.
+The security headers middleware doesn't include `Strict-Transport-Security` (HSTS), allowing downgrade attacks when TLS is enabled.
 
-**Severity**: High
-**Impact**: SSL/TLS downgrade attacks, MITM
+**Severity**: High | **Impact**: SSL/TLS downgrade attacks, MITM
+
 **Remediation**:
 ```go
 func securityHeadersMiddleware() echo.MiddlewareFunc {
@@ -236,10 +222,10 @@ func securityHeadersMiddleware() echo.MiddlewareFunc {
 ### 8. ERROR-001: Verbose Error Messages in Production
 **Files**: Multiple handlers in `/mnt/ollama/git/agent-guardrails-template/mcp-server/internal/web/handlers.go`
 
-**Issue**: Error messages expose internal details (e.g., database errors, file paths) in production. Example: `return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})`
+Error messages expose internal details (e.g., database errors, file paths) in production. Example: `return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})`
 
-**Severity**: High
-**Impact**: Information disclosure, system fingerprinting
+**Severity**: High | **Impact**: Information disclosure, system fingerprinting
+
 **Remediation**:
 ```go
 func handleError(c echo.Context, err error, publicMsg string, isProduction bool) error {
@@ -261,10 +247,10 @@ func handleError(c echo.Context, err error, publicMsg string, isProduction bool)
 ### 9. INPUT-003: Insufficient Query Parameter Validation
 **File**: `/mnt/ollama/git/agent-guardrails-template/mcp-server/internal/web/handlers.go:116-140`
 
-**Issue**: Search query parameter `q` is accepted without length limits or sanitization, potentially enabling ReDoS (Regular Expression Denial of Service) if regex is used in search.
+Search query parameter `q` is accepted without length limits or sanitization, potentially enabling ReDoS (Regular Expression Denial of Service) if regex is used in search.
 
-**Severity**: Medium
-**Impact**: ReDoS, resource exhaustion
+**Severity**: Medium | **Impact**: ReDoS, resource exhaustion
+
 **Remediation**:
 ```go
 const maxQueryLength = 200
@@ -291,10 +277,10 @@ func (s *Server) searchDocuments(c echo.Context) error {
 ### 10. RATE-002: No Burst Protection for Rate Limiting
 **File**: `/mnt/ollama/git/agent-guardrails-template/mcp-server/internal/cache/redis.go:282-298`
 
-**Issue**: The rate limiter uses a simple counter without burst bucket or proper sliding window implementation. It resets at window boundaries, allowing burst attacks at minute boundaries.
+The rate limiter uses a simple counter without burst bucket or proper sliding window implementation. It resets at window boundaries, allowing burst attacks at minute boundaries.
 
-**Severity**: Medium
-**Impact**: Burst attacks at window boundaries
+**Severity**: Medium | **Impact**: Burst attacks at window boundaries
+
 **Remediation**:
 ```go
 // Implement token bucket or proper sliding window
@@ -340,10 +326,10 @@ func (dl *DistributedRateLimiter) Allow(ctx context.Context, key string, limit i
 ### 11. SEC-002: Version Endpoint Information Disclosure
 **File**: `/mnt/ollama/git/agent-guardrails-template/mcp-server/internal/web/server.go:273-280`
 
-**Issue**: The `/version` endpoint exposes version information without authentication, enabling attackers to identify vulnerable versions.
+The `/version` endpoint exposes version information without authentication, enabling attackers to identify vulnerable versions.
 
-**Severity**: Medium
-**Impact**: System fingerprinting, targeted attacks
+**Severity**: Medium | **Impact**: System fingerprinting, targeted attacks
+
 **Remediation**:
 ```go
 // Require authentication for version endpoint
@@ -362,10 +348,10 @@ func (s *Server) versionInfo(c echo.Context) error {
 ### 12. SEC-003: Missing Request Size Validation for Query Parameters
 **File**: `/mnt/ollama/git/agent-guardrails-template/mcp-server/internal/web/server.go:109-110`
 
-**Issue**: While body size is limited to 10MB, there's no validation on URL length or query string size, potentially enabling HTTP request smuggling or buffer overflow attacks.
+While body size is limited to 10MB, there's no validation on URL length or query string size, potentially enabling HTTP request smuggling or buffer overflow attacks.
 
-**Severity**: Medium
-**Impact**: HTTP request smuggling, DoS
+**Severity**: Medium | **Impact**: HTTP request smuggling, DoS
+
 **Remediation**:
 ```go
 // Add URL length validation middleware
@@ -391,9 +377,10 @@ s.echo.Use(URLLengthLimit(4096))
 ### 13. SEC-004: X-XSS-Protection Deprecated Header
 **File**: `/mnt/ollama/git/agent-guardrails-template/mcp-server/internal/web/server.go:264`
 
-**Issue**: The `X-XSS-Protection` header is deprecated and can introduce vulnerabilities in older browsers. CSP is the modern replacement.
+The `X-XSS-Protection` header is deprecated and can introduce vulnerabilities in older browsers. CSP is the modern replacement.
 
 **Severity**: Low
+
 **Remediation**:
 ```go
 // Remove X-XSS-Protection header
@@ -405,10 +392,10 @@ s.echo.Use(URLLengthLimit(4096))
 ### 14. LOG-001: Sensitive Information in Logs (API Key Hash)
 **File**: `/mnt/ollama/git/agent-guardrails-template/mcp-server/internal/web/middleware.go:66-72`
 
-**Issue**: API key hashes are logged, which could enable offline cracking attempts if logs are compromised.
+API key hashes are logged, which could enable offline cracking attempts if logs are compromised.
 
-**Severity**: Low
-**Impact**: Information disclosure (requires log access)
+**Severity**: Low | **Impact**: Information disclosure (requires log access)
+
 **Remediation**:
 ```go
 // Don't log key hashes, only use for rate limiting internally
@@ -420,17 +407,15 @@ s.echo.Use(URLLengthLimit(4096))
 ### 15. SEC-005: Race Condition in Cache Invalidation
 **File**: `/mnt/ollama/git/agent-guardrails-template/mcp-server/internal/web/handlers.go:334-336`
 
-**Issue**: The `patchRule` handler doesn't use the same error handling pattern as other handlers for cache invalidation, potentially masking failures.
+The `patchRule` handler doesn't use the same error handling pattern as other handlers for cache invalidation, potentially masking failures.
 
-**Severity**: Low
-**Impact**: Inconsistent error handling, stale cache
+**Severity**: Low | **Impact**: Inconsistent error handling, stale cache
+
 **Remediation**: Standardize cache invalidation error handling across all handlers.
 
 ---
 
 ## Security Strengths
-
-The following security controls are well-implemented:
 
 1. **Constant-Time API Key Comparison** (`middleware.go:47-50`): Uses `subtle.ConstantTimeCompare` to prevent timing attacks
 2. **Secret Scanning** (`handlers.go:90-96`): Documents are scanned for secrets before saving
@@ -440,31 +425,6 @@ The following security controls are well-implemented:
 6. **Body Size Limit** (`server.go:110`): 10MB body limit prevents large payload attacks
 7. **Audit Logging** (multiple files): Comprehensive audit logging for changes
 8. **Health Check Security** (`server.go:296-313`): Health endpoints don't expose component details
-
----
-
-## Remediation Priority
-
-### Immediate (Critical & High - Next 7 Days)
-1. [ ] Fix AUTH-BYPASS-001: Use actual request path instead of route pattern
-2. [ ] Fix RATE-001: Validate proxy headers before using RealIP()
-3. [ ] Fix CORS-001: Remove wildcard localhost origins
-4. [ ] Fix AUTH-002: Correct IDE endpoint authorization logic
-5. [ ] Fix INPUT-001: Add strict PATCH validation
-6. [ ] Fix SEC-001: Add HSTS header for TLS connections
-
-### Short-term (High & Medium - Next 30 Days)
-7. [ ] Fix INPUT-002: Add Content-Type validation middleware
-8. [ ] Fix ERROR-001: Implement production-safe error handling
-9. [ ] Fix INPUT-003: Add query parameter length limits
-10. [ ] Fix RATE-002: Implement proper token bucket rate limiting
-
-### Long-term (Medium & Low - Next 90 Days)
-11. [ ] Fix SEC-002: Protect version endpoint
-12. [ ] Fix SEC-003: Add URL length validation
-13. [ ] Fix SEC-004: Remove deprecated headers
-14. [ ] Fix LOG-001: Reduce sensitive information in logs
-15. [ ] Fix SEC-005: Standardize cache invalidation handling
 
 ---
 

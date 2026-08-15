@@ -6,14 +6,6 @@
 
 ---
 
-## Overview
-
-This document establishes Infrastructure as Code (IaC) standards for projects that manage cloud resources. All infrastructure must be defined in version-controlled configuration files - never through manual console operations ("ClickOps").
-
-**Core Principle:** If it's not in code, it doesn't exist.
-
----
-
 ## THE NO-CLICKOPS MANDATE
 
 ### Why ClickOps is Forbidden
@@ -503,42 +495,3 @@ jobs:
 ```
 
 ---
-
-## QUICK REFERENCE
-
-```
-+------------------------------------------------------------------+
-|              INFRASTRUCTURE STANDARDS QUICK REFERENCE             |
-+------------------------------------------------------------------+
-| RULE: All infrastructure defined in code (Terraform/Pulumi)      |
-| RULE: No manual console changes (ClickOps forbidden)             |
-+------------------------------------------------------------------+
-| WORKFLOW:                                                         |
-|   1. Edit .tf files                                              |
-|   2. Create PR                                                   |
-|   3. Run terraform plan                                          |
-|   4. Review plan (especially DESTROY operations)                 |
-|   5. Get approval                                                |
-|   6. Apply via CI/CD                                             |
-+------------------------------------------------------------------+
-| DRIFT DETECTION:                                                  |
-|   - Run terraform plan periodically                              |
-|   - Unexpected changes = drift                                   |
-|   - Investigate and remediate                                    |
-+------------------------------------------------------------------+
-| STATE FILES:                                                      |
-|   - Never commit to git                                          |
-|   - Use remote backend with encryption                           |
-|   - Enable state locking                                         |
-+------------------------------------------------------------------+
-| AGENT RULES:                                                      |
-|   - Generate .tf code only                                       |
-|   - Never run apply without approval                             |
-|   - Never access cloud console                                   |
-+------------------------------------------------------------------+
-```
-
----
-
-**Authored by:** TheArchitectit
-**Document Owner:** Project Maintainers

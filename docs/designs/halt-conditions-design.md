@@ -591,93 +591,43 @@ If check logic fails:
 
 ## Usage Examples
 
-### Example 1: Code Safety Check
+### Triggering a halt (code safety)
+
+An agent tries to modify `src/auth.js` without reading it first, and with no rollback plan:
 
 ```typescript
-// Agent wants to modify src/auth.js
 const result = await guardrail_check_halt_conditions({
     session_token: "sess_abc123",
     current_context: {
         operation: "modify authentication logic",
         target_files: ["src/auth.js"],
-        files_read: ["src/app.js"],  // auth.js NOT read!
+        files_read: ["src/app.js"],   // auth.js NOT read
         attempt_number: 1
     },
-    proposed_changes: {
-        files_to_modify: ["src/auth.js"],
-        has_tests: false,
-        has_rollback_plan: false
-    }
+    proposed_changes: { files_to_modify: ["src/auth.js"], has_tests: false, has_rollback_plan: false }
 });
-
-// Result:
-// should_halt: true
-// halt_reasons: [
-//   {
-//     halt_type: "code_safety",
-//     condition_name: "modifying_unread_code",
-//     severity: "critical",
-//     description: "Attempting to modify src/auth.js which has not been read"
-//   },
-//   {
-//     halt_type: "code_safety",
-//     condition_name: "no_rollback_plan",
-//     severity: "high",
-//     description: "No rollback plan provided for changes"
-//   }
-// ]
+// → should_halt: true
+//   halt_reasons: [
+//     { condition_name: "modifying_unread_code", severity: "critical",
+//       description: "Attempting to modify src/auth.js which has not been read" },
+//     { condition_name: "no_rollback_plan", severity: "high" }
+//   ]
 ```
 
-### Example 2: Three Strikes
+### Three strikes
+
+On the third failed attempt at a task, the check returns `three_strikes` (high) and `repeated_errors` (medium), with `recommended_action: "HALT and escalate. Recommend fresh session."`
+
+### Acknowledging a halt
 
 ```typescript
-// Third attempt on task
-const result = await guardrail_check_halt_conditions({
-    session_token: "sess_abc123",
-    task_id: "task_fix_bug_42",
-    current_context: {
-        operation: "fix null pointer exception",
-        attempt_number: 3,
-        previous_errors: [
-            "TypeError: Cannot read property 'x' of null",
-            "TypeError: Cannot read property 'x' of undefined"
-        ]
-    }
-});
-
-// Result:
-// should_halt: true
-// halt_reasons: [
-//   {
-//     halt_type: "execution",
-//     condition_name: "three_strikes",
-//     severity: "high",
-//     description: "Task has failed 3 times. Context may be contaminated."
-//   },
-//   {
-//     halt_type: "execution",
-//     condition_name: "repeated_errors",
-//     severity: "medium",
-//     description: "Similar errors across attempts suggest fundamental misunderstanding"
-//   }
-// ]
-// recommended_action: "HALT and escalate to user. Recommend fresh session."
-```
-
-### Example 3: Acknowledgment
-
-```typescript
-// User acknowledges and wants to proceed
 const result = await guardrail_acknowledge_halt({
     session_token: "sess_abc123",
     halt_id: "halt_789xyz",
     resolution: "resolved",
     resolution_notes: "User confirmed they read the file in another session"
 });
-
-// Result:
-// confirmed: true
-// session_can_resume: true
+// → confirmed: true, session_can_resume: true
 ```
 
 ---
