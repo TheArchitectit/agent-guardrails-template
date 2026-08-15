@@ -1,8 +1,218 @@
 {
   "project_name": "test-project-status",
   "version": "1.0.0",
-  "updated_at": "2026-03-02T01:57:33.601023527Z",
+  "updated_at": "2026-08-15T10:02:48.354576636-05:00",
   "teams": [
+    {
+      "id": 6,
+      "name": "Data Governance \u0026 Analytics",
+      "phase": "Phase 2: Platform \u0026 Foundation",
+      "description": "Enterprise data management",
+      "roles": [
+        {
+          "name": "Data Architect",
+          "responsibility": "Enterprise data model",
+          "deliverables": [
+            "Data models",
+            "Schema designs",
+            "Lineage documentation"
+          ]
+        },
+        {
+          "name": "DBA",
+          "responsibility": "Production database performance",
+          "deliverables": [
+            "Query optimization",
+            "Index tuning",
+            "Backup verification"
+          ]
+        },
+        {
+          "name": "Data Privacy Officer",
+          "responsibility": "Retention and deletion rules",
+          "deliverables": [
+            "Data retention policies",
+            "Deletion workflows"
+          ]
+        },
+        {
+          "name": "ETL Developer",
+          "responsibility": "Data flow management",
+          "deliverables": [
+            "ETL pipelines",
+            "Data quality checks",
+            "Transformation logic"
+          ]
+        }
+      ],
+      "exit_criteria": [
+        "Data models defined",
+        "Pipelines operational",
+        "Privacy controls implemented"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": 7,
+      "name": "Core Feature Squad",
+      "phase": "Phase 3: The Build Squads",
+      "description": "The 'Devs' - Feature implementation",
+      "roles": [
+        {
+          "name": "Technical Lead",
+          "responsibility": "Final word on implementation",
+          "deliverables": [
+            "Code reviews",
+            "Architecture decisions",
+            "Technical guidance"
+          ]
+        },
+        {
+          "name": "Senior Backend Engineer",
+          "responsibility": "Logic, APIs, microservices",
+          "deliverables": [
+            "Backend services",
+            "API endpoints",
+            "Business logic"
+          ]
+        },
+        {
+          "name": "Senior Frontend Engineer",
+          "responsibility": "Design system, state management",
+          "deliverables": [
+            "UI components",
+            "Frontend architecture",
+            "State logic"
+          ]
+        },
+        {
+          "name": "Accessibility (A11y) Expert",
+          "responsibility": "WCAG compliance",
+          "deliverables": [
+            "A11y audits",
+            "Remediation plans",
+            "Testing reports"
+          ]
+        },
+        {
+          "name": "Technical Writer",
+          "responsibility": "Internal/external docs",
+          "deliverables": [
+            "API docs",
+            "User guides",
+            "Runbooks"
+          ]
+        }
+      ],
+      "exit_criteria": [
+        "Features implemented",
+        "Code reviewed and approved",
+        "Documentation complete",
+        "A11y requirements met"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": 12,
+      "name": "IT Operations \u0026 Support (NOC)",
+      "phase": "Phase 5: Delivery \u0026 Sustainment",
+      "description": "Production operations",
+      "roles": [
+        {
+          "name": "NOC Analyst",
+          "responsibility": "24/7 monitoring",
+          "deliverables": [
+            "Monitoring dashboards",
+            "Alert triage",
+            "Incident tickets"
+          ]
+        },
+        {
+          "name": "Change Manager",
+          "responsibility": "Deployment approval",
+          "deliverables": [
+            "Change requests",
+            "Deployment windows",
+            "CAB approval"
+          ]
+        },
+        {
+          "name": "Release Manager",
+          "responsibility": "Go/No-Go coordination",
+          "deliverables": [
+            "Release plans",
+            "Rollback procedures",
+            "Coordination"
+          ]
+        },
+        {
+          "name": "L3 Support Engineer",
+          "responsibility": "Production bug escalation",
+          "deliverables": [
+            "Root cause analysis",
+            "Hotfix coordination",
+            "KB articles"
+          ]
+        }
+      ],
+      "exit_criteria": [
+        "Change approved",
+        "Release deployed",
+        "Support handoff complete"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": 4,
+      "name": "Infrastructure \u0026 Cloud Ops",
+      "phase": "Phase 2: Platform \u0026 Foundation",
+      "description": "Cloud infrastructure and networking",
+      "roles": [
+        {
+          "name": "Cloud Architect",
+          "responsibility": "VPC and network design",
+          "deliverables": [
+            "Network diagrams",
+            "Security groups",
+            "Routing tables"
+          ]
+        },
+        {
+          "name": "IaC Engineer",
+          "responsibility": "Provisions the 'metal'",
+          "deliverables": [
+            "Terraform modules",
+            "Ansible playbooks",
+            "Infrastructure code"
+          ]
+        },
+        {
+          "name": "Network Security Engineer",
+          "responsibility": "Firewalls, VPNs, Direct Connect",
+          "deliverables": [
+            "Security rules",
+            "Network policies",
+            "Access controls"
+          ]
+        },
+        {
+          "name": "Storage Engineer",
+          "responsibility": "S3/SAN management",
+          "deliverables": [
+            "Storage policies",
+            "Backup strategies",
+            "Archival rules"
+          ]
+        }
+      ],
+      "exit_criteria": [
+        "Infrastructure provisioned",
+        "Network connectivity verified",
+        "Security rules applied",
+        "Monitoring enabled"
+      ],
+      "status": "not_started"
+    },
     {
       "id": 9,
       "name": "Cybersecurity (AppSec)",
@@ -155,154 +365,6 @@
       "status": "not_started"
     },
     {
-      "id": 4,
-      "name": "Infrastructure \u0026 Cloud Ops",
-      "phase": "Phase 2: Platform \u0026 Foundation",
-      "description": "Cloud infrastructure and networking",
-      "roles": [
-        {
-          "name": "Cloud Architect",
-          "responsibility": "VPC and network design",
-          "deliverables": [
-            "Network diagrams",
-            "Security groups",
-            "Routing tables"
-          ]
-        },
-        {
-          "name": "IaC Engineer",
-          "responsibility": "Provisions the 'metal'",
-          "deliverables": [
-            "Terraform modules",
-            "Ansible playbooks",
-            "Infrastructure code"
-          ]
-        },
-        {
-          "name": "Network Security Engineer",
-          "responsibility": "Firewalls, VPNs, Direct Connect",
-          "deliverables": [
-            "Security rules",
-            "Network policies",
-            "Access controls"
-          ]
-        },
-        {
-          "name": "Storage Engineer",
-          "responsibility": "S3/SAN management",
-          "deliverables": [
-            "Storage policies",
-            "Backup strategies",
-            "Archival rules"
-          ]
-        }
-      ],
-      "exit_criteria": [
-        "Infrastructure provisioned",
-        "Network connectivity verified",
-        "Security rules applied",
-        "Monitoring enabled"
-      ],
-      "status": "not_started"
-    },
-    {
-      "id": 12,
-      "name": "IT Operations \u0026 Support (NOC)",
-      "phase": "Phase 5: Delivery \u0026 Sustainment",
-      "description": "Production operations",
-      "roles": [
-        {
-          "name": "NOC Analyst",
-          "responsibility": "24/7 monitoring",
-          "deliverables": [
-            "Monitoring dashboards",
-            "Alert triage",
-            "Incident tickets"
-          ]
-        },
-        {
-          "name": "Change Manager",
-          "responsibility": "Deployment approval",
-          "deliverables": [
-            "Change requests",
-            "Deployment windows",
-            "CAB approval"
-          ]
-        },
-        {
-          "name": "Release Manager",
-          "responsibility": "Go/No-Go coordination",
-          "deliverables": [
-            "Release plans",
-            "Rollback procedures",
-            "Coordination"
-          ]
-        },
-        {
-          "name": "L3 Support Engineer",
-          "responsibility": "Production bug escalation",
-          "deliverables": [
-            "Root cause analysis",
-            "Hotfix coordination",
-            "KB articles"
-          ]
-        }
-      ],
-      "exit_criteria": [
-        "Change approved",
-        "Release deployed",
-        "Support handoff complete"
-      ],
-      "status": "not_started"
-    },
-    {
-      "id": 3,
-      "name": "GRC (Governance, Risk, \u0026 Compliance)",
-      "phase": "Phase 1: Strategy, Governance \u0026 Planning",
-      "description": "Compliance and risk management",
-      "roles": [
-        {
-          "name": "Compliance Officer",
-          "responsibility": "SOX/HIPAA/GDPR adherence",
-          "deliverables": [
-            "Compliance checklists",
-            "Audit reports"
-          ]
-        },
-        {
-          "name": "Internal Auditor",
-          "responsibility": "Pre-production mock audits",
-          "deliverables": [
-            "Audit findings",
-            "Remediation plans"
-          ]
-        },
-        {
-          "name": "Privacy Engineer",
-          "responsibility": "Data masking and PII",
-          "deliverables": [
-            "Privacy impact assessments",
-            "Data flow diagrams"
-          ]
-        },
-        {
-          "name": "Policy Manager",
-          "responsibility": "Maintains SOPs",
-          "deliverables": [
-            "Standard operating procedures",
-            "Policy updates"
-          ]
-        }
-      ],
-      "exit_criteria": [
-        "Compliance review passed",
-        "Risk assessment complete",
-        "Privacy requirements met",
-        "Policies acknowledged"
-      ],
-      "status": "not_started"
-    },
-    {
       "id": 1,
       "name": "Business \u0026 Product Strategy",
       "phase": "Phase 1: Strategy, Governance \u0026 Planning",
@@ -353,111 +415,49 @@
       "status": "not_started"
     },
     {
-      "id": 6,
-      "name": "Data Governance \u0026 Analytics",
-      "phase": "Phase 2: Platform \u0026 Foundation",
-      "description": "Enterprise data management",
+      "id": 3,
+      "name": "GRC (Governance, Risk, \u0026 Compliance)",
+      "phase": "Phase 1: Strategy, Governance \u0026 Planning",
+      "description": "Compliance and risk management",
       "roles": [
         {
-          "name": "Data Architect",
-          "responsibility": "Enterprise data model",
+          "name": "Compliance Officer",
+          "responsibility": "SOX/HIPAA/GDPR adherence",
           "deliverables": [
-            "Data models",
-            "Schema designs",
-            "Lineage documentation"
+            "Compliance checklists",
+            "Audit reports"
           ]
         },
         {
-          "name": "DBA",
-          "responsibility": "Production database performance",
+          "name": "Internal Auditor",
+          "responsibility": "Pre-production mock audits",
           "deliverables": [
-            "Query optimization",
-            "Index tuning",
-            "Backup verification"
+            "Audit findings",
+            "Remediation plans"
           ]
         },
         {
-          "name": "Data Privacy Officer",
-          "responsibility": "Retention and deletion rules",
+          "name": "Privacy Engineer",
+          "responsibility": "Data masking and PII",
           "deliverables": [
-            "Data retention policies",
-            "Deletion workflows"
+            "Privacy impact assessments",
+            "Data flow diagrams"
           ]
         },
         {
-          "name": "ETL Developer",
-          "responsibility": "Data flow management",
+          "name": "Policy Manager",
+          "responsibility": "Maintains SOPs",
           "deliverables": [
-            "ETL pipelines",
-            "Data quality checks",
-            "Transformation logic"
+            "Standard operating procedures",
+            "Policy updates"
           ]
         }
       ],
       "exit_criteria": [
-        "Data models defined",
-        "Pipelines operational",
-        "Privacy controls implemented"
-      ],
-      "status": "not_started"
-    },
-    {
-      "id": 7,
-      "name": "Core Feature Squad",
-      "phase": "Phase 3: The Build Squads",
-      "description": "The 'Devs' - Feature implementation",
-      "roles": [
-        {
-          "name": "Technical Lead",
-          "responsibility": "Final word on implementation",
-          "deliverables": [
-            "Code reviews",
-            "Architecture decisions",
-            "Technical guidance"
-          ]
-        },
-        {
-          "name": "Senior Backend Engineer",
-          "responsibility": "Logic, APIs, microservices",
-          "deliverables": [
-            "Backend services",
-            "API endpoints",
-            "Business logic"
-          ]
-        },
-        {
-          "name": "Senior Frontend Engineer",
-          "responsibility": "Design system, state management",
-          "deliverables": [
-            "UI components",
-            "Frontend architecture",
-            "State logic"
-          ]
-        },
-        {
-          "name": "Accessibility (A11y) Expert",
-          "responsibility": "WCAG compliance",
-          "deliverables": [
-            "A11y audits",
-            "Remediation plans",
-            "Testing reports"
-          ]
-        },
-        {
-          "name": "Technical Writer",
-          "responsibility": "Internal/external docs",
-          "deliverables": [
-            "API docs",
-            "User guides",
-            "Runbooks"
-          ]
-        }
-      ],
-      "exit_criteria": [
-        "Features implemented",
-        "Code reviewed and approved",
-        "Documentation complete",
-        "A11y requirements met"
+        "Compliance review passed",
+        "Risk assessment complete",
+        "Privacy requirements met",
+        "Policies acknowledged"
       ],
       "status": "not_started"
     },

@@ -19,7 +19,6 @@ This directory contains documentation standards that ensure consistency, maintai
 | [LOGGING_PATTERNS.md](./LOGGING_PATTERNS.md) | Array-based logging | Standard log format |
 | [LOGGING_INTEGRATION.md](./LOGGING_INTEGRATION.md) | External logging hooks | Hook interface spec |
 | [API_SPECIFICATIONS.md](./API_SPECIFICATIONS.md) | OpenAPI + OpenSpec | When to use each |
-| [GAME_BUILD_VALIDATION.md](./GAME_BUILD_VALIDATION.md) | Game engine validation | Godot/Unity/Unreal headless checks |
 | [CROSS_CUTTING_2026.md](./CROSS_CUTTING_2026.md) | 2026 universal standards | SBOM, SLSA, AI code gen, OWASP |
 
 ---
@@ -78,16 +77,6 @@ Guidance on choosing between OpenAPI and OpenSpec for API documentation.
 - Hybrid approach guidance
 - Template files
 
-### GAME_BUILD_VALIDATION.md
-Validates game engine projects (Godot, Unity, Unreal) as part of the guardrails framework. Runs headless build checks, script validation, and test execution.
-
-**Key sections:**
-- MCP tool: guardrail_validate_game_build
-- Validation pipeline (detect, config, headless, scenes, scripts, tests)
-- Supported engines (Godot full, Unity/Unreal planned)
-- Test script format (PASS/FAIL output)
-- Integration with pre-work check
-
 ### CROSS_CUTTING_2026.md
 Cross-cutting security and quality standards for ALL language profiles, reflecting 2026 best practices.
 
@@ -111,7 +100,6 @@ These standards support the [AGENT_GUARDRAILS.md](../AGENT_GUARDRAILS.md) requir
 - **External integration** → LOGGING_INTEGRATION.md
 - **Documentation quality** → MODULAR_DOCUMENTATION.md
 - **API documentation** → API_SPECIFICATIONS.md
-- **Game build safety** → GAME_BUILD_VALIDATION.md
 - **2026 universal standards** → CROSS_CUTTING_2026.md
 
 ---
