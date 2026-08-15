@@ -299,5 +299,4 @@ func (s *Store[T]) Update(fn func(*T)) {
 |----------|---------|
 | [AI_ASSISTED_DEV.md](../ai-dev/ai-assisted-dev.md) | AI development decision matrix |
 | [2026_UI_UX_STANDARD.md](../ui-ux/ui-ux-standard.md) | UI component patterns |
-| [2026_GAME_DESIGN.md](../game-design/2026_GAME_DESIGN.md) | Game state requirements |
 | [AGENT_GUARDRAILS.md](../getting-started/agent-guardrails.md) | Core safety protocols |

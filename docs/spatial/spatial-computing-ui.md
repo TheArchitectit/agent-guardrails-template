@@ -342,7 +342,6 @@ impl SpatialSafety {
 | Document | Purpose |
 |----------|---------|
 | [AI_ASSISTED_DEV.md](../ai-dev/ai-assisted-dev.md) | AI development patterns and iteration safety |
-| [2026_GAME_DESIGN.md](../game-design/2026_GAME_DESIGN.md) | Game design guardrails |
 | [ACCESSIBILITY_GUIDE.md](../accessibility/accessibility-guide.md) | WCAG 3.0+ compliance for spatial interfaces |
 
 ---

@@ -2,7 +2,7 @@
 
 > **Control the supply chain.** Only approved packages may be used.
 
-**Related:** [PROJECT_CONTEXT_TEMPLATE.md](project-context-template.md) | [AGENT_GUARDRAILS.md](../getting-started/agent-guardrails.md)
+**Related:** [project-context-template.md](project-context-template.md) | [agent-guardrails.md](../getting-started/agent-guardrails.md)
 
 ---
 
@@ -479,5 +479,3 @@ PROCESS TO REMOVE PACKAGE:
 
 **Authored by:** TheArchitectit
 **Document Owner:** Project Maintainers
-**Last Updated:** 2026-01-21
-**Line Count:** ~380
