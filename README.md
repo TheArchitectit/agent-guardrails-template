@@ -77,7 +77,7 @@ Then see [QUICK_SETUP.md](docs/QUICK_SETUP.md) for the 5-minute setup, or [HOW_T
 | [four-laws.md](skills/shared-prompts/four-laws.md) | Canonical Four Laws prompt |
 | [halt-conditions.md](skills/shared-prompts/halt-conditions.md) | When to stop and ask |
 
-### AI-First Development 
+### AI-First Development
 
 | Document | Purpose |
 |----------|---------|
@@ -86,7 +86,7 @@ Then see [QUICK_SETUP.md](docs/QUICK_SETUP.md) for the 5-minute setup, or [HOW_T
 | [GENERATIVE_ASSET_SAFETY.md](docs/generative/GENERATIVE_ASSET_SAFETY.md) | AI content disclosure, C2PA metadata, procedural generation safety |
 | [vibe-coding.md](skills/shared-prompts/vibe-coding.md) | Canonical vibe coding principles |
 
-### AI Tool Integration 
+### AI Tool Integration
 
 | Document | Purpose |
 |----------|---------|
@@ -98,7 +98,6 @@ Then see [QUICK_SETUP.md](docs/QUICK_SETUP.md) for the 5-minute setup, or [HOW_T
 | [.windsurfrules](.windsurfrules) | Windsurf rules preamble |
 | [.opencode/](.opencode/) | OpenCode agents and skills |
 | [.opencode/skills/3d-game-dev/](.opencode/skills/3d-game-dev/) | 3D game dev OpenCode skill |
-| [.claude/skills/](.claude/skills/) | 7 Claude Code skill files |
 | [.claude/skills-3d/](.claude/skills-3d/) | 3D game dev Claude skill |
 | [.github/copilot-instructions.md](.github/copilot-instructions.md) | GitHub Copilot repo-level instructions |
 | [skills/shared-prompts/](skills/shared-prompts/) | 8 canonical shared prompts (3d-game-dev, error-recovery, three-strikes, production-first, scope-validation + existing) |
@@ -114,7 +113,7 @@ Then see [QUICK_SETUP.md](docs/QUICK_SETUP.md) for the 5-minute setup, or [HOW_T
 
 > Game design docs (2026_GAME_DESIGN, 3D game development, AI_DEV_2026 guide, Hermes 2026 dossier) have been moved to a separate private repo.
 
-### Commerce & Social Safety 
+### Commerce & Social Safety
 
 | Document | Purpose |
 |----------|---------|
@@ -307,27 +306,20 @@ BSD-3-Clause — See [LICENSE](LICENSE)
 - **Maintainer:** [TheArchitectit](https://github.com/TheArchitectit)
 - **Built with:** Claude Code + Opus
 
-### ☕ Support This Project
+## Support This Project
 
-Help keep this project going — use a referral link below and both of us get credits!
+If this project helped you, consider buying me a coffee:
+
+[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-TheArchitectit-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://www.buymeacoffee.com/TheArchitectit)
+
+Or use one of the referral links below — you get credits, and so do we:
 
 | Service | Your Bonus | Details | Referral Code |
 |---------|-----------|---------|---------------|
 | [**Neuralwatt**](https://portal.neuralwatt.com/auth/register?ref=NW-ROGER-ET3Y) | $10 in credits | Spend $10+ → you get $10, we get $20 | `NW-ROGER-ET3Y` |
 | [**Synthetic**](https://synthetic.new/?referral=UAWqkKQQLFkzMkY) | $10 in credits | Subscribe → both get $10 credit | `UAWqkKQQLFkzMkY` |
+| [**Ozore.com**](https://ozore.com/?ref=cwe4kdx0) | 50% off first month | Cloud hosting for AI projects — code `lundrog50` | — |
+
 ---
 
 **v3.3.0** · AI-First Rapid Development Framework · [Get Started →](docs/QUICK_SETUP.md)
-
-
-## ☁️ Cloud Credits
-
-Power your AI projects with [Ozore.com](https://ozore.com/?ref=cwe4kdx0) — use code **lundrog50** for 50% off your first month.
-
-> `direct-pin` and `custom-router` are available on **Pro** and **Max** plans only.
-
-## ☕ Support
-
-If this project helped you, consider buying me a coffee:
-
-[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-TheArchitectit-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://www.buymeacoffee.com/TheArchitectit)
