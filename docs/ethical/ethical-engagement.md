@@ -338,10 +338,10 @@ func (a *EthicalAudit) Passes() bool {
 
 | Document | Purpose |
 |----------|---------|
-| [MONETIZATION_GUARDRAILS.md](../monetization/MONETIZATION_GUARDRAILS.md) | IAP ethics and spending protections |
-| [ANALYTICS_ETHICS.md](../analytics/ANALYTICS_ETHICS.md) | Telemetry and behavioral tracking ethics |
-| [GENERATIVE_ASSET_SAFETY.md](../generative/GENERATIVE_ASSET_SAFETY.md) | AI-generated content safety |
-| [AI_ASSISTED_DEV.md](../ai-dev/AI_ASSISTED_DEV.md) | AI development approval gates |
+| [MONETIZATION_GUARDRAILS.md](../monetization/monetization-guardrails.md) | IAP ethics and spending protections |
+| [ANALYTICS_ETHICS.md](../analytics/analytics-ethics.md) | Telemetry and behavioral tracking ethics |
+| [GENERATIVE_ASSET_SAFETY.md](../generative/generative-asset-safety.md) | AI-generated content safety |
+| [AI_ASSISTED_DEV.md](../ai-dev/ai-assisted-dev.md) | AI development approval gates |
 
 ---
 

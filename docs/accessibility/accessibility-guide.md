@@ -307,9 +307,9 @@ impl AccessibilityAudit {
 
 | Document | Purpose |
 |----------|---------|
-| [AI_ASSISTED_DEV.md](../ai-dev/AI_ASSISTED_DEV.md) | AI development patterns and quality gates |
-| [2026_UI_UX_STANDARD.md](../ui-ux/2026_UI_UX_STANDARD.md) | Component patterns with built-in accessibility |
-| [ETHICAL_ENGAGEMENT.md](../ethical/ETHICAL_ENGAGEMENT.md) | Dark pattern prevention |
+| [AI_ASSISTED_DEV.md](../ai-dev/ai-assisted-dev.md) | AI development patterns and quality gates |
+| [2026_UI_UX_STANDARD.md](../ui-ux/ui-ux-standard.md) | Component patterns with built-in accessibility |
+| [ETHICAL_ENGAGEMENT.md](../ethical/ethical-engagement.md) | Dark pattern prevention |
 
 ---
 

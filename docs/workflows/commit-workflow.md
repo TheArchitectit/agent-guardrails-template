@@ -2,7 +2,7 @@
 
 > When and how to commit, especially between to-do items.
 
-**Related:** [TESTING_VALIDATION.md](./TESTING_VALIDATION.md) | [GIT_PUSH_PROCEDURES.md](./GIT_PUSH_PROCEDURES.md)
+**Related:** [TESTING_VALIDATION.md](testing-validation.md) | [GIT_PUSH_PROCEDURES.md](git-push-procedures.md)
 
 ---
 

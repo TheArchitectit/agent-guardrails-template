@@ -2,7 +2,7 @@
 
 > **Trust but verify.** Every agent's work must be reviewed before acceptance.
 
-**Related:** [AGENT_GUARDRAILS.md](../AGENT_GUARDRAILS.md) | [ADVERSARIAL_TESTING.md](../standards/ADVERSARIAL_TESTING.md) | [CODE_REVIEW.md](./CODE_REVIEW.md)
+**Related:** [AGENT_GUARDRAILS.md](../getting-started/agent-guardrails.md) | [ADVERSARIAL_TESTING.md](../standards/adversarial-testing.md) | [CODE_REVIEW.md](code-review.md)
 
 ---
 

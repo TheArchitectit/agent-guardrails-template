@@ -2,7 +2,7 @@
 
 > Agent self-review and human review escalation.
 
-**Related:** [TESTING_VALIDATION.md](./TESTING_VALIDATION.md) | [AGENT_GUARDRAILS.md](../AGENT_GUARDRAILS.md)
+**Related:** [TESTING_VALIDATION.md](testing-validation.md) | [AGENT_GUARDRAILS.md](../getting-started/agent-guardrails.md)
 
 ---
 

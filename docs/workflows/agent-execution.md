@@ -2,7 +2,7 @@
 
 > Standard task execution flow, rollback procedures, and error handling for AI agents.
 
-**Related:** [../AGENT_GUARDRAILS.md](../AGENT_GUARDRAILS.md) | [TESTING_VALIDATION.md](./TESTING_VALIDATION.md) | [AGENT_REVIEW_PROTOCOL.md](./AGENT_REVIEW_PROTOCOL.md)
+**Related:** [../AGENT_GUARDRAILS.md](../getting-started/agent-guardrails.md) | [TESTING_VALIDATION.md](testing-validation.md) | [AGENT_REVIEW_PROTOCOL.md](agent-review-protocol.md)
 
 ---
 
@@ -532,11 +532,11 @@ PRE-COMPLETION CHECKLIST:
 ---
 
 **Related Documents:**
-- [AGENT_GUARDRAILS.md](../AGENT_GUARDRAILS.md) - Core safety protocols
-- [TESTING_VALIDATION.md](./TESTING_VALIDATION.md) - Validation protocols
-- [ROLLBACK_PROCEDURES.md](./ROLLBACK_PROCEDURES.md) - Recovery operations
-- [COMMIT_WORKFLOW.md](./COMMIT_WORKFLOW.md) - Commit guidelines
-- [AGENT_REVIEW_PROTOCOL.md](./AGENT_REVIEW_PROTOCOL.md) - Post-work verification
+- [AGENT_GUARDRAILS.md](../getting-started/agent-guardrails.md) - Core safety protocols
+- [TESTING_VALIDATION.md](testing-validation.md) - Validation protocols
+- [ROLLBACK_PROCEDURES.md](rollback-procedures.md) - Recovery operations
+- [COMMIT_WORKFLOW.md](commit-workflow.md) - Commit guidelines
+- [AGENT_REVIEW_PROTOCOL.md](agent-review-protocol.md) - Post-work verification
 
 ---
 

@@ -2,7 +2,7 @@
 
 > **Infrastructure as Code.** No ClickOps, only declarative definitions.
 
-**Related:** [AGENT_GUARDRAILS.md](../AGENT_GUARDRAILS.md) | [OPERATIONAL_PATTERNS.md](./OPERATIONAL_PATTERNS.md)
+**Related:** [AGENT_GUARDRAILS.md](../getting-started/agent-guardrails.md) | [OPERATIONAL_PATTERNS.md](operational-patterns.md)
 
 ---
 

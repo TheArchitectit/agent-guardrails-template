@@ -368,7 +368,7 @@ See [API.md](API.md) for complete API documentation.
 └── README.md            # This file
 ```
 
-**Note:** As of v2.6.0, all team management functionality has been migrated from Python (`scripts/team_manager.py`) to Go (`internal/team/`). See [../docs/PYTHON_TO_GO_MIGRATION.md](../docs/PYTHON_TO_GO_MIGRATION.md) for details.
+**Note:** As of v2.6.0, all team management functionality has been migrated from Python (`scripts/team_manager.py`) to Go (`internal/team/`). See [../docs/PYTHON_TO_GO_MIGRATION.md](../docs/mcp-server/python-to-go-migration.md) for details.
 
 ### Adding New Features
 

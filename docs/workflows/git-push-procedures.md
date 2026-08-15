@@ -2,7 +2,7 @@
 
 > Safety procedures for pushing to remote repositories.
 
-**Related:** [COMMIT_WORKFLOW.md](./COMMIT_WORKFLOW.md) | [BRANCH_STRATEGY.md](./BRANCH_STRATEGY.md)
+**Related:** [COMMIT_WORKFLOW.md](commit-workflow.md) | [BRANCH_STRATEGY.md](branch-strategy.md)
 
 ---
 
