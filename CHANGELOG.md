@@ -8,15 +8,75 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
-### Changed
+---
+
+## [3.3.0] - 2026-08-15
+
+### Release: Stateless StreamableHTTP Transport, Repo Cleanup, and Deployment Fixes
+
+**Type:** Minor Version Bump (transport migration + infrastructure fixes)
+**Requires:** Go 1.25+
+
+This release moves the MCP server from the legacy SSE transport to stateless
+StreamableHTTP, fixes the build so the server actually compiles and runs on a
+fresh install, and pays down a large pile of accumulated repo debt. If you have
+an SSE-based client config, you need to update it — see **Migration Notes** below.
+
+#### Changed
 
 - **MCP Transport** — Migrated from SSE to stateless StreamableHTTP
   - Replaced `server.NewSSEServer` with `server.NewStreamableHTTPServer` (mcp-go v0.58.0)
-  - Stateless mode: no session IDs, no persistent connections — each POST to `/mcp` is independent
-  - Single `POST /mcp` endpoint replaces two-step SSE flow (`GET /sse` + `POST /message?session_id=...`)
-  - Fixed `Shutdown()` to actually shut down the MCP transport (was a no-op)
-  - Removed dead `/mcp/v1/sse` path skip in web middleware
-  - Updated all client config examples and docs to use `/mcp` endpoint
+  - Stateless mode: no session IDs, no persistent connections — each `POST /mcp` is independent
+  - Single `POST /mcp` endpoint replaces the two-step SSE flow (`GET /sse` + `POST /message?session_id=...`)
+  - `Shutdown()` now actually shuts down the MCP transport (was a no-op)
+  - Removed dead `/mcp/v1/sse` auth-path skip in web middleware
+  - Updated all client config examples and docs to the new endpoint
+- **Go toolchain** — 1.25+ required; updated `Dockerfile` builder image (was pinned to Go 1.23) and CI workflow (was pinned to Go 1.21, which couldn't build the module at all)
+- **Deployment compose files** — container bind address is now configurable
+  - `BIND_ADDR` env var controls the host interface ports bind to (defaults to `127.0.0.1`, i.e. localhost only — set it to a specific interface if you need the server reachable from other hosts)
+  - Dropped the deprecated `version:` key from compose files
+- **Repository hygiene** — removed ~53MB of committed binaries and tarballs, junk/scratch/test-data files, and duplicated navigation docs; moved game-design, 3D-development, and Hermes-2026 docs to a private companion repo; restructured root directory and consolidated changelogs
+
+#### Fixed
+
+- **Build was broken in v3.2.0** — `internal/mcp` was written against an mcp-go API that never shipped; the package did not compile. Ported to mcp-go v0.58.0 with per-tool registration and mechanical type fixes. The server now builds cleanly.
+- **Database migrations failed on fresh installs** — repaired and renumbered the migration set (now a clean 001–018 sequence):
+  - `failure_registry` and `audit_log` were declared as partitioned tables whose primary key omitted the partition column — invalid in PostgreSQL, so the tables never got created. They are plain tables now.
+  - Removed a call to a nonexistent partition-management function, a trailing-comma syntax error, a `VARCHAR`→`UUID` foreign key, and FKs pointing at tables that don't exist in this schema
+  - Fixed duplicate migration numbers that broke golang-migrate ordering
+- **PostgreSQL and Redis containers crash-looped on first deploy**
+  - `no-new-privileges` blocked the postgres:alpine entrypoint's setuid privilege drop; postgres now runs with the minimal capability set it needs
+  - redis:7-alpine has no `/usr/local/etc/redis` directory — configuration now passes via CLI flags, running as the image's `redis` user directly
+- **JWT secret validation rejected valid random secrets** — the check counted set bits per byte (popcount), which measures bit density of the ASCII encoding rather than randomness; `openssl rand -hex` secrets randomly failed it. Replaced with Shannon entropy over byte frequencies.
+- **Stale documentation** — refreshed status/audit docs, fixed dead links after the doc reorganization, archived outdated release notes
+
+#### Migration Notes (v3.2.x → v3.3.0)
+
+1. **Update client configs:** point MCP clients at `POST /mcp` instead of the old SSE URL (`/mcp/v1/sse`). Example:
+
+   ```json
+   {
+     "mcpServers": {
+       "guardrails": { "url": "http://your-host:8080/mcp" }
+     }
+   }
+   ```
+
+2. **No session handling needed:** there are no session IDs to track. Each request is independent.
+3. **Go 1.25+** if building from source.
+4. **Fresh databases:** migrations apply cleanly from empty; existing databases with partially-applied old migrations should drop and re-apply (no production data lives in the previously-broken tables).
+5. **Exposed ports default to localhost.** Set `BIND_ADDR` only if you need the server reachable off-box.
+
+#### Stats
+
+| Metric | Value |
+|--------|-------|
+| Commits | 26 |
+| Files changed | 217 (+3,100 / −15,485 lines) |
+| MCP tools | 35 |
+| MCP resources | 11 |
+| Database migrations | 18 (clean sequence) |
+| Repo weight removed | ~53MB of binaries/tarballs |
 
 ---
 
