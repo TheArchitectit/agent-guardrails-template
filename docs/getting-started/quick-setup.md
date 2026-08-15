@@ -335,7 +335,7 @@ You're not adding constraints. You're removing the need for agents to self-const
 
 ## Need Help?
 
-- 📖 **Documentation:** See [INDEX_MAP.md](../../INDEX_MAP.md) for all docs
+- 📖 **Documentation:** See [index-map.md](../../index-map.md) for all docs
 - 🐛 **Issues:** https://github.com/TheArchitectit/agent-guardrails-template/issues
 - 💬 **Discussions:** GitHub Discussions tab
 

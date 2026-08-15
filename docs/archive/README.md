@@ -13,4 +13,4 @@ were written and are almost certainly out of date.
 | `sprints/` | All sprint records — MCP gap sprints (001–006), the sprint guide/template, and enterprise readiness sprints (v1.0–v1.4) |
 | `architecture/` | Superseded architecture docs (Clean CQRS map — referenced a code package that was never finished) |
 
-For current docs, start at the root [INDEX_MAP](../../INDEX_MAP.md) or [README](../../README.md).
+For current docs, start at the root [INDEX_MAP](../../index-map.md) or [README](../../README.md).

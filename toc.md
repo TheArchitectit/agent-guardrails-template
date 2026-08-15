@@ -1,7 +1,7 @@
 # Table of Contents
 
 Flat listing of documentation in this repo. For keyword lookup, see
-[INDEX_MAP.md](INDEX_MAP.md). Historical docs are in
+[index-map.md](index-map.md). Historical docs are in
 [docs/archive/](docs/archive/) and not listed here.
 
 ## Root
@@ -10,8 +10,8 @@ Flat listing of documentation in this repo. For keyword lookup, see
 - [CHANGELOG.md](CHANGELOG.md) — release history
 - [CONTRIBUTING.md](CONTRIBUTING.md) — how to contribute
 - [CLAUDE.md](CLAUDE.md) — Claude Code context
-- [INDEX_MAP.md](INDEX_MAP.md) — keyword → file lookup
-- [TOC.md](TOC.md) — this file
+- [index-map.md](index-map.md) — keyword → file lookup
+- [toc.md](toc.md) — this file
 
 ## docs/
 

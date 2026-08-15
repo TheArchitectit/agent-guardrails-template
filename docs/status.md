@@ -152,7 +152,7 @@ Tailscale). Ports are bound to the Tailscale interface by default via
 
 1. **Enforce 500-Line File Limit**
    - Audit all docs and source files for the 500-line maximum
-   - Split any over-limit files (refactor into sections + update INDEX_MAP)
+   - Split any over-limit files (refactor into sections + update index-map)
 
 2. **Dead Code Cleanup**
    - Remove unused functions, endpoints, and components flagged during review
