@@ -2,7 +2,7 @@ package config
 
 import (
 	"fmt"
-	"math/bits"
+	"math"
 	"regexp"
 	"time"
 
@@ -267,12 +267,21 @@ func ValidateJWTSecret(secret string) error {
 		return fmt.Errorf("JWT_SECRET must be at least 32 bytes, got %d", len(secret))
 	}
 
-	// Check entropy
-	var entropy float64
-	for _, b := range []byte(secret) {
-		entropy += float64(bits.OnesCount8(uint8(b)))
+	// Check entropy using Shannon entropy over byte frequencies.
+	// Random secrets (hex, base64) score ~4.0 bits; human-readable or
+	// repetitive strings score far lower. The previous check used popcount
+	// (bits set per byte), which wrongly rejected valid hex secrets.
+	freq := make(map[byte]int)
+	for i := 0; i < len(secret); i++ {
+		freq[secret[i]]++
 	}
-	if entropy/float64(len(secret)) < 3.5 {
+	n := float64(len(secret))
+	entropy := 0.0
+	for _, count := range freq {
+		p := float64(count) / n
+		entropy -= p * math.Log2(p)
+	}
+	if entropy < 3.0 {
 		return fmt.Errorf("JWT_SECRET has insufficient entropy (should be random, not human-readable)")
 	}
 
