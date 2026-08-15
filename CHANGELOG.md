@@ -152,7 +152,7 @@ an SSE-based client config, you need to update it — see **Migration Notes** be
 
 **Type:** Minor Version Bump (new features + security hardening)
 **Branch:** `feature/platform-review-june-2026` (14 commits)
-**Review:** [Platform Review](docs/reviews/PLATFORM_REVIEW_2026-06-14.md) | [Implementation Report](docs/reviews/IMPLEMENTATION_REPORT_2026-06-14.md)
+**Review:** [Platform Review](docs/archive/reviews/PLATFORM_REVIEW_2026-06-14.md) | [Implementation Report](docs/archive/reviews/IMPLEMENTATION_REPORT_2026-06-14.md)
 
 #### Added
 
