@@ -10,39 +10,7 @@
 
 This document establishes the **mandatory review protocol** for AI agent work. No agent's output should be accepted without verification by either another agent, a different LLM, or systematic automated checks.
 
-**Core Principle:** The agent that builds should NOT be the only agent that validates.
-
----
-
-## WHY AGENT REVIEW IS MANDATORY
-
-### The Hallucination Problem
-
-```
-PROBLEM: AI agents confidently produce incorrect output.
-
-SYMPTOMS:
-- Code that "looks right" but has subtle bugs
-- Tests that pass but don't actually test the right thing
-- Logic that works for happy path but fails edge cases
-- Confident assertions about code that doesn't exist
-
-SOLUTION: Independent verification breaks the hallucination loop.
-```
-
-### The Context Contamination Problem
-
-```
-PROBLEM: Long sessions accumulate errors in context.
-
-SYMPTOMS:
-- Agent references earlier mistakes as "facts"
-- Corrections don't fully override original errors
-- Agent defends wrong approaches because they're in context
-- Quality degrades as session length increases
-
-SOLUTION: Fresh agent with clean context reviews the work.
-```
+**Core Principle:** The agent that builds should NOT be the only agent that validates. AI agents confidently produce incorrect output (hallucinations), and long sessions accumulate errors in context — independent verification with fresh context breaks both loops.
 
 ---
 
@@ -151,8 +119,6 @@ SOLUTION: Fresh agent with clean context reviews the work.
 │  - Authentication changes                                   │
 └─────────────────────────────────────────────────────────────┘
 ```
-
----
 
 ## REVIEWER AGENT PROMPTS
 
@@ -315,8 +281,6 @@ EVALUATE:
 4. Suggestions for improvement
 ```
 
----
-
 ## REVIEW WORKFLOW
 
 ### Standard Review Flow
@@ -395,50 +359,6 @@ Post Review:
 [ ] If pattern emerges: Suggest prevention rule addition
 ```
 
-### Review Package Template
-
-```markdown
-# Review Package: [Task Name]
-
-## Summary
-- **Builder Agent:** [Agent/Model used]
-- **Session ID:** [If applicable]
-- **Task:** [Brief description]
-- **Files Changed:** [Count]
-
-## Changes Overview
-[Brief description of what was done]
-
-## Files Modified
-| File | Type | Lines Changed |
-|------|------|---------------|
-| src/components/Button.tsx | Modified | +45, -12 |
-| src/components/Button.test.tsx | Created | +78 |
-
-## Git Diff
-```diff
-[Paste git diff here]
-```
-
-## Test Results
-- Total tests: X
-- Passed: X
-- Failed: 0
-- Coverage: X%
-
-## Builder Notes
-[Any context the builder wants to provide]
-
-## Review Request
-Please review for:
-- [ ] Correctness
-- [ ] Security
-- [ ] Test quality
-- [ ] Architecture compliance
-```
-
----
-
 ## REVIEW DECISION MATRIX
 
 ### When to APPROVE
@@ -495,8 +415,6 @@ Recommended action:
 [What should happen next]"
 ```
 
----
-
 ## REVIEW CYCLE LIMITS
 
 ### Three Strikes Rule
@@ -521,23 +439,6 @@ RATIONALE:
 - Forces escalation when agent can't resolve issues
 - Protects against hallucination loops
 ```
-
-### Context Reset Between Cycles
-
-```
-CONTEXT RESET PROTOCOL:
-
-After each review cycle:
-1. Start NEW reviewer session (fresh context)
-2. Do NOT carry forward previous review comments
-3. Reviewer should see ONLY:
-   - Current code state
-   - Test results
-   - Original requirements
-4. Prevents bias from previous review attempts
-```
-
----
 
 ## AUTOMATION INTEGRATION
 
@@ -595,44 +496,3 @@ jobs:
           fi
 ```
 
----
-
-## QUICK REFERENCE
-
-```
-+------------------------------------------------------------------+
-|              AGENT REVIEW PROTOCOL QUICK REFERENCE                |
-+------------------------------------------------------------------+
-| MODELS:                                                           |
-|   1. Dual-Agent: Builder → Reviewer (different session)          |
-|   2. Cross-Model: Claude → GPT-4 (or vice versa)                 |
-|   3. Specialized: Builder → Security → QA → Architect            |
-|   4. Hybrid: Automated → Agent → Human                           |
-+------------------------------------------------------------------+
-| REVIEW FLOW:                                                      |
-|   1. Builder completes work                                       |
-|   2. Automated checks pass (blocking)                            |
-|   3. Prepare review package (diff, tests, description)           |
-|   4. Agent review (new session)                                  |
-|   5. APPROVE / REQUEST_CHANGES / REJECT                          |
-+------------------------------------------------------------------+
-| LIMITS:                                                           |
-|   - MAX_REVIEW_CYCLES = 3                                        |
-|   - After 3 cycles → Escalate to human                           |
-|   - Fresh context for each review cycle                          |
-+------------------------------------------------------------------+
-| VERDICTS:                                                         |
-|   APPROVE: No critical issues, proceed to merge                  |
-|   REQUEST_CHANGES: Fixable issues, return to builder             |
-|   REJECT: Critical issues, escalate to human                     |
-+------------------------------------------------------------------+
-| KEY RULE: The agent that builds ≠ the agent that validates       |
-+------------------------------------------------------------------+
-```
-
----
-
-**Authored by:** TheArchitectit
-**Document Owner:** Project Maintainers
-**Last Updated:** 2026-01-21
-**Line Count:** ~450

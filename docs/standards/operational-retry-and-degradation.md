@@ -144,7 +144,7 @@ async function getDashboard(userId: string): Promise<Dashboard> {
   return {
     user: userResult.status === 'fulfilled' ? userResult.value : null,
     orders: ordersResult.status === 'fulfilled' ? ordersResult.value : [],
-    recommendations: recommendationsResult.status === 'fulfilleded' 
+    recommendations: recommendationsResult.status === 'fulfilled' 
       ? recommendationsResult.value 
       : [], // Empty array if recommendations fail
     warnings: [
