@@ -78,8 +78,8 @@
 7. Additional sprint hardening (budget, lifecycle, review gates)
 
 **References:**
-- [docs/reviews/PLATFORM_REVIEW_2026-06-14.md](docs/reviews/PLATFORM_REVIEW_2026-06-14.md)
-- [docs/reviews/IMPLEMENTATION_REPORT_2026-06-14.md](docs/reviews/IMPLEMENTATION_REPORT_2026-06-14.md)
+- [Platform Review](archive/reviews/PLATFORM_REVIEW_2026-06-14.md)
+- [Implementation Report](archive/reviews/IMPLEMENTATION_REPORT_2026-06-14.md)
 
 ---
 
