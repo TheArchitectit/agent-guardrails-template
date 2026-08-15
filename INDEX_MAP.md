@@ -71,6 +71,16 @@
 | lifecycle-docs | tools_lifecycle.go | mcp-server/internal/mcp/ | 5 MCP tools: create/transition/get/list/force session |
 | team-tools | TEAM_TOOLS.md | docs/ | Team layout management MCP tools reference (Go implementation) |
 | team-structure | TEAM_STRUCTURE.md | docs/ | 12-team enterprise structure documentation |
+| enterprise-charter | enterprise/charter.md | docs/enterprise/ | Enterprise readiness charter: SOC 2/ISO 27001, 12-release program |
+| governance | enterprise/governance-playbook.md | docs/enterprise/ | Governance roles, cadences, change-control gates |
+| ownership | enterprise/ownership-registry.md | docs/enterprise/ | Document ownership registry (pilot) |
+| tech-stack | enterprise/tech-stack.md | docs/enterprise/ | Enterprise tech stack baseline & tooling |
+| release-calendar | enterprise/release-calendar.md | docs/enterprise/ | V1.0-V12.0 release calendar & gate plan |
+| sprint-v1.0 | sprints/v1.0.0.md | docs/sprints/ | Sprint: baseline enterprise readiness (S1-01..S1-12) |
+| sprint-v1.1 | sprints/v1.1.0.md | docs/sprints/ | Sprint: modularization & docs-as-code |
+| sprint-v1.2 | sprints/v1.2.0.md | docs/sprints/ | Sprint: security baseline & compliance mapping |
+| sprint-v1.3 | sprints/v1.3.0.md | docs/sprints/ | Sprint: accessibility & UX uniformity |
+| sprint-v1.4 | sprints/v1.4.0.md | docs/sprints/ | Sprint: observability foundations |
 | python-migration | PYTHON_TO_GO_MIGRATION.md | docs/ | Python to Go migration guide for developers |
 | go-migration | PYTHON_TO_GO_MIGRATION.md | docs/ | Python to Go migration guide for developers |
 | team-cli | cmd/team-cli/README.md | cmd/team-cli/ | Team management CLI tool |
@@ -177,6 +187,7 @@
 ## Category Index
 
 ### AI Tools Integration
+
 - `AGENTS_AND_SKILLS_SETUP.md` - Setup guide for all AI platforms (Claude Code, OpenCode, Cursor, Copilot, etc.)
 - `CLCODE_INTEGRATION.md` - Claude Code skills and hooks
 - `OPENCODE_INTEGRATION.md` - OpenCode agents and skills
@@ -184,12 +195,14 @@
 - `GENERIC_LLM_INTEGRATION.md` - Generic/local LLM setup (Ollama, vLLM, etc.)
 
 ### Git Operations
+
 - `COMMIT_WORKFLOW.md` - Commit timing and format
 - `GIT_PUSH_PROCEDURES.md` - Push safety and verification
 - `BRANCH_STRATEGY.md` - Branch naming and workflow
 - `ROLLBACK_PROCEDURES.md` - Undo and recovery
 
 ### Quality & Validation
+
 - `TESTING_VALIDATION.md` - Pre/post validation checks
 - `CODE_REVIEW.md` - Review process and escalation
 - `AGENT_GUARDRAILS.md` - Safety protocols (MANDATORY)
@@ -202,35 +215,43 @@
 - `RULE_PATTERNS_GUIDE.md` - Pattern authoring guide
 
 ### Logging & Monitoring
+
 - `LOGGING_PATTERNS.md` - Structured log format
 - `LOGGING_INTEGRATION.md` - External system hooks
 - `MCP_CHECKPOINTING.md` - State checkpoints
 
 ### Documentation Standards
+
 - `MODULAR_DOCUMENTATION.md` - 500-line rule
 - `DOCUMENTATION_UPDATES.md` - Post-sprint updates
 - `API_SPECIFICATIONS.md` - API doc formats
 
 ### Security
+
 - `SECRETS_MANAGEMENT.md` - GitHub Secrets
 - `AGENT_GUARDRAILS.md` - Forbidden actions
 - `ADVERSARIAL_TESTING.md` - Security attack checklists
 - `DEPENDENCY_GOVERNANCE.md` - Package allow-list
 
 ### Infrastructure & Operations
+
 - `INFRASTRUCTURE_STANDARDS.md` - IaC and Terraform standards
 - `OPERATIONAL_PATTERNS.md` - Health checks, circuit breakers, retry
 
 ### UI/UX & Accessibility
+
+> Game design docs (2026_GAME_DESIGN, 3D game development, AI_DEV_2026 guide, Hermes 2026 dossier) live in a separate private repo.
 - `2026_UI_UX_STANDARD.md` - UI/UX component standards, design tokens, responsive patterns
 - `ACCESSIBILITY_GUIDE.md` - WCAG 3.0+ conformance (Bronze/Silver/Gold), automated testing
 - `SPATIAL_COMPUTING_UI.md` - XR/VR/AR comfort zones, latency, depth layering, interaction
 - `ETHICAL_ENGAGEMENT.md` - Dark pattern taxonomy, ethical review capabilities
 
 ### Project Setup
+
 - `PROJECT_CONTEXT_TEMPLATE.md` - Project Bible template
 
 ### Sprint Framework
+
 - `SPRINT_TEMPLATE.md` - Task template
 - `SPRINT_GUIDE.md` - Writing guide
 - `INDEX.md` (sprints/) - Sprint navigation
