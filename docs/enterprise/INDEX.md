@@ -25,4 +25,4 @@ Next steps
 - Populate the Ownership Registry with core docs and scale outward.
 - Kick off the 12-month plan with monthly DoD gates and a CI-driven doc QA loop.
 
-Note: This index points to the enterprise namespace files in docs/enterprise and to supporting templates in docs/templates and docs/sprints. Use the Quick Navigation and the TOC to navigate between sections.
+Note: This index points to the enterprise namespace files in docs/enterprise and to supporting templates in docs/templates and docs/sprints. Use the Quick Navigation and the toc to navigate between sections.

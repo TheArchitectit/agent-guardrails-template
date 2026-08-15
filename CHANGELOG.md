@@ -34,11 +34,11 @@ links break; see [docs/releases/v3.4.0.md](docs/releases/v3.4.0.md) for a migrat
 - **Documentation restructure** — new taxonomy (`getting-started/`, `architecture/`,
   `integrations/`, `teams/`, `mcp-server/`, `rules/`, `archive/`); all files renamed
   to `lowercase-kebab-case.md`.
-- **Navigation rebuilt** — `INDEX_MAP.md` rewritten as a lean keyword→file map;
-  `TOC.md` trimmed to a flat listing. Markdown files: 185 → 242 (more files, each
+- **Navigation rebuilt** — `index-map.md` rewritten as a lean keyword→file map;
+  `toc.md` trimmed to a flat listing. Markdown files: 185 → 242 (more files, each
   focused and under the 500-line limit).
 - **`HEADER_MAP.md` dropped** (1033 lines of line-number refs that broke on every
-  edit) — replaced by `INDEX_MAP.md` + per-directory `INDEX.md`.
+  edit) — replaced by `index-map.md` + per-directory `INDEX.md`.
 - **README** updated — version badge v3.4.0, links point at new doc paths and the
   private companion repos, HEADER_MAP references removed.
 
@@ -1166,5 +1166,5 @@ This project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html):
 ## Links
 
 - **Releases:** [GitHub Releases](https://github.com/TheArchitectit/agent-guardrails-template/releases)
-- **Documentation:** [INDEX_MAP.md](INDEX_MAP.md)
+- **Documentation:** [index-map.md](index-map.md)
 - **Issues:** [GitHub Issues](https://github.com/TheArchitectit/agent-guardrails-template/issues)
