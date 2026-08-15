@@ -2,7 +2,7 @@
 
 > Interfaces for external logging systems.
 
-**Related:** [LOGGING_PATTERNS.md](./LOGGING_PATTERNS.md) | [AGENT_GUARDRAILS.md](../AGENT_GUARDRAILS.md)
+**Related:** [LOGGING_PATTERNS.md](logging-patterns.md) | [AGENT_GUARDRAILS.md](../getting-started/agent-guardrails.md)
 
 ---
 

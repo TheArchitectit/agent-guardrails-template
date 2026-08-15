@@ -2,7 +2,7 @@
 
 > **The Single Source of Truth** for AI agent behavior in this repository.
 
-**Related:** [AGENT_GUARDRAILS.md](../AGENT_GUARDRAILS.md) | [DEPENDENCY_GOVERNANCE.md](./DEPENDENCY_GOVERNANCE.md)
+**Related:** [AGENT_GUARDRAILS.md](../getting-started/agent-guardrails.md) | [DEPENDENCY_GOVERNANCE.md](dependency-governance.md)
 
 ---
 

@@ -8,7 +8,7 @@
 
 This directory contains operational workflow documentation for AI agents. These documents define **how** to perform common operations safely and consistently.
 
-**Before using these workflows:** Always read [AGENT_GUARDRAILS.md](../AGENT_GUARDRAILS.md) first.
+**Before using these workflows:** Always read [AGENT_GUARDRAILS.md](../getting-started/agent-guardrails.md) first.
 
 ---
 
@@ -16,16 +16,16 @@ This directory contains operational workflow documentation for AI agents. These 
 
 | Document | Purpose | When to Use |
 |----------|---------|-------------|
-| [AGENT_EXECUTION.md](./AGENT_EXECUTION.md) | Standard execution protocol and rollback | During task execution |
-| [AGENT_ESCALATION.md](./AGENT_ESCALATION.md) | Audit requirements and escalation | When uncertain or errors occur |
-| [TESTING_VALIDATION.md](./TESTING_VALIDATION.md) | Validation and verification protocols | Before committing changes |
-| [COMMIT_WORKFLOW.md](./COMMIT_WORKFLOW.md) | Commit timing and message format | After completing to-dos |
-| [GIT_PUSH_PROCEDURES.md](./GIT_PUSH_PROCEDURES.md) | Push safety and verification | Before pushing to remote |
-| [BRANCH_STRATEGY.md](./BRANCH_STRATEGY.md) | Branch naming and workflows | When creating branches |
-| [ROLLBACK_PROCEDURES.md](./ROLLBACK_PROCEDURES.md) | Undo and recovery operations | When errors occur |
-| [CODE_REVIEW.md](./CODE_REVIEW.md) | Review process and escalation | After code changes |
-| [MCP_CHECKPOINTING.md](./MCP_CHECKPOINTING.md) | MCP checkpoint integration | Before/after critical tasks |
-| [DOCUMENTATION_UPDATES.md](./DOCUMENTATION_UPDATES.md) | Post-sprint doc updates | After completing sprints |
+| [AGENT_EXECUTION.md](agent-execution.md) | Standard execution protocol and rollback | During task execution |
+| [AGENT_ESCALATION.md](agent-escalation.md) | Audit requirements and escalation | When uncertain or errors occur |
+| [TESTING_VALIDATION.md](testing-validation.md) | Validation and verification protocols | Before committing changes |
+| [COMMIT_WORKFLOW.md](commit-workflow.md) | Commit timing and message format | After completing to-dos |
+| [GIT_PUSH_PROCEDURES.md](git-push-procedures.md) | Push safety and verification | Before pushing to remote |
+| [BRANCH_STRATEGY.md](branch-strategy.md) | Branch naming and workflows | When creating branches |
+| [ROLLBACK_PROCEDURES.md](rollback-procedures.md) | Undo and recovery operations | When errors occur |
+| [CODE_REVIEW.md](code-review.md) | Review process and escalation | After code changes |
+| [MCP_CHECKPOINTING.md](mcp-checkpointing.md) | MCP checkpoint integration | Before/after critical tasks |
+| [DOCUMENTATION_UPDATES.md](documentation-updates.md) | Post-sprint doc updates | After completing sprints |
 
 ---
 
@@ -128,7 +128,7 @@ Procedures for updating documentation after sprints and code changes.
 
 ## Integration with Guardrails
 
-All workflows in this directory **support** the safety protocols defined in [AGENT_GUARDRAILS.md](../AGENT_GUARDRAILS.md). They provide detailed implementation guidance for:
+All workflows in this directory **support** the safety protocols defined in [AGENT_GUARDRAILS.md](../getting-started/agent-guardrails.md). They provide detailed implementation guidance for:
 
 - **Execution** → AGENT_EXECUTION.md
 - **Audit & escalation** → AGENT_ESCALATION.md
@@ -141,7 +141,7 @@ All workflows in this directory **support** the safety protocols defined in [AGE
 
 ## Related Documents
 
-- [AGENT_GUARDRAILS.md](../AGENT_GUARDRAILS.md) - Mandatory safety protocols
+- [AGENT_GUARDRAILS.md](../getting-started/agent-guardrails.md) - Mandatory safety protocols
 - [../standards/INDEX.md](../standards/INDEX.md) - Documentation standards
 - [../sprints/INDEX.md](../sprints/INDEX.md) - Sprint task framework
 

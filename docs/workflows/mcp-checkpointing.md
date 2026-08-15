@@ -8,7 +8,7 @@
 
 > Integration with MCP servers for automatic checkpointing.
 
-**Related:** [COMMIT_WORKFLOW.md](./COMMIT_WORKFLOW.md) | [ROLLBACK_PROCEDURES.md](./ROLLBACK_PROCEDURES.md)
+**Related:** [COMMIT_WORKFLOW.md](commit-workflow.md) | [ROLLBACK_PROCEDURES.md](rollback-procedures.md)
 
 ---
 

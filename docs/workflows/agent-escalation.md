@@ -2,7 +2,7 @@
 
 > Audit requirements, escalation procedures, and agent-specific guidelines.
 
-**Related:** [../AGENT_GUARDRAILS.md](../AGENT_GUARDRAILS.md) | [CODE_REVIEW.md](./CODE_REVIEW.md)
+**Related:** [../AGENT_GUARDRAILS.md](../getting-started/agent-guardrails.md) | [CODE_REVIEW.md](code-review.md)
 
 ---
 
@@ -403,9 +403,9 @@ REPORTING VIOLATION PROTOCOL:
 ---
 
 **Related Documents:**
-- [AGENT_GUARDRAILS.md](../AGENT_GUARDRAILS.md) - Core safety protocols
-- [CODE_REVIEW.md](./CODE_REVIEW.md) - Code review and escalation
-- [AGENT_EXECUTION.md](./AGENT_EXECUTION.md) - Execution protocol
+- [AGENT_GUARDRAILS.md](../getting-started/agent-guardrails.md) - Core safety protocols
+- [CODE_REVIEW.md](code-review.md) - Code review and escalation
+- [AGENT_EXECUTION.md](agent-execution.md) - Execution protocol
 
 ---
 
