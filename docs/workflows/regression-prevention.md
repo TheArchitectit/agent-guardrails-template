@@ -2,7 +2,7 @@
 
 > Comprehensive guide to preventing bug reintroduction using the failure registry and prevention rules.
 
-**Related:** [AGENT_GUARDRAILS.md](../getting-started/agent-guardrails.md) | [AGENT_EXECUTION.md](agent-execution.md) | [AGENT_REVIEW_PROTOCOL.md](agent-review-protocol.md)
+**Related:** [AGENT_GUARDRAILS.md](../getting-started/agent-guardrails.md) | [AGENT_EXECUTION.md](agent-execution.md) | [AGENT_REVIEW_PROTOCOL.md](agent-review-protocol.md) | [TESTING_VALIDATION.md](testing-validation.md)
 
 ---
 
@@ -15,24 +15,6 @@ The Regression Prevention System ensures that once a bug is fixed, it stays fixe
 3. **Pre-Work Checks** - Mandatory verification before editing
 4. **Regression Tests** - Permanent tests for fixed bugs
 5. **CI Integration** - Automated enforcement
-
----
-
-## Core Philosophy
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                 REGRESSION PREVENTION MANDATE                │
-├─────────────────────────────────────────────────────────────┤
-│                                                              │
-│  1. Every bug is a learning opportunity                      │
-│  2. Every fix must be documented                             │
-│  3. Every pattern must be prevented                          │
-│  4. Every edit must be checked                               │
-│  5. Every fix must have a regression test                    │
-│                                                              │
-└─────────────────────────────────────────────────────────────┘
-```
 
 ---
 
@@ -499,41 +481,3 @@ Warning signs:
 - Share regression success stories
 - Make it part of onboarding
 
----
-
-## Quick Reference
-
-```bash
-# Before work
-cat .guardrails/pre-work-check.md
-python scripts/regression_check.py --all
-
-# During work
-python scripts/regression_check.py --unstaged
-
-# Before commit
-python scripts/regression_check.py --staged
-
-# Log new bug
-python scripts/log_failure.py --interactive
-
-# List bugs
-python scripts/log_failure.py --list
-
-# Resolve bug
-python scripts/log_failure.py --resolve FAIL-xxx
-```
-
----
-
-**Related Documents:**
-- [AGENT_GUARDRAILS.md](../getting-started/agent-guardrails.md) - Core safety protocols
-- [AGENT_EXECUTION.md](agent-execution.md) - Execution protocol
-- [AGENT_REVIEW_PROTOCOL.md](agent-review-protocol.md) - Review checklist
-- [TESTING_VALIDATION.md](testing-validation.md) - Testing requirements
-
----
-
-**Last Updated:** 2026-02-07
-**Version:** 1.0
-**Document Owner:** Project Maintainers

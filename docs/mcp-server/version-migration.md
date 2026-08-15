@@ -20,14 +20,14 @@
 
 ### Current Version Support
 
-| Version | Status | Support End | Compatible With | Implementation |
-|---------|--------|-------------|-----------------|----------------|
-| 2.6.x | Current | 2027-02-15 | 2.0.x, 1.10.x | **Go** |
-| 2.0.x | Maintained | 2026-10-15 | 1.10.x, 1.9.x | Go |
-| 1.10.x | Maintained | 2026-08-15 | 1.9.x | Go |
-| 1.9.x | Maintained | 2026-06-15 | 1.8.x | Go |
-| 1.8.x | Deprecated | 2026-04-15 | 1.7.x | Python |
-| < 1.8.0 | End of Life | - | - | Python |
+| Version | Status | Compatible With | Implementation |
+|---------|--------|-----------------|----------------|
+| 3.3.x | Current | 3.x | **Go** (StreamableHTTP) |
+| 3.2.x | Maintained | 3.x | Go |
+| 2.6.x | Maintained | 2.0.x, 1.10.x | Go |
+| 1.10.x | Legacy | 1.9.x | Go |
+| 1.8.x | Deprecated | 1.7.x | Python |
+| < 1.8.0 | End of life | — | Python |
 
 ### Compatibility Legend
 
