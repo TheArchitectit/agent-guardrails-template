@@ -34,4 +34,8 @@ regexes = [
   '''eyJhbGciOiJIUzI1NiIs''',
   # Fake example API keys from older deployment docs
   '''DevKey[0-9]{28,32}''',
+  # Placeholder values in documentation curl examples (Bearer YOUR_API_KEY, etc.)
+  '''YOUR_API_KEY''',
+  '''YOUR_MCP_API_KEY''',
+  '''your-api-key''',
 ]
