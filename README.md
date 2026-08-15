@@ -2,7 +2,7 @@
 
 > AI-first safety framework for agents building software at high velocity. Guardrails don't slow you down — they're your license to move fast.
 
-[![Version](https://img.shields.io/badge/version-v3.2.0-blue.svg)](./CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-v3.3.0-blue.svg)](./CHANGELOG.md)
 [![Go Implementation](https://img.shields.io/badge/Implementation-Go-blue.svg?style=flat&logo=go)](https://golang.org)
 [![WCAG 3.0+](https://img.shields.io/badge/Accessibility-WCAG_3.0+_Silver-green.svg)](docs/accessibility/ACCESSIBILITY_GUIDE.md)
 [![Spatial Computing](https://img.shields.io/badge/Spatial-XR/VR/AR-blue.svg)](docs/spatial/SPATIAL_COMPUTING_UI.md)
@@ -11,7 +11,9 @@
 
 ## What Is This?
 
-**The Agent Guardrails Template** is a production-grade operating system for AI-assisted development. It turns "vibe coding" chaos into shipping software — giving AI agents explicit boundaries so they spend 100% of their context window on building, not on safety-checking.
+Agent Guardrails Template is a set of safety rules and tooling for teams that let AI agents write most of their code. The idea is simple: give the agent clear boundaries up front, so it can spend its time building instead of second-guessing every file edit.
+
+The centerpiece is a Go MCP server that checks bash commands, file edits, and git operations against your guardrails before they run. Everything else — the docs, the per-IDE skill files, the examples — is there to get those guardrails into your workflow with minimal setup.
 
 ### What You Actually Get
 
@@ -22,9 +24,8 @@
 | **Webhook Notifications** | Real-time violation and halt event delivery via HMAC-signed webhooks with circuit breaker protection |
 | **Token Budget Ledger** | Track AI API costs across Claude/GPT models, set team budgets, get alerts when thresholds are crossed |
 | **Agent Lifecycle Management** | State machine (idle→planning→active→review→release) with transition validation and audit trails |
-| **Multi-Agent Orchestration** | 10-part AI-Powered Development 2026 guide covering MoA (Mixture of Agents), swarm intelligence, and autonomous tool use |
+| **Multi-Agent Orchestration** | Patterns for MoA (Mixture of Agents), swarm intelligence, and autonomous tool use |
 | **Cross-Platform IDE Integration** | Native skills and rules for Claude Code, Cursor, OpenCode, Windsurf, and GitHub Copilot — not generic prompts |
-| **3D Game Development Suite** | Engine-agnostic guardrails (Godot, Unity, Unreal), XR/VR/AR comfort zones, mathematical foundations, AI-debuggable architecture |
 | **Token-Efficient Documentation** | 68+ modular docs (500-line max), INDEX_MAP keyword lookup, HEADER_MAP section navigation, `.claudeignore` for context savings |
 | **Production Infrastructure** | PostgreSQL 16 + Redis 7, Docker Compose, CI/CD validation, 22-pattern secret scanning, regression prevention |
 | **14 Language Examples** | Go, Rust, TypeScript, Python, Java, GDScript, Scala, R, C#, C++, PHP, Ruby, Swift, Dart/Flutter |
@@ -32,18 +33,17 @@
 
 ### Who This Is For
 
-- **AI-First Teams** — Agents generate 80%+ of your code. You need them to move fast without breaking prod.
-- **3D Game Developers** — AI-generated shaders, physics, NPCs, and assets need mathematical correctness and comfort-zone enforcement.
-- **Platform Engineers** — Enforce infrastructure guardrails, prevent config drift, and maintain separation across environments.
-- **Compliance & Security** — Documented safety processes that satisfy regulatory requirements.
+- **AI-first teams** — If agents write most of your code, you want them moving fast without breaking production.
+- **Platform engineers** — Enforce infrastructure guardrails, prevent config drift, and keep test and production separated.
+- **Compliance & security folks** — Documented safety processes that hold up in an audit.
 
-### The Paradox: Constraints Enable Speed
+### Why Constraints Speed Things Up
 
-Without guardrails, agents waste tokens on safety verification: *"Is this file safe to edit? Will this break something? Should I ask first?"* This constant self-checking burns context and slows output.
+Left on their own, agents burn tokens asking themselves *"Is this safe to edit? Should I check first?"* That constant self-verification eats context and slows output.
 
-With guardrails, agents know the boundaries upfront. They spend tokens on building, not on doubt. The result: faster iteration, fewer rollbacks, and code that ships with confidence.
+With the boundaries defined up front, the agent knows what's allowed and just gets on with the work. Fewer rollbacks, faster iteration.
 
-Think of guardrails like lane markers on a highway — they don't slow you down. They're the reason you can drive at full speed.
+The analogy we keep coming back to: lane markers on a highway don't slow you down — they're the reason you can drive at full speed.
 
 ### The Four Laws of Agent Safety
 
@@ -150,14 +150,14 @@ All documents follow the **500-line max** rule for fast context loading.
 
 ## MCP Server
 
-The **Model Context Protocol Server** provides real-time guardrail enforcement — validating every bash command, file edit, git operation, and commit before execution.
+The MCP server does the actual enforcement. Agents connect to it over HTTP, and it validates bash commands, file edits, git operations, and commits against your rules before anything runs. Written in Go, backed by PostgreSQL 16 and Redis 7.
 
-**Implementation:** Go (`mcp-server/internal/`) | **Infra:** PostgreSQL 16 + Redis 7
+As of v3.3.0 the server speaks **stateless StreamableHTTP**: one `POST /mcp` endpoint, no session IDs to keep track of, each request stands on its own.
 
 | Feature | Details |
 |---------|---------|
-| **32 MCP Tools** | Session, bash/file/git validation, scope, regression, team, webhooks (5), budget (5), lifecycle (5) |
-| **8 MCP Resources** | Quick reference, active rules, documentation access |
+| **35 MCP Tools** | Session, bash/file/git validation, scope, regression, team, webhooks, budget, lifecycle |
+| **11 MCP Resources** | Quick reference, active rules, four laws, halt conditions, and documentation |
 | **Web UI** | Dashboard, document browser, rules management, failure registry |
 | **REST API** | 31 endpoints including `/api/v1/policy/check` for CI/CD enforcement |
 | **API Docs** | OpenAPI 3.1 spec + Scalar explorer at `/docs` |
@@ -206,12 +206,13 @@ Multi-language implementation examples demonstrating guardrails patterns:
 
 ## Who Should Use This
 
-- **AI-First Development Teams** — Practicing vibe coding where agents generate most of the code. Guardrails let agents build at full velocity without human bottlenecks.
-- **3D Game Development Teams** — Building with Godot, Unity, Unreal, or custom engines. Mathematical correctness, asset safety, shader constraints, and AI-debuggable architecture.
-- **Engineering Teams** — Deploying AI coding assistants safely across projects.
-- **DevOps & Platform Teams** — Enforcing infrastructure guardrails and preventing configuration drift.
-- **AI Agent Developers** — Building safer autonomous agents with real-time validation.
-- **Compliance & Security Teams** — Meeting regulatory requirements with documented safety processes.
+- **Teams where agents write most of the code** — Guardrails let agents build at full velocity without a human reviewing every command.
+- **Engineering teams** rolling out AI coding assistants across multiple projects.
+- **DevOps & platform teams** — Enforce infrastructure guardrails and prevent configuration drift.
+- **Agent developers** building autonomous agents that need real-time validation.
+- **Compliance & security teams** who need documented safety processes that hold up under audit.
+
+> Building games? The 3D game development suite (Godot/Unity/Unreal guardrails, XR comfort zones, AI_DEV_2026 and Hermes 2026 guides) moved to our private companion repo — reach out if you need access.
 
 ---
 
@@ -268,10 +269,9 @@ agent-guardrails-template/
 | **Guardrail Categories** | 6 (safety, commerce, social, analytics, deployment, generative) |
 | **Workflows** | 10 documents |
 | **Standards** | 11 documents |
-| **Example Languages** | 13 (Go, TS, Rust, Python, Java, Swift, Dart, Scala, R, C#, C++, PHP, Ruby) |
-| **MCP Tools** | 56 |
+| **Example Languages** | 14 (Go, TS, Rust, Python, Java, Swift, Dart, GDScript, Scala, R, C#, C++, PHP, Ruby) |
+| **MCP Tools** | 35 |
 | **MCP Resources** | 11 |
-| **Supported AI Models** | 30+ LLM families |
 | **Implementation** | Go 1.25+ |
 | **Infrastructure** | PostgreSQL 16, Redis 7, Docker/Podman |
 
@@ -279,11 +279,12 @@ agent-guardrails-template/
 
 ## Version History
 
-**Current:** v3.2.0 (2026-06-16)
+**Current:** v3.3.0 (2026-08-15)
 
 | Version | Date | Highlights |
 |---------|------|------------|
-| **v3.2.0** | 2026-06-16 | Platform review sprint: 7 features, all P0 fixes, mcp-go v0.58.0 |
+| **v3.3.0** | 2026-08-15 | Stateless StreamableHTTP transport, repo cleanup, migration & deploy fixes |
+| **v3.2.0** | 2026-06-16 | Platform review sprint: 7 features, all P0 fixes |
 | **v3.1.0** | 2026-05-12 | Structural reorganization: split docs into 3d/ subfolder, README link fixes, stats update |
 | **v3.0.0** | 2026-05-12 | 3D game development suite, AI-Powered Development 2026 guide, Hermes 2026 dossier |
 | **v2.9.0** | 2026-05-08 | AI tool integration suite (Claude Code, Cursor, Windsurf, Copilot, OpenCode) |
@@ -316,7 +317,7 @@ Help keep this project going — use a referral link below and both of us get cr
 | [**Synthetic**](https://synthetic.new/?referral=UAWqkKQQLFkzMkY) | $10 in credits | Subscribe → both get $10 credit | `UAWqkKQQLFkzMkY` |
 ---
 
-**v3.2.0** · AI-First Rapid Development Framework · [Get Started →](docs/QUICK_SETUP.md)
+**v3.3.0** · AI-First Rapid Development Framework · [Get Started →](docs/QUICK_SETUP.md)
 
 
 ## ☁️ Cloud Credits
