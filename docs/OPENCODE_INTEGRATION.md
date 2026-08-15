@@ -37,7 +37,7 @@ If you have a deployed Guardrail MCP server (see [README.md](../README.md) MCP S
 | Field | Description | Example |
 |-------|-------------|---------|
 | `type` | Must be `"remote"` for external MCP servers | `"remote"` |
-| `url` | StreamableHTTP endpoint URL with external port | `http://0.0.0.0:8094/mcp` |
+| `url` | StreamableHTTP endpoint URL with external port | `http://your-server:8080/mcp` |
 | `headers.Authorization` | Bearer token with MCP_API_KEY | `Bearer JGtwbxsS2Nvy...` |
 
 **Important Notes:**

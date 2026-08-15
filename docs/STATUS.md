@@ -1,8 +1,8 @@
 # Project Status - Guardrail MCP Server
 
-**Last Updated:** 2026-08-14
+**Last Updated:** 2026-08-15
 **Branch:** main
-**Current Version:** v3.2.0
+**Current Version:** v3.3.0
 
 ---
 
@@ -83,18 +83,34 @@
 
 ---
 
+## v3.3.0 Transport & Infrastructure Sprint - COMPLETED
+
+- **Status:** ✅ COMPLETE
+- **Released:** 2026-08-15
+- **Scope:** Transport migration, build/deploy fixes, repo cleanup
+
+**Delivered:**
+1. Stateless StreamableHTTP transport (replaces SSE) — single `POST /mcp` endpoint
+2. Fixed broken v3.2.0 build (mcp-go v0.58.0 port completed)
+3. All 18 database migrations repaired and renumbered — fresh installs work
+4. Container deploy fixes (PostgreSQL capabilities, Redis config, `BIND_ADDR`)
+5. JWT secret validation rewritten (Shannon entropy replaces broken popcount check)
+6. ~53MB of committed binaries removed; game-design docs moved to private repo
+
+**Reference:** [docs/releases/v3.3.0.md](docs/releases/v3.3.0.md)
+
+---
+
 ## Deployment Status
 
-**your-server (0.0.0.0):**
-- MCP Port: 8094
-- Web UI Port: 8095
-- Version: v3.2.0
-- Status: ✅ Running
-- Features: Ingest system, update notifications, file upload, auth fixes, platform review sprint (CI/CD, webhooks, token budget ledger, lifecycle state machine, OpenAPI 3.1), mcp-go v0.58.0
+The server is deployed and verified on an internal test VM (reachable over
+Tailscale). Ports are bound to the Tailscale interface by default via
+`BIND_ADDR` — localhost-only unless configured otherwise.
 
-**Web UI Access:**
-- URL: http://0.0.0.0:8095/web/
-- API Key: `<REDACTED — rotate and set via environment variable>`
+- Version: v3.3.0
+- Status: ✅ Running (MCP + Web UI healthy)
+- Transport: Stateless StreamableHTTP (`POST /mcp`)
+- Features: Full tool set (35 tools, 11 resources), migrations applied cleanly
 
 ---
 
