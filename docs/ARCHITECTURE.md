@@ -198,7 +198,7 @@ sequenceDiagram
     participant Backend as Backend Service
     participant Storage as Storage
 
-    Client->>Server: HTTP POST /mcp/v1/message
+    Client->>Server: HTTP POST /mcp
     Server->>Server: Parse JSON-RPC request
     Server->>Validator: Validate input parameters
 

@@ -139,7 +139,7 @@ docker compose -f deploy/docker-compose.example.yml logs -f
 |---------|-----|
 | Web UI | http://localhost:8095 |
 | Health Check | http://localhost:8095/health/ready |
-| MCP SSE | http://localhost:8095/mcp/v1/sse |
+| MCP StreamableHTTP | http://localhost:8095/mcp |
 
 ### Windows-Specific Notes
 
@@ -324,7 +324,7 @@ podman logs guardrail-mcp-server 2>&1 | tail -20
 # - "Redis connected"
 # - "Starting web server" on 0.0.0.0:8096
 # - "Starting MCP server" on 0.0.0.0:8095
-# - "Starting MCP SSE server" on 0.0.0.0:8095
+# - "Starting MCP StreamableHTTP server" on 0.0.0.0:8095
 
 # Test MCP endpoint (from your-server)
 curl -s http://localhost:8095/mcp 2>&1
@@ -562,10 +562,7 @@ MCP_API_KEY=your-api-key
 
 ```bash
 # From your-server (localhost):
-curl -sN http://localhost:8095/mcp/v1/sse &
-
-# Capture session_id from endpoint event, then:
-curl -X POST "http://localhost:8095/mcp/v1/message?session_id=YOUR_SESSION_ID" \
+curl -X POST http://localhost:8095/mcp \
   -H "Content-Type: application/json" \
   -d '{
     "jsonrpc": "2.0",
@@ -581,15 +578,14 @@ curl -X POST "http://localhost:8095/mcp/v1/message?session_id=YOUR_SESSION_ID" \
     }
   }'
 
-# Expected: HTTP 202 Accepted
-# Response arrives on SSE stream
+# Expected: JSON-RPC response with server capabilities
 ```
 
 ### Test Guardrail Tools
 
 ```bash
 # Test guardrail_validate_bash
-curl -X POST "http://localhost:8095/mcp/v1/message?session_id=YOUR_SESSION_ID" \
+curl -X POST "http://localhost:8095/mcp" \
   -H "Authorization: Bearer your-api-key" \
   -H "Content-Type: application/json" \
   -d '{
@@ -943,7 +939,7 @@ Add to `.opencode/oh-my-opencode.jsonc`:
   "mcpServers": {
     "guardrails": {
       "type": "remote",
-      "url": "http://0.0.0.0:8095/mcp/v1/sse",
+      "url": "http://0.0.0.0:8095/mcp",
       "headers": {
         "Authorization": "Bearer your-api-key"
       }

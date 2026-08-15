@@ -161,7 +161,7 @@ The **Model Context Protocol Server** provides real-time guardrail enforcement â
 | **Web UI** | Dashboard, document browser, rules management, failure registry |
 | **REST API** | 31 endpoints including `/api/v1/policy/check` for CI/CD enforcement |
 | **API Docs** | OpenAPI 3.1 spec + Scalar explorer at `/docs` |
-| **Endpoints** | SSE stream (`/mcp/v1/sse`), JSON-RPC (`/mcp/v1/message`), Web UI (`/web`) |
+| **Endpoints** | StreamableHTTP (`POST /mcp`), Web UI (`/web`) |
 
 ```bash
 # Quick start with Docker Compose

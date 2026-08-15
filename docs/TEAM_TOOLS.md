@@ -996,17 +996,17 @@ Team tools use the native Go `team` package for persistence. Project data is sto
 
 ```bash
 # Initialize project
-curl -X POST "http://localhost:8094/mcp/v1/message?session_id=abc123" \
+curl -X POST "http://localhost:8094/mcp" \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -d '{"jsonrpc":"2.0","method":"tools/call","params":{"name":"guardrail_team_init","arguments":{"project_name":"web-platform"}}}'
 
 # Assign backend lead
-curl -X POST "http://localhost:8094/mcp/v1/message?session_id=abc123" \
+curl -X POST "http://localhost:8094/mcp" \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -d '{"jsonrpc":"2.0","method":"tools/call","params":{"name":"guardrail_team_assign","arguments":{"project_name":"web-platform","team_id":7,"role_name":"Technical Lead","person":"Alice Developer"}}}'
 
 # Check phase gate
-curl -X POST "http://localhost:8094/mcp/v1/message?session_id=abc123" \
+curl -X POST "http://localhost:8094/mcp" \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -d '{"jsonrpc":"2.0","method":"tools/call","params":{"name":"guardrail_phase_gate_check","arguments":{"project_name":"web-platform","from_phase":2,"to_phase":3}}}'
 ```
@@ -1042,7 +1042,7 @@ declare -a ASSIGNMENTS=(
 )
 
 echo "Initializing team structure..."
-curl -s -X POST "http://localhost:8094/mcp/v1/message?session_id=$SESSION_ID" \
+curl -s -X POST "http://localhost:8094/mcp" \
     -H "Content-Type: application/json" \
     -d "{\"jsonrpc\":\"2.0\",\"method\":\"tools/call\",\"params\":{\"name\":\"guardrail_team_init\",\"arguments\":{\"project_name\":\"$PROJECT_NAME\"}}}"
 
@@ -1051,13 +1051,13 @@ for assignment in "${ASSIGNMENTS[@]}"; do
     IFS='|' read -r team_id role_name person <<< "$assignment"
 
     echo "  -> Assigning $person as $role_name to Team $team_id"
-    curl -s -X POST "http://localhost:8094/mcp/v1/message?session_id=$SESSION_ID" \
+    curl -s -X POST "http://localhost:8094/mcp" \
         -H "Content-Type: application/json" \
         -d "{\"jsonrpc\":\"2.0\",\"method\":\"tools/call\",\"params\":{\"name\":\"guardrail_team_assign\",\"arguments\":{\"project_name\":\"$PROJECT_NAME\",\"team_id\":$team_id,\"role_name\":\"$role_name\",\"person\":\"$person\"}}}"
 done
 
 echo "Validating team sizes..."
-curl -s -X POST "http://localhost:8094/mcp/v1/message?session_id=$SESSION_ID" \
+curl -s -X POST "http://localhost:8094/mcp" \
     -H "Content-Type: application/json" \
     -d "{\"jsonrpc\":\"2.0\",\"method\":\"tools/call\",\"params\":{\"name\":\"guardrail_team_size_validate\",\"arguments\":{\"project_name\":\"$PROJECT_NAME\"}}}"
 
@@ -1087,7 +1087,7 @@ declare -a NEW_ASSIGNMENTS=(
 for unassign in "${UNASSIGNMENTS[@]}"; do
     IFS='|' read -r team_id role_name <<< "$unassign"
     echo "Unassigning $role_name from Team $team_id"
-    curl -s -X POST "http://localhost:8094/mcp/v1/message?session_id=$SESSION_ID" \
+    curl -s -X POST "http://localhost:8094/mcp" \
         -H "Content-Type: application/json" \
         -d "{\"jsonrpc\":\"2.0\",\"method\":\"tools/call\",\"params\":{\"name\":\"guardrail_team_unassign\",\"arguments\":{\"project_name\":\"$PROJECT_NAME\",\"team_id\":$team_id,\"role_name\":\"$role_name\"}}}"
 done
@@ -1096,7 +1096,7 @@ done
 for assign in "${NEW_ASSIGNMENTS[@]}"; do
     IFS='|' read -r team_id role_name person <<< "$assign"
     echo "Assigning $person as $role_name to Team $team_id"
-    curl -s -X POST "http://localhost:8094/mcp/v1/message?session_id=$SESSION_ID" \
+    curl -s -X POST "http://localhost:8094/mcp" \
         -H "Content-Type: application/json" \
         -d "{\"jsonrpc\":\"2.0\",\"method\":\"tools/call\",\"params\":{\"name\":\"guardrail_team_assign\",\"arguments\":{\"project_name\":\"$PROJECT_NAME\",\"team_id\":$team_id,\"role_name\":\"$role_name\",\"person\":\"$person\"}}}"
 done
@@ -1116,19 +1116,19 @@ echo "Checking phase gate from Phase $FROM_PHASE to Phase $TO_PHASE..."
 
 # Validate team sizes first
 echo "Validating team sizes..."
-curl -s -X POST "http://localhost:8094/mcp/v1/message?session_id=$SESSION_ID" \
+curl -s -X POST "http://localhost:8094/mcp" \
     -H "Content-Type: application/json" \
     -d "{\"jsonrpc\":\"2.0\",\"method\":\"tools/call\",\"params\":{\"name\":\"guardrail_team_size_validate\",\"arguments\":{\"project_name\":\"$PROJECT_NAME\"}}}"
 
 # Check phase status for all teams in source phase
 echo "Checking teams in Phase $FROM_PHASE..."
-curl -s -X POST "http://localhost:8094/mcp/v1/message?session_id=$SESSION_ID" \
+curl -s -X POST "http://localhost:8094/mcp" \
     -H "Content-Type: application/json" \
     -d "{\"jsonrpc\":\"2.0\",\"method\":\"tools/call\",\"params\":{\"name\":\"guardrail_team_status\",\"arguments\":{\"project_name\":\"$PROJECT_NAME\",\"phase\":\"Phase $FROM_PHASE\"}}}"
 
 # Check phase gate requirements
 echo "Checking phase gate requirements..."
-curl -s -X POST "http://localhost:8094/mcp/v1/message?session_id=$SESSION_ID" \
+curl -s -X POST "http://localhost:8094/mcp" \
     -H "Content-Type: application/json" \
     -d "{\"jsonrpc\":\"2.0\",\"method\":\"tools/call\",\"params\":{\"name\":\"guardrail_phase_gate_check\",\"arguments\":{\"project_name\":\"$PROJECT_NAME\",\"from_phase\":$FROM_PHASE,\"to_phase\":$TO_PHASE}}}"
 
@@ -1154,7 +1154,7 @@ process_assignment() {
     local role_name=$2
     local person=$3
 
-    response=$(curl -s -X POST "http://localhost:8094/mcp/v1/message?session_id=$SESSION_ID" \
+    response=$(curl -s -X POST "http://localhost:8094/mcp" \
         -H "Content-Type: application/json" \
         -d "{\"jsonrpc\":\"2.0\",\"method\":\"tools/call\",\"params\":{\"name\":\"guardrail_team_assign\",\"arguments\":{\"project_name\":\"$PROJECT_NAME\",\"team_id\":$team_id,\"role_name\":\"$role_name\",\"person\":\"$person\"}}}")
 
