@@ -5,7 +5,7 @@ coding assistants and IDE extensions. Written in Go — the old Python
 implementation was retired back in v2.6.0.
 
 [![Go Implementation](https://img.shields.io/badge/Implementation-Go-blue.svg?style=flat&logo=go)](https://golang.org)
-[![Version](https://img.shields.io/badge/version-v3.3.0-blue.svg)](../CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-v3.4.0-blue.svg)](../CHANGELOG.md)
 
 ## Things worth knowing before you deploy
 

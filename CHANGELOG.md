@@ -10,6 +10,72 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [3.4.0] - 2026-08-15
+
+### Release: Documentation Redo, pi-extension Restoration, and Content Split
+
+**Type:** Minor Version Bump (documentation restructure + extension restoration)
+**Requires:** No changes — MCP server, tools, and API identical to v3.3.0
+
+This release reorganizes the entire documentation set, restores the pi-extension
+to main, and splits game/vision content into private companion repos. Old doc
+links break; see [docs/releases/v3.4.0.md](docs/releases/v3.4.0.md) for a migration note.
+
+#### Added
+- **pi-extension** restored to main — the `@thearchitectit/pi-guardrails` TypeScript
+  extension (63 files) for the pi coding agent, with MCP bridge, injection detector,
+  sandbox, and 10 skills.
+- **Private companion repos** — `agent-guardrails-game-design` (new) holds game
+  design docs and 3D development guardrails; `radredeye` holds vision pipeline docs.
+- **Per-directory `INDEX.md`** files (24) for lean navigation.
+- Release notes at [docs/releases/v3.4.0.md](docs/releases/v3.4.0.md).
+
+#### Changed
+- **Documentation restructure** — new taxonomy (`getting-started/`, `architecture/`,
+  `integrations/`, `teams/`, `mcp-server/`, `rules/`, `archive/`); all files renamed
+  to `lowercase-kebab-case.md`.
+- **Navigation rebuilt** — `INDEX_MAP.md` rewritten as a lean keyword→file map;
+  `TOC.md` trimmed to a flat listing. Markdown files: 185 → 242 (more files, each
+  focused and under the 500-line limit).
+- **`HEADER_MAP.md` dropped** (1033 lines of line-number refs that broke on every
+  edit) — replaced by `INDEX_MAP.md` + per-directory `INDEX.md`.
+- **README** updated — version badge v3.4.0, links point at new doc paths and the
+  private companion repos, HEADER_MAP references removed.
+
+#### Merged (duplicate clusters → single docs)
+- OpenCode integration: `OPENCODE_INTEGRATION.md` + `OPCODE_INTEGRATION.md` (typo) → `integrations/opencode.md`
+- Python migration: `PYTHON_TO_GO_MIGRATION.md` + `PYTHON_MIGRATION.md` → `mcp-server/python-to-go-migration.md`
+- Contributing: `docs/CONTRIBUTING.md` folded into root `CONTRIBUTING.md`
+- Rules meta: `RULES_FROM_MD.md` + `RULE_PATTERNS_GUIDE.md` → `rules/writing-rules.md` + `rules/extracting-rules.md`
+
+#### Archived (stale point-in-time docs → `docs/archive/`)
+- 21 docs: MCP server plan (2093 lines), Project Sentinel plan, April audit report,
+  June 2026 platform review + implementation report, team-tools gap analysis +
+  remediation plan, all sprint records (001–006 + v1.0–v1.4), Clean CQRS architecture map.
+
+#### Removed
+- **Dead game-build code** — `game_build.go`, `game_validator.go`, `game_validator_test.go`
+  (compiled but never registered as MCP tools, no callers).
+- **Game content** — 5× `3d-game-dev` skill copies + `GAME_BUILD_VALIDATION.md` (moved
+  to private `agent-guardrails-game-design` repo).
+- **Vision docs** — `vision-pipeline.md` + `vision.example.yaml` (moved to `radredeye`).
+- **`.openclaw/`** orphan directory (held only the game skill, referenced by nothing).
+- Byte-identical duplicate `mcp-server/.guardrails/pre-work-check.md`.
+- `RULES_INDEX_MAP.md` (folded into `INDEX_MAP.md`).
+
+#### Fixed
+- Stale facts across docs reconciled to the live server: port 8094 → 8080/8081,
+  SSE → stateless StreamableHTTP, Python `mcp_server.py` references removed,
+  Go 1.23 → 1.25+, version matrix updated to v3.3.x.
+- Zero broken internal links across all live markdown (verified).
+
+#### Stats
+- 16 commits, 282 files changed, +19,859 / −17,371.
+- 4 duplicate clusters merged, 21 docs archived, 16 oversized files split.
+- MCP tools: 35 (unchanged). MCP resources: 11 (unchanged).
+
+---
+
 ## [3.3.0] - 2026-08-15
 
 ### Release: Stateless StreamableHTTP Transport, Repo Cleanup, and Deployment Fixes
