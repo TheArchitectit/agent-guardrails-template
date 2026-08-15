@@ -35,7 +35,7 @@ See [DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md) for step-by-step deployment ins
 Deployment host (or local VM)
 |
 |-- guardrail-mcp-server (app container)
-|   |-- :8080 MCP SSE + JSON-RPC message endpoint
+|   |-- :8080 MCP StreamableHTTP endpoint (POST /mcp)
 |   |-- :8081 Web UI + REST API + health + metrics
 |   |-- attached networks: frontend, backend
 |   |-- host bindings: 127.0.0.1:${MCP_PORT}->8080, 127.0.0.1:${WEB_PORT}->8081
@@ -183,12 +183,11 @@ docker compose -f deploy/docker-compose.example.yml ps
 
 ### MCP Protocol (Port 8080)
 
-Server-Sent Events (SSE) endpoint for MCP clients.
+Stateless StreamableHTTP endpoint for MCP clients.
 
-- `GET /mcp/v1/sse` - SSE event stream endpoint
-- `POST /mcp/v1/message?session_id=<session_id>` - JSON-RPC message endpoint
+- `POST /mcp` - JSON-RPC request/response over HTTP
 
-The `session_id` is provided by the initial SSE `endpoint` event.
+No session ID required. Each request is independent and self-contained.
 
 ### Web UI API (Port 8081)
 
@@ -276,18 +275,12 @@ The MCP server implements the Model Context Protocol for AI assistant integratio
 ### Connecting to MCP Server
 
 ```bash
-# 1) Open SSE stream and capture endpoint event
-curl -sN http://localhost:8080/mcp/v1/sse
-# event: endpoint
-# data: http://localhost:8080/mcp/v1/message?session_id=<session_id>
-
-# 2) In another terminal, send JSON-RPC message to session-specific URL
-curl -i -X POST "http://localhost:8080/mcp/v1/message?session_id=<session_id>" \
+# Send a JSON-RPC initialize request to the stateless StreamableHTTP endpoint
+curl -i -X POST http://localhost:8080/mcp \
   -H "Content-Type: application/json" \
   -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test-client","version":"1.0"}}}'
 
-# Expected HTTP status: 202 Accepted
-# JSON-RPC response arrives on the SSE stream as: event: message
+# JSON-RPC response arrives directly in the HTTP response body
 ```
 
 See [API.md](API.md) for complete API documentation.
@@ -352,15 +345,14 @@ See [API.md](API.md) for complete API documentation.
 - Check REDIS_PASSWORD matches between `.env` and Redis container
 - For local development without Redis, set `REDIS_PASSWORD=` (empty)
 
-### SSE Connection Errors
+### MCP Connection Errors
 
-**Problem:** EOF errors when connecting to `/mcp/v1/sse`
+**Problem:** Connection refused or 404 when connecting to `/mcp`
 
 **Solution:**
-- Verify the client posts follow-up messages to the `endpoint` URL emitted by SSE
-- Ensure requests use `?session_id=<session_id>` from that endpoint event
-- Ensure no proxy is buffering SSE responses (check X-Accel-Buffering header)
-- If using custom clients, ensure they consume only `event: message` payloads as JSON-RPC
+- Verify the MCP server is running on port 8080: `curl http://localhost:8080/mcp -X POST -H "Content-Type: application/json" -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}}}'`
+- Ensure clients use `POST /mcp` (not the legacy `/mcp/v1/sse` SSE endpoint)
+- The transport is stateless — no session IDs or persistent connections required
 
 ### API Key Authentication Failures
 
@@ -478,7 +470,7 @@ MIT
 ### For Testers
 
 **your-server Connection Info:**
-- **MCP Endpoint:** http://0.0.0.0:8095/mcp/v1/sse
+- **MCP Endpoint:** http://0.0.0.0:8095/mcp
 - **Web UI:** http://0.0.0.0:8096
 - **API Key:** your-api-key (example - use your own)
 
@@ -488,7 +480,7 @@ MIT
   "mcpServers": {
     "guardrails": {
       "type": "remote",
-      "url": "http://0.0.0.0:8095/mcp/v1/sse",
+      "url": "http://0.0.0.0:8095/mcp",
       "headers": {
         "Authorization": "Bearer your-api-key"
       }

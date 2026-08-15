@@ -8,6 +8,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- **MCP Transport** — Migrated from SSE to stateless StreamableHTTP
+  - Replaced `server.NewSSEServer` with `server.NewStreamableHTTPServer` (mcp-go v0.58.0)
+  - Stateless mode: no session IDs, no persistent connections — each POST to `/mcp` is independent
+  - Single `POST /mcp` endpoint replaces two-step SSE flow (`GET /sse` + `POST /message?session_id=...`)
+  - Fixed `Shutdown()` to actually shut down the MCP transport (was a no-op)
+  - Removed dead `/mcp/v1/sse` path skip in web middleware
+  - Updated all client config examples and docs to use `/mcp` endpoint
+
 ---
 
 ## [3.2.0] - 2026-06-16

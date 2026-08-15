@@ -25,7 +25,7 @@ Run this checklist to quickly identify common issues:
 
 ```bash
 # 1. Verify installation
-curl -s http://localhost:8094/mcp/v1/health | jq .
+curl -s http://localhost:8093/health/ready | jq .
 
 # 2. Check configuration
 ls -la .teams/
@@ -35,7 +35,7 @@ ls -la .guardrails/
 python scripts/team_manager.py --validate
 
 # 4. Test MCP connection
-curl -s -X POST http://localhost:8094/mcp/v1/message \
+curl -s -X POST http://localhost:8094/mcp \
   -d '{"jsonrpc":"2.0","method":"tools/list"}' | jq .
 ```
 
@@ -140,7 +140,7 @@ Team 7 has 8 members (maximum is 6)
 
 1. **Check current team sizes:**
    ```bash
-   curl -X POST http://localhost:8094/mcp/v1/message \
+   curl -X POST http://localhost:8094/mcp \
      -d '{
        "jsonrpc":"2.0",
        "method":"tools/call",
@@ -153,7 +153,7 @@ Team 7 has 8 members (maximum is 6)
 
 2. **Remove excess members:**
    ```bash
-   curl -X POST http://localhost:8094/mcp/v1/message \
+   curl -X POST http://localhost:8094/mcp \
      -d '{
        "jsonrpc":"2.0",
        "method":"tools/call",
@@ -191,7 +191,7 @@ Missing deliverables: Architecture Decision Records
 
 1. **List gate requirements:**
    ```bash
-   curl -X POST http://localhost:8094/mcp/v1/message \
+   curl -X POST http://localhost:8094/mcp \
      -d '{
        "jsonrpc":"2.0",
        "method":"tools/call",
@@ -213,7 +213,7 @@ Missing deliverables: Architecture Decision Records
 
 3. **Verify team assignments:**
    ```bash
-   curl -X POST http://localhost:8094/mcp/v1/message \
+   curl -X POST http://localhost:8094/mcp \
      -d '{
        "jsonrpc":"2.0",
        "method":"tools/call",
@@ -245,7 +245,7 @@ Role 'Technical Lead' already has 'Alice Johnson' assigned
 
 1. **Unassign current person:**
    ```bash
-   curl -X POST http://localhost:8094/mcp/v1/message \
+   curl -X POST http://localhost:8094/mcp \
      -d '{
        "jsonrpc":"2.0",
        "method":"tools/call",
@@ -262,7 +262,7 @@ Role 'Technical Lead' already has 'Alice Johnson' assigned
 
 2. **Assign new person:**
    ```bash
-   curl -X POST http://localhost:8094/mcp/v1/message \
+   curl -X POST http://localhost:8094/mcp \
      -d '{
        "jsonrpc":"2.0",
        "method":"tools/call",
@@ -464,7 +464,7 @@ crontab -e
 **Diagnosis:**
 ```bash
 # Check response times
-time curl -s -X POST http://localhost:8094/mcp/v1/message \
+time curl -s -X POST http://localhost:8094/mcp \
   -d '...team_list...'
 
 # Monitor server resources
@@ -598,7 +598,7 @@ cp .teams/backups/project-backup-20260214.json .teams/my-project.json
 python mcp_server.py
 
 # 5. Verify restoration
-curl -X POST http://localhost:8094/mcp/v1/message \
+curl -X POST http://localhost:8094/mcp \
   -d '{"jsonrpc":"2.0","method":"tools/call","params":{"name":"guardrail_team_list","arguments":{"project_name":"my-project"}}}'
 ```
 
@@ -613,7 +613,7 @@ curl -X POST http://localhost:8094/mcp/v1/message \
 mv .teams/my-project.json .teams/my-project-$(date +%Y%m%d).json.bak
 
 # 2. Re-initialize project
-curl -X POST http://localhost:8094/mcp/v1/message \
+curl -X POST http://localhost:8094/mcp \
   -d '{
     "jsonrpc":"2.0",
     "method":"tools/call",
@@ -671,7 +671,7 @@ cp "$BACKUP_FILE" ".teams/${PROJECT_NAME}.json"
 echo "Rollback complete."
 
 echo "Verifying..."
-curl -s -X POST http://localhost:8094/mcp/v1/message \
+curl -s -X POST http://localhost:8094/mcp \
   -d "{\"jsonrpc\":\"2.0\",\"method\":\"tools/call\",\"params\":{\"name\":\"guardrail_team_list\",\"arguments\":{\"project_name\":\"$PROJECT_NAME\"}}}"
 ```
 
