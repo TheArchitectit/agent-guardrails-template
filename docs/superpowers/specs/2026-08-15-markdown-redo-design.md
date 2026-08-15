@@ -65,17 +65,35 @@ Root: `README.md`, `CHANGELOG.md`, `CONTRIBUTING.md`, `CLAUDE.md`, `INDEX_MAP.md
 
 ## 5. File Disposition
 
-### 5a. Move to private companion repo (game content — 7 files)
+### 5a. Move to private game-design repo (NEW private GitHub repo)
+Created from existing local `~/projects/game-design-docs/` (76 files, no remote).
+Game-content residue that never got extracted in commit 1257f61:
 - `skills/shared-prompts/3d-game-dev.md`
 - `.opencode/skills/3d-game-dev/` (SKILL.md)
 - `.claude/skills-3d/3d-game-dev.json`
 - `.cursor/rules-3d/3d-game-dev.md`
 - `.openclaw/skills/3d-game-dev/SKILL.md` (then remove empty `.openclaw/`)
 - `docs/standards/GAME_BUILD_VALIDATION.md` (unimplemented game-engine tool)
-- `docs/vision-pipeline.md` — **AMBIGUOUS:** documents a real MCP server feature
-  (env vars + code exist) but framed entirely around 3D game dev. Decision needed:
-  (A) move to private repo as game content, or (B) keep and de-game the prose.
-  Default if no answer: **B** (keep — it documents public server infra).
+Then remove `.openclaw/` (orphan, after its sole file moves).
+
+### 5a2. Move to radredeye (existing private repo — vision pipeline)
+radredeye will do both vision capture AND screenshot-review long term; it
+supersedes this repo's game-specific Go vision prototype. It already holds a
+stale copy of vision-pipeline.md referencing these paths.
+- `docs/vision-pipeline.md` → radredeye `docs/vision-pipeline.md` (reconcile/replace)
+- `mcp-server/config/vision.example.yaml` → radredeye (reconcile/replace)
+
+### 5a3. Delete dead game-build code
+- `mcp-server/internal/models/game_build.go` + `internal/validation/game_validator.go`
+  + `game_validator_test.go` — compiles but never registered as an MCP tool, no
+  callers. Dead code. (GAME_BUILD_VALIDATION.md moves to private repo per 5a.)
+
+NOTE: the 13-file vision Go pipeline (`internal/vision/*`, `vision_tools.go`,
+`vision_server.go`) is live, registered, and gated behind `VISION_ENABLED`.
+radredeye is the long-term home, but radredeye's capture is still incomplete
+("GPU framebuffer extraction is still a stub"). **Vision code removal is a
+separate, explicit decision deferred until radredeye reaches parity.** For this
+redo: move the docs + config to radredeye; leave the Go code in place for now.
 
 ### 5b. Archive to `docs/archive/` (stale point-in-time — ~18 files)
 - `docs/plans/MCP_SERVER_PLAN.md` (2093 lines, "Status: Planning" for a live server)
@@ -150,8 +168,10 @@ decomposition: `TEAM_TOOLS.md` (1199), `TROUBLESHOOTING.md` (767), `MIGRATION.md
 - gitleaks — clean (allowlist in place).
 - Every `docs/` subdir has an `INDEX.md`; root has `INDEX_MAP.md` + `TOC.md` only.
 
-## 10. Open Decisions Within Scope
+## 10. Resolved Decisions
 
-1. `vision-pipeline.md` — move to private repo (game) or keep + de-game? Default: keep.
-2. `GAME_BUILD_VALIDATION.md` — private repo vs archive as unimplemented? Default: private repo (it's game content).
-3. `.teams/` runtime artifacts — stay gitignored/uncommitted throughout (as before).
+1. `vision-pipeline.md` + `vision.example.yaml` → **radredeye** (private repo; radredeye does both vision capture + review long term).
+2. `GAME_BUILD_VALIDATION.md` → **private game-design repo**; dead `game_build` Go code **deleted**.
+3. `.teams/` runtime artifacts — stay uncommitted throughout.
+4. Vision Go code (13 files) — **stays for now**; removal deferred until radredeye reaches parity.
+5. Private game-design repo — **create new** private GitHub repo from `~/projects/game-design-docs/`.

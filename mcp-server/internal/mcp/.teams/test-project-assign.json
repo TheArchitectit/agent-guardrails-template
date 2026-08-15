@@ -1,8 +1,68 @@
 {
   "project_name": "test-project-assign",
   "version": "1.0.0",
-  "updated_at": "2026-03-02T01:57:33.599389625Z",
+  "updated_at": "2026-08-15T10:02:48.354309519-05:00",
   "teams": [
+    {
+      "id": 7,
+      "name": "Core Feature Squad",
+      "phase": "Phase 3: The Build Squads",
+      "description": "The 'Devs' - Feature implementation",
+      "roles": [
+        {
+          "name": "Technical Lead",
+          "responsibility": "Final word on implementation",
+          "deliverables": [
+            "Code reviews",
+            "Architecture decisions",
+            "Technical guidance"
+          ]
+        },
+        {
+          "name": "Senior Backend Engineer",
+          "responsibility": "Logic, APIs, microservices",
+          "deliverables": [
+            "Backend services",
+            "API endpoints",
+            "Business logic"
+          ]
+        },
+        {
+          "name": "Senior Frontend Engineer",
+          "responsibility": "Design system, state management",
+          "deliverables": [
+            "UI components",
+            "Frontend architecture",
+            "State logic"
+          ]
+        },
+        {
+          "name": "Accessibility (A11y) Expert",
+          "responsibility": "WCAG compliance",
+          "deliverables": [
+            "A11y audits",
+            "Remediation plans",
+            "Testing reports"
+          ]
+        },
+        {
+          "name": "Technical Writer",
+          "responsibility": "Internal/external docs",
+          "deliverables": [
+            "API docs",
+            "User guides",
+            "Runbooks"
+          ]
+        }
+      ],
+      "exit_criteria": [
+        "Features implemented",
+        "Code reviewed and approved",
+        "Documentation complete",
+        "A11y requirements met"
+      ],
+      "status": "not_started"
+    },
     {
       "id": 1,
       "name": "Business \u0026 Product Strategy",
@@ -105,103 +165,53 @@
       "status": "not_started"
     },
     {
-      "id": 5,
-      "name": "Platform Engineering",
+      "id": 4,
+      "name": "Infrastructure \u0026 Cloud Ops",
       "phase": "Phase 2: Platform \u0026 Foundation",
-      "description": "The 'Internal Tools' - Developer experience platform",
+      "description": "Cloud infrastructure and networking",
       "roles": [
         {
-          "name": "Platform Product Manager",
-          "responsibility": "Developer experience as product",
+          "name": "Cloud Architect",
+          "responsibility": "VPC and network design",
           "deliverables": [
-            "Platform roadmap",
-            "DX metrics",
-            "Adoption reports"
+            "Network diagrams",
+            "Security groups",
+            "Routing tables"
           ]
         },
         {
-          "name": "CI/CD Architect",
-          "responsibility": "Golden pipelines",
+          "name": "IaC Engineer",
+          "responsibility": "Provisions the 'metal'",
           "deliverables": [
-            "Pipeline templates",
-            "Build configs",
-            "Deployment strategies"
+            "Terraform modules",
+            "Ansible playbooks",
+            "Infrastructure code"
           ]
         },
         {
-          "name": "Kubernetes Administrator",
-          "responsibility": "Cluster management",
+          "name": "Network Security Engineer",
+          "responsibility": "Firewalls, VPNs, Direct Connect",
           "deliverables": [
-            "Cluster configs",
-            "Resource quotas",
-            "Ingress rules"
+            "Security rules",
+            "Network policies",
+            "Access controls"
           ]
         },
         {
-          "name": "Developer Advocate",
-          "responsibility": "Dev squad adoption",
+          "name": "Storage Engineer",
+          "responsibility": "S3/SAN management",
           "deliverables": [
-            "Onboarding guides",
-            "Training materials",
-            "Feedback loops"
+            "Storage policies",
+            "Backup strategies",
+            "Archival rules"
           ]
         }
       ],
       "exit_criteria": [
-        "Platform services ready",
-        "CI/CD pipelines functional",
-        "Developer onboarding complete"
-      ],
-      "status": "not_started"
-    },
-    {
-      "id": 9,
-      "name": "Cybersecurity (AppSec)",
-      "phase": "Phase 4: Validation \u0026 Hardening",
-      "description": "Application security",
-      "roles": [
-        {
-          "name": "Security Architect",
-          "responsibility": "Threat model review",
-          "deliverables": [
-            "Threat models",
-            "Security architecture",
-            "Risk assessments"
-          ]
-        },
-        {
-          "name": "Vulnerability Researcher",
-          "responsibility": "SAST/DAST/SCA scanners",
-          "deliverables": [
-            "Scan reports",
-            "Vulnerability triage",
-            "Fix verification"
-          ]
-        },
-        {
-          "name": "Penetration Tester",
-          "responsibility": "Manual security testing",
-          "deliverables": [
-            "Pen test reports",
-            "Exploit verification",
-            "Remediation"
-          ]
-        },
-        {
-          "name": "DevSecOps Engineer",
-          "responsibility": "Security in CI/CD",
-          "deliverables": [
-            "Security gates",
-            "Pipeline integration",
-            "Compliance checks"
-          ]
-        }
-      ],
-      "exit_criteria": [
-        "Security review passed",
-        "Vulnerabilities remediated or accepted",
-        "Pen testing complete",
-        "Security gates passing"
+        "Infrastructure provisioned",
+        "Network connectivity verified",
+        "Security rules applied",
+        "Monitoring enabled"
       ],
       "status": "not_started"
     },
@@ -308,105 +318,6 @@
       "status": "not_started"
     },
     {
-      "id": 2,
-      "name": "Enterprise Architecture",
-      "phase": "Phase 1: Strategy, Governance \u0026 Planning",
-      "description": "The 'Standards' - Technology vision and standards",
-      "roles": [
-        {
-          "name": "Chief Architect",
-          "responsibility": "Sets 5-year tech vision",
-          "deliverables": [
-            "Architecture vision",
-            "Tech radar",
-            "Strategic plans"
-          ]
-        },
-        {
-          "name": "Domain Architect",
-          "responsibility": "Specialized stack expertise",
-          "deliverables": [
-            "Domain-specific patterns",
-            "Best practices guides"
-          ]
-        },
-        {
-          "name": "Solution Architect",
-          "responsibility": "Maps projects to standards",
-          "deliverables": [
-            "Solution designs",
-            "Architecture decision records"
-          ]
-        },
-        {
-          "name": "Standards Lead",
-          "responsibility": "Manages Approved Tech List",
-          "deliverables": [
-            "Technology standards",
-            "Evaluation criteria",
-            "Approved list"
-          ]
-        }
-      ],
-      "exit_criteria": [
-        "Architecture approved",
-        "Technology choices validated",
-        "Standards compliance verified"
-      ],
-      "status": "not_started"
-    },
-    {
-      "id": 4,
-      "name": "Infrastructure \u0026 Cloud Ops",
-      "phase": "Phase 2: Platform \u0026 Foundation",
-      "description": "Cloud infrastructure and networking",
-      "roles": [
-        {
-          "name": "Cloud Architect",
-          "responsibility": "VPC and network design",
-          "deliverables": [
-            "Network diagrams",
-            "Security groups",
-            "Routing tables"
-          ]
-        },
-        {
-          "name": "IaC Engineer",
-          "responsibility": "Provisions the 'metal'",
-          "deliverables": [
-            "Terraform modules",
-            "Ansible playbooks",
-            "Infrastructure code"
-          ]
-        },
-        {
-          "name": "Network Security Engineer",
-          "responsibility": "Firewalls, VPNs, Direct Connect",
-          "deliverables": [
-            "Security rules",
-            "Network policies",
-            "Access controls"
-          ]
-        },
-        {
-          "name": "Storage Engineer",
-          "responsibility": "S3/SAN management",
-          "deliverables": [
-            "Storage policies",
-            "Backup strategies",
-            "Archival rules"
-          ]
-        }
-      ],
-      "exit_criteria": [
-        "Infrastructure provisioned",
-        "Network connectivity verified",
-        "Security rules applied",
-        "Monitoring enabled"
-      ],
-      "status": "not_started"
-    },
-    {
       "id": 6,
       "name": "Data Governance \u0026 Analytics",
       "phase": "Phase 2: Platform \u0026 Foundation",
@@ -452,66 +363,6 @@
         "Data models defined",
         "Pipelines operational",
         "Privacy controls implemented"
-      ],
-      "status": "not_started"
-    },
-    {
-      "id": 7,
-      "name": "Core Feature Squad",
-      "phase": "Phase 3: The Build Squads",
-      "description": "The 'Devs' - Feature implementation",
-      "roles": [
-        {
-          "name": "Technical Lead",
-          "responsibility": "Final word on implementation",
-          "deliverables": [
-            "Code reviews",
-            "Architecture decisions",
-            "Technical guidance"
-          ]
-        },
-        {
-          "name": "Senior Backend Engineer",
-          "responsibility": "Logic, APIs, microservices",
-          "deliverables": [
-            "Backend services",
-            "API endpoints",
-            "Business logic"
-          ]
-        },
-        {
-          "name": "Senior Frontend Engineer",
-          "responsibility": "Design system, state management",
-          "deliverables": [
-            "UI components",
-            "Frontend architecture",
-            "State logic"
-          ]
-        },
-        {
-          "name": "Accessibility (A11y) Expert",
-          "responsibility": "WCAG compliance",
-          "deliverables": [
-            "A11y audits",
-            "Remediation plans",
-            "Testing reports"
-          ]
-        },
-        {
-          "name": "Technical Writer",
-          "responsibility": "Internal/external docs",
-          "deliverables": [
-            "API docs",
-            "User guides",
-            "Runbooks"
-          ]
-        }
-      ],
-      "exit_criteria": [
-        "Features implemented",
-        "Code reviewed and approved",
-        "Documentation complete",
-        "A11y requirements met"
       ],
       "status": "not_started"
     },
@@ -609,6 +460,155 @@
         "Risk assessment complete",
         "Privacy requirements met",
         "Policies acknowledged"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": 9,
+      "name": "Cybersecurity (AppSec)",
+      "phase": "Phase 4: Validation \u0026 Hardening",
+      "description": "Application security",
+      "roles": [
+        {
+          "name": "Security Architect",
+          "responsibility": "Threat model review",
+          "deliverables": [
+            "Threat models",
+            "Security architecture",
+            "Risk assessments"
+          ]
+        },
+        {
+          "name": "Vulnerability Researcher",
+          "responsibility": "SAST/DAST/SCA scanners",
+          "deliverables": [
+            "Scan reports",
+            "Vulnerability triage",
+            "Fix verification"
+          ]
+        },
+        {
+          "name": "Penetration Tester",
+          "responsibility": "Manual security testing",
+          "deliverables": [
+            "Pen test reports",
+            "Exploit verification",
+            "Remediation"
+          ]
+        },
+        {
+          "name": "DevSecOps Engineer",
+          "responsibility": "Security in CI/CD",
+          "deliverables": [
+            "Security gates",
+            "Pipeline integration",
+            "Compliance checks"
+          ]
+        }
+      ],
+      "exit_criteria": [
+        "Security review passed",
+        "Vulnerabilities remediated or accepted",
+        "Pen testing complete",
+        "Security gates passing"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": 5,
+      "name": "Platform Engineering",
+      "phase": "Phase 2: Platform \u0026 Foundation",
+      "description": "The 'Internal Tools' - Developer experience platform",
+      "roles": [
+        {
+          "name": "Platform Product Manager",
+          "responsibility": "Developer experience as product",
+          "deliverables": [
+            "Platform roadmap",
+            "DX metrics",
+            "Adoption reports"
+          ]
+        },
+        {
+          "name": "CI/CD Architect",
+          "responsibility": "Golden pipelines",
+          "deliverables": [
+            "Pipeline templates",
+            "Build configs",
+            "Deployment strategies"
+          ]
+        },
+        {
+          "name": "Kubernetes Administrator",
+          "responsibility": "Cluster management",
+          "deliverables": [
+            "Cluster configs",
+            "Resource quotas",
+            "Ingress rules"
+          ]
+        },
+        {
+          "name": "Developer Advocate",
+          "responsibility": "Dev squad adoption",
+          "deliverables": [
+            "Onboarding guides",
+            "Training materials",
+            "Feedback loops"
+          ]
+        }
+      ],
+      "exit_criteria": [
+        "Platform services ready",
+        "CI/CD pipelines functional",
+        "Developer onboarding complete"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": 2,
+      "name": "Enterprise Architecture",
+      "phase": "Phase 1: Strategy, Governance \u0026 Planning",
+      "description": "The 'Standards' - Technology vision and standards",
+      "roles": [
+        {
+          "name": "Chief Architect",
+          "responsibility": "Sets 5-year tech vision",
+          "deliverables": [
+            "Architecture vision",
+            "Tech radar",
+            "Strategic plans"
+          ]
+        },
+        {
+          "name": "Domain Architect",
+          "responsibility": "Specialized stack expertise",
+          "deliverables": [
+            "Domain-specific patterns",
+            "Best practices guides"
+          ]
+        },
+        {
+          "name": "Solution Architect",
+          "responsibility": "Maps projects to standards",
+          "deliverables": [
+            "Solution designs",
+            "Architecture decision records"
+          ]
+        },
+        {
+          "name": "Standards Lead",
+          "responsibility": "Manages Approved Tech List",
+          "deliverables": [
+            "Technology standards",
+            "Evaluation criteria",
+            "Approved list"
+          ]
+        }
+      ],
+      "exit_criteria": [
+        "Architecture approved",
+        "Technology choices validated",
+        "Standards compliance verified"
       ],
       "status": "not_started"
     }

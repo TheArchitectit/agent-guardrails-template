@@ -1,53 +1,55 @@
 {
   "project_name": "integration-test-phase-filter",
   "version": "1.0.0",
-  "updated_at": "2026-03-02T01:57:33.588079658Z",
+  "updated_at": "2026-08-15T10:02:48.352212453-05:00",
   "teams": [
     {
-      "id": 2,
-      "name": "Enterprise Architecture",
+      "id": 1,
+      "name": "Business \u0026 Product Strategy",
       "phase": "Phase 1: Strategy, Governance \u0026 Planning",
-      "description": "The 'Standards' - Technology vision and standards",
+      "description": "The 'Why' - Business case and product strategy",
       "roles": [
         {
-          "name": "Chief Architect",
-          "responsibility": "Sets 5-year tech vision",
+          "name": "Business Relationship Manager",
+          "responsibility": "Connects IT to C-suite",
           "deliverables": [
-            "Architecture vision",
-            "Tech radar",
-            "Strategic plans"
+            "Strategic alignment docs",
+            "Executive briefings"
           ]
         },
         {
-          "name": "Domain Architect",
-          "responsibility": "Specialized stack expertise",
+          "name": "Lead Product Manager",
+          "responsibility": "Owns long-term roadmap",
           "deliverables": [
-            "Domain-specific patterns",
-            "Best practices guides"
+            "Product roadmap",
+            "OKRs",
+            "Feature prioritization"
           ]
         },
         {
-          "name": "Solution Architect",
-          "responsibility": "Maps projects to standards",
+          "name": "Business Systems Analyst",
+          "responsibility": "Translates business to technical",
           "deliverables": [
-            "Solution designs",
-            "Architecture decision records"
+            "Requirements specs",
+            "User stories",
+            "Acceptance criteria"
           ]
         },
         {
-          "name": "Standards Lead",
-          "responsibility": "Manages Approved Tech List",
+          "name": "Financial Controller (FinOps)",
+          "responsibility": "Approves budget and cloud spend",
           "deliverables": [
-            "Technology standards",
-            "Evaluation criteria",
-            "Approved list"
+            "Budget forecasts",
+            "Cost projections",
+            "Spend reports"
           ]
         }
       ],
       "exit_criteria": [
-        "Architecture approved",
-        "Technology choices validated",
-        "Standards compliance verified"
+        "Business case approved",
+        "Budget allocated",
+        "Roadmap defined",
+        "Success metrics established"
       ],
       "status": "not_started"
     },
@@ -99,6 +101,108 @@
         "Network connectivity verified",
         "Security rules applied",
         "Monitoring enabled"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": 11,
+      "name": "Site Reliability Engineering (SRE)",
+      "phase": "Phase 5: Delivery \u0026 Sustainment",
+      "description": "Reliability and observability",
+      "roles": [
+        {
+          "name": "SRE Lead",
+          "responsibility": "Error budget and uptime SLA",
+          "deliverables": [
+            "SLOs",
+            "Error budgets",
+            "Reliability reports"
+          ]
+        },
+        {
+          "name": "Observability Engineer",
+          "responsibility": "Monitoring and logging",
+          "deliverables": [
+            "Dashboards",
+            "Alerts",
+            "Log aggregation",
+            "Traces"
+          ]
+        },
+        {
+          "name": "Chaos Engineer",
+          "responsibility": "Resiliency testing",
+          "deliverables": [
+            "Chaos experiments",
+            "Failure scenarios",
+            "Recovery tests"
+          ]
+        },
+        {
+          "name": "Incident Manager",
+          "responsibility": "War room leadership",
+          "deliverables": [
+            "Incident response",
+            "Post-mortems",
+            "Runbook updates"
+          ]
+        }
+      ],
+      "exit_criteria": [
+        "Monitoring in place",
+        "Alerts configured",
+        "Runbooks complete",
+        "Error budget healthy"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": 5,
+      "name": "Platform Engineering",
+      "phase": "Phase 2: Platform \u0026 Foundation",
+      "description": "The 'Internal Tools' - Developer experience platform",
+      "roles": [
+        {
+          "name": "Platform Product Manager",
+          "responsibility": "Developer experience as product",
+          "deliverables": [
+            "Platform roadmap",
+            "DX metrics",
+            "Adoption reports"
+          ]
+        },
+        {
+          "name": "CI/CD Architect",
+          "responsibility": "Golden pipelines",
+          "deliverables": [
+            "Pipeline templates",
+            "Build configs",
+            "Deployment strategies"
+          ]
+        },
+        {
+          "name": "Kubernetes Administrator",
+          "responsibility": "Cluster management",
+          "deliverables": [
+            "Cluster configs",
+            "Resource quotas",
+            "Ingress rules"
+          ]
+        },
+        {
+          "name": "Developer Advocate",
+          "responsibility": "Dev squad adoption",
+          "deliverables": [
+            "Onboarding guides",
+            "Training materials",
+            "Feedback loops"
+          ]
+        }
+      ],
+      "exit_criteria": [
+        "Platform services ready",
+        "CI/CD pipelines functional",
+        "Developer onboarding complete"
       ],
       "status": "not_started"
     },
@@ -309,52 +413,52 @@
       "status": "not_started"
     },
     {
-      "id": 5,
-      "name": "Platform Engineering",
-      "phase": "Phase 2: Platform \u0026 Foundation",
-      "description": "The 'Internal Tools' - Developer experience platform",
+      "id": 8,
+      "name": "Middleware \u0026 Integration",
+      "phase": "Phase 3: The Build Squads",
+      "description": "APIs and system integrations",
       "roles": [
         {
-          "name": "Platform Product Manager",
-          "responsibility": "Developer experience as product",
+          "name": "API Product Manager",
+          "responsibility": "API lifecycle and versioning",
           "deliverables": [
-            "Platform roadmap",
-            "DX metrics",
-            "Adoption reports"
+            "API specs",
+            "Versioning strategy",
+            "Deprecation plans"
           ]
         },
         {
-          "name": "CI/CD Architect",
-          "responsibility": "Golden pipelines",
+          "name": "Integration Engineer",
+          "responsibility": "SAP/Oracle/Mainframe connections",
           "deliverables": [
-            "Pipeline templates",
-            "Build configs",
-            "Deployment strategies"
+            "Integration specs",
+            "Data mappings",
+            "Error handling"
           ]
         },
         {
-          "name": "Kubernetes Administrator",
-          "responsibility": "Cluster management",
+          "name": "Messaging Engineer",
+          "responsibility": "Kafka/RabbitMQ management",
           "deliverables": [
-            "Cluster configs",
-            "Resource quotas",
-            "Ingress rules"
+            "Topic design",
+            "Message schemas",
+            "Consumer groups"
           ]
         },
         {
-          "name": "Developer Advocate",
-          "responsibility": "Dev squad adoption",
+          "name": "IAM Specialist",
+          "responsibility": "Okta/AD integration",
           "deliverables": [
-            "Onboarding guides",
-            "Training materials",
-            "Feedback loops"
+            "Auth flows",
+            "Permission models",
+            "Access policies"
           ]
         }
       ],
       "exit_criteria": [
-        "Platform services ready",
-        "CI/CD pipelines functional",
-        "Developer onboarding complete"
+        "APIs documented and tested",
+        "Integrations verified",
+        "Auth flows functional"
       ],
       "status": "not_started"
     },
@@ -410,106 +514,6 @@
       "status": "not_started"
     },
     {
-      "id": 1,
-      "name": "Business \u0026 Product Strategy",
-      "phase": "Phase 1: Strategy, Governance \u0026 Planning",
-      "description": "The 'Why' - Business case and product strategy",
-      "roles": [
-        {
-          "name": "Business Relationship Manager",
-          "responsibility": "Connects IT to C-suite",
-          "deliverables": [
-            "Strategic alignment docs",
-            "Executive briefings"
-          ]
-        },
-        {
-          "name": "Lead Product Manager",
-          "responsibility": "Owns long-term roadmap",
-          "deliverables": [
-            "Product roadmap",
-            "OKRs",
-            "Feature prioritization"
-          ]
-        },
-        {
-          "name": "Business Systems Analyst",
-          "responsibility": "Translates business to technical",
-          "deliverables": [
-            "Requirements specs",
-            "User stories",
-            "Acceptance criteria"
-          ]
-        },
-        {
-          "name": "Financial Controller (FinOps)",
-          "responsibility": "Approves budget and cloud spend",
-          "deliverables": [
-            "Budget forecasts",
-            "Cost projections",
-            "Spend reports"
-          ]
-        }
-      ],
-      "exit_criteria": [
-        "Business case approved",
-        "Budget allocated",
-        "Roadmap defined",
-        "Success metrics established"
-      ],
-      "status": "not_started"
-    },
-    {
-      "id": 8,
-      "name": "Middleware \u0026 Integration",
-      "phase": "Phase 3: The Build Squads",
-      "description": "APIs and system integrations",
-      "roles": [
-        {
-          "name": "API Product Manager",
-          "responsibility": "API lifecycle and versioning",
-          "deliverables": [
-            "API specs",
-            "Versioning strategy",
-            "Deprecation plans"
-          ]
-        },
-        {
-          "name": "Integration Engineer",
-          "responsibility": "SAP/Oracle/Mainframe connections",
-          "deliverables": [
-            "Integration specs",
-            "Data mappings",
-            "Error handling"
-          ]
-        },
-        {
-          "name": "Messaging Engineer",
-          "responsibility": "Kafka/RabbitMQ management",
-          "deliverables": [
-            "Topic design",
-            "Message schemas",
-            "Consumer groups"
-          ]
-        },
-        {
-          "name": "IAM Specialist",
-          "responsibility": "Okta/AD integration",
-          "deliverables": [
-            "Auth flows",
-            "Permission models",
-            "Access policies"
-          ]
-        }
-      ],
-      "exit_criteria": [
-        "APIs documented and tested",
-        "Integrations verified",
-        "Auth flows functional"
-      ],
-      "status": "not_started"
-    },
-    {
       "id": 10,
       "name": "Quality Engineering (SDET)",
       "phase": "Phase 4: Validation \u0026 Hardening",
@@ -560,54 +564,50 @@
       "status": "not_started"
     },
     {
-      "id": 11,
-      "name": "Site Reliability Engineering (SRE)",
-      "phase": "Phase 5: Delivery \u0026 Sustainment",
-      "description": "Reliability and observability",
+      "id": 2,
+      "name": "Enterprise Architecture",
+      "phase": "Phase 1: Strategy, Governance \u0026 Planning",
+      "description": "The 'Standards' - Technology vision and standards",
       "roles": [
         {
-          "name": "SRE Lead",
-          "responsibility": "Error budget and uptime SLA",
+          "name": "Chief Architect",
+          "responsibility": "Sets 5-year tech vision",
           "deliverables": [
-            "SLOs",
-            "Error budgets",
-            "Reliability reports"
+            "Architecture vision",
+            "Tech radar",
+            "Strategic plans"
           ]
         },
         {
-          "name": "Observability Engineer",
-          "responsibility": "Monitoring and logging",
+          "name": "Domain Architect",
+          "responsibility": "Specialized stack expertise",
           "deliverables": [
-            "Dashboards",
-            "Alerts",
-            "Log aggregation",
-            "Traces"
+            "Domain-specific patterns",
+            "Best practices guides"
           ]
         },
         {
-          "name": "Chaos Engineer",
-          "responsibility": "Resiliency testing",
+          "name": "Solution Architect",
+          "responsibility": "Maps projects to standards",
           "deliverables": [
-            "Chaos experiments",
-            "Failure scenarios",
-            "Recovery tests"
+            "Solution designs",
+            "Architecture decision records"
           ]
         },
         {
-          "name": "Incident Manager",
-          "responsibility": "War room leadership",
+          "name": "Standards Lead",
+          "responsibility": "Manages Approved Tech List",
           "deliverables": [
-            "Incident response",
-            "Post-mortems",
-            "Runbook updates"
+            "Technology standards",
+            "Evaluation criteria",
+            "Approved list"
           ]
         }
       ],
       "exit_criteria": [
-        "Monitoring in place",
-        "Alerts configured",
-        "Runbooks complete",
-        "Error budget healthy"
+        "Architecture approved",
+        "Technology choices validated",
+        "Standards compliance verified"
       ],
       "status": "not_started"
     }

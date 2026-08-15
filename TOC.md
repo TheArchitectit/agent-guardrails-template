@@ -81,7 +81,6 @@
 | **API_SPECIFICATIONS.md** | 421 | 6 | OpenAPI vs OpenSpec guidance |
 | **PROMPTING_GUIDE.md** | 984 | 10 | Master prompting techniques |
 | **CROSS_CUTTING_2026.md** | 288 | 5 | Cross-cutting concerns for 2026 |
-| **GAME_BUILD_VALIDATION.md** | 202 | 7 | Game build validation (planned) |
 
 **Total:** 14 standards documents (INDEX.md + 13 guides)
 
