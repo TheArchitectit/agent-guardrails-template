@@ -28,12 +28,12 @@ Fixes #
 
 ### Security
 - [ ] No secrets, credentials, or API keys in code
-- [ ] No .env files committed (see [SECRETS_MANAGEMENT.md](SECRETS_MANAGEMENT.md))
+- [ ] No .env files committed (see [secrets-management.md](secrets-management.md))
 - [ ] Security-sensitive changes reviewed by team
 
 ### Documentation
 - [ ] I have updated documentation as needed
-- [ ] INDEX_MAP.md updated (if new docs added)
+- [ ] index-map.md updated (if new docs added)
 - [ ] All docs under 500 lines (see [MODULAR_DOCUMENTATION.md](../docs/standards/modular-documentation.md))
 
 ## Test Plan

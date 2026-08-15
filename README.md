@@ -26,7 +26,7 @@ The centerpiece is a Go MCP server that checks bash commands, file edits, and gi
 | **Agent Lifecycle Management** | State machine (idle→planning→active→review→release) with transition validation and audit trails |
 | **Multi-Agent Orchestration** | Patterns for MoA (Mixture of Agents), swarm intelligence, and autonomous tool use |
 | **Cross-Platform IDE Integration** | Native skills and rules for Claude Code, Cursor, OpenCode, Windsurf, and GitHub Copilot — not generic prompts |
-| **Token-Efficient Documentation** | 68+ modular docs (500-line max), INDEX_MAP keyword lookup, `.claudeignore` for context savings |
+| **Token-Efficient Documentation** | 68+ modular docs (500-line max), index-map keyword lookup, `.claudeignore` for context savings |
 | **Production Infrastructure** | PostgreSQL 16 + Redis 7, Docker Compose, CI/CD validation, 22-pattern secret scanning, regression prevention |
 | **14 Language Examples** | Go, Rust, TypeScript, Python, Java, GDScript, Scala, R, C#, C++, PHP, Ruby, Swift, Dart/Flutter |
 | **Ethical & Accessible by Default** | WCAG 3.0+ Silver compliance, dark pattern prevention, XR comfort zones, monetization ethics, multiplayer safety |
@@ -138,8 +138,8 @@ Then see [QUICK_SETUP.md](docs/getting-started/quick-setup.md) for the 5-minute 
 
 | Tool | Purpose |
 |------|---------|
-| [INDEX_MAP.md](INDEX_MAP.md) | Find docs by keyword — saves 60-80% tokens |
-| [TOC.md](TOC.md) | Complete file listing |
+| [index-map.md](index-map.md) | Find docs by keyword — saves 60-80% tokens |
+| [toc.md](toc.md) | Complete file listing |
 | `.claudeignore` | Skip irrelevant files |
 
 All documents follow the **500-line max** rule for fast context loading.
@@ -219,8 +219,8 @@ Multi-language implementation examples demonstrating guardrails patterns:
 ```
 agent-guardrails-template/
 ├── README.md                    ← You are here
-├── INDEX_MAP.md ← Token-efficient navigation
-├── TOC.md                       ← Complete file listing
+├── index-map.md ← Token-efficient navigation
+├── toc.md                       ← Complete file listing
 ├── CLAUDE.md                    ← Claude Code CLI context
 ├── CONTRIBUTING.md              ← How to contribute
 ├── CHANGELOG.md                 ← Release notes

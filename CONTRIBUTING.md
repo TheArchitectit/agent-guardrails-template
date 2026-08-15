@@ -185,7 +185,7 @@ Brief description of changes
 
 - New docs go in the appropriate `docs/` subdirectory.
 - Keep every document under 500 lines — split if it grows past that.
-- Add the file to `INDEX_MAP.md` and the directory's `INDEX.md`.
+- Add the file to `index-map.md` and the directory's `INDEX.md`.
 - Match the tone and structure of existing docs.
 
 ## Questions

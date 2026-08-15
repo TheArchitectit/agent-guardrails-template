@@ -2,7 +2,7 @@
 
 > Detailed instructions for adding agent guardrails to existing or new repositories.
 
-**Related:** [AGENT_GUARDRAILS.md](agent-guardrails.md) | [INDEX_MAP.md](../../INDEX_MAP.md)
+**Related:** [AGENT_GUARDRAILS.md](agent-guardrails.md) | [index-map.md](../../index-map.md)
 
 ---
 
@@ -140,14 +140,14 @@ ANALYSIS NEEDED:
    - docs/standards/ (coding standards)
    - docs/sprints/ (task documents)
 4. Check if AGENT_GUARDRAILS.md exists
-5. Check if INDEX_MAP.md exists
+5. Check if index-map.md exists
 
 ACTIONS TO TAKE:
 1. Create missing directory structures
 2. Import guardrails framework from /mnt/ollama/git/agent-guardrails-template
 3. Reorganize existing docs into appropriate directories
 4. Split any docs over 500 lines
-5. Create/update INDEX_MAP.md
+5. Create/update index-map.md
 6. Update README.md navigation
 7. Commit with descriptive message
 
@@ -228,7 +228,7 @@ COMMAND: mkdir -p src tests docs/sprints/archive .github/ISSUE_TEMPLATE
 STEP 3: Copy all template files
 ─────────────────────────────────────────────
 FILES TO COPY:
-  - INDEX_MAP.md (navigation map)
+  - index-map.md (navigation map)
   - CLAUDE.md
   - .claudeignore
   - docs/AGENT_GUARDRAILS.md
@@ -237,7 +237,7 @@ FILES TO COPY:
   - docs/sprints/SPRINT_TEMPLATE.md
   - docs/sprints/SPRINT_GUIDE.md
   - docs/sprints/INDEX.md
-  - .github/SECRETS_MANAGEMENT.md
+  - .github/secrets-management.md
   - .github/workflows/ (all 3 files)
   - .github/PULL_REQUEST_TEMPLATE.md
   - .github/ISSUE_TEMPLATE/bug_report.md
@@ -320,7 +320,7 @@ IF any doc > 500 lines:
 STEP 6: Create Navigation Maps
 ─────────────────────────────────────────────
 Import or create:
-  - INDEX_MAP.md - Master navigation by keyword
+  - index-map.md - Master navigation by keyword
   - Per-directory INDEX.md files
 
 STEP 7: Update README.md
@@ -331,7 +331,7 @@ Add documentation section:
 
 | Document | Description |
 |----------|-------------|
-| [**INDEX_MAP.md**](INDEX_MAP.md) | Master navigation - find docs by keyword |
+| [**index-map.md**](index-map.md) | Master navigation - find docs by keyword |
 | [**Agent Guardrails**](docs/AGENT_GUARDRAILS.md) | **MANDATORY** safety protocols |
 | [**Workflows**](docs/workflows/INDEX.md) | Operational procedures |
 | [**Standards**](docs/standards/INDEX.md) | Coding standards |
@@ -346,7 +346,7 @@ COMMAND: git commit -m "docs: restructure documentation to follow guardrails con
 - Imported agent guardrails framework v1.2
 - Reorganized existing docs into workflows/standards/sprints/
 - Split oversized documents for 500-line compliance
-- Added navigation map (INDEX_MAP.md) and per-directory INDEX.md files
+- Added navigation map (index-map.md) and per-directory INDEX.md files
 - Updated README.md documentation section
 
 Authored by TheArchitectit"
@@ -371,7 +371,7 @@ project/
 ├── README.md
 ├── CLAUDE.md
 ├── .claudeignore
-├── INDEX_MAP.md
+├── index-map.md
 ├── docs/
 │   ├── AGENT_GUARDRAILS.md
 │   ├── CONTRIBUTING.md
@@ -401,7 +401,7 @@ After applying the template, verify:
 
 ```
 NAVIGATION MAPS:
-[ ] INDEX_MAP.md exists at root
+[ ] index-map.md exists at root
 [ ] Per-directory INDEX.md files exist
 
 CORE DOCUMENTATION:
@@ -413,13 +413,13 @@ CORE DOCUMENTATION:
 [ ] docs/sprints/INDEX.md exists
 
 GITHUB INTEGRATION:
-[ ] .github/SECRETS_MANAGEMENT.md exists
+[ ] .github/secrets-management.md exists
 [ ] .github/workflows/ contains 3 CI workflows
 [ ] .github/PULL_REQUEST_TEMPLATE.md exists
 
 PROJECT FILES:
 [ ] CLAUDE.md configured for project
-[ ] README.md links to INDEX_MAP.md and Agent Guardrails
+[ ] README.md links to index-map.md and Agent Guardrails
 [ ] .gitignore exists
 [ ] All docs under 500 lines (check with: find docs -name "*.md" -exec sh -c 'wc -l "$1" | awk "{if($1>500) print $1\" lines: \"$1}"' _ {} \;)
 ```

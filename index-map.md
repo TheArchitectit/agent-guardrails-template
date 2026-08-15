@@ -1,7 +1,7 @@
 # Index Map
 
 Find documentation by keyword. Each entry links to the file that covers it.
-For a flat file listing, see [TOC.md](TOC.md); for an overview, start at the
+For a flat file listing, see [toc.md](toc.md); for an overview, start at the
 [README](README.md).
 
 ## Getting started
