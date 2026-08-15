@@ -57,7 +57,7 @@ Team 7 has 8 members (maximum is 6)
 
 1. **Check current team sizes:**
    ```bash
-   curl -X POST http://localhost:8094/mcp \
+   curl -X POST http://localhost:8080/mcp \
      -d '{
        "jsonrpc":"2.0",
        "method":"tools/call",
@@ -70,7 +70,7 @@ Team 7 has 8 members (maximum is 6)
 
 2. **Remove excess members:**
    ```bash
-   curl -X POST http://localhost:8094/mcp \
+   curl -X POST http://localhost:8080/mcp \
      -d '{
        "jsonrpc":"2.0",
        "method":"tools/call",
@@ -108,7 +108,7 @@ Missing deliverables: Architecture Decision Records
 
 1. **List gate requirements:**
    ```bash
-   curl -X POST http://localhost:8094/mcp \
+   curl -X POST http://localhost:8080/mcp \
      -d '{
        "jsonrpc":"2.0",
        "method":"tools/call",
@@ -130,7 +130,7 @@ Missing deliverables: Architecture Decision Records
 
 3. **Verify team assignments:**
    ```bash
-   curl -X POST http://localhost:8094/mcp \
+   curl -X POST http://localhost:8080/mcp \
      -d '{
        "jsonrpc":"2.0",
        "method":"tools/call",
@@ -162,7 +162,7 @@ Role 'Technical Lead' already has 'Alice Johnson' assigned
 
 1. **Unassign current person:**
    ```bash
-   curl -X POST http://localhost:8094/mcp \
+   curl -X POST http://localhost:8080/mcp \
      -d '{
        "jsonrpc":"2.0",
        "method":"tools/call",
@@ -179,7 +179,7 @@ Role 'Technical Lead' already has 'Alice Johnson' assigned
 
 2. **Assign new person:**
    ```bash
-   curl -X POST http://localhost:8094/mcp \
+   curl -X POST http://localhost:8080/mcp \
      -d '{
        "jsonrpc":"2.0",
        "method":"tools/call",

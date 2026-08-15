@@ -82,7 +82,7 @@ ls -la .guardrails/ 2>/dev/null || echo "No .guardrails directory"
 echo ""
 
 echo "=== Health Check ==="
-curl -s http://localhost:8094/mcp/v1/health 2>/dev/null || echo "Health check failed"
+curl -s http://localhost:8081/health/ready 2>/dev/null || echo "Health check failed"
 echo ""
 
 echo "=== Diagnostics Complete ==="

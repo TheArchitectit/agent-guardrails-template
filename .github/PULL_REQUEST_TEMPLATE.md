@@ -34,7 +34,6 @@ Fixes #
 ### Documentation
 - [ ] I have updated documentation as needed
 - [ ] INDEX_MAP.md updated (if new docs added)
-- [ ] HEADER_MAP.md updated (if doc sections changed)
 - [ ] All docs under 500 lines (see [MODULAR_DOCUMENTATION.md](../docs/standards/modular-documentation.md))
 
 ## Test Plan

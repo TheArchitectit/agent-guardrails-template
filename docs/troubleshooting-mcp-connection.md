@@ -10,7 +10,7 @@ See the [Troubleshooting Index](troubleshooting.md) for other topics.
 
 **Symptoms:**
 ```
-Error: Connection refused (localhost:8094)
+Error: Connection refused (localhost:8080)
 Error: Could not connect to MCP server
 ```
 
@@ -23,23 +23,23 @@ Error: Could not connect to MCP server
 
 1. **Start the MCP server:**
    ```bash
-   python mcp_server.py
-   # or
-   ./start-mcp-server.sh
+   cd mcp-server && make dev
+   # or, if running the container:
+   docker compose -f deploy/podman-compose.yml up -d
    ```
 
 2. **Verify port configuration:**
    ```bash
    # Check if server is listening
-   netstat -tlnp | grep 8094
+   netstat -tlnp | grep 8080
    # or
-   lsof -i :8094
+   lsof -i :8080
    ```
 
 3. **Check firewall rules:**
    ```bash
    # For Linux
-   sudo ufw allow 8094/tcp
+   sudo ufw allow 8080/tcp
    # For macOS
    sudo pfctl -e
    ```

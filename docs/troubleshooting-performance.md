@@ -16,7 +16,7 @@ See the [Troubleshooting Index](troubleshooting.md) for other topics.
 **Diagnosis:**
 ```bash
 # Check response times
-time curl -s -X POST http://localhost:8094/mcp \
+time curl -s -X POST http://localhost:8080/mcp \
   -d '...team_list...'
 
 # Monitor server resources
