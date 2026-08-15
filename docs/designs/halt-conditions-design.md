@@ -506,54 +506,11 @@ When `should_halt=true`:
 3. Read operations may still be permitted (configurable)
 4. All halt events must be acknowledged before resume
 
-### Escalation Workflow
+### Escalation workflow
 
-```
-Halt Triggered (critical severity)
-    │
-    ▼
-┌─────────────────┐
-│ Record in DB    │
-│ severity=critical│
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│ Auto-escalate?  │
-└────────┬────────┘
-         │
-    ┌────┴────┐
-    │         │
-    ▼         ▼
-┌──────┐  ┌──────────┐
-│ Yes  │  │ No       │
-└──┬───┘  └────┬─────┘
-   │           │
-   ▼           ▼
-┌────────┐  ┌──────────┐
-│ Notify │  │ Wait for │
-│ User   │  │ user ack │
-└───┬────┘  └────┬─────┘
-    │            │
-    └────┬───────┘
-         ▼
-┌─────────────────┐
-│ User responds   │
-└────────┬────────┘
-         │
-    ┌────┴────┬────────┐
-    ▼         ▼        ▼
-┌───────┐ ┌───────┐ ┌───────┐
-│Resolve│ │Escalate│ │Dismiss│
-└───┬───┘ └───┬───┘ └───┬───┘
-    │         │         │
-    ▼         ▼         ▼
-┌───────┐ ┌───────┐ ┌───────┐
-│Resume │ │Human  │ │Resume │
-│Work    │ │Takes  │ │With   │
-│        │ │Over   │ │Warning│
-└───────┘ └───────┘ └───────┘
-```
+1. Halt triggered → record in DB with severity.
+2. If critical, auto-escalate: notify the user immediately. Otherwise, wait for acknowledgment.
+3. User responds with one of: **resolve** (resume work), **escalate** (human takes over), or **dismiss** (resume with a warning).
 
 ---
 
