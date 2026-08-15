@@ -179,6 +179,6 @@ If the project also has a `CLAUDE.md`, Windsurf reads both. Rules in `.windsurfr
 
 ## References
 
-- [AGENT_GUARDRAILS.md](AGENT_GUARDRAILS.md) - Core safety protocols
-- [AGENTS_AND_SKILLS_SETUP.md](AGENTS_AND_SKILLS_SETUP.md) - Unified setup guide
-- [skills/shared-prompts/](../skills/shared-prompts/) - Canonical prompt definitions
+- [AGENT_GUARDRAILS.md](../getting-started/agent-guardrails.md) - Core safety protocols
+- [AGENTS_AND_SKILLS_SETUP.md](agents-and-skills-setup.md) - Unified setup guide
+- [skills/shared-prompts/](../../skills/shared-prompts/) - Canonical prompt definitions

@@ -143,7 +143,7 @@ All workflows in this directory **support** the safety protocols defined in [AGE
 
 - [AGENT_GUARDRAILS.md](../getting-started/agent-guardrails.md) - Mandatory safety protocols
 - [../standards/INDEX.md](../standards/INDEX.md) - Documentation standards
-- [../sprints/INDEX.md](../sprints/INDEX.md) - Sprint task framework
+- [../archive/sprints/INDEX.md](../archive/sprints/INDEX.md) - Sprint task framework (archived)
 
 ---
 

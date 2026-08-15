@@ -2,7 +2,7 @@
 
 > Interfaces for external logging systems.
 
-**Related:** [LOGGING_PATTERNS.md](logging-patterns.md) | [AGENT_GUARDRAILS.md](../getting-started/agent-guardrails.md)
+**Related:** [logging-patterns.md](logging-patterns.md) | [agent-guardrails.md](../getting-started/agent-guardrails.md)
 
 ---
 
@@ -460,5 +460,3 @@ BEFORE SENDING EXTERNALLY:
 
 **Authored by:** TheArchitectit
 **Document Owner:** Project Maintainers
-**Last Updated:** 2026-01-14
-**Line Count:** ~300

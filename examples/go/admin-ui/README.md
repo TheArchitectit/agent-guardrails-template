@@ -161,7 +161,7 @@ Access the admin UI at `http://localhost:8080/admin`
 
 - [AGENT_GUARDRAILS.md](../../../docs/getting-started/agent-guardrails.md) - Core safety protocols
 - [TEST_PRODUCTION_SEPARATION.md](../../../docs/standards/test-production-separation.md) - Separation standards
-- [WEB_UI_IMPLEMENTATION.md](../../docs/sprints/SPRINT_002_WEB_UI_IMPLEMENTATION.md) - Web UI patterns
+- [WEB_UI_IMPLEMENTATION.md](../../../docs/archive/sprints/SPRINT_002_WEB_UI_IMPLEMENTATION.md) - Web UI patterns
 - [MCP_TOOLS_REFERENCE.md](../../../docs/mcp-server/tools-reference.md) - MCP integration
 
 ---
