@@ -316,7 +316,6 @@ Or use one of the referral links below — you get credits, and so do we:
 
 | Service | Your Bonus | Details | Referral Code |
 |---------|-----------|---------|---------------|
-| [**Neuralwatt**](https://portal.neuralwatt.com/auth/register?ref=NW-ROGER-ET3Y) | $10 in credits | Spend $10+ → you get $10, we get $20 | `NW-ROGER-ET3Y` |
 | [**Synthetic**](https://synthetic.new/?referral=UAWqkKQQLFkzMkY) | $10 in credits | Subscribe → both get $10 credit | `UAWqkKQQLFkzMkY` |
 | [**Ozore.com**](https://ozore.com/?ref=cwe4kdx0) | 50% off first month | Cloud hosting for AI projects — code `lundrog50` | — |
 
