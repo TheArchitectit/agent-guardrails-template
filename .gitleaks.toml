@@ -1,0 +1,37 @@
+title = "agent-guardrails-template gitleaks configuration"
+
+# This repo *is* a secrets-detection tool. Its test suites and documentation
+# deliberately contain fake secrets — scanner test vectors and "this is what
+# a secret looks like" examples. Everything below is allowlisted so that real
+# leaks (should any ever appear) stay visible.
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Test fixtures, documentation examples, and known-fake keys"
+
+paths = [
+  # Scanner test vectors — the whole point of this file is to contain secrets
+  '''mcp-server/internal/security/secrets_scanner_test\.go''',
+  # Dummy values used to exercise config validation
+  '''mcp-server/internal/config/config_test\.go''',
+  # Output-validator test fixtures (removed from tree, still in history)
+  '''pi-extension/output-validator/validator\.test\.ts''',
+  # Old MCP test reports (removed from tree) — session tokens from the
+  # pre-v3.3.0 SSE server, invalidated by the stateless transport migration
+  '''reports/guardrail_mcp_(re)?test_report\.md''',
+]
+
+regexes = [
+  # AWS documentation example key (used in AWS's own docs worldwide)
+  '''AKIAIOSFODNN7EXAMPLE''',
+  # Documentation examples showing what a hardcoded secret looks like
+  '''sk_live_abc123xyz789secretkey''',
+  '''sk-1234567890''',
+  '''sk-abc123xyz789''',
+  # Truncated illustrative JWT in docs/plans/MCP_SERVER_PLAN.md
+  '''eyJhbGciOiJIUzI1NiIs''',
+  # Fake example API keys from older deployment docs
+  '''DevKey[0-9]{28,32}''',
+]
