@@ -294,6 +294,6 @@ Cursor will stop loading it immediately.
 
 ## References
 
-- [AGENTS_AND_SKILLS_SETUP.md](AGENTS_AND_SKILLS_SETUP.md) - Unified setup guide
-- [AGENT_GUARDRAILS.md](AGENT_GUARDRAILS.md) - Core safety protocols
-- [skills/shared-prompts/](../skills/shared-prompts/) - Canonical prompt definitions
+- [AGENTS_AND_SKILLS_SETUP.md](agents-and-skills-setup.md) - Unified setup guide
+- [AGENT_GUARDRAILS.md](../getting-started/agent-guardrails.md) - Core safety protocols
+- [skills/shared-prompts/](../../skills/shared-prompts/) - Canonical prompt definitions

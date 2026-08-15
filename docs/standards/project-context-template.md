@@ -2,7 +2,7 @@
 
 > **The Single Source of Truth** for AI agent behavior in this repository.
 
-**Related:** [AGENT_GUARDRAILS.md](../getting-started/agent-guardrails.md) | [DEPENDENCY_GOVERNANCE.md](dependency-governance.md)
+**Related:** [agent-guardrails.md](../getting-started/agent-guardrails.md) | [dependency-governance.md](dependency-governance.md)
 
 ---
 
@@ -298,7 +298,7 @@ element.innerHTML = userInput;  // NO
 
 ## 7. APPROVED DEPENDENCIES
 
-See [DEPENDENCY_GOVERNANCE.md](./DEPENDENCY_GOVERNANCE.md) for the full allow-list.
+See [dependency-governance.md](./dependency-governance.md) for the full allow-list.
 
 Quick reference:
 - UI: `@radix-ui/*`, `tailwind-merge`, `clsx`
@@ -372,5 +372,3 @@ Quick reference:
 
 **Authored by:** TheArchitectit
 **Document Owner:** Project Maintainers
-**Last Updated:** 2026-01-21
-**Line Count:** ~350

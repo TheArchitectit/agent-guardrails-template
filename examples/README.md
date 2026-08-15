@@ -153,7 +153,7 @@ All examples follow:
 - [AGENT_GUARDRAILS.md](../docs/getting-started/agent-guardrails.md) - Core safety protocols
 - [TEST_PRODUCTION_SEPARATION.md](../docs/standards/test-production-separation.md) - Separation standards
 - [TESTING_VALIDATION.md](../docs/workflows/testing-validation.md) - Validation protocols
-- [SPRINT_TEMPLATE.md](../docs/sprints/SPRINT_TEMPLATE.md) - Language-specific commands
+- [SPRINT_TEMPLATE.md](../docs/archive/sprints/SPRINT_TEMPLATE.md) - Language-specific commands
 
 ---
 

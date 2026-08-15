@@ -316,6 +316,6 @@ Multi-purpose validation tool checking file paths, content changes, and security
 
 | Document | Purpose |
 |----------|---------|
-| [RULES_INDEX_MAP.md](RULES_INDEX_MAP.md) | Complete rule reference |
-| [RULE_PATTERNS_GUIDE.md](RULE_PATTERNS_GUIDE.md) | Writing custom patterns |
-| [AGENT_GUARDRAILS.md](AGENT_GUARDRAILS.md) | Main guardrails guide |
+| [RULES_INDEX_MAP.md](../../INDEX_MAP.md) | Complete rule reference |
+| [RULE_PATTERNS_GUIDE.md](../rules/writing-rules.md) | Writing custom patterns |
+| [AGENT_GUARDRAILS.md](../getting-started/agent-guardrails.md) | Main guardrails guide |

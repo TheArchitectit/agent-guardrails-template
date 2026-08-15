@@ -252,7 +252,6 @@ func ValidateDeployment(config *BuildConfig, req *BuildRequirement) ([]string, e
 
 | Document | Purpose |
 |----------|---------|
-| [2026_GAME_DESIGN.md](../game-design/2026_GAME_DESIGN.md) | Game design platform constraints |
 | [MONETIZATION_GUARDRAILS.md](../monetization/monetization-guardrails.md) | Platform IAP requirements |
 | [ANALYTICS_ETHICS.md](../analytics/analytics-ethics.md) | Platform privacy requirements |
 | [AI_ASSISTED_DEV.md](../ai-dev/ai-assisted-dev.md) | AI development infrastructure gates |

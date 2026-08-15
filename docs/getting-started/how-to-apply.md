@@ -2,14 +2,14 @@
 
 > Detailed instructions for adding agent guardrails to existing or new repositories.
 
-**Related:** [AGENT_GUARDRAILS.md](agent-guardrails.md) | [INDEX_MAP.md](../INDEX_MAP.md)
+**Related:** [AGENT_GUARDRAILS.md](agent-guardrails.md) | [INDEX_MAP.md](../../INDEX_MAP.md)
 
 ---
 
 ## Overview
 
 This document provides step-by-step instructions for applying the agent guardrails framework to repositories in different scenarios.
-clone from https://github.com/TheArchitectit/agent-guardrails-template
+
 ---
 
 ## Option A: Apply to an EXISTING Repository
@@ -430,5 +430,3 @@ PROJECT FILES:
 
 **Authored by:** TheArchitectit
 **Document Owner:** Project Maintainers
-**Last Updated:** 2026-01-16
-**Line Count:** ~295

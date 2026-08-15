@@ -258,6 +258,5 @@ func ValidatePurchase(user *User, item *PurchaseItem, gate *AgeGate) error {
 |----------|---------|
 | [ETHICAL_ENGAGEMENT.md](../ethical/ethical-engagement.md) | Dark pattern prevention |
 | [ANALYTICS_ETHICS.md](../analytics/analytics-ethics.md) | Telemetry ethics for economy tracking |
-| [2026_GAME_DESIGN.md](../game-design/2026_GAME_DESIGN.md) | Game design guardrails |
 | [AI_ASSISTED_DEV.md](../ai-dev/ai-assisted-dev.md) | AI development approval gates |
 | [CROSS_PLATFORM_DEPLOYMENT.md](../deployment/cross-platform-deployment.md) | Platform compliance |

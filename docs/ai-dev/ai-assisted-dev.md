@@ -318,7 +318,6 @@ func AISafeOperation[T any](operation func() (T, error), rollback func(), risk R
 | Document | Purpose |
 |----------|---------|
 | [AGENT_GUARDRAILS.md](../getting-started/agent-guardrails.md) | Core safety protocols (The Four Laws) |
-| [2026_GAME_DESIGN.md](../game-design/2026_GAME_DESIGN.md) | Game design guardrails |
 | [2026_UI_UX_STANDARD.md](../ui-ux/ui-ux-standard.md) | UI component patterns |
 | [ACCESSIBILITY_GUIDE.md](../accessibility/accessibility-guide.md) | WCAG 3.0+ compliance |
 | [ETHICAL_ENGAGEMENT.md](../ethical/ethical-engagement.md) | Dark pattern prevention |
