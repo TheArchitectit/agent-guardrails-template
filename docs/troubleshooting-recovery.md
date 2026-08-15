@@ -27,7 +27,7 @@ cp .teams/backups/project-backup-20260214.json .teams/my-project.json
 python mcp_server.py
 
 # 5. Verify restoration
-curl -X POST http://localhost:8094/mcp \
+curl -X POST http://localhost:8080/mcp \
   -d '{"jsonrpc":"2.0","method":"tools/call","params":{"name":"guardrail_team_list","arguments":{"project_name":"my-project"}}}'
 ```
 
@@ -42,7 +42,7 @@ curl -X POST http://localhost:8094/mcp \
 mv .teams/my-project.json .teams/my-project-$(date +%Y%m%d).json.bak
 
 # 2. Re-initialize project
-curl -X POST http://localhost:8094/mcp \
+curl -X POST http://localhost:8080/mcp \
   -d '{
     "jsonrpc":"2.0",
     "method":"tools/call",
@@ -100,6 +100,6 @@ cp "$BACKUP_FILE" ".teams/${PROJECT_NAME}.json"
 echo "Rollback complete."
 
 echo "Verifying..."
-curl -s -X POST http://localhost:8094/mcp \
+curl -s -X POST http://localhost:8080/mcp \
   -d "{\"jsonrpc\":\"2.0\",\"method\":\"tools/call\",\"params\":{\"name\":\"guardrail_team_list\",\"arguments\":{\"project_name\":\"$PROJECT_NAME\"}}}"
 ```

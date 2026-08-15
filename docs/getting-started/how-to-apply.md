@@ -140,14 +140,14 @@ ANALYSIS NEEDED:
    - docs/standards/ (coding standards)
    - docs/sprints/ (task documents)
 4. Check if AGENT_GUARDRAILS.md exists
-5. Check if INDEX_MAP.md or HEADER_MAP.md exist
+5. Check if INDEX_MAP.md exists
 
 ACTIONS TO TAKE:
 1. Create missing directory structures
 2. Import guardrails framework from /mnt/ollama/git/agent-guardrails-template
 3. Reorganize existing docs into appropriate directories
 4. Split any docs over 500 lines
-5. Create/update INDEX_MAP.md and HEADER_MAP.md
+5. Create/update INDEX_MAP.md
 6. Update README.md navigation
 7. Commit with descriptive message
 
@@ -229,7 +229,6 @@ STEP 3: Copy all template files
 ─────────────────────────────────────────────
 FILES TO COPY:
   - INDEX_MAP.md (navigation map)
-  - HEADER_MAP.md (section lookup)
   - CLAUDE.md
   - .claudeignore
   - docs/AGENT_GUARDRAILS.md
@@ -322,7 +321,7 @@ STEP 6: Create Navigation Maps
 ─────────────────────────────────────────────
 Import or create:
   - INDEX_MAP.md - Master navigation by keyword
-  - HEADER_MAP.md - Section headers with line numbers
+  - Per-directory INDEX.md files
 
 STEP 7: Update README.md
 ─────────────────────────────────────────────
@@ -347,7 +346,7 @@ COMMAND: git commit -m "docs: restructure documentation to follow guardrails con
 - Imported agent guardrails framework v1.2
 - Reorganized existing docs into workflows/standards/sprints/
 - Split oversized documents for 500-line compliance
-- Added navigation maps (INDEX_MAP.md, HEADER_MAP.md)
+- Added navigation map (INDEX_MAP.md) and per-directory INDEX.md files
 - Updated README.md documentation section
 
 Authored by TheArchitectit"
@@ -373,7 +372,6 @@ project/
 ├── CLAUDE.md
 ├── .claudeignore
 ├── INDEX_MAP.md
-├── HEADER_MAP.md
 ├── docs/
 │   ├── AGENT_GUARDRAILS.md
 │   ├── CONTRIBUTING.md
@@ -404,7 +402,7 @@ After applying the template, verify:
 ```
 NAVIGATION MAPS:
 [ ] INDEX_MAP.md exists at root
-[ ] HEADER_MAP.md exists at root
+[ ] Per-directory INDEX.md files exist
 
 CORE DOCUMENTATION:
 [ ] docs/AGENT_GUARDRAILS.md exists and is complete
