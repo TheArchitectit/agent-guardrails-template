@@ -111,8 +111,9 @@ services:
       redis:
         condition: service_healthy
     ports:
-      - "127.0.0.1:${MCP_PORT:-8080}:8080"  # MCP - localhost only
-      - "127.0.0.1:${WEB_PORT:-8081}:8081"  # Web UI - localhost only
+      # Default: localhost only. Set BIND_ADDR (e.g. a Tailscale IP) to expose on a specific interface.
+      - "${BIND_ADDR:-127.0.0.1}:${MCP_PORT:-8080}:8080"  # MCP
+      - "${BIND_ADDR:-127.0.0.1}:${WEB_PORT:-8081}:8081"  # Web UI
     environment:
       # Server Configuration
       - MCP_PORT=8080
