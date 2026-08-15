@@ -32,6 +32,11 @@ logs/
 htmlcov/
 .pytest_cache/
 
+# Team runtime artifacts (regenerated at runtime — never commit)
+.teams/*.lock
+.teams/metrics.json
+mcp-server/internal/mcp/.teams/
+
 # Secrets (NEVER commit these)
 *.pem
 *.key

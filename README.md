@@ -94,13 +94,13 @@ Then see [QUICK_SETUP.md](docs/QUICK_SETUP.md) for the 5-minute setup, or [HOW_T
 | [.claude/skills/](.claude/skills/) | 7 Claude Code skill files (guardrails-enforcer, commit-validator, etc.) |
 | [.claude/hooks/](.claude/hooks/) | Pre/post execution shell hooks |
 | [.cursor/rules/](.cursor/rules/) | 3 Cursor rules files |
-| [.cursor/rules-3d/](.cursor/rules-3d/) | 3D game dev Cursor rules |
 | [.windsurfrules](.windsurfrules) | Windsurf rules preamble |
 | [.opencode/](.opencode/) | OpenCode agents and skills |
-| [.opencode/skills/3d-game-dev/](.opencode/skills/3d-game-dev/) | 3D game dev OpenCode skill |
-| [.claude/skills-3d/](.claude/skills-3d/) | 3D game dev Claude skill |
+| [.claude/skills/](.claude/skills/) | 8 Claude Code skill files |
 | [.github/copilot-instructions.md](.github/copilot-instructions.md) | GitHub Copilot repo-level instructions |
-| [skills/shared-prompts/](skills/shared-prompts/) | 8 canonical shared prompts (3d-game-dev, error-recovery, three-strikes, production-first, scope-validation + existing) |
+| [skills/shared-prompts/](skills/shared-prompts/) | 7 canonical shared prompts (error-recovery, three-strikes, production-first, scope-validation, four-laws, halt-conditions, vibe-coding) |
+
+> 3D game-development skills and docs moved to the private [agent-guardrails-game-design](https://github.com/TheArchitectit/agent-guardrails-game-design) repo. Vision capture/review lives in [radredeye](https://github.com/TheArchitectit/radredeye).
 
 ### UI/UX & Accessibility
 
@@ -111,7 +111,7 @@ Then see [QUICK_SETUP.md](docs/QUICK_SETUP.md) for the 5-minute setup, or [HOW_T
 | [SPATIAL_COMPUTING_UI.md](docs/spatial/SPATIAL_COMPUTING_UI.md) | XR/VR/AR UI patterns, comfort zones, latency requirements |
 | [ETHICAL_ENGAGEMENT.md](docs/ethical/ETHICAL_ENGAGEMENT.md) | Dark pattern taxonomy and automated prevention |
 
-> Game design docs (2026_GAME_DESIGN, 3D game development, AI_DEV_2026 guide, Hermes 2026 dossier) have been moved to a separate private repo.
+> Game design docs (2026_GAME_DESIGN, 3D game development, AI_DEV_2026 guide, Hermes 2026 dossier) live in the private [agent-guardrails-game-design](https://github.com/TheArchitectit/agent-guardrails-game-design) repo.
 
 ### Commerce & Social Safety
 
@@ -211,7 +211,7 @@ Multi-language implementation examples demonstrating guardrails patterns:
 - **Agent developers** building autonomous agents that need real-time validation.
 - **Compliance & security teams** who need documented safety processes that hold up under audit.
 
-> Building games? The 3D game development suite (Godot/Unity/Unreal guardrails, XR comfort zones, AI_DEV_2026 and Hermes 2026 guides) moved to our private companion repo — reach out if you need access.
+> Building games? The 3D game development suite (Godot/Unity/Unreal guardrails, XR comfort zones, AI_DEV_2026 and Hermes 2026 guides) lives in the private [agent-guardrails-game-design](https://github.com/TheArchitectit/agent-guardrails-game-design) repo. Vision capture and screenshot review live in [radredeye](https://github.com/TheArchitectit/radredeye).
 
 ---
 
