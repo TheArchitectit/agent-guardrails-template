@@ -21,7 +21,7 @@ you don't get blindsided by error messages:
 - Containers talk to each other over the compose network by service name —
   don't point `DB_HOST` at `localhost`.
 
-The full walkthrough is in [DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md).
+The full walkthrough is in [DEPLOYMENT_GUIDE.md](./deployment-guide.md).
 
 ## Architecture
 
@@ -118,7 +118,7 @@ make vuln
 The short version: copy `.env.example` to `.env`, fill in the required values,
 and bring the stack up. PostgreSQL, Redis, and the MCP server all run as
 containers. For production hardening and the long-form walkthrough, see
-[DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md).
+[DEPLOYMENT_GUIDE.md](./deployment-guide.md).
 
 The compose file reads variables from the `.env` in the same directory. If you
 keep your `.env` somewhere else, pass it explicitly with `--env-file /path/to/.env`
@@ -337,7 +337,7 @@ curl -i -X POST http://localhost:8080/mcp \
 # JSON-RPC response arrives directly in the HTTP response body
 ```
 
-See [API.md](API.md) for complete API documentation.
+See [API.md](api.md) for complete API documentation.
 
 ## Development
 
@@ -489,5 +489,5 @@ Once the server is running, point your MCP client at it:
 
 Replace `your-server-host` and the API key with your own values.
 
-See [DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md) for the full deployment
+See [DEPLOYMENT_GUIDE.md](./deployment-guide.md) for the full deployment
 walkthrough and more troubleshooting.

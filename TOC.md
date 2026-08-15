@@ -96,8 +96,8 @@ ownership, release calendar, tech stack.
 
 ## mcp-server/ (root)
 - [README.md](mcp-server/README.md)
-- [API.md](mcp-server/API.md) — API overview (links to api-*.md)
-- [DEPLOYMENT_GUIDE.md](mcp-server/DEPLOYMENT_GUIDE.md)
+- [API.md](mcp-server/api.md) — API overview (links to api-*.md)
+- [DEPLOYMENT_GUIDE.md](mcp-server/deployment-guide.md)
 
 ## Other
 - [pi-extension/README.md](pi-extension/README.md) — pi coding agent extension
