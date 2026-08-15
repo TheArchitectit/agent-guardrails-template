@@ -13,9 +13,7 @@ CREATE TABLE IF NOT EXISTS scope_definitions (
     scope_description TEXT,
     scope_boundaries TEXT,
     affected_files TEXT[],
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-
-    -- Indexes created separately below
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Table 2: file_changes
