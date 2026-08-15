@@ -2,7 +2,7 @@
 
 **Last Updated:** 2026-08-15
 **Branch:** main
-**Current Version:** v3.3.0
+**Current Version:** v3.4.0
 
 ---
 
@@ -101,13 +101,30 @@
 
 ---
 
+## v3.4.0 Documentation Redo & Content Split - COMPLETED
+
+- **Status:** ✅ COMPLETE
+- **Released:** 2026-08-15
+- **Scope:** Documentation restructure, pi-extension restoration, game/vision content split
+
+**Delivered:**
+1. Complete documentation redo — new taxonomy, kebab-case naming, duplicates merged, stale docs archived, oversized files split under 500 lines
+2. pi-extension restored to main (63 files)
+3. Game/vision content moved to private repos (agent-guardrails-game-design, radredeye)
+4. Dead game-build code removed
+5. Lean navigation rebuilt (HEADER_MAP dropped, per-dir INDEX.md added)
+
+**Reference:** [v3.4.0 release notes](releases/v3.4.0.md)
+
+---
+
 ## Deployment Status
 
 The server is deployed and verified on an internal test VM (reachable over
 Tailscale). Ports are bound to the Tailscale interface by default via
 `BIND_ADDR` — localhost-only unless configured otherwise.
 
-- Version: v3.3.0
+- Version: v3.4.0
 - Status: ✅ Running (MCP + Web UI healthy)
 - Transport: Stateless StreamableHTTP (`POST /mcp`)
 - Features: Full tool set (35 tools, 11 resources), migrations applied cleanly

@@ -1,6 +1,6 @@
 # Guardrail MCP Server Deployment Guide
 
-**Version:** v3.3.0
+**Version:** v3.4.0
 **Last Updated:** 2026-08-15
 **Tested On:** RHEL server with Podman, Docker Desktop (Windows 11), Ubuntu 24.04
 
@@ -58,11 +58,11 @@ cd /opt/guardrail-mcp
 
 # Build image
 podman build \
-  --build-arg VERSION=v3.3.0 \
+  --build-arg VERSION=v3.4.0 \
   --build-arg BUILD_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ) \
   --build-arg GIT_COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo 'unknown') \
   -f deploy/Dockerfile \
-  -t guardrail-mcp:v3.3.0 .
+  -t guardrail-mcp:v3.4.0 .
 
 # Create pod with port mappings (MCP and Web UI)
 podman pod create --name guardrail-pod -p 8080:8080 -p 8081:8081
@@ -103,7 +103,7 @@ podman run -d --pod guardrail-pod --name guardrail-mcp-server \
   -e JWT_ISSUER=guardrail-mcp \
   -e JWT_EXPIRY=15m \
   -e JWT_ROTATION_HOURS=168h \
-  localhost/guardrail-mcp:v3.3.0
+  localhost/guardrail-mcp:v3.4.0
 ```
 
 > Prefer not to manage pods by hand? The compose path in
@@ -252,7 +252,7 @@ sed -i 's/server.NewMCPServer("guardrail-mcp"/server.NewMCPServer("guardrail_mcp
 cd /opt/guardrail-mcp
 
 # Set build variables
-VERSION=v3.3.0
+VERSION=v3.4.0
 BUILD_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 GIT_COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo 'unknown')
 
@@ -328,7 +328,7 @@ podman run -d --pod guardrail-pod --name guardrail-mcp-server \
   -e JWT_ISSUER=guardrail-mcp \
   -e JWT_EXPIRY=15m \
   -e JWT_ROTATION_HOURS=168h \
-  localhost/guardrail-mcp:v3.3.0
+  localhost/guardrail-mcp:v3.4.0
 ```
 
 ### Step 5: Verify Deployment
@@ -684,7 +684,7 @@ In context=('properties', 'affected_files'), array schema missing items
 # Check server name
 grep 'NewMCPServer' internal/mcp/server.go
 
-# Should show: server.NewMCPServer("guardrail_mcp", "v3.3.0")
+# Should show: server.NewMCPServer("guardrail_mcp", "v3.4.0")
 # If not, fix it:
 sed -i 's/server.NewMCPServer("guardrail-mcp"/server.NewMCPServer("guardrail_mcp"/' internal/mcp/server.go
 
