@@ -306,7 +306,7 @@ OUT OF SCOPE (DO NOT TOUCH):
 - [SPRINT_GUIDE.md](../archive/sprints/SPRINT_GUIDE.md) - How to write sprints
 
 ### Security
-- [SECRETS_MANAGEMENT.md](../../.github/SECRETS_MANAGEMENT.md) - GitHub Secrets
+- [secrets-management.md](../../.github/secrets-management.md) - GitHub Secrets
 
 ---
 

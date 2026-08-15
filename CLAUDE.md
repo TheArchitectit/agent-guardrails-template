@@ -1,9 +1,9 @@
 # Project Guidelines
 
 ## 0. Navigation Maps (READ FIRST)
-* **INDEX_MAP.md**: Read this FIRST to find documents by keyword/category. Saves 60-80% tokens.
-* **Flow**: INDEX_MAP → identify doc → read the relevant section.
-* **TOC.md**: Complete file listing and organization structure.
+* **index-map.md**: Read this FIRST to find documents by keyword/category. Saves 60-80% tokens.
+* **Flow**: index-map → identify doc → read the relevant section.
+* **toc.md**: Complete file listing and organization structure.
 
 ---
 
@@ -45,7 +45,7 @@ These constraints enable flow state. Follow the guardrails and you can generate 
 * **NO RE-READING**: Trust your context; do not re-read files just edited.
 * **TARGETED CONTEXT**: Read ONLY files explicitly relevant to the request.
 * **CONCISE PLANS**: Bullet points only. No "thinking out loud".
-* **USE MAPS**: Always check INDEX_MAP.md before reading full documents.
+* **USE MAPS**: Always check index-map.md before reading full documents.
 
 ## 3. Workflow
 * **Tests**: Run ONLY relevant tests.
@@ -55,4 +55,4 @@ These constraints enable flow state. Follow the guardrails and you can generate 
 
 ## 4. Documentation Standards
 * **500-Line Max**: No document over 500 lines.
-* **Update Maps**: Update INDEX_MAP.md and the directory's INDEX.md when adding/changing docs.
+* **Update Maps**: Update index-map.md and the directory's INDEX.md when adding/changing docs.

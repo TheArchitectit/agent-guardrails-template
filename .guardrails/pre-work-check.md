@@ -8,7 +8,7 @@
 
 Before editing any file, verify:
 
-- [ ] **I have read the relevant documentation** (INDEX_MAP.md → specific docs)
+- [ ] **I have read the relevant documentation** (index-map.md → specific docs)
 - [ ] **I know which files I will modify**
 - [ ] **I have checked the Failure Registry** for known bugs in those files
 - [ ] **I understand what bugs have been fixed** in this area before

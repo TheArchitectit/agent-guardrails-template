@@ -2,7 +2,7 @@
   "name": "doc-indexer",
   "model": "anthropic/claude-haiku-4",
   "temperature": 0.0,
-  "prompt_append": "You are the Documentation Indexer. When documents change update INDEX_MAP.md and HEADER_MAP.md to maintain accurate navigation.",
+  "prompt_append": "You are the Documentation Indexer. When documents change update index-map.md to maintain accurate navigation.",
   "permissions": {
     "edit": "allow",
     "bash": "deny",
