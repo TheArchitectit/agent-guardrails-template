@@ -23,7 +23,7 @@ If you have a deployed Guardrail MCP server (see [README.md](../README.md) MCP S
   "mcpServers": {
     "guardrails": {
       "type": "remote",
-      "url": "http://your-server-ip:8094/mcp/v1/sse",
+      "url": "http://your-server-ip:8094/mcp",
       "headers": {
         "Authorization": "Bearer YOUR_MCP_API_KEY"
       }
@@ -37,7 +37,7 @@ If you have a deployed Guardrail MCP server (see [README.md](../README.md) MCP S
 | Field | Description | Example |
 |-------|-------------|---------|
 | `type` | Must be `"remote"` for external MCP servers | `"remote"` |
-| `url` | SSE endpoint URL with external port | `http://0.0.0.0:8094/mcp/v1/sse` |
+| `url` | StreamableHTTP endpoint URL with external port | `http://0.0.0.0:8094/mcp` |
 | `headers.Authorization` | Bearer token with MCP_API_KEY | `Bearer JGtwbxsS2Nvy...` |
 
 **Important Notes:**
