@@ -308,11 +308,13 @@ cd ..
 curl -s http://localhost:8094/mcp/v1/health | jq .
 
 # Test team operations
-curl -X POST http://localhost:8094/mcp/v1/message \
+curl -X POST http://localhost:8094/mcp \
+  -H "Content-Type: application/json" \
   -d '{"jsonrpc":"2.0","method":"tools/call","params":{"name":"guardrail_team_list","arguments":{"project_name":"test-project"}}}'
 
 # Verify team size validation
-curl -X POST http://localhost:8094/mcp/v1/message \
+curl -X POST http://localhost:8094/mcp \
+  -H "Content-Type: application/json" \
   -d '{"jsonrpc":"2.0","method":"tools/call","params":{"name":"guardrail_team_size_validate","arguments":{"project_name":"test-project"}}}'
 ```
 
@@ -324,7 +326,7 @@ curl -X POST http://localhost:8094/mcp/v1/message \
 {
   "mcpServers": {
     "guardrails": {
-      "url": "http://localhost:8094/mcp/v1/sse",
+      "url": "http://localhost:8094/mcp",
       "headers": {
         "Authorization": "Bearer YOUR_API_KEY"
       }
@@ -341,7 +343,7 @@ curl -X POST http://localhost:8094/mcp/v1/message \
     "servers": [
       {
         "name": "guardrails",
-        "url": "http://localhost:8094/mcp/v1/sse",
+        "url": "http://localhost:8094/mcp",
         "apiKey": "YOUR_API_KEY"
       }
     ]
@@ -464,7 +466,7 @@ python scripts/import_v1.9.py --input migration_data.json
 
 Update all client configurations to use new MCP endpoints:
 - Old: `http://localhost:8094`
-- New: `http://localhost:8092/mcp/v1/sse`
+- New: `http://localhost:8092/mcp`
 
 ---
 
@@ -737,7 +739,7 @@ MCP_PORT=8096 ./mcp-server/cmd/server/server
 **Solution:**
 ```bash
 # Update client configuration
-./scripts/update_client_configs.sh --new-port 8094 --new-path /mcp/v1/sse
+./scripts/update_client_configs.sh --new-port 8094 --new-path /mcp
 
 # Verify connectivity
 curl -H "Authorization: Bearer $API_KEY" \
@@ -770,7 +772,8 @@ python scripts/validate_all_configs.py && echo "PASS" || echo "FAIL"
 
 # Test basic operation
 echo -n "Operation check: "
-curl -s -X POST http://localhost:8094/mcp/v1/message \
+curl -s -X POST http://localhost:8094/mcp \
+  -H "Content-Type: application/json" \
   -d '{"jsonrpc":"2.0","method":"tools/list"}' | grep -q "guardrail_team" && echo "PASS" || echo "FAIL"
 
 echo "Verification complete"

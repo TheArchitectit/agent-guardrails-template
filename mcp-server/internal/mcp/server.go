@@ -25,6 +25,7 @@ import (
 // MCPServer handles MCP protocol requests
 type MCPServer struct {
 	mcpServer         *server.MCPServer
+	httpServer        *server.StreamableHTTPServer
 	db                *database.DB
 	cache             *cache.Client
 	audit             *audit.Logger
@@ -116,6 +117,9 @@ func (s *MCPServer) Start(addr string) error {
 
 // Shutdown gracefully shuts down the MCP server.
 func (s *MCPServer) Shutdown(ctx context.Context) error {
+	if s.httpServer != nil {
+		return s.httpServer.Shutdown(ctx)
+	}
 	return nil
 }
 
@@ -274,10 +278,14 @@ func (s *MCPServer) handleInitSession(ctx context.Context, args map[string]inter
 	return buildToolResult(result, false)
 }
 
-// Serve HTTP requests (SSE for MCP)
+// Serve HTTP requests (stateless StreamableHTTP for MCP)
 func (s *MCPServer) Serve(addr string) error {
-	sseServer := server.NewSSEServer(s.mcpServer)
-	return sseServer.Start(addr)
+	s.httpServer = server.NewStreamableHTTPServer(
+		s.mcpServer,
+		server.WithEndpointPath("/mcp"),
+		server.WithStateLess(true),
+	)
+	return s.httpServer.Start(addr)
 }
 
 func (s *MCPServer) handleGetContext(ctx context.Context, args map[string]interface{}) (*mcp.CallToolResult, error) {

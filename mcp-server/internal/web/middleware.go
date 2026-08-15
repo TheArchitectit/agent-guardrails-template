@@ -27,17 +27,13 @@ func APIKeyAuth(cfg *config.Config) echo.MiddlewareFunc {
 			// This is critical because c.Path() returns route pattern which may be /*
 			requestPath := c.Request().URL.Path
 
-			// Skip health checks, metrics, API docs, Web UI routes, and SSE endpoint
+			// Skip health checks, metrics, API docs, and Web UI routes
 			path := c.Path()
 			if path == "/health/live" || path == "/health/ready" || path == "/metrics" {
 				return next(c)
 			}
 			// Skip API documentation routes
 			if path == "/docs" || path == "/openapi.yaml" {
-				return next(c)
-			}
-			// Skip SSE endpoint - auth handled via message endpoint
-			if path == "/mcp/v1/sse" {
 				return next(c)
 			}
 
@@ -145,7 +141,7 @@ func RateLimitMiddleware(limiter *cache.DistributedRateLimiter, cfg *config.Conf
 			// Use the actual request URL path
 			requestPath := c.Request().URL.Path
 
-			// Skip health checks, API docs, Web UI routes, and SSE endpoint
+			// Skip health checks, API docs, and Web UI routes
 			path := c.Path()
 			if path == "/health/live" || path == "/health/ready" || path == "/metrics" {
 				return next(c)
@@ -179,11 +175,6 @@ func RateLimitMiddleware(limiter *cache.DistributedRateLimiter, cfg *config.Conf
 				strings.HasSuffix(requestPath, ".woff") ||
 				strings.HasSuffix(requestPath, ".woff2") ||
 				strings.HasSuffix(requestPath, ".ttf") {
-				return next(c)
-			}
-
-			// Skip SSE endpoint - auth handled via message endpoint
-			if path == "/mcp/v1/sse" {
 				return next(c)
 			}
 
