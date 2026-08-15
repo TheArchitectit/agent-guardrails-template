@@ -2,9 +2,8 @@
 
 ## 0. Navigation Maps (READ FIRST)
 * **INDEX_MAP.md**: Read this FIRST to find documents by keyword/category. Saves 60-80% tokens.
-* **HEADER_MAP.md**: Find specific sections with file:line references for targeted reading.
-* **Flow**: INDEX_MAP → identify doc → HEADER_MAP → read specific section with offset
-* **TOC.md**: Complete file listing and organization structure
+* **Flow**: INDEX_MAP → identify doc → read the relevant section.
+* **TOC.md**: Complete file listing and organization structure.
 
 ---
 
@@ -56,4 +55,4 @@ These constraints enable flow state. Follow the guardrails and you can generate 
 
 ## 4. Documentation Standards
 * **500-Line Max**: No document over 500 lines.
-* **Update Maps**: Update INDEX_MAP.md and HEADER_MAP.md when adding/changing docs.
+* **Update Maps**: Update INDEX_MAP.md and the directory's INDEX.md when adding/changing docs.
