@@ -46,6 +46,17 @@ describe("HaltChecker", () => {
       const denied = checker.checkCommand("npm install evil");
       expect(denied.shouldHalt).toBe(true);
     });
+
+    it("reports category 'safe' for safe commands", () => {
+      const checker = new HaltChecker();
+      expect(checker.checkCommand("ls -la").category).toBe("safe");
+    });
+
+    it("maps classification engine categories onto the result", () => {
+      const checker = new HaltChecker({ allowlist: ["rm -rf /tmp/*"], denylist: ["npm *"] });
+      expect(checker.checkCommand("npm install evil").category).toBe("destructive");
+      expect(checker.checkCommand("rm -rf /tmp/test").category).toBe("safe");
+    });
   });
 
   describe("checkHalt", () => {
@@ -91,6 +102,24 @@ describe("HaltChecker", () => {
       const checker = new HaltChecker();
       const result = checker.checkHalt("delete", "/src/old.ts");
       expect(result.uncertaintyScore).toBeGreaterThanOrEqual(0.6);
+    });
+  });
+
+  describe("isCatastrophic", () => {
+    it("flags fork bombs, mkfs, rm -rf /, and dd of=/dev/", () => {
+      const checker = new HaltChecker();
+      expect(checker.isCatastrophic(":(){ :|:& };:")).toBe(true);
+      expect(checker.isCatastrophic("mkfs.ext4 /dev/sdb1")).toBe(true);
+      expect(checker.isCatastrophic("rm -rf /")).toBe(true);
+      expect(checker.isCatastrophic("rm -rf /*")).toBe(true);
+      expect(checker.isCatastrophic("dd if=/dev/zero of=/dev/sda")).toBe(true);
+    });
+
+    it("does not flag dangerous-but-standard commands", () => {
+      const checker = new HaltChecker();
+      expect(checker.isCatastrophic("git push --force origin main")).toBe(false);
+      expect(checker.isCatastrophic("sudo apt install curl")).toBe(false);
+      expect(checker.isCatastrophic("rm -rf node_modules")).toBe(false);
     });
   });
 });
