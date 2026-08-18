@@ -11,6 +11,7 @@ import { SessionStore } from "./standalone/session-store.js";
 import { MCPClient } from "./mcp-bridge/mcp-client.js";
 import { registerMCPBridgeTool } from "./mcp-bridge/mcp-tools.js";
 import { PermissionManager } from "./permissions/permissions.js";
+import { DangerAllowList, normalizeCommand } from "./permissions/danger-allow-list.js";
 import { ContentFilter } from "./output-validator/content-filter.js";
 import { CanaryTokenManager } from "./injection/canary.js";
 import { PreWorkChecker } from "./standalone/pre-work-checker.js";
@@ -38,7 +39,7 @@ import {
   createSessionShutdownHandler,
   createReadTrackingHandler,
   createPreEditHandler,
-  createBashSafetyHandler,
+  createBashPermissionHandler,
   createInjectionDefenseHandler,
   createOutputValidationHandler,
   createPermissionHandler,
@@ -67,6 +68,7 @@ import {
   RegisterFailureParams,
   ValidateReplacementParams,
   AcknowledgeHaltParams,
+  AllowDangerParams,
 } from "./types.js";
 import { GuardrailsPanel } from "./tui/guardrails-panel.js";
 
@@ -86,6 +88,7 @@ export default function piGuardrailsExtension(pi: ExtensionAPI) {
   const sessionStore = new SessionStore(config.maxStrikes);
   const mcpClient = new MCPClient();
   const permissionManager = new PermissionManager(config.toolPermissions);
+  const dangerAllowList = new DangerAllowList();
 
   // Output security: content filter + canary tokens
   const contentFilter = config.outputValidation?.contentFilter
@@ -119,6 +122,7 @@ export default function piGuardrailsExtension(pi: ExtensionAPI) {
     mcpClient,
     config,
     permissionManager,
+    dangerAllowList,
     contentFilter,
     canaryManager,
   };
@@ -258,6 +262,93 @@ export default function piGuardrailsExtension(pi: ExtensionAPI) {
     parameters: StatusParams,
     execute(_id: string, _params: any) {
       return getStatus(sessionStore, fileReadStore, strikeCounter, scopeValidator, violationLog, mcpClient);
+    },
+  });
+
+  pi.registerTool({
+    name: "guardrail_allow_danger",
+    label: "Manage Dangerous Command Allow-List",
+    description:
+      "Add, remove, list, or clear persisted allow-list entries for dangerous bash commands. Adding a pattern entry requires a reason. Use sessionOnly for session-limited allowances of exact commands.",
+    promptSnippet: "Manage the dangerous command allow-list",
+    parameters: AllowDangerParams,
+    execute(_id: string, params: any) {
+      switch (params.action) {
+        case "add": {
+          if (params.command && params.pattern) {
+            return { error: "Provide either 'command' or 'pattern', not both" };
+          }
+          if (!params.command && !params.pattern) {
+            return { error: "Provide 'command' or 'pattern'" };
+          }
+          if (params.pattern) {
+            if (params.sessionOnly) {
+              return { error: "sessionOnly is only valid with 'command', not 'pattern'" };
+            }
+            if (!params.reason) {
+              return { error: "Pattern entries require a reason" };
+            }
+            const ok = dangerAllowList.addPattern(params.pattern, params.reason);
+            if (!ok) return { error: `Invalid regex or duplicate pattern: ${params.pattern}` };
+            violationLog.log({
+              law: "halt-when-uncertain",
+              severity: "warning",
+              details: `Danger allow-list pattern added: ${params.pattern} (${params.reason})`,
+              operation: "guardrail_allow_danger",
+            });
+            return { added: true, type: "pattern", regex: params.pattern };
+          }
+          if (params.sessionOnly) {
+            permissionManager.allowSessionDanger(params.command);
+            violationLog.log({
+              law: "halt-when-uncertain",
+              severity: "info",
+              details: `Session danger allowance granted: ${normalizeCommand(params.command)}`,
+              operation: "guardrail_allow_danger",
+            });
+            return { added: true, scope: "session", command: normalizeCommand(params.command) };
+          }
+          const ok = dangerAllowList.addExact(params.command, "tool", params.reason);
+          if (!ok) return { error: `Duplicate command already allow-listed: ${params.command}` };
+          violationLog.log({
+            law: "halt-when-uncertain",
+            severity: "info",
+            details: `Danger allow-list entry added: ${normalizeCommand(params.command)}`,
+            operation: "guardrail_allow_danger",
+          });
+          return { added: true, type: "exact", command: normalizeCommand(params.command) };
+        }
+        case "remove": {
+          if (params.command && params.pattern) {
+            return { error: "Provide either 'command' or 'pattern', not both" };
+          }
+          if (!params.command && !params.pattern) {
+            return { error: "Provide 'command' or 'pattern' to remove" };
+          }
+          const removed = dangerAllowList.remove((params.command || params.pattern) as string);
+          if (!removed) return { error: "No matching allow-list entry found" };
+          violationLog.log({
+            law: "halt-when-uncertain",
+            severity: "info",
+            details: `Danger allow-list entry removed: ${params.command || params.pattern}`,
+            operation: "guardrail_allow_danger",
+          });
+          return { removed: true };
+        }
+        case "list":
+          return { entries: dangerAllowList.list() };
+        case "clear":
+          dangerAllowList.clear();
+          violationLog.log({
+            law: "halt-when-uncertain",
+            severity: "critical",
+            details: "Danger allow-list cleared",
+            operation: "guardrail_allow_danger",
+          });
+          return { cleared: true };
+        default:
+          return { error: `Unknown action: ${params.action}` };
+      }
     },
   });
 
@@ -508,9 +599,9 @@ export default function piGuardrailsExtension(pi: ExtensionAPI) {
   pi.on("session_shutdown", createSessionShutdownHandler(deps));
   pi.on("tool_result", createReadTrackingHandler(deps));
   pi.on("tool_result", createOutputValidationHandler(deps));
-  pi.on("tool_call", createPermissionHandler(deps));
+  pi.on("tool_call", createPermissionHandler(deps));       // non-bash tools (skips bash internally)
+  pi.on("tool_call", createBashPermissionHandler(deps));   // bash: prompt + allow-list decision path
   pi.on("tool_call", createPreEditHandler(deps));
-  pi.on("tool_call", createBashSafetyHandler(deps));
   pi.on("tool_call", createInjectionDefenseHandler(deps));
 
   // ===========================================================================

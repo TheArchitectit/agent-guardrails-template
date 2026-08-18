@@ -137,7 +137,7 @@ export interface Attempt {
 export interface Violation {
   id: string;
   law: string;
-  severity: "warning" | "critical";
+  severity: "info" | "warning" | "critical";
   details: string;
   filePath?: string;
   operation?: string;
@@ -155,7 +155,7 @@ export interface HaltResult {
 export interface CommandCheckResult {
   shouldHalt: boolean;
   reason?: string;
-  category?: "destructive" | "elevated" | "network";
+  category: "safe" | "destructive" | "elevated" | "network";
 }
 
 export interface PreWorkCheckResult {
@@ -202,6 +202,25 @@ export interface HaltState {
 
 export const AcknowledgeHaltParams = Type.Object({
   reason: Type.Optional(Type.String({ description: "Why the halt is being acknowledged" })),
+});
+
+export type ApprovalScope = "once" | "session" | "always";
+
+export type AllowListEntry =
+  | { type: "exact"; command: string; addedAt: string; reason?: string; source: "prompt" | "tool" }
+  | { type: "pattern"; regex: string; addedAt: string; reason: string; source: "tool" };
+
+export interface AllowDangerConfig {
+  enabled: boolean;
+  requireTypebackForCatastrophic: boolean;
+}
+
+export const AllowDangerParams = Type.Object({
+  action: StringEnum(["add", "remove", "list", "clear"] as const, { description: "Operation to perform" }),
+  command: Type.Optional(Type.String({ description: "Exact command to add or remove (normalized before storage)" })),
+  pattern: Type.Optional(Type.String({ description: "Regex pattern to add or remove" })),
+  reason: Type.Optional(Type.String({ description: "Why this exception is needed (required for pattern entries)" })),
+  sessionOnly: Type.Optional(Type.Boolean({ description: "Allow for this session only, do not persist (exact entries only)" })),
 });
 
 export interface SessionState {
@@ -251,6 +270,7 @@ export interface GuardrailsConfig {
     prefix?: string;
     tokenLength?: number;
   };
+  allowDanger?: AllowDangerConfig;
   gitPolicy?: {
     protectedBranches?: string[];
     commitFormat?: string;
@@ -266,4 +286,5 @@ export const DEFAULT_CONFIG: GuardrailsConfig = {
   maxStrikes: 3,
   statusBarEnabled: true,
   panelAutoOpen: false,
+  allowDanger: { enabled: true, requireTypebackForCatastrophic: true },
 };
