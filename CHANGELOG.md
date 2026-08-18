@@ -10,6 +10,78 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [3.5.0] - 2026-08-18
+
+### Release: Interactive Bash Permission Prompts for the pi Extension
+
+**Type:** Minor Version Bump (new feature — pi extension bash permission UX)
+**Requires:** Config change optional — defaults enable interactive prompts; set `allowDanger.enabled: false` to restore the legacy hard-block behavior.
+
+The pi extension's bash handling moves from a hard-block dead-end to a full interactive
+permission system. Dangerous commands now prompt for approval with four scopes (once /
+session / always / deny); catastrophic-tier commands require type-back confirmation but
+remain grantable. A new `guardrail_allow_danger` tool manages a persisted allow-list at
+runtime. See [docs/releases/v3.5.0.md](docs/releases/v3.5.0.md) for full notes.
+
+#### Added
+- **`createBashPermissionHandler`** — unified bash decision path: normalize → legacy
+  fallback → persisted allow-list → session allowance → classify → safe-level resolution
+  / dangerous prompt / catastrophic type-back. Replaces `createBashSafetyHandler`.
+- **Interactive scope prompts** via `ctx.ui.select`: Allow once / Allow for session /
+  Always allow / Deny. Dismissed dialog (`undefined`) denies. No UI denies with audited
+  reason (preserves non-interactive / RPC behavior).
+- **Catastrophic-tier type-back** — fork bombs, `mkfs` (as a command token), `rm` with
+  flags targeting bare `/`, `dd` writing to a device node. Still grantable; type-back is
+  a UX safeguard, not a hard block. Toggled by `allowDanger.requireTypebackForCatastrophic`.
+- **`guardrail_allow_danger` tool** — runtime allow-list management: `add` (exact or
+  regex pattern, with `sessionOnly` option), `remove`, `list`, `clear`. All mutations
+  audited; `clear` at critical severity.
+- **`DangerAllowList`** (`permissions/danger-allow-list.ts`) — persisted allow-list with
+  exact and pattern entries; corrupt-file tolerant, invalid-regex skip at load.
+  `normalizeCommand` helper (trim + collapse whitespace) exported for reuse.
+- **`PermissionManager` session allowances** — `allowSessionDanger` /
+  `isSessionDangerAllowed` (in-memory, normalized, non-persisted).
+- **`HaltChecker.isCatastrophic(cmd)`** — catastrophic classification helper.
+- **`allowDanger` config section** — `{ enabled: true, requireTypebackForCatastrophic: true }`
+  with partial-config merge (spread, not `??`).
+- **`getAllowListPath()`** in config.ts — `~/.pi/agent/extensions/pi-guardrails/allowlist.json`.
+- **`ApprovalScope`, `AllowListEntry`, `AllowDangerConfig`, `AllowDangerParams`** types.
+- Release notes at [docs/releases/v3.5.0.md](docs/releases/v3.5.0.md).
+
+#### Changed
+- **`Violation.severity`** widened from `"warning" | "critical"` to
+  `"info" | "warning" | "critical"` — allows at `info`, denies at `warning`. Existing
+  `ViolationLog` summary counts only branch on critical/warning, so behavior unchanged.
+- **`CommandCheckResult.category`** now required and always populated (`"safe"` on
+  non-halting commands) so the prompt can name the risk tier.
+- **`createPermissionHandler`** now early-returns for `bash` (owned by
+  `createBashPermissionHandler`). Non-bash tool behavior unchanged.
+- **Handler registration order** in `index.ts`: `createPermissionHandler` →
+  `createBashPermissionHandler` → `createPreEditHandler` →
+  `createInjectionDefenseHandler`. Inline comments document the invariant.
+- **pi-extension README** — Tools table (`guardrail_allow_danger` row), Bash permission
+  prompts bullet, Tool Permissions section (ask-level distinction), Bash permission
+  prompts subsection, Danger allow-list subsection, config example (`allowDanger`),
+  storage entry (`allowlist.json`).
+- **Catastrophic patterns tightened** — `mkfs` requires command-token boundary (no
+  false positives on `cat mkfs.txt`); `rm` allows intervening flags (catches
+  `--no-preserve-root`).
+
+#### Removed
+- **`createBashSafetyHandler`** — replaced by `createBashPermissionHandler`.
+- **`PermissionManager.pendingConfirmations` / `confirmToolCall`** — dead code (nothing
+  populated or read them).
+
+#### Migration
+- **Default behavior changes**: bash commands that were hard-blocked now prompt. To
+  restore the old behavior, set `allowDanger.enabled: false` in config.json, or set
+  `tools.bash: "blocked"` in `toolPermissions` to block all bash.
+- **Non-interactive / RPC users**: no action needed. When no UI is available, bash that
+  would prompt is denied with an audited reason.
+- **Config**: the `allowDanger` section is optional. Defaults apply if absent.
+
+---
+
 ## [3.4.0] - 2026-08-15
 
 ### Release: Documentation Redo, pi-extension Restoration, and Content Split
