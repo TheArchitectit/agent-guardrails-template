@@ -42,6 +42,12 @@ function makeCtx(overrides?: { select?: (title: string, options: string[]) => Pr
 
 const bashEvent = (command: string) => ({ toolName: "bash", input: { command } });
 
+function readViolations(dir: string): Array<{ severity?: string; details?: string; operation?: string }> {
+  const file = path.join(dir, "violations.jsonl");
+  if (!fs.existsSync(file)) return [];
+  return fs.readFileSync(file, "utf-8").split("\n").filter(Boolean).map((l) => JSON.parse(l));
+}
+
 describe("createBashPermissionHandler", () => {
   let dir: string;
   beforeEach(() => {
@@ -65,6 +71,32 @@ describe("createBashPermissionHandler", () => {
     const handler = createBashPermissionHandler(deps);
     expect(await handler(bashEvent("git push --force origin main") as any, ctx as any)).toBeUndefined();
     expect(ctx.ui.select).not.toHaveBeenCalled();
+    deps.violationLog.flush();
+    const entries = readViolations(dir);
+    expect(entries.some((e) => e.severity === "info" && e.details?.includes("git push --force origin main") && e.details?.includes("allow-list"))).toBe(true);
+  });
+
+  it("blocks dangerous commands at level blocked without prompting", async () => {
+    const deps = makeDeps(dir, { toolPermissions: { tools: { bash: "blocked" } } });
+    const ctx = makeCtx();
+    const handler = createBashPermissionHandler(deps);
+    const result = await handler(bashEvent("git push --force origin main") as any, ctx as any);
+    expect(result?.block).toBe(true);
+    expect(ctx.ui.select).not.toHaveBeenCalled();
+    deps.violationLog.flush();
+    const entries = readViolations(dir);
+    expect(entries.some((e) => e.severity === "warning" && e.details?.includes("git push --force origin main"))).toBe(true);
+  });
+
+  it("treats a partial allowDanger config as enabled", async () => {
+    const deps = makeDeps(dir, {
+      allowDanger: { requireTypebackForCatastrophic: false } as any,
+      toolPermissions: { tools: { bash: "ask" } },
+    });
+    const ctx = makeCtx();
+    const handler = createBashPermissionHandler(deps);
+    expect(await handler(bashEvent("ls") as any, ctx as any)).toBeUndefined();
+    expect(ctx.ui.select).toHaveBeenCalledTimes(1);
   });
 
   it("allows session-danger-allowed commands without prompting", async () => {
@@ -117,6 +149,9 @@ describe("createBashPermissionHandler", () => {
     handler = createBashPermissionHandler(deps);
     const denied = await handler(bashEvent("npm whoami") as any, ctx as any);
     expect(denied?.block).toBe(true);
+    deps.violationLog.flush();
+    const deniedEntries = readViolations(dir);
+    expect(deniedEntries.some((e) => e.severity === "warning" && e.details?.includes("npm whoami"))).toBe(true);
 
     // Dismissed (undefined): blocked
     ctx = makeCtx({ select: async () => undefined });

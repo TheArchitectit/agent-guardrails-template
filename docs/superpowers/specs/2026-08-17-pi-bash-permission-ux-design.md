@@ -60,6 +60,7 @@ bash tool_call
   ├─ safe + level "auto"             ──→ allow
   ├─ safe + level "blocked"          ──→ block
   ├─ safe + level "ask"              ──→ simple prompt (scope choices)
+  ├─ dangerous + level "blocked"     ──→ block (audited)
   └─ dangerous                       ──→ strong prompt
         └─ catastrophic tier?        ──→ type-back confirmation prompt
   prompt resolves to:
