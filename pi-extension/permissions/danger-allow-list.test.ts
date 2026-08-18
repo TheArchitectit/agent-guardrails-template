@@ -92,4 +92,15 @@ describe("DangerAllowList", () => {
     const reloaded = new DangerAllowList(file);
     expect(reloaded.list()).toHaveLength(0);
   });
+
+  it("removes patterns only by exact stored string (no normalization)", () => {
+    const list = new DangerAllowList(file);
+    list.addPattern("^sudo ", "elevated ops");
+    // A whitespace-padded variant must NOT remove the pattern — regexes are never normalized.
+    expect(list.remove("  ^sudo ")).toBe(false);
+    expect(list.list()).toHaveLength(1); // still present
+    // The exact stored string removes it.
+    expect(list.remove("^sudo ")).toBe(true);
+    expect(list.list()).toHaveLength(0);
+  });
 });

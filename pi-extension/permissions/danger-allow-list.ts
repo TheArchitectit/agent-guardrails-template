@@ -51,12 +51,17 @@ export class DangerAllowList {
     return true;
   }
 
-  /** Remove an entry by exact command (normalized) or pattern regex string. */
+  /**
+   * Remove an entry by exact command (normalized) or pattern regex string.
+   * Exact commands are matched after normalization; patterns are identified by
+   * their exact stored string (regexes are never normalized, as trimming/altering
+   * whitespace would change regex meaning).
+   */
   remove(commandOrRegex: string): boolean {
     const normalized = normalizeCommand(commandOrRegex);
     const before = this.entries.length;
     this.entries = this.entries.filter((e) => {
-      const hit = (e.type === "exact" && e.command === normalized) || (e.type === "pattern" && e.regex === commandOrRegex);
+      const hit = (e.type === "exact" && e.command === normalized) || (e.type === "pattern" && e.regex === commandOrRegex); // Patterns matched by exact stored string (never normalized)
       if (hit && e.type === "pattern") this.compiledPatterns.delete(e.regex);
       return !hit;
     });
