@@ -1,4 +1,7 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import * as fs from "node:fs";
+import * as os from "node:os";
+import * as path from "node:path";
 import { PermissionManager } from "./permissions.js";
 
 describe("PermissionManager", () => {
@@ -48,5 +51,73 @@ describe("PermissionManager", () => {
     const matrix = pm.getPermissionMatrix();
     expect(matrix.bash).toBe("ask");
     expect(matrix.write).toBe("blocked");
+  });
+
+  describe("session danger allows", () => {
+    it("records and checks session-scoped bash allowances", () => {
+      const pm = new PermissionManager();
+      expect(pm.isSessionDangerAllowed("git push --force")).toBe(false);
+      pm.allowSessionDanger("git push --force");
+      expect(pm.isSessionDangerAllowed("git push --force")).toBe(true);
+    });
+
+    it("normalizes commands for session allowances", () => {
+      const pm = new PermissionManager();
+      pm.allowSessionDanger("git   push   --force");
+      expect(pm.isSessionDangerAllowed("git push --force")).toBe(true);
+    });
+  });
+
+  describe("setPermission persist", () => {
+    let dir: string;
+    let configPath: string;
+
+    beforeEach(() => {
+      dir = fs.mkdtempSync(path.join(os.tmpdir(), "pm-config-"));
+      configPath = path.join(dir, "config.json");
+    });
+
+    afterEach(() => {
+      fs.rmSync(dir, { recursive: true, force: true });
+    });
+
+    it("persists tool permission changes to config.json when persist is true", () => {
+      const pm = new PermissionManager({ tools: { bash: "ask" } }, configPath);
+      pm.setPermission("bash", "auto", { persist: true });
+      const parsed = JSON.parse(fs.readFileSync(configPath, "utf-8"));
+      expect(parsed.toolPermissions.tools.bash).toBe("auto");
+    });
+
+    it("merges into an existing config.json", () => {
+      fs.writeFileSync(configPath, JSON.stringify({ statusBarEnabled: false }));
+      const pm = new PermissionManager({ tools: { bash: "ask" } }, configPath);
+      pm.setPermission("bash", "blocked", { persist: true });
+      const parsed = JSON.parse(fs.readFileSync(configPath, "utf-8"));
+      expect(parsed.statusBarEnabled).toBe(false);
+      expect(parsed.toolPermissions.tools.bash).toBe("blocked");
+    });
+
+    it("does not persist when persist is false", () => {
+      const pm = new PermissionManager({ tools: { bash: "ask" } }, configPath);
+      pm.setPermission("bash", "auto");
+      expect(fs.existsSync(configPath)).toBe(false);
+    });
+
+    it("preserves unrelated pre-existing tool entries when persisting", () => {
+      fs.writeFileSync(configPath, JSON.stringify({ toolPermissions: { tools: { write: "blocked" } } }));
+      const pm = new PermissionManager({ tools: { bash: "ask" } }, configPath);
+      pm.setPermission("bash", "auto", { persist: true });
+      const parsed = JSON.parse(fs.readFileSync(configPath, "utf-8"));
+      expect(parsed.toolPermissions.tools.write).toBe("blocked");
+      expect(parsed.toolPermissions.tools.bash).toBe("auto");
+    });
+
+    it("creates parent directories when persisting to a nested path", () => {
+      const nested = path.join(dir, "nested", "config.json");
+      const pm = new PermissionManager({ tools: { bash: "ask" } }, nested);
+      pm.setPermission("bash", "auto", { persist: true });
+      const parsed = JSON.parse(fs.readFileSync(nested, "utf-8"));
+      expect(parsed.toolPermissions.tools.bash).toBe("auto");
+    });
   });
 });
