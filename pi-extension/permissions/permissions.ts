@@ -108,8 +108,12 @@ export class PermissionManager {
       if (fs.existsSync(this.configPath)) {
         parsed = JSON.parse(fs.readFileSync(this.configPath, "utf-8"));
       }
-      const toolPermissions = (parsed.toolPermissions ?? {}) as Record<string, unknown>;
-      const tools = (toolPermissions.tools ?? {}) as Record<string, string>;
+      const rawTp = parsed.toolPermissions;
+      const toolPermissions: Record<string, unknown> =
+        rawTp && typeof rawTp === "object" && !Array.isArray(rawTp) ? (rawTp as Record<string, unknown>) : {};
+      const rawTools = toolPermissions.tools;
+      const tools: Record<string, string> =
+        rawTools && typeof rawTools === "object" && !Array.isArray(rawTools) ? (rawTools as Record<string, string>) : {};
       tools[toolName] = level;
       toolPermissions.tools = tools;
       parsed.toolPermissions = toolPermissions;
@@ -127,7 +131,12 @@ export class PermissionManager {
       const raw = fs.readFileSync(this.configPath, "utf-8");
       const parsed = JSON.parse(raw);
       if (parsed.toolPermissions) {
-        this.config = { ...this.config, ...parsed.toolPermissions };
+        const tp = parsed.toolPermissions as { defaultLevel?: PermissionLevel; tools?: Record<string, PermissionLevel> };
+        this.config = {
+          defaultLevel: tp.defaultLevel ?? this.config.defaultLevel,
+          // Per-key merge: a partial persisted tools map must not drop other entries
+          tools: { ...this.config.tools, ...(tp.tools ?? {}) },
+        };
       }
     } catch {
       // Best-effort load
