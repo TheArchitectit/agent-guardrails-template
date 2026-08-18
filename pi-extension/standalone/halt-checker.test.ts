@@ -110,8 +110,10 @@ describe("HaltChecker", () => {
       const checker = new HaltChecker();
       expect(checker.isCatastrophic(":(){ :|:& };:")).toBe(true);
       expect(checker.isCatastrophic("mkfs.ext4 /dev/sdb1")).toBe(true);
+      expect(checker.isCatastrophic("sudo /sbin/mkfs.ext4 /dev/sdb1")).toBe(true);
       expect(checker.isCatastrophic("rm -rf /")).toBe(true);
       expect(checker.isCatastrophic("rm -rf /*")).toBe(true);
+      expect(checker.isCatastrophic("rm -rf --no-preserve-root /")).toBe(true);
       expect(checker.isCatastrophic("dd if=/dev/zero of=/dev/sda")).toBe(true);
     });
 
@@ -120,6 +122,10 @@ describe("HaltChecker", () => {
       expect(checker.isCatastrophic("git push --force origin main")).toBe(false);
       expect(checker.isCatastrophic("sudo apt install curl")).toBe(false);
       expect(checker.isCatastrophic("rm -rf node_modules")).toBe(false);
+      expect(checker.isCatastrophic("rm -rf /home/user")).toBe(false);
+      expect(checker.isCatastrophic("rm -rf /home/*")).toBe(false);
+      expect(checker.isCatastrophic("cat mkfs.txt")).toBe(false);
+      expect(checker.isCatastrophic("less my-mkfs-file")).toBe(false);
     });
   });
 });
