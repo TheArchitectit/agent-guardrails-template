@@ -262,8 +262,8 @@ function auditBashDecision(deps: HandlerDeps, ctx: any, severity: "info" | "warn
 }
 
 async function promptForBashScope(
-  ctx: any,
   deps: HandlerDeps,
+  ctx: any,
   cmd: string,
   category: string,
   catastrophic: boolean,
@@ -277,33 +277,38 @@ async function promptForBashScope(
     };
   }
 
-  if (catastrophic) {
-    const typed = await ctx.ui.input(`Type the command exactly to confirm: ${cmd}`, cmd);
-    if (typed === undefined || normalizeCommand(typed) !== cmd) {
-      auditBashDecision(deps, ctx, "warning", `Catastrophic command confirmation failed (type-back mismatch): ${cmd}`);
-      return { block: true, reason: "Catastrophic command confirmation failed: typed text did not match the command." };
+  try {
+    if (catastrophic) {
+      const typed = await ctx.ui.input(`Type the command exactly to confirm: ${cmd}`, cmd);
+      if (typed === undefined || normalizeCommand(typed) !== cmd) {
+        auditBashDecision(deps, ctx, "warning", `Catastrophic command confirmation failed (type-back mismatch): ${cmd}`);
+        return { block: true, reason: "Catastrophic command confirmation failed: typed text did not match the command." };
+      }
     }
-  }
 
-  const title = `Allow command? [${category}] ${cmd}${reason ? ` — ${reason}` : ""}`;
-  const choice = await ctx.ui.select(title, [...SCOPE_OPTIONS]);
+    const title = `Allow command? [${category}] ${cmd}${reason ? ` — ${reason}` : ""}`;
+    const choice = await ctx.ui.select(title, [...SCOPE_OPTIONS]);
 
-  switch (choice) {
-    case "Allow once":
-      auditBashDecision(deps, ctx, "info", `Bash allowed once via prompt: ${cmd}`);
-      return;
-    case "Allow for session":
-      deps.permissionManager.allowSessionDanger(cmd);
-      auditBashDecision(deps, ctx, "info", `Bash allowed for session via prompt: ${cmd}`);
-      return;
-    case "Always allow":
-      deps.dangerAllowList.addExact(cmd, "prompt");
-      auditBashDecision(deps, ctx, "info", `Bash always-allowed via prompt (persisted): ${cmd}`);
-      return;
-    default:
-      // "Deny" or dialog dismissed (undefined)
-      auditBashDecision(deps, ctx, "warning", `Bash denied via prompt: ${cmd}`);
-      return { block: true, reason: `User denied command: ${cmd}` };
+    switch (choice) {
+      case "Allow once":
+        auditBashDecision(deps, ctx, "info", `Bash allowed once via prompt: ${cmd}`);
+        return;
+      case "Allow for session":
+        deps.permissionManager.allowSessionDanger(cmd);
+        auditBashDecision(deps, ctx, "info", `Bash allowed for session via prompt: ${cmd}`);
+        return;
+      case "Always allow":
+        deps.dangerAllowList.addExact(cmd, "prompt");
+        auditBashDecision(deps, ctx, "info", `Bash always-allowed via prompt (persisted): ${cmd}`);
+        return;
+      default:
+        // "Deny" or dialog dismissed (undefined)
+        auditBashDecision(deps, ctx, "warning", `Bash denied via prompt: ${cmd}`);
+        return { block: true, reason: `User denied command: ${cmd}` };
+    }
+  } catch {
+    auditBashDecision(deps, ctx, "warning", `Bash denied (prompt failed): ${cmd}`);
+    return { block: true, reason: "Permission prompt failed; command denied." };
   }
 }
 
@@ -316,7 +321,7 @@ export function createBashPermissionHandler(deps: HandlerDeps) {
     if (!input || typeof input.command !== "string") return;
     const cmd = normalizeCommand(input.command as string);
 
-    const allowDangerCfg = deps.config.allowDanger ?? { enabled: true, requireTypebackForCatastrophic: true };
+    const allowDangerCfg = { enabled: true, requireTypebackForCatastrophic: true, ...deps.config.allowDanger };
 
     // Legacy mode: allowDanger disabled — reproduce the old hard-block behavior
     if (!allowDangerCfg.enabled) {
@@ -334,6 +339,13 @@ export function createBashPermissionHandler(deps: HandlerDeps) {
       }
       const perm = deps.permissionManager.checkTool("bash", event.input as Record<string, unknown>);
       if (!perm.allowed) {
+        deps.violationLog.log({
+          law: "halt-when-uncertain",
+          severity: "warning",
+          details: `Tool 'bash' blocked by permission policy${perm.reason ? `: ${perm.reason}` : ""}`,
+          operation: "bash",
+        });
+        updateStatusBar(ctx, deps);
         return { block: true, reason: perm.reason ?? "Tool 'bash' requires permission." };
       }
       return;
@@ -358,17 +370,25 @@ export function createBashPermissionHandler(deps: HandlerDeps) {
     if (!check.shouldHalt) {
       // Non-dangerous: the tool permission level decides
       const level = deps.permissionManager.getPermission("bash");
+      // Safe auto-allows are intentionally not audited (volume/noise); every other allow path logs at info.
       if (level === "auto") return;
       if (level === "blocked") {
         auditBashDecision(deps, ctx, "warning", `Bash blocked by permission policy: ${cmd}`);
         return { block: true, reason: "Tool 'bash' is blocked by permission policy" };
       }
       // level === "ask"
-      return promptForBashScope(ctx, deps, cmd, check.category, false);
+      return promptForBashScope(deps, ctx, cmd, check.category, false);
     }
 
-    // 4. Dangerous: strong prompt, type-back for the catastrophic tier
+    // 4. Dangerous: explicit prior grants (allow-list/session, steps 1–2) take
+    //    precedence over the level gate; "blocked" only prevents *new* interactive
+    //    grants — matching how blocked+safe behaves when an allow-list entry exists.
+    const level = deps.permissionManager.getPermission("bash");
+    if (level === "blocked") {
+      auditBashDecision(deps, ctx, "warning", `Dangerous bash blocked by permission policy: ${cmd}`);
+      return { block: true, reason: "Tool 'bash' is blocked by permission policy" };
+    }
     const catastrophic = allowDangerCfg.requireTypebackForCatastrophic && deps.haltChecker.isCatastrophic(cmd);
-    return promptForBashScope(ctx, deps, cmd, check.category, catastrophic, check.reason);
+    return promptForBashScope(deps, ctx, cmd, check.category, catastrophic, check.reason);
   };
 }
