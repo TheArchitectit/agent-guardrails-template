@@ -11,6 +11,7 @@ import { CanaryTokenManager, type CanaryConfig } from "./injection/canary.js";
 import { validateOutput, getValidationSummary, type ValidatorConfig } from "./output-validator/validator.js";
 import { ContentFilter, type ContentFilterConfig } from "./output-validator/content-filter.js";
 import { PermissionManager, type PermissionConfig } from "./permissions/permissions.js";
+import { DangerAllowList, normalizeCommand } from "./permissions/danger-allow-list.js";
 import { renderStatusBar } from "./status.js";
 
 export interface HandlerDeps {
@@ -23,6 +24,7 @@ export interface HandlerDeps {
   mcpClient: MCPClient;
   config: GuardrailsConfig;
   permissionManager: PermissionManager;
+  dangerAllowList: DangerAllowList;
   injectionConfig?: InjectionConfig;
   validatorConfig?: ValidatorConfig;
   contentFilter?: ContentFilter;
@@ -105,30 +107,6 @@ export function createPreEditHandler(deps: HandlerDeps) {
       deps.sessionStore.recordHalt(`Law 2 violation: ${filePath} is outside scope`, "warning");
       updateStatusBar(ctx, deps);
       return { block: true, reason: `Law 2 violation: ${filePath} is outside the authorized scope. Use guardrail_set_scope to expand.` };
-    }
-  };
-}
-
-export function createBashSafetyHandler(deps: HandlerDeps) {
-  return async (_event: any, ctx: any): Promise<{ block: true; reason: string } | void> => {
-    const event = _event as { toolName?: string; input?: Record<string, unknown> };
-    if (event.toolName !== "bash") return;
-
-    const input = event.input;
-    if (!input || typeof input.command !== "string") return;
-    const cmd = input.command as string;
-
-    const result = deps.haltChecker.checkCommand(cmd);
-    if (result.shouldHalt) {
-      deps.violationLog.log({
-        law: "halt-when-uncertain",
-        severity: "critical",
-        details: `Blocked dangerous command: ${cmd}`,
-        operation: "bash",
-      });
-      deps.sessionStore.recordHalt(`Dangerous command blocked: ${result.reason}`, "critical");
-      updateStatusBar(ctx, deps);
-      return { block: true, reason: `Command blocked: ${result.reason}` };
     }
   };
 }
@@ -256,6 +234,9 @@ export function createPermissionHandler(deps: HandlerDeps) {
     const event = _event as { toolName?: string; input?: Record<string, unknown> };
     if (!event.toolName) return;
 
+    // Bash is owned by createBashPermissionHandler (prompt + allow-list flow)
+    if (event.toolName === "bash") return;
+
     const result = deps.permissionManager.checkTool(event.toolName, event.input as Record<string, unknown>);
 
     if (!result.allowed) {
@@ -268,5 +249,126 @@ export function createPermissionHandler(deps: HandlerDeps) {
       updateStatusBar(ctx, deps);
       return { block: true, reason: result.reason ?? `Tool '${event.toolName}' requires permission.` };
     }
+  };
+}
+
+// ---- Bash permission handler: unified prompt + allow-list decision path ----
+
+const SCOPE_OPTIONS = ["Allow once", "Allow for session", "Always allow", "Deny"] as const;
+
+function auditBashDecision(deps: HandlerDeps, ctx: any, severity: "info" | "warning", details: string): void {
+  deps.violationLog.log({ law: "halt-when-uncertain", severity, details, operation: "bash" });
+  updateStatusBar(ctx, deps);
+}
+
+async function promptForBashScope(
+  ctx: any,
+  deps: HandlerDeps,
+  cmd: string,
+  category: string,
+  catastrophic: boolean,
+  reason?: string,
+): Promise<{ block: true; reason: string } | void> {
+  if (!ctx?.hasUI) {
+    auditBashDecision(deps, ctx, "warning", `Bash denied (no UI available): ${cmd}`);
+    return {
+      block: true,
+      reason: "Interactive confirmation required but no UI available; bash denied in non-interactive mode.",
+    };
+  }
+
+  if (catastrophic) {
+    const typed = await ctx.ui.input(`Type the command exactly to confirm: ${cmd}`, cmd);
+    if (typed === undefined || normalizeCommand(typed) !== cmd) {
+      auditBashDecision(deps, ctx, "warning", `Catastrophic command confirmation failed (type-back mismatch): ${cmd}`);
+      return { block: true, reason: "Catastrophic command confirmation failed: typed text did not match the command." };
+    }
+  }
+
+  const title = `Allow command? [${category}] ${cmd}${reason ? ` — ${reason}` : ""}`;
+  const choice = await ctx.ui.select(title, [...SCOPE_OPTIONS]);
+
+  switch (choice) {
+    case "Allow once":
+      auditBashDecision(deps, ctx, "info", `Bash allowed once via prompt: ${cmd}`);
+      return;
+    case "Allow for session":
+      deps.permissionManager.allowSessionDanger(cmd);
+      auditBashDecision(deps, ctx, "info", `Bash allowed for session via prompt: ${cmd}`);
+      return;
+    case "Always allow":
+      deps.dangerAllowList.addExact(cmd, "prompt");
+      auditBashDecision(deps, ctx, "info", `Bash always-allowed via prompt (persisted): ${cmd}`);
+      return;
+    default:
+      // "Deny" or dialog dismissed (undefined)
+      auditBashDecision(deps, ctx, "warning", `Bash denied via prompt: ${cmd}`);
+      return { block: true, reason: `User denied command: ${cmd}` };
+  }
+}
+
+export function createBashPermissionHandler(deps: HandlerDeps) {
+  return async (_event: any, ctx: any): Promise<{ block: true; reason: string } | void> => {
+    const event = _event as { toolName?: string; input?: Record<string, unknown> };
+    if (event.toolName !== "bash") return;
+
+    const input = event.input;
+    if (!input || typeof input.command !== "string") return;
+    const cmd = normalizeCommand(input.command as string);
+
+    const allowDangerCfg = deps.config.allowDanger ?? { enabled: true, requireTypebackForCatastrophic: true };
+
+    // Legacy mode: allowDanger disabled — reproduce the old hard-block behavior
+    if (!allowDangerCfg.enabled) {
+      const check = deps.haltChecker.checkCommand(cmd);
+      if (check.shouldHalt) {
+        deps.violationLog.log({
+          law: "halt-when-uncertain",
+          severity: "critical",
+          details: `Blocked dangerous command: ${cmd}`,
+          operation: "bash",
+        });
+        deps.sessionStore.recordHalt(`Dangerous command blocked: ${check.reason}`, "critical");
+        updateStatusBar(ctx, deps);
+        return { block: true, reason: `Command blocked: ${check.reason}` };
+      }
+      const perm = deps.permissionManager.checkTool("bash", event.input as Record<string, unknown>);
+      if (!perm.allowed) {
+        return { block: true, reason: perm.reason ?? "Tool 'bash' requires permission." };
+      }
+      return;
+    }
+
+    // 1. Persisted allow-list short-circuit
+    const entry = deps.dangerAllowList.matches(cmd);
+    if (entry) {
+      auditBashDecision(deps, ctx, "info", `Bash allowed via allow-list (${entry.type}): ${cmd}`);
+      return;
+    }
+
+    // 2. Session-scoped allowance
+    if (deps.permissionManager.isSessionDangerAllowed(cmd)) {
+      auditBashDecision(deps, ctx, "info", `Bash allowed via session allowance: ${cmd}`);
+      return;
+    }
+
+    // 3. Classify
+    const check = deps.haltChecker.checkCommand(cmd);
+
+    if (!check.shouldHalt) {
+      // Non-dangerous: the tool permission level decides
+      const level = deps.permissionManager.getPermission("bash");
+      if (level === "auto") return;
+      if (level === "blocked") {
+        auditBashDecision(deps, ctx, "warning", `Bash blocked by permission policy: ${cmd}`);
+        return { block: true, reason: "Tool 'bash' is blocked by permission policy" };
+      }
+      // level === "ask"
+      return promptForBashScope(ctx, deps, cmd, check.category, false);
+    }
+
+    // 4. Dangerous: strong prompt, type-back for the catastrophic tier
+    const catastrophic = allowDangerCfg.requireTypebackForCatastrophic && deps.haltChecker.isCatastrophic(cmd);
+    return promptForBashScope(ctx, deps, cmd, check.category, catastrophic, check.reason);
   };
 }
