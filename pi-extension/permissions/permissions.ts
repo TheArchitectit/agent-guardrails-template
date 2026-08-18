@@ -1,5 +1,6 @@
 import * as fs from "node:fs";
 import { getConfigPath } from "../config.js";
+import { normalizeCommand } from "./danger-allow-list.js";
 
 export type PermissionLevel = "auto" | "ask" | "blocked";
 
@@ -32,10 +33,13 @@ const DEFAULT_PERMISSIONS: PermissionConfig = {
 export class PermissionManager {
   private config: PermissionConfig;
   private sessionOverrides: Map<string, PermissionLevel> = new Map();
-  private pendingConfirmations: Map<string, { toolName: string; args: string; resolved: boolean; approved: boolean }> = new Map();
+  /** In-memory, non-persisted bash allowances granted with scope "session". */
+  private sessionDangerAllows: Set<string> = new Set();
+  private configPath: string;
 
-  constructor(config?: Partial<PermissionConfig>) {
+  constructor(config?: Partial<PermissionConfig>, configPath?: string) {
     this.config = { ...DEFAULT_PERMISSIONS, ...config };
+    this.configPath = configPath ?? getConfigPath();
     this.loadPersistedConfig();
   }
 
@@ -52,8 +56,9 @@ export class PermissionManager {
     return this.config.defaultLevel;
   }
 
-  setPermission(toolName: string, level: PermissionLevel, reason?: string): void {
+  setPermission(toolName: string, level: PermissionLevel, opts?: { persist?: boolean }): void {
     this.sessionOverrides.set(toolName, level);
+    if (opts?.persist) this.persistToolPermission(toolName, level);
   }
 
   checkTool(
@@ -80,12 +85,13 @@ export class PermissionManager {
     }
   }
 
-  confirmToolCall(toolName: string, approved: boolean): void {
-    const pending = this.pendingConfirmations.get(toolName);
-    if (pending) {
-      pending.resolved = true;
-      pending.approved = approved;
-    }
+  /** Record a session-scoped allowance for a dangerous bash command (normalized). */
+  allowSessionDanger(cmd: string): void {
+    this.sessionDangerAllows.add(normalizeCommand(cmd));
+  }
+
+  isSessionDangerAllowed(cmd: string): boolean {
+    return this.sessionDangerAllows.has(normalizeCommand(cmd));
   }
 
   getPermissionMatrix(): Record<string, PermissionLevel> {
@@ -96,14 +102,41 @@ export class PermissionManager {
     return result;
   }
 
+  private persistToolPermission(toolName: string, level: PermissionLevel): void {
+    try {
+      let parsed: Record<string, unknown> = {};
+      if (fs.existsSync(this.configPath)) {
+        parsed = JSON.parse(fs.readFileSync(this.configPath, "utf-8"));
+      }
+      const rawTp = parsed.toolPermissions;
+      const toolPermissions: Record<string, unknown> =
+        rawTp && typeof rawTp === "object" && !Array.isArray(rawTp) ? (rawTp as Record<string, unknown>) : {};
+      const rawTools = toolPermissions.tools;
+      const tools: Record<string, string> =
+        rawTools && typeof rawTools === "object" && !Array.isArray(rawTools) ? (rawTools as Record<string, string>) : {};
+      tools[toolName] = level;
+      toolPermissions.tools = tools;
+      parsed.toolPermissions = toolPermissions;
+      const dir = this.configPath.substring(0, this.configPath.lastIndexOf("/"));
+      if (dir && !fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(this.configPath, JSON.stringify(parsed, null, 2));
+    } catch {
+      // Best-effort persistence; the session override still applies for this session.
+    }
+  }
+
   private loadPersistedConfig(): void {
     try {
-      const configPath = getConfigPath();
-      if (!fs.existsSync(configPath)) return;
-      const raw = fs.readFileSync(configPath, "utf-8");
+      if (!fs.existsSync(this.configPath)) return;
+      const raw = fs.readFileSync(this.configPath, "utf-8");
       const parsed = JSON.parse(raw);
       if (parsed.toolPermissions) {
-        this.config = { ...this.config, ...parsed.toolPermissions };
+        const tp = parsed.toolPermissions as { defaultLevel?: PermissionLevel; tools?: Record<string, PermissionLevel> };
+        this.config = {
+          defaultLevel: tp.defaultLevel ?? this.config.defaultLevel,
+          // Per-key merge: a partial persisted tools map must not drop other entries
+          tools: { ...this.config.tools, ...(tp.tools ?? {}) },
+        };
       }
     } catch {
       // Best-effort load
