@@ -282,6 +282,9 @@ export default function piGuardrailsExtension(pi: ExtensionAPI) {
             return { error: "Provide 'command' or 'pattern'" };
           }
           if (params.pattern) {
+            if (params.sessionOnly) {
+              return { error: "sessionOnly is only valid with 'command', not 'pattern'" };
+            }
             if (!params.reason) {
               return { error: "Pattern entries require a reason" };
             }
@@ -319,12 +322,12 @@ export default function piGuardrailsExtension(pi: ExtensionAPI) {
           if (!params.command && !params.pattern) {
             return { error: "Provide 'command' or 'pattern' to remove" };
           }
-          const removed = dangerAllowList.remove((params.command ?? params.pattern) as string);
+          const removed = dangerAllowList.remove((params.command || params.pattern) as string);
           if (!removed) return { error: "No matching allow-list entry found" };
           violationLog.log({
             law: "halt-when-uncertain",
             severity: "info",
-            details: `Danger allow-list entry removed: ${params.command ?? params.pattern}`,
+            details: `Danger allow-list entry removed: ${params.command || params.pattern}`,
             operation: "guardrail_allow_danger",
           });
           return { removed: true };
