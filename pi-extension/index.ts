@@ -319,6 +319,9 @@ export default function piGuardrailsExtension(pi: ExtensionAPI) {
           return { added: true, type: "exact", command: normalizeCommand(params.command) };
         }
         case "remove": {
+          if (params.command && params.pattern) {
+            return { error: "Provide either 'command' or 'pattern', not both" };
+          }
           if (!params.command && !params.pattern) {
             return { error: "Provide 'command' or 'pattern' to remove" };
           }
