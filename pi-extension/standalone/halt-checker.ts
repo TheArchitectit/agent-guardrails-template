@@ -16,8 +16,8 @@ const DESTRUCTIVE_PATTERNS: RegExp[] = [
 
 const CATASTROPHIC_PATTERNS: RegExp[] = [
   /:\(\)\{\s*:\|:&\s*\}/,                          // fork bomb
-  /\bmkfs\b/,                                       // filesystem format
-  /\brm\s+-(rf|fr)\s+\/(\s|\*|$)/,                 // rm -rf / or /*
+  /(^|[\s\/;|&(])mkfs(\.(ext[234]|xfs|btrfs|vfat|ntfs|minix|f2fs))?(?=\s|$)/,  // filesystem format
+  /\brm\s+(?:-\S+\s+)+\/(\s|\*|$)/,                 // rm with flags targeting bare /
   /\bdd\s+\S+\s+.*of=\/dev\//,                     // dd writing to a device node
 ];
 
