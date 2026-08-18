@@ -317,7 +317,8 @@ Or use one of the referral links below — you get credits, and so do we:
 | Service | Your Bonus | Details | Referral Code |
 |---------|-----------|---------|---------------|
 | [**Synthetic**](https://synthetic.new/?referral=UAWqkKQQLFkzMkY) | $10 in credits | Subscribe → both get $10 credit | `UAWqkKQQLFkzMkY` |
-| [**Ozore.com**](https://ozore.com/?ref=cwe4kdx0) | 50% off first month | Cloud hosting for AI projects — code `lundrog50` | — |
+| [**Ozore.com**](https://ozore.com/?ref=cwe4kdx0) | 50% off first month |  — code `lundrog50` | — |
+| [**Neuralwatt**](https://portal.neuralwatt.com/auth/register?ref=NW-ROGER-ET3Y) | When you use $25+ in compute, you both earn $5. Bonuses are credited after a 72-hour review period. — |
 
 ---
 
