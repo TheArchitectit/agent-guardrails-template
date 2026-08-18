@@ -2,7 +2,7 @@
 
 > AI-first safety framework for agents building software at high velocity. Guardrails don't slow you down — they're your license to move fast.
 
-[![Version](https://img.shields.io/badge/version-v3.4.0-blue.svg)](./CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-v3.5.0-blue.svg)](./CHANGELOG.md)
 [![Go Implementation](https://img.shields.io/badge/Implementation-Go-blue.svg?style=flat&logo=go)](https://golang.org)
 [![WCAG 3.0+](https://img.shields.io/badge/Accessibility-WCAG_3.0+_Silver-green.svg)](docs/accessibility/accessibility-guide.md)
 [![Spatial Computing](https://img.shields.io/badge/Spatial-XR/VR/AR-blue.svg)](docs/spatial/spatial-computing-ui.md)
@@ -277,10 +277,11 @@ agent-guardrails-template/
 
 ## Version History
 
-**Current:** v3.4.0 (2026-08-15)
+**Current:** v3.5.0 (2026-08-18)
 
 | Version | Date | Highlights |
 |---------|------|------------|
+| **v3.5.0** | 2026-08-18 | Interactive bash permission prompts, danger allow-list, catastrophic type-back, guardrail_allow_danger tool |
 | **v3.4.0** | 2026-08-15 | Documentation redo, pi-extension restored, game/vision content split to private repos |
 | **v3.3.0** | 2026-08-15 | Stateless StreamableHTTP transport, repo cleanup, migration & deploy fixes |
 | **v3.2.0** | 2026-06-16 | Platform review sprint: 7 features, all P0 fixes |
@@ -322,4 +323,4 @@ Or use one of the referral links below — you get credits, and so do we:
 
 ---
 
-**v3.4.0** · AI-First Rapid Development Framework · [Get Started →](docs/getting-started/quick-setup.md)
+**v3.5.0** · AI-First Rapid Development Framework · [Get Started →](docs/getting-started/quick-setup.md)
