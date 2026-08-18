@@ -14,6 +14,13 @@ const DESTRUCTIVE_PATTERNS: RegExp[] = [
   /:\(\)\{\s*:\|:&\s*\}/, // fork bomb
 ];
 
+const CATASTROPHIC_PATTERNS: RegExp[] = [
+  /:\(\)\{\s*:\|:&\s*\}/,                          // fork bomb
+  /\bmkfs\b/,                                       // filesystem format
+  /\brm\s+-(rf|fr)\s+\/(\s|\*|$)/,                 // rm -rf / or /*
+  /\bdd\s+\S+\s+.*of=\/dev\//,                     // dd writing to a device node
+];
+
 const DANGEROUS_COMMANDS: string[] = [
   "rm -rf /",
   "rm -rf /*",
@@ -23,6 +30,19 @@ const DANGEROUS_COMMANDS: string[] = [
   "git clean -f",
   "drop database",
 ];
+
+function mapCategory(category: string): CommandCheckResult["category"] {
+  switch (category) {
+    case "destructive":
+      return "destructive";
+    case "elevated":
+      return "elevated";
+    case "network":
+      return "network";
+    default:
+      return "safe"; // read_only, constructive, unknown
+  }
+}
 
 export class HaltChecker {
   private classifyConfig?: ClassifyConfig;
@@ -36,10 +56,11 @@ export class HaltChecker {
     if (this.classifyConfig) {
       const result = classifyCommand(cmd, this.classifyConfig);
       const block = shouldBlock(result, this.classifyConfig);
+      const category = mapCategory(result.category);
       if (block.block) {
-        return { shouldHalt: true, reason: block.reason ?? `Blocked ${result.category} command`, category: result.category };
+        return { shouldHalt: true, reason: block.reason ?? `Blocked ${result.category} command`, category };
       }
-      return { shouldHalt: false };
+      return { shouldHalt: false, category };
     }
 
     // Fallback to hardcoded denylist (Sprint 0 behavior)
@@ -63,7 +84,13 @@ export class HaltChecker {
       }
     }
 
-    return { shouldHalt: false };
+    return { shouldHalt: false, category: "safe" };
+  }
+
+  /** True for commands in the catastrophic tier (type-back confirmation required). */
+  isCatastrophic(cmd: string): boolean {
+    const trimmed = cmd.trim().toLowerCase();
+    return CATASTROPHIC_PATTERNS.some((p) => p.test(trimmed));
   }
 
   checkHalt(operation: string, filePath?: string, details?: string): HaltResult {
