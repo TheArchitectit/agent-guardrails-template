@@ -354,7 +354,7 @@ export function createBashPermissionHandler(deps: HandlerDeps) {
     // 1. Persisted allow-list short-circuit
     const entry = deps.dangerAllowList.matches(cmd);
     if (entry) {
-      auditBashDecision(deps, ctx, "info", `Bash allowed via allow-list (${entry.type}): ${cmd}`);
+      auditBashDecision(deps, ctx, "info", `Bash allowed via allow-list (${entry.type}, source=${entry.source}): ${cmd}`);
       return;
     }
 
