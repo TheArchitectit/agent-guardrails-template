@@ -38,7 +38,6 @@ import {
   createSessionShutdownHandler,
   createReadTrackingHandler,
   createPreEditHandler,
-  createBashSafetyHandler,
   createInjectionDefenseHandler,
   createOutputValidationHandler,
   createPermissionHandler,
@@ -510,7 +509,6 @@ export default function piGuardrailsExtension(pi: ExtensionAPI) {
   pi.on("tool_result", createOutputValidationHandler(deps));
   pi.on("tool_call", createPermissionHandler(deps));
   pi.on("tool_call", createPreEditHandler(deps));
-  pi.on("tool_call", createBashSafetyHandler(deps));
   pi.on("tool_call", createInjectionDefenseHandler(deps));
 
   // ===========================================================================
