@@ -45,6 +45,7 @@ The standalone mode is the primary value proposition — teams don't need to run
 | `guardrail_check_halt` | Evaluate halt conditions |
 | `guardrail_log_violation` | Log a guardrail violation |
 | `guardrail_status` | Get current session status |
+| `guardrail_allow_danger` | Manage the persisted dangerous-command allow-list (add/remove/list/clear) |
 | `guardrail_mcp` | Proxy to MCP server (when connected) |
 
 ## Automatic Enforcement
@@ -54,7 +55,7 @@ The extension registers event handlers that enforce the Four Laws automatically:
 - **Read tracking**: File reads are tracked via `tool_result` events
 - **Pre-edit enforcement**: Edits to unread files are blocked (Law 1)
 - **Scope enforcement**: Edits outside the authorized scope are blocked (Law 2)
-- **Bash safety**: Dangerous commands (`rm -rf /`, `git push --force`, `sudo`, etc.) are blocked
+- **Bash permission prompts**: Bash commands are evaluated against the persisted danger allow-list, then classified. Dangerous commands prompt for approval (once / session / always); catastrophic-tier commands (`rm -rf /`, `mkfs`, fork bombs, `dd of=/dev/…`) additionally require typing the command back. All decisions are audited.
 - **Injection defense**: Scans tool inputs for prompt injection patterns (Sprint 2)
 - **Output validation**: Detects secrets and PII in tool output (Sprint 2)
 - **Permission system**: Per-tool permission levels (auto/ask/blocked) (Sprint 2)
@@ -90,6 +91,10 @@ Config file: `~/.pi/agent/extensions/pi-guardrails/config.json`
     "enablePII": false,
     "autoRedact": false,
     "redactionText": "[REDACTED]"
+  },
+  "allowDanger": {
+    "enabled": true,
+    "requireTypebackForCatastrophic": true
   }
 }
 ```
@@ -153,10 +158,38 @@ Per-tool permission levels control which tools the agent can use:
 | Level | Behavior |
 |-------|----------|
 | `auto` | Tool executes without confirmation |
-| `ask` | Tool is blocked with a message telling the agent to get user approval |
+| `ask` | Bash: interactive prompt (once / session / always). Other tools: blocked with a message telling the agent to get user approval |
 | `blocked` | Tool is blocked entirely |
 
 Configure via `toolPermissions` in config.json. Session overrides are available through the permission manager.
+
+### Bash permission prompts
+
+Bash commands follow a single decision path:
+
+1. Command matches the persisted allow-list → allowed (audited)
+2. Command matches a session allowance → allowed (audited)
+3. Command classified safe → resolved by the `bash` permission level (`auto` / `ask` / `blocked`)
+4. Command classified dangerous → interactive prompt with scope choices:
+   - **Allow once** — allows this call only
+   - **Allow for session** — allows this command for the rest of the session
+   - **Always allow** — persists the exact command to the allow-list
+   - **Deny** (or dismissing the dialog) — blocks the call
+5. Catastrophic-tier commands additionally require typing the command back before the scope prompt.
+
+In non-interactive contexts (no UI available), bash that would prompt is denied.
+
+### Danger allow-list
+
+Managed via the `guardrail_allow_danger` tool:
+
+- `add` with `command` — persist an exact command (normalized); `sessionOnly: true` grants a session-limited allowance instead
+- `add` with `pattern` — persist a regex pattern; requires `reason`
+- `remove` / `list` / `clear` — manage entries
+
+Stored in `~/.pi/agent/extensions/pi-guardrails/allowlist.json`. All mutations are audited; `clear` is logged at critical severity.
+
+To restore the legacy hard-block behavior, set `allowDanger.enabled: false` in config.json.
 
 ## Storage
 
@@ -165,6 +198,7 @@ All state is stored under `~/.pi/agent/extensions/pi-guardrails/`:
 - `sessions/` — session state JSON files
 - `violations.jsonl` — append-only violation log
 - `config.json` — user configuration
+- `allowlist.json` — persisted dangerous-command allow-list
 
 ## Canary Tokens
 
