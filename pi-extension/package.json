@@ -1,6 +1,6 @@
 {
   "name": "@architectit/pi-guardrails",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Four Laws guardrails enforcement for pi coding agent — standalone + MCP bridge",
   "type": "module",
   "author": "TheArchitectit",
