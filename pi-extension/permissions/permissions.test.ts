@@ -102,5 +102,22 @@ describe("PermissionManager", () => {
       pm.setPermission("bash", "auto");
       expect(fs.existsSync(configPath)).toBe(false);
     });
+
+    it("preserves unrelated pre-existing tool entries when persisting", () => {
+      fs.writeFileSync(configPath, JSON.stringify({ toolPermissions: { tools: { write: "blocked" } } }));
+      const pm = new PermissionManager({ tools: { bash: "ask" } }, configPath);
+      pm.setPermission("bash", "auto", { persist: true });
+      const parsed = JSON.parse(fs.readFileSync(configPath, "utf-8"));
+      expect(parsed.toolPermissions.tools.write).toBe("blocked");
+      expect(parsed.toolPermissions.tools.bash).toBe("auto");
+    });
+
+    it("creates parent directories when persisting to a nested path", () => {
+      const nested = path.join(dir, "nested", "config.json");
+      const pm = new PermissionManager({ tools: { bash: "ask" } }, nested);
+      pm.setPermission("bash", "auto", { persist: true });
+      const parsed = JSON.parse(fs.readFileSync(nested, "utf-8"));
+      expect(parsed.toolPermissions.tools.bash).toBe("auto");
+    });
   });
 });
