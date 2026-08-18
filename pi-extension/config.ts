@@ -23,6 +23,10 @@ export function getConfigPath(): string {
   return path.join(EXTENSION_DIR, "config.json");
 }
 
+export function getAllowListPath(): string {
+  return path.join(EXTENSION_DIR, "allowlist.json");
+}
+
 export function getMcpApiKey(): string | undefined {
   return process.env.PI_GUARDRAILS_MCP_API_KEY;
 }
