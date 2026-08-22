@@ -10,3 +10,4 @@ How to wire Agent Guardrails into each supported AI coding platform.
 | [cursor.md](cursor.md) | Integrate guardrails with Cursor using markdown rules |
 | [opencode.md](opencode.md) | Wire guardrails into OpenCode's multi-agent config |
 | [windsurf.md](windsurf.md) | Integrate guardrails with Windsurf via `.windsurfrules` |
+| [atlas-cloud.md](atlas-cloud.md) | Route guardrails' AI-backed checks through the Atlas Cloud open-source sponsorship (OpenAI-compatible) |
