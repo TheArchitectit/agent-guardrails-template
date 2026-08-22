@@ -1240,3 +1240,17 @@ This project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html):
 - **Releases:** [GitHub Releases](https://github.com/TheArchitectit/agent-guardrails-template/releases)
 - **Documentation:** [index-map.md](index-map.md)
 - **Issues:** [GitHub Issues](https://github.com/TheArchitectit/agent-guardrails-template/issues)
+
+## [3.6.0] - 2026-08-22
+
+### Added
+- Atlas Cloud open-source sponsorship integration (Starter tier, $50/mo credits)
+- `docs/integrations/atlas-cloud.md` — how to route AI-backed checks through Atlas
+- `.env.example` — `ATLAS_BASE_URL`, `ATLAS_API_KEY`, `ATLAS_MODEL`, `LLM_PROVIDER=atlas`
+- `.github/FUNDING.yml` — GitHub Sponsors button
+- Powered by Atlas Cloud badge in README (required to keep grant active)
+
+### Changed
+- README completely rewritten — clean, human, reflects actual lowercase file structure
+- Removed 21 stale UPPERCASE file references that didn't exist
+- Consolidated project structure section to match actual repo layout
