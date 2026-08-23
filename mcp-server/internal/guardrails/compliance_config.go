@@ -1,6 +1,8 @@
 // Package guardrails provides tools for mapping system features to regulatory compliance frameworks.
 package guardrails
 
+import "fmt"
+
 // ComplianceConfig defines the configuration for compliance reporting and mapping.
 type ComplianceConfig struct {
 	Enabled                bool              `yaml:"enabled" json:"enabled"`
@@ -21,6 +23,17 @@ func DefaultComplianceConfig() *ComplianceConfig {
 		ExportPath:        "reports/compliance/",
 		RequirementDbPath: "internal/guardrails/compliance_requirements.json",
 	}
+}
+
+// Validate checks the config for errors.
+func (c *ComplianceConfig) Validate() error {
+	if c.ReportFormat != "json" && c.ReportFormat != "markdown" {
+		return fmt.Errorf("compliance report_format must be 'json' or 'markdown'")
+	}
+	if len(c.ActiveFrameworks) == 0 && c.Enabled {
+		return fmt.Errorf("compliance enabled but no active_frameworks specified")
+	}
+	return nil
 }
 
 // Framework is a label for a regulatory framework.

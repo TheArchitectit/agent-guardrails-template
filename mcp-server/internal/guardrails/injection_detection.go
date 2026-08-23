@@ -109,12 +109,15 @@ type AuditEvent struct {
 
 // InjectionClassifier defines the contract for L3 classifier backends.
 type InjectionClassifier interface {
+	// Name returns the backend identifier (e.g., "ollama-llama-guard", "noop").
+	Name() string
+
 	// Classify analyzes text and returns a safety assessment.
 	// Returns safe=true if no injection detected, safe=false with confidence and categories if detected.
 	Classify(ctx context.Context, text string) (safe bool, confidence float64, categories []InjectionCategory, err error)
 
-	// HealthCheck returns the current health of the classifier backend.
-	HealthCheck(ctx context.Context) error
+	// Available returns true if the backend is reachable and ready.
+	Available(ctx context.Context) bool
 }
 
 // ClassifierBackend is a factory for creating classifier instances.
@@ -527,15 +530,16 @@ func (pa *PerplexityAnalyzer) Analyze(ctx context.Context, text string) (float64
 // Used when no L3 backend is configured.
 type NoOpClassifier struct{}
 
+// Name implements InjectionClassifier.
+func (n *NoOpClassifier) Name() string { return "noop" }
+
 // Classify implements InjectionClassifier.
 func (n *NoOpClassifier) Classify(ctx context.Context, text string) (bool, float64, []InjectionCategory, error) {
 	return true, 0.0, nil, nil
 }
 
-// HealthCheck implements InjectionClassifier.
-func (n *NoOpClassifier) HealthCheck(ctx context.Context) error {
-	return nil
-}
+// Available implements InjectionClassifier.
+func (n *NoOpClassifier) Available(_ context.Context) bool { return true }
 
 // hashText returns a SHA-256 hash of the text for privacy-preserving audit logs.
 func hashText(text string) string {

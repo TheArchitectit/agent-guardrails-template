@@ -20,17 +20,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
-	"sync"
 	"time"
-)
-
-// ValidatorAction determines the outcome of a single validator step.
-type ValidatorAction string
-
-const (
-	ValidatorActionBlock ValidatorAction = "block"
-	ValidatorActionWarn  ValidatorAction = "warn"
-	ValidatorActionAllow ValidatorAction = "allow"
 )
 
 // OnFailureAction determines chain behavior when a validator fails.
@@ -123,9 +113,9 @@ type SafetyValidator interface {
 
 // ChainStep is a single step in a safety chain with its configured action.
 type ChainStep struct {
-	Validator  string          `yaml:"validator"`
-	Action     ValidatorAction `yaml:"action"`
-	Description string         `yaml:"description"`
+	Validator  string  `yaml:"validator"`
+	Action     Action  `yaml:"action"`
+	Description string  `yaml:"description"`
 }
 
 // SafetyChainDefinition defines an ordered sequence of safety validations.
@@ -141,7 +131,6 @@ type SafetyChain struct {
 	chainDef    SafetyChainDefinition
 	validators  map[string]SafetyValidator
 	auditLogger MultiAgentAuditLogger
-	mu          sync.RWMutex
 }
 
 // MultiAgentAuditLogger is the interface for multi-agent audit events.
@@ -187,7 +176,7 @@ func (sc *SafetyChain) Execute(ctx context.Context, agentID, output, context str
 			})
 			result.Violations = append(result.Violations, fmt.Sprintf("missing validator: %s", step.Validator))
 			result.Passed = false
-			result.Decision = string(ValidatorActionBlock)
+			result.Decision = string(ActionBlock)
 			break
 		}
 
@@ -225,17 +214,17 @@ func (sc *SafetyChain) Execute(ctx context.Context, agentID, output, context str
 
 		if !stepResult.Passed {
 			result.Passed = false
-			if step.Action == ValidatorActionBlock {
-				result.Decision = string(ValidatorActionBlock)
+			if step.Action == ActionBlock {
+				result.Decision = string(ActionBlock)
 				break
 			}
 			// warn: continue but track
-			result.Decision = string(ValidatorActionWarn)
+			result.Decision = string(ActionWarn)
 		}
 	}
 
 	if result.Passed {
-		result.Decision = string(ValidatorActionAllow)
+		result.Decision = string(ActionAllow)
 	}
 
 	result.AuditEntry = sc.buildAudit(result)

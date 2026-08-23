@@ -516,7 +516,7 @@ func TestProvenanceConfig_Validate(t *testing.T) {
 			name: "empty pattern",
 			cfg: &ProvenanceConfig{
 				SourceTrustPolicies: []TrustPolicy{
-					{SourcePattern: "", TrustLevel: TrustLevelTrusted, Action: TrustAction("allow")},
+					{SourcePattern: "", TrustLevel: TrustLevelTrusted, Action: ActionAllow},
 				},
 			},
 			wantErr: true,
@@ -525,7 +525,7 @@ func TestProvenanceConfig_Validate(t *testing.T) {
 			name: "invalid trust level",
 			cfg: &ProvenanceConfig{
 				SourceTrustPolicies: []TrustPolicy{
-					{SourcePattern: "*.json", TrustLevel: "invalid", Action: TrustAction("allow")},
+					{SourcePattern: "*.json", TrustLevel: "invalid", Action: ActionAllow},
 				},
 			},
 			wantErr: true,

@@ -1,6 +1,8 @@
 // Package guardrails provides runtime isolation and resource limiting for MCP tool executions.
 package guardrails
 
+import "fmt"
+
 // SandboxLevel defines the isolation depth for a process execution.
 type SandboxLevel string
 
@@ -109,4 +111,21 @@ func DefaultSandboxConfig() *SandboxConfig {
 			},
 		},
 	}
+}
+
+// Validate checks the config for errors.
+func (c *SandboxConfig) Validate() error {
+	if c.GlobalDefaults.Time.MaxSeconds < 0 {
+		return fmt.Errorf("sandbox max_seconds must be >= 0")
+	}
+	if c.GlobalDefaults.Time.MaxWallSeconds < 0 {
+		return fmt.Errorf("sandbox max_wall_seconds must be >= 0")
+	}
+	if c.GlobalDefaults.CPU.MaxPercent < 0 || c.GlobalDefaults.CPU.MaxPercent > 100 {
+		return fmt.Errorf("sandbox max_cpu_percent must be 0-100")
+	}
+	if c.GlobalDefaults.Memory.MaxMB < 0 {
+		return fmt.Errorf("sandbox max_memory_mb must be >= 0")
+	}
+	return nil
 }

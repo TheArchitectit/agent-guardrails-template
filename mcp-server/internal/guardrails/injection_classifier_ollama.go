@@ -211,8 +211,18 @@ func parseLlamaGuardCategories(response string) []InjectionCategory {
 	return cats
 }
 
-// HealthCheck verifies the Ollama endpoint is reachable and the model is available.
-func (c *OllamaClassifier) HealthCheck(ctx context.Context) error {
+// Name implements InjectionClassifier.
+func (c *OllamaClassifier) Name() string {
+	return "ollama-" + c.model
+}
+
+// Available implements InjectionClassifier.
+func (c *OllamaClassifier) Available(ctx context.Context) bool {
+	return c.healthCheck(ctx) == nil
+}
+
+// healthCheck verifies the Ollama endpoint is reachable and the model is available.
+func (c *OllamaClassifier) healthCheck(ctx context.Context) error {
 	url := c.endpoint + "/api/tags"
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
