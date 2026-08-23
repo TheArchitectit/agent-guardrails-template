@@ -4,6 +4,7 @@ go 1.25.5
 
 require (
 	github.com/caarlos0/env/v11 v11.3.1
+	github.com/dlclark/regexp2 v1.12.0
 	github.com/fsnotify/fsnotify v1.4.9
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/google/uuid v1.6.0

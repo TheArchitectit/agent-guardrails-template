@@ -16,6 +16,7 @@ package guardrails
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"time"
 )
 
@@ -130,6 +131,12 @@ type MultiAgentAuditLogger interface {
 func NewSafetyChain(def SafetyChainDefinition, validators []SafetyValidator, logger MultiAgentAuditLogger) *SafetyChain {
 	m := make(map[string]SafetyValidator, len(validators))
 	for _, v := range validators {
+		if _, exists := m[v.Name()]; exists {
+			slog.Warn("duplicate validator name, second registration overwrites first",
+				"name", v.Name(),
+				"chain_id", def.ID,
+			)
+		}
 		m[v.Name()] = v
 	}
 	return &SafetyChain{
@@ -198,11 +205,17 @@ func (sc *SafetyChain) Execute(ctx context.Context, agentID, output, context str
 
 		if !stepResult.Passed {
 			result.Passed = false
-			if step.Action == ActionBlock {
+			switch step.Action {
+			case ActionBlock, ActionScanAndBlock:
 				result.Decision = string(ActionBlock)
+			case ActionWarn, ActionScanAndWarn:
+				result.Decision = string(ActionWarn)
+			default:
+				result.Decision = string(ActionWarn)
+			}
+			if result.Decision == string(ActionBlock) {
 				break
 			}
-			result.Decision = string(ActionWarn)
 		}
 	}
 
@@ -267,11 +280,18 @@ type InheritanceResult struct {
 }
 
 // ResolveConstraints merges parent and child constraints per the inheritance rule.
+// Child constraints with the same ID as a parent constraint override it only if
+// they are stronger (higher severity). Downgrade is prevented when a child tries
+// to weaken a parent constraint.
 func ResolveConstraints(agentID, parentAgentID string, parent, child []AgentConstraint) InheritanceResult {
 	result := InheritanceResult{
 		AgentID:        agentID,
 		ParentAgentID:  parentAgentID,
 		OwnConstraints: child,
+	}
+
+	severityRank := map[string]int{
+		"low": 1, "medium": 2, "high": 3, "critical": 4,
 	}
 
 	childByID := make(map[string]AgentConstraint, len(child))
@@ -280,9 +300,25 @@ func ResolveConstraints(agentID, parentAgentID string, parent, child []AgentCons
 	}
 
 	merged := make([]AgentConstraint, 0, len(parent)+len(child))
+	downgradePrevented := false
+
 	for _, c := range parent {
-		merged = append(merged, c)
 		result.InheritedConstraints = append(result.InheritedConstraints, c)
+		if childOverride, ok := childByID[c.ID]; ok {
+			// Child tries to override parent — check severity
+			parentSev := severityRank[c.Severity]
+			childSev := severityRank[childOverride.Severity]
+			if childSev >= parentSev {
+				// Child is stronger or equal — use child's version
+				merged = append(merged, childOverride)
+			} else {
+				// Child is weaker — keep parent's version (downgrade prevented)
+				merged = append(merged, c)
+				downgradePrevented = true
+			}
+		} else {
+			merged = append(merged, c)
+		}
 	}
 
 	for _, c := range child {
@@ -292,7 +328,7 @@ func ResolveConstraints(agentID, parentAgentID string, parent, child []AgentCons
 	}
 
 	result.MergedConstraints = merged
-	result.DowngradePrevented = len(merged) >= len(parent)
+	result.DowngradePrevented = downgradePrevented
 
 	return result
 }

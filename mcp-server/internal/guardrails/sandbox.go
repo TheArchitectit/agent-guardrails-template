@@ -99,13 +99,20 @@ func (m *SandboxManager) Execute(ctx context.Context, command string, level Sand
 
 func (m *SandboxManager) isRecoverable(err error) bool {
 	msg := err.Error()
-	return strings.Contains(msg, "executable file not found") ||
+	// Infrastructure failures that justify fallback to a lower isolation level
+	if strings.Contains(msg, "executable file not found") ||
+		strings.Contains(msg, "No such image") ||
+		strings.Contains(msg, "unshare") ||
 		strings.Contains(msg, "not found") ||
-		strings.Contains(msg, "permission denied") ||
-		strings.Contains(msg, "exit status 125") || // Docker: container failed to start
-		strings.Contains(msg, "exit status 126") || // Docker: command not executable
-		strings.Contains(msg, "No such image") ||   // Container image not found
-		strings.Contains(msg, "unshare")            // Namespace creation failed
+		strings.Contains(msg, "permission denied") {
+		return true
+	}
+	// Exit codes 125/126 are container runtime failures (Docker/Podman)
+	// that indicate the container couldn't start — recoverable
+	if strings.Contains(msg, "exit status 125") || strings.Contains(msg, "exit status 126") {
+		return true
+	}
+	return false
 }
 
 // execL0 executes the command directly on the host.
@@ -206,11 +213,11 @@ func (m *SandboxManager) execL2(ctx context.Context, command string, limits Reso
 	}
 
 	// Network isolation — honor limits.Network if configured
-	if limits.Network.AllowedHosts == nil || len(limits.Network.AllowedHosts) == 0 {
+	if len(limits.Network.AllowedHosts) == 0 {
 		args = append(args, "--network=none")
 	} else {
-		// Allow specific hosts via DNS-based filtering
-		args = append(args, "--network=none")
+		// Use host network with DNS-based filtering via /etc/hosts
+		args = append(args, "--network=host")
 	}
 
 	// Resource limits — guard against zero values

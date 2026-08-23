@@ -25,6 +25,7 @@ func DefaultEngineConfig() *EngineConfig {
 	sandboxCfg := DefaultSandboxConfig()
 	return &EngineConfig{
 		Enabled:       true,
+		Injection:     DefaultPipelineConfig(),
 		ContentFilter: *filterCfg,
 		Sandbox:       *sandboxCfg,
 		Provenance:    provCfg,
@@ -181,7 +182,7 @@ func (e *Engine) Evaluate(ctx context.Context, input EvalInput) *EvalResult {
 	}
 
 	// 2. Injection detection
-	if e.pipeline != nil && input.Text != "" {
+	if e.pipeline != nil && e.config.Injection.Enabled && input.Text != "" {
 		injResult := e.pipeline.Detect(ctx, input.Text, input.Source)
 		result.Injection = &injResult
 		if !injResult.Safe {
@@ -195,7 +196,7 @@ func (e *Engine) Evaluate(ctx context.Context, input EvalInput) *EvalResult {
 	}
 
 	// 3. Content filtering
-	if e.filter != nil && e.filter.config.Enabled && input.Text != "" {
+	if e.filter != nil && e.config.ContentFilter.Enabled && input.Text != "" {
 		contentResult, err := e.filter.Classify(ctx, input.Text, direction)
 		if err != nil {
 			e.logger.Warn("content classification failed", "error", err)
@@ -231,8 +232,14 @@ func (e *Engine) Evaluate(ctx context.Context, input EvalInput) *EvalResult {
 		if err != nil {
 			e.logger.Warn("sandbox execution failed", "error", err)
 			result.Warnings = append(result.Warnings, fmt.Sprintf("sandbox: %v", err))
-		} else {
+		}
+		if sandboxResult != nil {
 			result.Sandbox = sandboxResult
+			// Treat non-zero exit code as a sandbox violation
+			if sandboxResult.ExitCode != 0 {
+				sandboxResult.SandboxViolations = append(sandboxResult.SandboxViolations,
+					fmt.Sprintf("non-zero exit code: %d", sandboxResult.ExitCode))
+			}
 			if len(sandboxResult.SandboxViolations) > 0 {
 				result.Safe = false
 				result.Decision = "block"
@@ -250,15 +257,24 @@ func (e *Engine) Evaluate(ctx context.Context, input EvalInput) *EvalResult {
 
 // DetectInjection is a convenience method for injection-only detection.
 func (e *Engine) DetectInjection(ctx context.Context, text string, source Source) InjectionResult {
+	if e.pipeline == nil {
+		return InjectionResult{Safe: true, Decision: string(FailPolicyLogOnly)}
+	}
 	return e.pipeline.Detect(ctx, text, source)
 }
 
 // ClassifyContent is a convenience method for content-only classification.
 func (e *Engine) ClassifyContent(ctx context.Context, text string, direction ContentDirection) (*ClassificationResult, error) {
+	if e.filter == nil {
+		return &ClassificationResult{Safe: true, Backend: "none"}, nil
+	}
 	return e.filter.Classify(ctx, text, direction)
 }
 
 // ExecuteSandbox is a convenience method for sandbox-only execution.
 func (e *Engine) ExecuteSandbox(ctx context.Context, command string, level SandboxLevel, limits ResourceLimits) (*SandboxResult, error) {
+	if e.sandbox == nil {
+		return &SandboxResult{ExitCode: 0}, nil
+	}
 	return e.sandbox.Execute(ctx, command, level, limits)
 }

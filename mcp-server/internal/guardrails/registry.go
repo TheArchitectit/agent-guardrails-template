@@ -107,16 +107,28 @@ func (r *Registry) EvaluateFileEdit(ctx context.Context, filePath, content, sess
 }
 
 func (r *Registry) EvaluateInput(ctx context.Context, input string, categories []string) ([]domain.Violation, error) {
-	// Route to appropriate evaluator based on category
+	// Collect violations from ALL matching categories (not just the first)
+	var allViolations []domain.Violation
 	for _, cat := range categories {
 		switch cat {
 		case "bash", "command":
-			return r.EvaluateCommand(ctx, input)
+			violations, err := r.EvaluateCommand(ctx, input)
+			if err != nil {
+				return nil, err
+			}
+			allViolations = append(allViolations, violations...)
 		case "git":
-			return r.EvaluateGit(ctx, input)
+			violations, err := r.EvaluateGit(ctx, input)
+			if err != nil {
+				return nil, err
+			}
+			allViolations = append(allViolations, violations...)
 		case "file_edit":
-			return nil, nil // file_edit requires file path, can't evaluate generically
+			// file_edit requires file path, skip generic evaluation
 		}
+	}
+	if len(allViolations) > 0 {
+		return allViolations, nil
 	}
 	// Default: try bash
 	return r.EvaluateCommand(ctx, input)
@@ -126,7 +138,9 @@ func (r *Registry) CheckFileRead(ctx context.Context, sessionID, filePath string
 	if r.transport != nil {
 		return r.transport.CheckFileRead(ctx, sessionID, filePath)
 	}
-	return &domain.FileReadVerification{WasRead: true}, nil
+	// No transport configured — cannot verify file reads.
+	// Return false to fail-closed rather than silently passing.
+	return &domain.FileReadVerification{WasRead: false}, nil
 }
 
 // Ensure Registry implements domain.GuardrailService

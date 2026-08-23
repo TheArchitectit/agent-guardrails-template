@@ -26,17 +26,6 @@ const (
 	DirectionOutput ContentDirection = "output"
 )
 
-// RiskLevel maps overall risk scores to human-readable levels.
-type RiskLevel string
-
-const (
-	RiskLevelNone     RiskLevel = "none"
-	RiskLevelLow      RiskLevel = "low"
-	RiskLevelMedium   RiskLevel = "medium"
-	RiskLevelHigh     RiskLevel = "high"
-	RiskLevelCritical RiskLevel = "critical"
-)
-
 // CategoryResult is the classification result for a single safety category.
 type CategoryResult struct {
 	ID     string  `json:"id"`
@@ -100,14 +89,19 @@ type ContentFilter struct {
 
 // NewContentFilter creates a content filter with the specified backends and policies.
 func NewContentFilter(backends []SemanticClassifier, policies []PolicyRule, opts ...FilterOption) *ContentFilter {
+	cfg := DefaultFilterConfig()
 	cf := &ContentFilter{
 		backends:     backends,
-		policyEngine: NewPolicyEngine(policies),
+		policyEngine: NewPolicyEngineWithThresholds(policies, cfg.Thresholds),
 		cache:        NewResultCache(60 * time.Second),
-		config:       DefaultFilterConfig(),
+		config:       cfg,
 	}
 	for _, opt := range opts {
 		opt(cf)
+	}
+	// Rebuild policy engine if config was overridden
+	if cf.config != nil {
+		cf.policyEngine = NewPolicyEngineWithThresholds(policies, cf.config.Thresholds)
 	}
 	return cf
 }
@@ -150,7 +144,14 @@ func (cf *ContentFilter) Classify(ctx context.Context, text string, direction Co
 	var categoryScores map[string]float64
 	var backendUsed string
 
-	for _, backend := range cf.backends {
+	// Take a snapshot of backends under read lock to avoid data race
+	// with concurrent AddContentFilterBackend calls.
+	cf.mu.RLock()
+	backends := make([]SemanticClassifier, len(cf.backends))
+	copy(backends, cf.backends)
+	cf.mu.RUnlock()
+
+	for _, backend := range backends {
 		if !backend.Available(ctx) {
 			slog.Debug("Backend unavailable, skipping",
 				"backend", backend.Name(),
@@ -174,6 +175,12 @@ func (cf *ContentFilter) Classify(ctx context.Context, text string, direction Co
 
 	if categoryScores == nil {
 		if cf.config.FailPolicy == ContentFailPolicyBlock {
+			// Fail-closed: block content when backends unavailable.
+			// Return the block result without an error — the result IS the decision.
+			errMsg := "all backends unavailable"
+			if lastErr != nil {
+				errMsg = fmt.Sprintf("all backends failed: %v", lastErr)
+			}
 			return &ClassificationResult{
 				Safe:        false,
 				OverallRisk: 1.0,
@@ -182,12 +189,12 @@ func (cf *ContentFilter) Classify(ctx context.Context, text string, direction Co
 					Name:   "System Error",
 					Score:  1.0,
 					Action: ActionBlock,
-					Reason: "All classification backends unavailable",
+					Reason: errMsg,
 				}},
-				Backend:   "fail-open",
+				Backend:   "fail-closed",
 				LatencyMs: time.Since(startTime).Milliseconds(),
 				Direction: direction,
-			}, fmt.Errorf("all backends failed: %w", lastErr)
+			}, nil
 		}
 		slog.Warn("All classification backends failed, failing open",
 			"text_len", len(text),
@@ -206,7 +213,8 @@ func (cf *ContentFilter) Classify(ctx context.Context, text string, direction Co
 
 	cf.cache.Set(cacheKey, result)
 
-	return result, nil
+	// Return a copy so the caller cannot mutate the cached entry.
+	return copyResult(result), nil
 }
 
 // CheckPolicy checks if text complies with a specific named policy.
