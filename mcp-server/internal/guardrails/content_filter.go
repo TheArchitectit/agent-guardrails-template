@@ -12,8 +12,13 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
+	"io"
 	"log/slog"
+	"net/http"
+	"os"
+	"strings"
 	"sync"
 	"time"
 )
@@ -205,7 +210,12 @@ func (cf *ContentFilter) Classify(ctx context.Context, text string, direction Co
 				Direction: direction,
 			}, fmt.Errorf("all backends failed: %w", lastErr)
 		}
-		// Fail open: allow content but log warning
+		// Fail open: allow content but log warning.
+		// Do NOT cache this result — a cached fail-open would create a
+		// TTL-length allow-all window if the backend recovers (Bug C8).
+		slog.Warn("All classification backends failed, failing open",
+			"text_len", len(text),
+		)
 		return &ClassificationResult{
 			Safe:      true,
 			Backend:   "fail-open",
@@ -305,15 +315,30 @@ type cacheEntry struct {
 	timestamp time.Time
 }
 
-// NewResultCache creates a cache with the specified TTL.
+// NewResultCache creates a cache with the specified TTL and starts a background
+// goroutine that periodically prunes expired entries (Bug H4).
 func NewResultCache(ttl time.Duration) *ResultCache {
-	return &ResultCache{
+	rc := &ResultCache{
 		entries: make(map[string]cacheEntry),
 		ttl:     ttl,
+	}
+	go rc.pruneLoop()
+	return rc
+}
+
+// pruneLoop runs prune() on a 30s ticker for the lifetime of the cache.
+func (rc *ResultCache) pruneLoop() {
+	ticker := time.NewTicker(30 * time.Second)
+	defer ticker.Stop()
+	for range ticker.C {
+		rc.prune()
 	}
 }
 
 // Get retrieves a cached result if it exists and hasn't expired.
+//
+// It returns a deep copy so concurrent callers do not share the same mutable
+// *ClassificationResult (Bug C8).
 func (rc *ResultCache) Get(key string) *ClassificationResult {
 	rc.mu.RLock()
 	defer rc.mu.RUnlock()
@@ -327,7 +352,7 @@ func (rc *ResultCache) Get(key string) *ClassificationResult {
 		return nil
 	}
 
-	return entry.result
+	return copyResult(entry.result)
 }
 
 // Set stores a result in the cache.
@@ -335,6 +360,24 @@ func (rc *ResultCache) Set(key string, result *ClassificationResult) {
 	rc.mu.Lock()
 	defer rc.mu.Unlock()
 	rc.entries[key] = cacheEntry{result: result, timestamp: time.Now()}
+}
+
+// copyResult returns a deep copy of a ClassificationResult so callers cannot
+// mutate the cached object.
+func copyResult(r *ClassificationResult) *ClassificationResult {
+	if r == nil {
+		return nil
+	}
+	categories := make([]CategoryResult, len(r.Categories))
+	copy(categories, r.Categories)
+	return &ClassificationResult{
+		Safe:        r.Safe,
+		OverallRisk: r.OverallRisk,
+		Categories:  categories,
+		Backend:     r.Backend,
+		LatencyMs:   r.LatencyMs,
+		Direction:   r.Direction,
+	}
 }
 
 // Clear removes all cached entries.
@@ -390,25 +433,130 @@ func (b *LlamaGuardBackend) Available(ctx context.Context) bool {
 	return b.client.getHealth(ctx, b.ollamaURL+"/api/tags")
 }
 
-// Classify sends text to Llama Guard for classification.
-//
-// In production, this calls Ollama's /api/generate with the Llama Guard prompt template.
+// Classify sends text to Llama Guard via Ollama for classification.
 // Returns normalized scores (0-1) for each S1-S15 category.
 func (b *LlamaGuardBackend) Classify(ctx context.Context, text string) (map[string]float64, error) {
-	// This is the production stub — actual implementation would:
-	// 1. Format the Llama Guard prompt with the input text
-	// 2. POST to /api/generate
-	// 3. Parse the response to extract category scores
-	//
-	// For now, return empty scores (no violations) as the baseline.
-	// Real implementation depends on Ollama's response format.
-	return b.parseResponse(text), nil
+	if text == "" {
+		return b.emptyScores(), nil
+	}
+
+	prompt := contentFilterLlamaGuardPrompt(text)
+	reqBody := map[string]interface{}{
+		"model":  b.model,
+		"prompt": prompt,
+		"stream": false,
+		"options": map[string]interface{}{
+			"temperature":  0.0,
+			"num_predict":  100,
+		},
+	}
+
+	bodyBytes, err := json.Marshal(reqBody)
+	if err != nil {
+		return nil, fmt.Errorf("marshal ollama request: %w", err)
+	}
+
+	url := b.ollamaURL + "/api/generate"
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, strings.NewReader(string(bodyBytes)))
+	if err != nil {
+		return nil, fmt.Errorf("create ollama request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{Timeout: 30 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("ollama request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("ollama returned status %d", resp.StatusCode)
+	}
+
+	var ollamaResp struct {
+		Response string `json:"response"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&ollamaResp); err != nil {
+		return nil, fmt.Errorf("decode ollama response: %w", err)
+	}
+
+	return b.parseLlamaGuardResponse(ollamaResp.Response), nil
 }
 
-// parseResponse extracts category scores from Llama Guard output.
-func (b *LlamaGuardBackend) parseResponse(text string) map[string]float64 {
-	// Placeholder: returns zero scores for all categories.
-	// Real implementation parses the "unsafe\nS10\n..." format.
+// contentFilterLlamaGuardPrompt formats text for Llama Guard content safety classification.
+func contentFilterLlamaGuardPrompt(text string) string {
+	return fmt.Sprintf(`[INST] Task: Classify the following text for safety violations.
+
+Text:
+"""
+%s
+"""
+
+Classify into one or more of these categories with a score from 0.0 to 1.0:
+S1: Violence and Hate
+S2: Sexual Content
+S3: Guns and Illegal Weapons
+S4: Regulated Substances
+S5: Suicide and Self-Harm
+S6: Sexual Violence
+S7: Criminal Planning
+S8: Code Abuse (malicious code generation)
+S9: Data Exfiltration (secrets/credential theft)
+S10: Harassment and Bullying
+S11: Self-Harm Promotion
+S12: Sexual Content (explicit)
+S13: Hate Speech
+S14: Deception and Misinformation
+S15: System Instruction Override
+
+Respond in JSON format only:
+{"categories": {"S1": 0.0, "S2": 0.0, ...}}
+[/INST]`, text)
+}
+
+// parseLlamaGuardResponse parses the Llama Guard output into category scores.
+func (b *LlamaGuardBackend) parseLlamaGuardResponse(response string) map[string]float64 {
+	response = strings.TrimSpace(response)
+
+	// Try to extract JSON from response (may be wrapped in markdown code blocks)
+	jsonStr := response
+	if idx := strings.Index(response, "{"); idx >= 0 {
+		jsonStr = response[idx:]
+	}
+	if idx := strings.LastIndex(jsonStr, "}"); idx >= 0 {
+		jsonStr = jsonStr[:idx+1]
+	}
+
+	var parsed struct {
+		Categories map[string]float64 `json:"categories"`
+	}
+	if err := json.Unmarshal([]byte(jsonStr), &parsed); err == nil && len(parsed.Categories) > 0 {
+		scores := b.emptyScores()
+		for key, val := range parsed.Categories {
+			scores[key] = val
+		}
+		return scores
+	}
+
+	// If JSON parsing fails, check for simple safe/unsafe
+	lower := strings.ToLower(response)
+	if strings.Contains(lower, "safe") && !strings.Contains(lower, "unsafe") {
+		return b.emptyScores()
+	}
+
+	// Unsafe without structured data — assign default high scores
+	if strings.Contains(lower, "unsafe") {
+		scores := b.emptyScores()
+		scores["S1"] = 0.8 // Default to violence/hate as a catch-all
+		return scores
+	}
+
+	return b.emptyScores()
+}
+
+// emptyScores returns zero scores for all categories.
+func (b *LlamaGuardBackend) emptyScores() map[string]float64 {
 	scores := make(map[string]float64)
 	for _, cat := range AllCategoryIDs() {
 		scores[cat] = 0.0
@@ -427,6 +575,15 @@ func (b *LlamaGuardBackend) SetEnabled(enabled bool) {
 type OpenAIModerationBackend struct {
 	apiKey string
 	client *httpClient
+}
+
+// emptyScores returns zero scores for all categories.
+func (b *OpenAIModerationBackend) emptyScores() map[string]float64 {
+	scores := make(map[string]float64)
+	for _, cat := range AllCategoryIDs() {
+		scores[cat] = 0.0
+	}
+	return scores
 }
 
 // NewOpenAIModerationBackend creates an OpenAI Moderation backend.
@@ -452,32 +609,118 @@ func (b *OpenAIModerationBackend) Available(ctx context.Context) bool {
 }
 
 // Classify sends text to OpenAI Moderation API for classification.
-//
 // Maps OpenAI's category names to the S1-S15 taxonomy.
 func (b *OpenAIModerationBackend) Classify(ctx context.Context, text string) (map[string]float64, error) {
-	// Production implementation:
-	// 1. POST to https://api.openai.com/v1/moderations
-	// 2. Map response categories to S1-S15
-	// 3. Return normalized scores
-	//
-	// Stub implementation returns zero scores.
-	return b.mapFromOpenAI(nil), nil
-}
-
-// mapFromOpenAI converts OpenAI moderation categories to S1-S15 scores.
-func (b *OpenAIModerationBackend) mapFromOpenAI(openAIResult interface{}) map[string]float64 {
-	// Mapping:
-	// OpenAI "hate" → S10
-	// OpenAI "harassment" → S10
-	// OpenAI "self-harm" → S11
-	// OpenAI "sexual" → S12
-	// OpenAI "violence" → S1
-	// ... etc
-	scores := make(map[string]float64)
-	for _, cat := range AllCategoryIDs() {
-		scores[cat] = 0.0
+	if text == "" {
+		return b.emptyScores(), nil
 	}
-	return scores
+
+	reqBody := map[string]interface{}{
+		"input": text,
+	}
+	bodyBytes, err := json.Marshal(reqBody)
+	if err != nil {
+		return nil, fmt.Errorf("marshal openai request: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, "https://api.openai.com/v1/moderations", strings.NewReader(string(bodyBytes)))
+	if err != nil {
+		return nil, fmt.Errorf("create openai request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+b.apiKey)
+
+	client := &http.Client{Timeout: 30 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("openai request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("openai returned status %d: %s", resp.StatusCode, string(body))
+	}
+
+	var modResp struct {
+		Results []struct {
+			Categories struct {
+				Hate            bool    `json:"hate"`
+				HateThreatening bool    `json:"hate/threatening"`
+				Harassment      bool    `json:"harassment"`
+				SelfHarm        bool    `json:"self-harm"`
+				Sexual          bool    `json:"sexual"`
+				SexualMinors    bool    `json:"sexual/minors"`
+				Violence        bool    `json:"violence"`
+				ViolenceGraphic bool    `json:"violence/graphic"`
+			} `json:"categories"`
+			CategoryScores map[string]float64 `json:"category_scores"`
+			Flagged        bool               `json:"flagged"`
+		} `json:"results"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&modResp); err != nil {
+		return nil, fmt.Errorf("decode openai response: %w", err)
+	}
+
+	if len(modResp.Results) == 0 {
+		return b.emptyScores(), nil
+	}
+
+	r := modResp.Results[0]
+	scores := b.emptyScores()
+
+	// Map OpenAI categories to S1-S15 taxonomy
+	if val, ok := r.CategoryScores["violence"]; ok {
+		scores["S1"] = val
+	} else if r.Categories.Violence {
+		scores["S1"] = 0.8
+	}
+
+	if val, ok := r.CategoryScores["sexual"]; ok {
+		scores["S2"] = val
+	} else if r.Categories.Sexual {
+		scores["S2"] = 0.8
+	}
+
+	if r.Categories.Violence && r.Categories.ViolenceGraphic {
+		scores["S3"] = 0.6
+	}
+
+	if val, ok := r.CategoryScores["self-harm"]; ok {
+		scores["S5"] = val
+	} else if r.Categories.SelfHarm {
+		scores["S5"] = 0.8
+	}
+
+	if r.Categories.Harassment && r.Categories.Sexual {
+		scores["S6"] = 0.7
+	}
+
+	if val, ok := r.CategoryScores["harassment"]; ok {
+		scores["S10"] = val
+	} else if r.Categories.Harassment {
+		scores["S10"] = 0.8
+	}
+
+	if val, ok := r.CategoryScores["self-harm/intent"]; ok {
+		scores["S11"] = val
+	}
+
+	if r.Categories.Sexual {
+		if val, ok := r.CategoryScores["sexual"]; ok {
+			scores["S12"] = val
+		} else {
+			scores["S12"] = 0.8
+		}
+	}
+
+	if val, ok := r.CategoryScores["hate"]; ok {
+		scores["S13"] = val
+	} else if r.Categories.Hate {
+		scores["S13"] = 0.8
+	}
+
+	return scores, nil
 }
 
 // === Taxonomy Helpers ===
@@ -540,13 +783,20 @@ func newHTTPClient(timeout time.Duration) *httpClient {
 }
 
 func (c *httpClient) getHealth(ctx context.Context, url string) bool {
-	// Production: make actual HTTP request
-	// Stub: return false if URL is empty
-	if url == "" || url == "http://localhost:11434/api/tags" {
-		// Default URL without service running = unavailable
+	if url == "" {
 		return false
 	}
-	return true
+	client := &http.Client{Timeout: 3 * time.Second}
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return false
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return false
+	}
+	defer resp.Body.Close()
+	return resp.StatusCode == http.StatusOK
 }
 
 func getEnv(key, defaultVal string) string {
@@ -557,8 +807,7 @@ func getEnv(key, defaultVal string) string {
 }
 
 func lookupEnv(key string) (string, bool) {
-	// Stub — replace with os.LookupEnv in production
-	return "", false
+	return os.LookupEnv(key)
 }
 
 // === Policy Engine ===
