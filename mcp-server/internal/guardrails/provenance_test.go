@@ -197,6 +197,44 @@ func TestMatchPattern_Extension(t *testing.T) {
 	}
 }
 
+func TestMatchPattern_GlobPatterns(t *testing.T) {
+	tests := []struct {
+		name    string
+		pattern string
+		path    string
+		want    bool
+	}{
+		// Single * wildcard (mid-string)
+		{"api.internal wildcard", "api.internal.*", "api.internal.example.com", true},
+		{"api.internal no match", "api.internal.*", "api.external.example.com", false},
+		{"api.internal exact", "api.internal.*", "api.internal.", true},
+		// ** recursive glob
+		{"docs nested md", "docs/**/*.md", "docs/foo/bar.md", true},
+		{"docs single md", "docs/**/*.md", "docs/foo.md", true},
+		{"docs no match", "docs/**/*.md", "docs/foo/bar.txt", false},
+		{"docs wrong prefix", "docs/**/*.md", "other/foo/bar.md", false},
+		// Exact match
+		{"exact match", "CLAUDE.md", "CLAUDE.md", true},
+		{"exact any depth", "CLAUDE.md", "subdir/CLAUDE.md", true},
+		// Wildcard *
+		{"star matches all", "*", "anything/at/all", true},
+		// Substring (no wildcards)
+		{"github substring", "github.com", "https://github.com/user/repo", true},
+		{"github no match", "github.com", "https://gitlab.com/user/repo", false},
+		// localhost should NOT match evil-localhost.xyz
+		{"localhost exact", "localhost", "localhost", true},
+		{"localhost false trust", "localhost", "https://evil-localhost.xyz/attack", false},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := matchPattern(tc.pattern, tc.path)
+			if got != tc.want {
+				t.Errorf("matchPattern(%q, %q) = %v, want %v", tc.pattern, tc.path, got, tc.want)
+			}
+		})
+	}
+}
+
 // ---------------------------------------------------------------------------
 // Unicode sanitization unit tests
 // ---------------------------------------------------------------------------
