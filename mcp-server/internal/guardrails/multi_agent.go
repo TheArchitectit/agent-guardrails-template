@@ -17,6 +17,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"regexp"
 	"sort"
 	"strings"
 	"sync"
@@ -595,25 +596,44 @@ func NewFourLawsValidator(scopePatterns []string) *FourLawsValidator {
 	return &FourLawsValidator{scopePatterns: scopePatterns}
 }
 
+// normalizeWhitespace strips zero-width characters and collapses runs of
+// whitespace to a single space so harmful-command checks can't be trivially
+// bypassed with invisible or decorative spacing (e.g. "rm -rf /​" or
+// "r'''m -rf /").
+func normalizeWhitespace(s string) string {
+	// Drop zero-width / control characters used to evade pattern matching.
+	zeroWidth := regexp.MustCompile(`[\x{200B}\x{200C}\x{200D}\x{2060}\x{FEFF}\x{00AD}]`)
+	s = zeroWidth.ReplaceAllString(s, "")
+	// Collapse all whitespace runs (spaces, tabs, newlines, etc.) to one space.
+	ws := regexp.MustCompile(`\s+`)
+	return ws.ReplaceAllString(s, " ")
+}
+
 // Validate implements SafetyValidator.
 func (v *FourLawsValidator) Validate(ctx context.Context, input ValidatorInput) (*ValidatorResult, error) {
 	output := input.Output
 
-	// Law 1: Check for harmful commands (destructive, exfiltration, etc.)
-	harmPatterns := []string{
-		"rm -rf /",
-		"mkfs.",
-		"dd if=/dev/zero",
-		":(){:|:&};:", // fork bomb
-		"chmod -R 777 /",
-		"> /dev/sda",
+	// Normalize so malicious spacing/zero-width tricks can't bypass checks.
+	norm := normalizeWhitespace(output)
+	lowerNorm := strings.ToLower(norm)
+
+	// Law 1: Check for harmful commands (destructive, fork bomb, etc.)
+	// Patterns use flexible whitespace so variants like "rm -rf /",
+	// "rm -rf /​" (zero-width), or ":(){ :|:&};:" still match.
+	harmPatterns := []*regexp.Regexp{
+		regexp.MustCompile(`rm\s+-rf\s+/`),
+		regexp.MustCompile(`mkfs\.[a-z0-9]+`),
+		regexp.MustCompile(`dd\s+if=/dev/zero`),
+		regexp.MustCompile(`:\(\)\s*\{\s*:\s*\|\s*:\s*&\s*\}\s*;\s*:`), // fork bomb
+		regexp.MustCompile(`chmod\s+-R\s+777\s+/`),
+		regexp.MustCompile(`>\s*/dev/sda`),
 	}
 
-	for _, p := range harmPatterns {
-		if strings.Contains(output, p) {
+	for _, re := range harmPatterns {
+		if re.MatchString(norm) {
 			return &ValidatorResult{
 				Passed:     false,
-				Reason:     fmt.Sprintf("Law 1 violation: destructive command detected (%s)", p),
+				Reason:     fmt.Sprintf("Law 1 violation: destructive command detected (%s)", re.String()),
 				Violations: []string{"harmful_command"},
 				Confidence: 1.0,
 			}, nil
@@ -634,18 +654,19 @@ func (v *FourLawsValidator) Validate(ctx context.Context, input ValidatorInput) 
 		}
 	}
 
-	// Law 4: Check for data exfiltration patterns
-	exfilPatterns := []string{
-		"curl.*pastebin",
-		"wget.*pastebin",
-		"curl.*webhook",
-		"nslookup.*control",
+	// Law 4: Check for data exfiltration patterns. These use real regex so
+	// "curl http://pastebin.com" actually matches the intended "curl.*pastebin".
+	exfilPatterns := []*regexp.Regexp{
+		regexp.MustCompile(`curl.*pastebin`),
+		regexp.MustCompile(`wget.*pastebin`),
+		regexp.MustCompile(`curl.*webhook`),
+		regexp.MustCompile(`nslookup.*control`),
 	}
-	for _, p := range exfilPatterns {
-		if strings.Contains(strings.ToLower(output), p) {
+	for _, re := range exfilPatterns {
+		if re.MatchString(lowerNorm) {
 			return &ValidatorResult{
 				Passed:     false,
-				Reason:     fmt.Sprintf("Law 4 violation: potential data exfiltration (%s)", p),
+				Reason:     fmt.Sprintf("Law 4 violation: potential data exfiltration (%s)", re.String()),
 				Violations: []string{"data_exfiltration"},
 				Confidence: 0.95,
 			}, nil
