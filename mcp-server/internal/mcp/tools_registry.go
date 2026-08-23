@@ -622,6 +622,10 @@ func (s *MCPServer) toolList() []mcp.Tool {
 		},
 	}
 
+	// Semantic content filtering tools (always registered; return a
+	// not-configured result until the guardrails engine is set).
+	tools = append(tools, s.guardrailsToolList()...)
+
 	if s.visionTools != nil {
 		tools = append(tools, s.visionTools.visionToolList()...)
 	}
