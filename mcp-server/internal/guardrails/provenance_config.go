@@ -3,7 +3,6 @@ package guardrails
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 	"time"
 
 	"gopkg.in/yaml.v3"
@@ -158,37 +157,3 @@ var (
 	errInvalidTrustLevel = fmt.Errorf("trust_level must be trusted, untrusted, or unknown")
 	errInvalidAction     = fmt.Errorf("action must be allow, scan_and_warn, or scan_and_block")
 )
-
-// getEnvOrDefault returns the environment variable value or a default.
-func getEnvOrDefault(key, defaultVal string) string {
-	if v, ok := os.LookupEnv(key); ok {
-		return v
-	}
-	return defaultVal
-}
-
-// ConfigFromEnv creates a provenance config with environment overrides.
-func ConfigFromEnv() *ProvenanceConfig {
-	cfg := DefaultProvenanceConfig()
-
-	if v := getEnvOrDefault("GUARDRAILS_PROVENANCE_ENABLED", ""); v != "" {
-		cfg.Enabled = v == "true"
-	}
-	if v := getEnvOrDefault("GUARDRAILS_PROVENANCE_CACHE_TTL", ""); v != "" {
-		if n := parseInt(v); n >= 0 {
-			cfg.CacheTTL = n
-		}
-	}
-
-	return cfg
-}
-
-// parseInt is a simple helper to parse an integer from string.
-func parseInt(s string) int {
-	var n int
-	_, _ = fmt.Sscanf(s, "%d", &n)
-	return n
-}
-
-// Ensure ConfigFromEnv is used (avoids unused import warnings)
-var _ = filepath.Join

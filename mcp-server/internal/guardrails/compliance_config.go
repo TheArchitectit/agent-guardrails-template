@@ -27,7 +27,7 @@ func DefaultComplianceConfig() *ComplianceConfig {
 
 // Validate checks the config for errors.
 func (c *ComplianceConfig) Validate() error {
-	if c.ReportFormat != "json" && c.ReportFormat != "markdown" {
+	if ReportFormat(c.ReportFormat) != FormatJSON && ReportFormat(c.ReportFormat) != FormatMarkdown {
 		return fmt.Errorf("compliance report_format must be 'json' or 'markdown'")
 	}
 	if len(c.ActiveFrameworks) == 0 && c.Enabled {

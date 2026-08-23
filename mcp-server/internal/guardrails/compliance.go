@@ -137,7 +137,9 @@ func (r *ComplianceReporter) GenerateReport(ctx context.Context, framework strin
 		report.Recommendations = append(report.Recommendations, req.Recommendations...)
 	}
 
-	report.OverallScore = (float64(totalCovered) / float64(totalReqs)) * 100
+	if totalReqs > 0 {
+		report.OverallScore = (float64(totalCovered) / float64(totalReqs)) * 100
+	}
 
 	// Organize into a single section for this simple implementation
 	report.Sections = append(report.Sections, ComplianceSection{
