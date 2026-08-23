@@ -19,11 +19,23 @@ type provCacheEntry struct {
 	expiresAt time.Time
 }
 
-// NewInMemoryProvenanceCache creates a new in-memory provenance cache.
+// NewInMemoryProvenanceCache creates a new in-memory provenance cache and starts
+// a background goroutine that periodically prunes expired entries.
 func NewInMemoryProvenanceCache(defaultTTL time.Duration) *InMemoryProvenanceCache {
-	return &InMemoryProvenanceCache{
+	c := &InMemoryProvenanceCache{
 		entries:    make(map[string]provCacheEntry),
 		defaultTTL: defaultTTL,
+	}
+	go c.pruneLoop()
+	return c
+}
+
+// pruneLoop runs Prune() on a 30s ticker for the lifetime of the cache.
+func (c *InMemoryProvenanceCache) pruneLoop() {
+	ticker := time.NewTicker(30 * time.Second)
+	defer ticker.Stop()
+	for range ticker.C {
+		c.Prune()
 	}
 }
 
