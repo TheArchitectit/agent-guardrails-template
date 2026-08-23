@@ -112,7 +112,9 @@ func (pt *ProvenanceTracker) resolveTrust(path string) (SourceTrustLevel, TrustA
 	return TrustLevelUnknown, ActionScanAndWarn
 }
 
-// matchPattern is a helper to check if a path matches a glob-like pattern.
+// matchPattern checks if a path matches a glob-like pattern.
+// Supported: exact match, * (any chars within one segment), ** (any path depth),
+// basename match for simple filenames (no wildcards, no slashes).
 func matchPattern(pattern, path string) bool {
 	// Wildcard matches everything
 	if pattern == "*" {
@@ -122,40 +124,71 @@ func matchPattern(pattern, path string) bool {
 	if pattern == path {
 		return true
 	}
-	// Substring match for domain patterns (e.g. "github.com" in "https://github.com/user/repo")
-	if !strings.Contains(pattern, "*") && strings.Contains(path, pattern) {
-		return true
+	// No wildcards: smart matching based on pattern shape
+	if !strings.Contains(pattern, "*") {
+		if strings.Contains(pattern, "/") {
+			// Path/URL pattern — substring match
+			return strings.Contains(path, pattern)
+		}
+		if strings.Contains(pattern, ".") || strings.Contains(pattern, ":") {
+			// Looks like a hostname/domain — substring match
+			// (github.com matches https://github.com/..., api.internal matches api.internal.example.com)
+			return strings.Contains(path, pattern)
+		}
+		// Simple name without dots/slashes — basename match only
+		// (prevents "localhost" matching "evil-localhost.xyz")
+		basename := path
+		if i := strings.LastIndex(path, "/"); i >= 0 {
+			basename = path[i+1:]
+		}
+		return pattern == basename
 	}
-	// Glob with **: docs/**/*.md matches docs/foo/bar.md
+	// ** glob: prefix / ** / suffix  →  path must start with prefix and end with suffix
+	// The ** itself is the recursive wildcard; remaining suffix after it is a literal tail.
 	if strings.Contains(pattern, "**") {
 		parts := strings.SplitN(pattern, "**", 2)
 		prefix := strings.TrimSuffix(parts[0], "/")
-		suffix := strings.TrimPrefix(parts[1], "/")
+		suffix := strings.TrimLeft(parts[1], "*/")
 		if prefix != "" && !strings.HasPrefix(path, prefix) {
 			return false
 		}
-		if suffix != "" {
-			// Match suffix with simple extension check
-			if suffix[0] == '.' {
-				ext := suffix
-				if len(path) >= len(ext) && path[len(path)-len(ext):] == ext {
-					return true
-				}
-			}
-			return strings.HasSuffix(path, suffix)
+		if suffix != "" && !strings.HasSuffix(path, suffix) {
+			return false
 		}
 		return true
 	}
-	// Basic extension matching (*.json)
-	if len(pattern) > 2 && pattern[0] == '*' && pattern[1] == '.' {
-		ext := pattern[2:]
-		lenPath := len(path)
-		lenExt := len(ext)
-		if lenPath >= lenExt && path[lenPath-lenExt:] == ext {
-			return true
-		}
+	// Single * glob: split on *, each segment must appear in order
+	// e.g. "api.internal.*" matches "api.internal.example.com"
+	// e.g. "*.json" matches "config.json"
+	return globMatch(pattern, path)
+}
+
+// globMatch handles single-* glob patterns by splitting on * and checking
+// that each literal segment appears in the path in order.
+func globMatch(pattern, path string) bool {
+	segments := strings.Split(pattern, "*")
+	if len(segments) == 1 {
+		return pattern == path
 	}
-	return false
+	idx := 0
+	for i, seg := range segments {
+		if seg == "" {
+			continue
+		}
+		pos := strings.Index(path[idx:], seg)
+		if pos < 0 {
+			return false
+		}
+		// First segment must match at start; last segment must match at end
+		if i == 0 && pos != 0 {
+			return false
+		}
+		if i == len(segments)-1 && idx+pos+len(seg) != len(path) {
+			return false
+		}
+		idx += pos + len(seg)
+	}
+	return true
 }
 
 // SanitizeContent applies a cleanup pipeline to untrusted content.
