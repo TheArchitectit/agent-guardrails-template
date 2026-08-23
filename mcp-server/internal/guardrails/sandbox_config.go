@@ -51,6 +51,7 @@ type SandboxPolicy struct {
 // SandboxConfig holds the overall sandbox configuration for the MCP server.
 type SandboxConfig struct {
 	Enabled         bool                     `yaml:"enabled"`
+	Image           string                   `yaml:"image"`            // Container image for L2 (default: alpine:latest)
 	GlobalDefaults  ResourceLimits           `yaml:"global_defaults"`
 	ToolPolicies    map[string]SandboxPolicy `yaml:"tool_policies"`
 	FallbackEnabled bool                     `yaml:"fallback_enabled"` // Fallback L2 -> L1 -> L0

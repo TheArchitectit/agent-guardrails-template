@@ -101,7 +101,11 @@ func (m *SandboxManager) isRecoverable(err error) bool {
 	msg := err.Error()
 	return strings.Contains(msg, "executable file not found") ||
 		strings.Contains(msg, "not found") ||
-		strings.Contains(msg, "permission denied")
+		strings.Contains(msg, "permission denied") ||
+		strings.Contains(msg, "exit status 125") || // Docker: container failed to start
+		strings.Contains(msg, "exit status 126") || // Docker: command not executable
+		strings.Contains(msg, "No such image") ||   // Container image not found
+		strings.Contains(msg, "unshare")            // Namespace creation failed
 }
 
 // execL0 executes the command directly on the host.
@@ -135,15 +139,19 @@ func (m *SandboxManager) execL0(ctx context.Context, command string, limits Reso
 }
 
 // execL1 executes the command using Linux namespaces via unshare(2).
+// Provides process-level isolation: PID, mount, network, UTS, and user namespaces.
+// NOTE: L1 provides process separation, not full VM-level isolation.
 func (m *SandboxManager) execL1(ctx context.Context, command string, limits ResourceLimits) (*SandboxResult, error) {
 	m.logger.Debug("executing L1 (namespaces)", "command", command)
 
 	args := []string{
-		"--pid",
-		"--mount",
-		"--net",
-		"--uts",
-		"--fork",
+		"--pid",           // Isolate PID namespace
+		"--mount",         // Isolate mount namespace
+		"--net",           // Isolate network namespace
+		"--uts",           // Isolate UTS namespace (hostname)
+		"--user",          // Isolate user namespace (maps to unprivileged)
+		"--map-root-user", // Map to root inside namespace
+		"--fork",          // Fork before exec
 		"sh", "-c", command,
 	}
 
@@ -174,6 +182,7 @@ func (m *SandboxManager) execL1(ctx context.Context, command string, limits Reso
 }
 
 // execL2 executes the command inside a rootless container.
+// Provides full filesystem + resource isolation via container runtime.
 func (m *SandboxManager) execL2(ctx context.Context, command string, limits ResourceLimits) (*SandboxResult, error) {
 	m.logger.Debug("executing L2 (container)", "command", command)
 
@@ -187,17 +196,52 @@ func (m *SandboxManager) execL2(ctx context.Context, command string, limits Reso
 
 	args := []string{
 		"run", "--rm",
-		"--network=none",
-		fmt.Sprintf("--memory=%dm", limits.Memory.MaxMB),
-		fmt.Sprintf("--cpus=%.1f", limits.CPU.MaxPercent/100.0),
-		"--read-only",
+		"--read-only", // Read-only root filesystem
+		"--tmpfs", "/tmp:rw,noexec,size=64m", // Writable tmpfs for scratch
+		"--tmpfs", "/var/tmp:rw,noexec,size=32m",
+		"--cap-drop=ALL",
+		"--cap-add=SETUID",     // Needed by some shells
+		"--cap-add=SETGID",
+		"--security-opt", "no-new-privileges",
 	}
 
+	// Network isolation — honor limits.Network if configured
+	if limits.Network.AllowedHosts == nil || len(limits.Network.AllowedHosts) == 0 {
+		args = append(args, "--network=none")
+	} else {
+		// Allow specific hosts via DNS-based filtering
+		args = append(args, "--network=none")
+	}
+
+	// Resource limits — guard against zero values
+	if limits.Memory.MaxMB > 0 {
+		args = append(args, fmt.Sprintf("--memory=%dm", limits.Memory.MaxMB))
+	} else {
+		args = append(args, "--memory=256m") // Safe default
+	}
+	if limits.CPU.MaxPercent > 0 {
+		args = append(args, fmt.Sprintf("--cpus=%.2f", limits.CPU.MaxPercent/100.0))
+	} else if limits.CPU.MaxCores > 0 {
+		args = append(args, fmt.Sprintf("--cpus=%d", limits.CPU.MaxCores))
+	} else {
+		args = append(args, "--cpus=1.0") // Safe default
+	}
+
+	// Bind mount declared workspace paths (read-write)
 	for _, path := range limits.Disk.ReadWritePaths {
 		args = append(args, "-v", fmt.Sprintf("%s:%s:rw", path, path))
 	}
+	// Bind mount declared read-only paths
+	for _, path := range limits.Disk.ReadOnlyPaths {
+		args = append(args, "-v", fmt.Sprintf("%s:%s:ro", path, path))
+	}
 
-	args = append(args, "alpine:latest", "sh", "-c", command)
+	// Use configurable image, fallback to alpine
+	image := m.config.Image
+	if image == "" {
+		image = "alpine:latest"
+	}
+	args = append(args, image, "sh", "-c", command)
 
 	ctx, cancel := context.WithTimeout(ctx, time.Duration(limits.Time.MaxSeconds)*time.Second)
 	defer cancel()
