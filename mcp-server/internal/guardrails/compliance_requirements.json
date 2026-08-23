@@ -1,0 +1,155 @@
+{
+  "eu_ai_act": {
+    "art_9": {
+      "title": "Risk Management System",
+      "description": "High-risk AI systems must have a risk management system that is iterative and takes into account the entire lifecycle of the system.",
+      "required_for": ["high-risk"],
+      "guardrail_features": ["halt_conditions", "four_laws", "sandbox"],
+      "evidence_queries": [
+        "SELECT * FROM guardrail_events WHERE event_type = 'halt_condition_triggered'",
+        "SELECT * FROM audit_logs WHERE event_type = 'policy_update'"
+      ],
+      "compliance_status": "partial",
+      "gaps": [],
+      "recommendations": ["Implement formal risk assessment documentation"]
+    },
+    "art_10": {
+      "title": "Data Governance",
+      "description": "Training, validation and testing data sets shall be subject to appropriate data governance and management practices.",
+      "required_for": ["high-risk"],
+      "guardrail_features": ["content_filter_privacy"],
+      "evidence_queries": [
+        "SELECT * FROM guardrail_events WHERE category = 'S7_privacy' AND action = 'block'"
+      ],
+      "compliance_status": "partial",
+      "gaps": [],
+      "recommendations": ["Extend privacy filters to training data validation"]
+    },
+    "art_12": {
+      "title": "Logging for Traceability",
+      "description": "High-risk AI systems must be designed to enable automatic recording of events over the lifetime of the system.",
+      "required_for": ["high-risk"],
+      "guardrail_features": ["audit_trail", "tool_call_logging", "guardrail_decisions"],
+      "evidence_queries": [
+        "SELECT * FROM audit_logs WHERE event_type = 'guardrail_decision' AND created_at > ?",
+        "SELECT * FROM guardrail_events WHERE event = 'injection_detected'"
+      ],
+      "compliance_status": "full",
+      "gaps": [],
+      "recommendations": []
+    },
+    "art_13": {
+      "title": "Transparency",
+      "description": "High-risk AI systems shall be designed and developed in such a way that their operation is sufficiently transparent to enable users to interpret the system's output.",
+      "required_for": ["high-risk"],
+      "guardrail_features": ["behavior_logging", "provenance_tracking"],
+      "evidence_queries": [
+        "SELECT * FROM audit_logs WHERE event_type = 'tool_execution'"
+      ],
+      "compliance_status": "partial",
+      "gaps": [],
+      "recommendations": ["Add human-readable explanations for guardrail blocks"]
+    },
+    "art_14": {
+      "title": "Human Oversight",
+      "description": "High-risk AI systems shall be designed and developed in such a way that they can be effectively overseen by natural persons.",
+      "required_for": ["high-risk"],
+      "guardrail_features": ["halt_conditions", "human_review_trigger"],
+      "evidence_queries": [
+        "SELECT * FROM guardrail_events WHERE event_type = 'human_review_required'"
+      ],
+      "compliance_status": "full",
+      "gaps": [],
+      "recommendations": []
+    },
+    "art_15": {
+      "title": "Accuracy, Robustness and Cybersecurity",
+      "description": "High-risk AI systems shall be designed and developed in such a way that they achieve an appropriate level of accuracy, robustness and cybersecurity.",
+      "required_for": ["high-risk"],
+      "guardrail_features": ["injection_defense", "sandbox_isolation"],
+      "evidence_queries": [
+        "SELECT * FROM guardrail_events WHERE event = 'injection_detected'",
+        "SELECT * FROM sandbox_logs WHERE violation = 'security_boundary_breach'"
+      ],
+      "compliance_status": "partial",
+      "gaps": [],
+      "recommendations": ["Implement automated red-teaming for injection"]
+    },
+    "art_50": {
+      "title": "AI-Generated Content",
+      "description": "AI systems that generate or manipulate text, images, audio or video shall ensure that the outputs are marked as being AI-generated.",
+      "required_for": ["all"],
+      "guardrail_features": ["content_filter_watermark"],
+      "evidence_queries": [
+        "SELECT * FROM audit_logs WHERE event_type = 'content_watermarked'"
+      ],
+      "compliance_status": "gap",
+      "gaps": ["No content watermarking implemented"],
+      "recommendations": ["Implement digital watermarking for all AI-generated outputs"]
+    }
+  },
+  "nist_rmf": {
+    "govern": {
+      "title": "Govern",
+      "description": "Establish and maintain a risk management culture and governance structure.",
+      "required_for": ["all"],
+      "guardrail_features": ["four_laws", "policy_management"],
+      "evidence_queries": [
+        "SELECT * FROM audit_logs WHERE event_type = 'policy_update'"
+      ],
+      "compliance_status": "full",
+      "gaps": [],
+      "recommendations": []
+    },
+    "map": {
+      "title": "Map",
+      "description": "Identify and document the AI system's context and the risks it may pose.",
+      "required_for": ["all"],
+      "guardrail_features": ["risk_assessment_logs", "provenance_analysis"],
+      "evidence_queries": [
+        "SELECT * FROM guardrail_events WHERE event_type = 'risk_profile_generated'"
+      ],
+      "compliance_status": "partial",
+      "gaps": [],
+      "recommendations": ["Integrate automated impact assessment tools"]
+    },
+    "measure": {
+      "title": "Measure",
+      "description": "Assess and measure the AI system's risks and the effectiveness of the guardrails.",
+      "required_for": ["all"],
+      "guardrail_features": ["audit_trail", "metrics_exporter"],
+      "evidence_queries": [
+        "SELECT * FROM audit_logs WHERE event_type = 'metric_snapshot'"
+      ],
+      "compliance_status": "full",
+      "gaps": [],
+      "recommendations": []
+    },
+    "manage": {
+      "title": "Manage",
+      "description": "Prioritize and act upon the risks identified and measured.",
+      "required_for": ["all"],
+      "guardrail_features": ["halt_conditions", "sandbox_isolation"],
+      "evidence_queries": [
+        "SELECT * FROM guardrail_events WHERE event_type = 'halt_condition_triggered'"
+      ],
+      "compliance_status": "full",
+      "gaps": [],
+      "recommendations": []
+    }
+  },
+  "iso_42001": {
+    "ai_management": {
+      "title": "AI Management System",
+      "description": "Establish and maintain an AI management system (AIMS) to manage risks and opportunities.",
+      "required_for": ["all"],
+      "guardrail_features": ["audit_trail", "policy_engine"],
+      "evidence_queries": [
+        "SELECT * FROM audit_logs WHERE event_type = 'system_config_change'"
+      ],
+      "compliance_status": "partial",
+      "gaps": [],
+      "recommendations": ["Map policies to ISO 42001 control objectives"]
+    }
+  }
+}
