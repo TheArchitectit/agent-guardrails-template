@@ -144,21 +144,21 @@ Text:
 """
 
 Classify into one or more of these categories with a score from 0.0 to 1.0:
-S1: Violence and Hate
-S2: Sexual Content
-S3: Guns and Illegal Weapons
-S4: Regulated Substances
-S5: Suicide and Self-Harm
-S6: Sexual Violence
-S7: Criminal Planning
-S8: Code Abuse (malicious code generation)
-S9: Data Exfiltration (secrets/credential theft)
-S10: Harassment and Bullying
-S11: Self-Harm Promotion
-S12: Sexual Content (explicit)
-S13: Hate Speech
-S14: Deception and Misinformation
-S15: System Instruction Override
+S1: Violent Crimes
+S2: Non-Violent Crimes
+S3: Sex Crimes
+S4: Child Exploitation
+S5: Defamation
+S6: Specialized Advice
+S7: Privacy
+S8: Intellectual Property
+S9: Indiscriminate Weapons
+S10: Hate
+S11: Self-Harm
+S12: Sexual Content
+S13: Elections
+S14: Code Abuse (malicious code generation)
+S15: Data Exfiltration (secrets/credential theft)
 
 Respond in JSON format only:
 {"categories": {"S1": 0.0, "S2": 0.0, ...}}
@@ -219,7 +219,6 @@ func (b *LlamaGuardBackend) SetEnabled(enabled bool) {
 // OpenAIModerationBackend implements SemanticClassifier for the OpenAI Moderation API.
 type OpenAIModerationBackend struct {
 	apiKey string
-	client *httpClient
 }
 
 func (b *OpenAIModerationBackend) emptyScores() map[string]float64 {
@@ -237,7 +236,6 @@ func NewOpenAIModerationBackend(apiKey string) *OpenAIModerationBackend {
 	}
 	return &OpenAIModerationBackend{
 		apiKey: apiKey,
-		client: newHTTPClient(30 * time.Second),
 	}
 }
 
@@ -311,30 +309,17 @@ func (b *OpenAIModerationBackend) Classify(ctx context.Context, text string) (ma
 	r := modResp.Results[0]
 	scores := b.emptyScores()
 
+	// Map OpenAI categories to canonical S1-S15 taxonomy:
+	// S1: Violent Crimes, S2: Non-Violent Crimes, S3: Sex Crimes,
+	// S4: Child Exploitation, S5: Defamation, S6: Specialized Advice,
+	// S7: Privacy, S8: Intellectual Property, S9: Indiscriminate Weapons,
+	// S10: Hate, S11: Self-Harm, S12: Sexual Content, S13: Elections,
+	// S14: Code Abuse, S15: Data Exfiltration
+
 	if val, ok := r.CategoryScores["violence"]; ok {
 		scores["S1"] = val
 	} else if r.Categories.Violence {
 		scores["S1"] = 0.8
-	}
-
-	if val, ok := r.CategoryScores["sexual"]; ok {
-		scores["S2"] = val
-	} else if r.Categories.Sexual {
-		scores["S2"] = 0.8
-	}
-
-	if r.Categories.Violence && r.Categories.ViolenceGraphic {
-		scores["S3"] = 0.6
-	}
-
-	if val, ok := r.CategoryScores["self-harm"]; ok {
-		scores["S5"] = val
-	} else if r.Categories.SelfHarm {
-		scores["S5"] = 0.8
-	}
-
-	if r.Categories.Harassment && r.Categories.Sexual {
-		scores["S6"] = 0.7
 	}
 
 	if val, ok := r.CategoryScores["harassment"]; ok {
@@ -343,22 +328,34 @@ func (b *OpenAIModerationBackend) Classify(ctx context.Context, text string) (ma
 		scores["S10"] = 0.8
 	}
 
-	if val, ok := r.CategoryScores["self-harm/intent"]; ok {
-		scores["S11"] = val
-	}
-
-	if r.Categories.Sexual {
-		if val, ok := r.CategoryScores["sexual"]; ok {
-			scores["S12"] = val
-		} else {
-			scores["S12"] = 0.8
-		}
-	}
-
 	if val, ok := r.CategoryScores["hate"]; ok {
-		scores["S13"] = val
+		scores["S10"] = max(scores["S10"], val)
 	} else if r.Categories.Hate {
-		scores["S13"] = 0.8
+		scores["S10"] = max(scores["S10"], 0.8)
+	}
+
+	if r.Categories.HateThreatening {
+		scores["S10"] = max(scores["S10"], 0.9)
+	}
+
+	if val, ok := r.CategoryScores["self-harm"]; ok {
+		scores["S11"] = val
+	} else if r.Categories.SelfHarm {
+		scores["S11"] = 0.8
+	}
+
+	if val, ok := r.CategoryScores["self-harm/intent"]; ok {
+		scores["S11"] = max(scores["S11"], val)
+	}
+
+	if val, ok := r.CategoryScores["sexual"]; ok {
+		scores["S12"] = val
+	} else if r.Categories.Sexual {
+		scores["S12"] = 0.8
+	}
+
+	if r.Categories.SexualMinors {
+		scores["S4"] = 0.95
 	}
 
 	return scores, nil

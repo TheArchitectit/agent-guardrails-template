@@ -77,8 +77,10 @@ func (pt *ProvenanceTracker) TagContent(ctx context.Context, content string, sou
 		)
 	}
 
-	// Hash the sanitized+decoded content for caching
-	hash := hashText(decoded)
+	// Hash the sanitized+decoded content + source path for caching.
+	// Including source prevents cross-source cache poisoning (same content
+	// from untrusted source returning provenance cached by trusted writer).
+	hash := hashText(decoded + "::" + sourcePath)
 
 	// Check cache first
 	if pt.cache != nil {
@@ -99,9 +101,10 @@ func (pt *ProvenanceTracker) TagContent(ctx context.Context, content string, sou
 		Hash:       hash,
 	}
 
-	// Cache the provenance
+	// Cache the provenance — use configured TTL or default to 1 hour
+	ttl := time.Hour
 	if pt.cache != nil {
-		_ = pt.cache.Set(ctx, hash, prov, time.Hour)
+		_ = pt.cache.Set(ctx, hash, prov, ttl)
 	}
 
 	return prov, nil
@@ -152,13 +155,22 @@ func matchPattern(pattern, path string) bool {
 		}
 		return pattern == basename
 	}
-	// ** glob: prefix / ** / suffix  →  path must start with prefix and end with suffix
-	// The ** itself is the recursive wildcard; remaining suffix after it is a literal tail.
+	// ** glob: prefix / ** / suffix  →  path must start with prefix, contain
+	// a '/' separator (so ** doesn't collapse to zero segments), and end with suffix.
 	if strings.Contains(pattern, "**") {
 		parts := strings.SplitN(pattern, "**", 2)
 		prefix := strings.TrimSuffix(parts[0], "/")
 		suffix := strings.TrimLeft(parts[1], "*/")
 		if prefix != "" && !strings.HasPrefix(path, prefix) {
+			return false
+		}
+		// ** must match at least one path segment — require '/' in path after prefix
+		if prefix != "" {
+			rest := path[len(prefix):]
+			if !strings.Contains(rest, "/") {
+				return false
+			}
+		} else if !strings.Contains(path, "/") {
 			return false
 		}
 		if suffix != "" && !strings.HasSuffix(path, suffix) {
@@ -316,23 +328,64 @@ func tryBase64Decode(content string) (string, bool) {
 
 // isPrintableText checks if a string is mostly printable characters.
 func isPrintableText(s string) bool {
-	if len(s) == 0 {
+	runes := []rune(s)
+	if len(runes) == 0 {
 		return false
 	}
 	printable := 0
-	for _, r := range s {
+	for _, r := range runes {
 		if r >= 32 && r < 127 || r == '\n' || r == '\r' || r == '\t' {
 			printable++
 		}
 	}
-	return float64(printable)/float64(len(s)) > 0.8
+	return float64(printable)/float64(len(runes)) > 0.8
 }
 
 // looksLikeROT13 checks if content might be ROT13-encoded.
+// Uses English letter frequency analysis: ROT13-encoded English has lower
+// frequency of common English letters (e,t,a,o,i,n,s,h,r) than decoded text.
 func looksLikeROT13(content string) bool {
-	// ROT13 typically produces strings with unusual letter distributions
-	// Heuristic: check if decoding produces more common English patterns
-	return len(content) > 20
+	if len(content) < 10 {
+		return false
+	}
+	// Only consider content that is predominantly letters
+	letterCount := 0
+	for _, r := range content {
+		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') {
+			letterCount++
+		}
+	}
+	if letterCount < 10 {
+		return false
+	}
+
+	// Score how "English-like" a string is based on common letter frequency.
+	// English top letters: e,t,a,o,i,n,s,h,r (~65% of text)
+	englishScore := func(s string) float64 {
+		common := map[rune]float64{
+			'e': 13, 't': 9, 'a': 8, 'o': 8, 'i': 7,
+			'n': 7, 's': 6, 'h': 6, 'r': 6,
+		}
+		total := 0.0
+		for _, r := range s {
+			rl := r
+			if rl >= 'A' && rl <= 'Z' {
+				rl = rl + 32
+			}
+			if v, ok := common[rl]; ok {
+				total += v
+			}
+		}
+		return total / float64(len(s))
+	}
+
+	originalScore := englishScore(content)
+	decoded := tryROT13(content)
+	decodedScore := englishScore(decoded)
+
+	// ROT13 text should have lower English score than decoded text.
+	// Threshold: decoded must be at least 1.5x more English-like.
+	return decodedScore > originalScore*1.5 && decodedScore > 5.0
 }
 
 // tryROT13 applies ROT13 decoding.

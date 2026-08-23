@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+
+	"gopkg.in/yaml.v3"
 )
 
 // Re-exports for content_filter.go compatibility
@@ -126,13 +128,28 @@ func (c *ContentFilterConfig) Validate() error {
 
 // LoadContentConfig loads the content filter configuration from a YAML file.
 func LoadContentConfig(path string) (*ContentFilterConfig, error) {
-	// In a real implementation, this would use yaml.Unmarshal
-	// For now, return defaults if file doesn't exist.
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		slog.Info("Content config file not found, using defaults", "path", path)
 		return DefaultFilterConfig(), nil
 	}
 
-	// Mocking YAML load for this implementation
-	return DefaultFilterConfig(), nil
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("read content config: %w", err)
+	}
+
+	cfg := DefaultFilterConfig()
+	if err := yaml.Unmarshal(data, cfg); err != nil {
+		return nil, fmt.Errorf("parse content config: %w", err)
+	}
+
+	// Merge: set zero-value thresholds from defaults
+	if cfg.Thresholds.Default == 0 {
+		cfg.Thresholds.Default = 0.7
+	}
+	if cfg.FailPolicy == "" {
+		cfg.FailPolicy = ContentFailPolicyBlock
+	}
+
+	return cfg, nil
 }

@@ -1,59 +1,9 @@
 package guardrails
 
 import (
-	"context"
-	"log/slog"
+	"fmt"
 	"sync"
 )
-
-// StreamingHandler processes text chunks for real-time filtering.
-type StreamingHandler struct {
-	filter    *ContentFilter
-	onBlock   func(result *ClassificationResult)
-	onWarn    func(result *ClassificationResult)
-	chunkSize int
-	mu        sync.Mutex
-}
-
-// NewStreamingHandler creates a streaming content filter.
-func NewStreamingHandler(filter *ContentFilter, onBlock, onWarn func(*ClassificationResult)) *StreamingHandler {
-	return &StreamingHandler{
-		filter:    filter,
-		onBlock:   onBlock,
-		onWarn:    onWarn,
-		chunkSize: 512,
-	}
-}
-
-// ProcessChunk classifies a text chunk. Returns true if generation should continue.
-func (sh *StreamingHandler) ProcessChunk(ctx context.Context, chunk string, direction ContentDirection) bool {
-	result, err := sh.filter.Classify(ctx, chunk, direction)
-	if err != nil {
-		slog.Warn("Streaming chunk classification failed", "error", err)
-		return true
-	}
-
-	if result.IsBlocked() {
-		if sh.onBlock != nil {
-			sh.onBlock(result)
-		}
-		return false
-	}
-
-	for _, cat := range result.Categories {
-		if cat.Action == ActionWarn && sh.onWarn != nil {
-			sh.onWarn(result)
-			break
-		}
-	}
-
-	return true
-}
-
-// SetChunkSize overrides the default chunk size for streaming.
-func (sh *StreamingHandler) SetChunkSize(size int) {
-	sh.chunkSize = size
-}
 
 // CategoryMetadata returns the name and default action for a category.
 func CategoryMetadata(id string) (name string, defaultAction Action) {
@@ -85,31 +35,30 @@ func CategoryMetadata(id string) (name string, defaultAction Action) {
 	return m.name, m.action
 }
 
-// RiskFromScore converts a normalized score to a RiskLevel.
-func RiskFromScore(score float64) RiskLevel {
-	switch {
-	case score >= 0.9:
-		return RiskLevelCritical
-	case score >= 0.7:
-		return RiskLevelHigh
-	case score >= 0.4:
-		return RiskLevelMedium
-	case score > 0:
-		return RiskLevelLow
-	default:
-		return RiskLevelNone
-	}
-}
-
 // PolicyEngine evaluates category scores against configured policies.
 type PolicyEngine struct {
-	rules []PolicyRule
-	mu    sync.RWMutex
+	rules      []PolicyRule
+	thresholds ThresholdConfig
+	mu         sync.RWMutex
 }
 
 // NewPolicyEngine creates a policy engine with the given rules.
 func NewPolicyEngine(rules []PolicyRule) *PolicyEngine {
-	return &PolicyEngine{rules: rules}
+	return &PolicyEngine{
+		rules:      rules,
+		thresholds: ThresholdConfig{Default: 0.7},
+	}
+}
+
+// NewPolicyEngineWithThresholds creates a policy engine with rules and threshold config.
+func NewPolicyEngineWithThresholds(rules []PolicyRule, thresholds ThresholdConfig) *PolicyEngine {
+	if thresholds.Default == 0 {
+		thresholds.Default = 0.7
+	}
+	return &PolicyEngine{
+		rules:      rules,
+		thresholds: thresholds,
+	}
 }
 
 // Evaluate maps category scores to actions based on policy rules.
@@ -129,14 +78,39 @@ func (pe *PolicyEngine) Evaluate(scores map[string]float64, backendName string) 
 		action := defaultAction
 		reason := ""
 
+		// Determine threshold: per-category > rule-specific > global default
+		threshold := pe.thresholds.Default
+		if perCat, ok := pe.thresholds.PerCategory[catID]; ok && perCat > 0 {
+			threshold = perCat
+		}
+
+		// Apply rule-specific settings (first matching rule wins for action/threshold)
 		for _, rule := range pe.rules {
 			for _, detail := range rule.Rules {
 				if detail.Category == catID {
 					action = detail.Action
 					reason = detail.Description
-					if detail.Threshold > 0 && score < detail.Threshold {
-						action = ActionAllow
+					// Rule-specific threshold overrides config threshold
+					if detail.Threshold > 0 {
+						threshold = detail.Threshold
 					}
+					break
+				}
+			}
+		}
+
+		// Apply threshold: if score is below threshold, downgrade to allow
+		if score < threshold {
+			action = ActionAllow
+			reason = fmt.Sprintf("below threshold %.2f", threshold)
+		}
+
+		// Apply context-specific overrides (last matching override wins)
+		for _, rule := range pe.rules {
+			for _, override := range rule.Overrides {
+				if override.Category == catID {
+					action = override.Action
+					reason = override.Description
 				}
 			}
 		}

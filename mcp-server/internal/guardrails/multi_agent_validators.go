@@ -125,16 +125,16 @@ func (v *FourLawsValidator) Validate(ctx context.Context, input ValidatorInput) 
 	lowerNorm := strings.ToLower(norm)
 
 	harmPatterns := []*regexp.Regexp{
-		regexp.MustCompile(`rm\s+-rf\s+/`),
-		regexp.MustCompile(`mkfs\.[a-z0-9]+`),
-		regexp.MustCompile(`dd\s+if=/dev/zero`),
+		regexp.MustCompile(`(?i)rm\s+-rf\s+/`),
+		regexp.MustCompile(`(?i)mkfs\.[a-z0-9]+`),
+		regexp.MustCompile(`(?i)dd\s+if=/dev/zero`),
 		regexp.MustCompile(`:\(\)\s*\{\s*:\s*\|\s*:\s*&\s*\}\s*;\s*:`),
-		regexp.MustCompile(`chmod\s+-R\s+777\s+/`),
-		regexp.MustCompile(`>\s*/dev/sda`),
+		regexp.MustCompile(`(?i)chmod\s+-R\s+777\s+/`),
+		regexp.MustCompile(`(?i)>\s*/dev/sda`),
 	}
 
 	for _, re := range harmPatterns {
-		if re.MatchString(norm) {
+		if re.MatchString(lowerNorm) {
 			return &ValidatorResult{
 				Passed:     false,
 				Reason:     fmt.Sprintf("Law 1 violation: destructive command detected (%s)", re.String()),
@@ -144,9 +144,10 @@ func (v *FourLawsValidator) Validate(ctx context.Context, input ValidatorInput) 
 		}
 	}
 
+	// Law 2: scope check — use normalized text for consistent matching
 	if input.Context != "" {
 		for _, pattern := range v.scopePatterns {
-			if strings.Contains(output, pattern) {
+			if strings.Contains(lowerNorm, strings.ToLower(pattern)) {
 				return &ValidatorResult{
 					Passed:     false,
 					Reason:     fmt.Sprintf("Law 2 violation: output exceeds declared scope (%s)", pattern),
@@ -154,6 +155,23 @@ func (v *FourLawsValidator) Validate(ctx context.Context, input ValidatorInput) 
 					Confidence: 0.9,
 				}, nil
 			}
+		}
+	}
+
+	// Law 3: transparency — detect attempts to hide or obscure output
+	obscurPatterns := []*regexp.Regexp{
+		regexp.MustCompile(`(?i)(obfuscate|hide|conceal|mask)\s+(the\s+)?(output|result|response)`),
+		regexp.MustCompile(`(?i)(do\s+not|don't)\s+(show|display|reveal|tell)\s+(the\s+)?(user|human)`),
+		regexp.MustCompile(`(?i)(secret|hidden)\s+(command|instruction|prompt)`),
+	}
+	for _, re := range obscurPatterns {
+		if re.MatchString(lowerNorm) {
+			return &ValidatorResult{
+				Passed:     false,
+				Reason:     fmt.Sprintf("Law 3 violation: transparency requirement breached (%s)", re.String()),
+				Violations: []string{"transparency_violation"},
+				Confidence: 0.85,
+			}, nil
 		}
 	}
 

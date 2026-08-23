@@ -138,6 +138,33 @@ type PipelineConfig struct {
 	SourcePolicies map[Source]FailPolicy `yaml:"source_policies" json:"source_policies"`
 }
 
+// DefaultPipelineConfig returns a safe default for the injection pipeline.
+func DefaultPipelineConfig() PipelineConfig {
+	return PipelineConfig{
+		Enabled:    true,
+		FailPolicy: FailPolicyBlock,
+		Layers: LayersConfig{
+			PatternMatching: PatternMatchingConfig{
+				Enabled: true,
+			},
+			Perplexity: PerplexityConfig{
+				Enabled:   false,
+				Threshold: 0.85,
+			},
+			Classifier: ClassifierConfig{},
+			LLMSelfCheck: LLMSelfCheckConfig{
+				Enabled: false,
+			},
+		},
+		SourcePolicies: map[Source]FailPolicy{
+			SourceUser:        FailPolicyLogOnly,
+			SourceToolOutput:  FailPolicyBlock,
+			SourceFileContent: FailPolicyBlock,
+			SourceAPIResponse: FailPolicyBlock,
+		},
+	}
+}
+
 // LayersConfig configures individual detection layers.
 type LayersConfig struct {
 	PatternMatching PatternMatchingConfig `yaml:"pattern_matching" json:"pattern_matching"`
