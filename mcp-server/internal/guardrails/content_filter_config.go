@@ -1,6 +1,7 @@
 package guardrails
 
 import (
+	"fmt"
 	"log/slog"
 	"os"
 )
@@ -9,9 +10,11 @@ import (
 type Action string
 
 const (
-	ActionBlock Action = "block"
-	ActionWarn  Action = "warn"
-	ActionAllow Action = "allow"
+	ActionBlock         Action = "block"
+	ActionWarn          Action = "warn"
+	ActionAllow         Action = "allow"
+	ActionScanAndWarn   Action = "scan_and_warn"
+	ActionScanAndBlock  Action = "scan_and_block"
 )
 
 // ContentFailPolicy defines the behavior when all classification backends fail.
@@ -108,6 +111,17 @@ func AllCategoryIDs() []string {
 		"S1", "S2", "S3", "S4", "S5", "S6", "S7", "S8",
 		"S9", "S10", "S11", "S12", "S13", "S14", "S15",
 	}
+}
+
+// Validate checks the config for errors.
+func (c *ContentFilterConfig) Validate() error {
+	if c.Thresholds.Default < 0 || c.Thresholds.Default > 1 {
+		return fmt.Errorf("content filter default threshold must be 0-1")
+	}
+	if c.FailPolicy != ContentFailPolicyBlock && c.FailPolicy != ContentFailPolicyAllow {
+		return fmt.Errorf("content filter fail_policy must be 'block' or 'allow'")
+	}
+	return nil
 }
 
 // LoadContentConfig loads the content filter configuration from a YAML file.
