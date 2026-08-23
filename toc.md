@@ -77,6 +77,16 @@ See [advisors/INDEX.md](docs/advisors/INDEX.md) — cost, privacy, resilience.
 See [enterprise/INDEX.md](docs/enterprise/INDEX.md) — charter, governance,
 ownership, release calendar, tech stack.
 
+### specs/
+#### guardrail-gaps-2026/
+- [index.md](docs/specs/guardrail-gaps-2026/index.md) — overview and implementation order
+- [01-prompt-injection-defense.md](docs/specs/guardrail-gaps-2026/01-prompt-injection-defense.md) — prompt injection defense (Critical)
+- [02-semantic-content-filtering.md](docs/specs/guardrail-gaps-2026/02-semantic-content-filtering.md) — semantic content filtering (Critical)
+- [03-runtime-sandbox-isolation.md](docs/specs/guardrail-gaps-2026/03-runtime-sandbox-isolation.md) — runtime sandbox isolation (Important)
+- [04-multi-agent-safety-policies.md](docs/specs/guardrail-gaps-2026/04-multi-agent-safety-policies.md) — multi-agent safety policies (Important)
+- [05-indirect-prompt-injection.md](docs/specs/guardrail-gaps-2026/05-indirect-prompt-injection.md) — indirect prompt injection handling (Important)
+- [06-regulatory-compliance-mapping.md](docs/specs/guardrail-gaps-2026/06-regulatory-compliance-mapping.md) — regulatory compliance mapping (Nice-to-have)
+
 ### Domain guides
 - [ui-ux/ui-ux-standard.md](docs/ui-ux/ui-ux-standard.md)
 - [accessibility/accessibility-guide.md](docs/accessibility/accessibility-guide.md)

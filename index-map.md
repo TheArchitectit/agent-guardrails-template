@@ -113,6 +113,20 @@ See [advisors/INDEX.md](docs/advisors/INDEX.md) — cost, privacy, resilience.
 See [enterprise/INDEX.md](docs/enterprise/INDEX.md) — charter, governance,
 ownership, release calendar, tech stack.
 
+## Specs (Guardrail Gaps 2026)
+
+See [specs/guardrail-gaps-2026/index.md](docs/specs/guardrail-gaps-2026/index.md) — full OpenSpecs
+closing identified gaps vs 2026 AI safety guardrail systems.
+
+| Keyword | Document |
+|---------|----------|
+| prompt injection, injection defense, LLM security | [specs/guardrail-gaps-2026/01-prompt-injection-defense.md](docs/specs/guardrail-gaps-2026/01-prompt-injection-defense.md) |
+| content filtering, semantic safety, llama guard, moderation | [specs/guardrail-gaps-2026/02-semantic-content-filtering.md](docs/specs/guardrail-gaps-2026/02-semantic-content-filtering.md) |
+| sandbox, runtime isolation, containers, namespaces | [specs/guardrail-gaps-2026/03-runtime-sandbox-isolation.md](docs/specs/guardrail-gaps-2026/03-runtime-sandbox-isolation.md) |
+| multi-agent, agent validation, safety chains | [specs/guardrail-gaps-2026/04-multi-agent-safety-policies.md](docs/specs/guardrail-gaps-2026/04-multi-agent-safety-policies.md) |
+| indirect injection, file injection, provenance | [specs/guardrail-gaps-2026/05-indirect-prompt-injection.md](docs/specs/guardrail-gaps-2026/05-indirect-prompt-injection.md) |
+| compliance, EU AI Act, NIST RMF, regulatory | [specs/guardrail-gaps-2026/06-regulatory-compliance-mapping.md](docs/specs/guardrail-gaps-2026/06-regulatory-compliance-mapping.md) |
+
 ## Archive
 
 Historical docs (past sprints, reviews, plans) live in
