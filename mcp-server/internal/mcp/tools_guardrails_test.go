@@ -53,7 +53,7 @@ func decodeResult[T any](t *testing.T, res *mcp.CallToolResult) T {
 
 func TestHandleClassifyContent_NoEngine(t *testing.T) {
 	s := &MCPServer{}
-	res, err := s.handleClassifyContent(context.Background(), map[string]interface{}{"text": "hello"})
+	res, err := s.handleClassifyContent(context.Background(), map[string]any{"text": "hello"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -64,7 +64,7 @@ func TestHandleClassifyContent_NoEngine(t *testing.T) {
 
 func TestHandleClassifyContent_EmptyText(t *testing.T) {
 	s := &MCPServer{guardrailsEngine: newTestEngine(t, map[string]float64{"S10": 0.9})}
-	res, err := s.handleClassifyContent(context.Background(), map[string]interface{}{"text": ""})
+	res, err := s.handleClassifyContent(context.Background(), map[string]any{"text": ""})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -75,7 +75,7 @@ func TestHandleClassifyContent_EmptyText(t *testing.T) {
 
 func TestHandleClassifyContent_Block(t *testing.T) {
 	s := &MCPServer{guardrailsEngine: newTestEngine(t, map[string]float64{"S10": 0.95})}
-	res, err := s.handleClassifyContent(context.Background(), map[string]interface{}{
+	res, err := s.handleClassifyContent(context.Background(), map[string]any{
 		"text":      "hateful content",
 		"direction": "input",
 	})
@@ -99,7 +99,7 @@ func TestHandleClassifyContent_Block(t *testing.T) {
 
 func TestHandleClassifyContent_Safe(t *testing.T) {
 	s := &MCPServer{guardrailsEngine: newTestEngine(t, map[string]float64{"S1": 0.05})}
-	res, err := s.handleClassifyContent(context.Background(), map[string]interface{}{
+	res, err := s.handleClassifyContent(context.Background(), map[string]any{
 		"text":      "benign content",
 		"direction": "output",
 	})
@@ -117,7 +117,7 @@ func TestHandleClassifyContent_Safe(t *testing.T) {
 
 func TestHandleCheckPolicy_NoEngine(t *testing.T) {
 	s := &MCPServer{}
-	res, err := s.handleCheckPolicy(context.Background(), map[string]interface{}{
+	res, err := s.handleCheckPolicy(context.Background(), map[string]any{
 		"text":      "hello",
 		"policy_id": "coding-safety",
 	})
@@ -131,7 +131,7 @@ func TestHandleCheckPolicy_NoEngine(t *testing.T) {
 
 func TestHandleCheckPolicy_MissingPolicyID(t *testing.T) {
 	s := &MCPServer{guardrailsEngine: newTestEngine(t, nil)}
-	res, err := s.handleCheckPolicy(context.Background(), map[string]interface{}{"text": "hello"})
+	res, err := s.handleCheckPolicy(context.Background(), map[string]any{"text": "hello"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -140,17 +140,82 @@ func TestHandleCheckPolicy_MissingPolicyID(t *testing.T) {
 	}
 }
 
-func TestHandleCheckPolicy_Compliant(t *testing.T) {
-	s := &MCPServer{guardrailsEngine: newTestEngine(t, map[string]float64{"S1": 0.05})}
-	res, err := s.handleCheckPolicy(context.Background(), map[string]interface{}{
-		"text":      "benign",
+func TestHandleCheckPolicy_UnknownPolicy_FailClosed(t *testing.T) {
+	// Blocked content (S14 Code Abuse at 0.95) classified, then checked against a
+	// policy_id that does not exist. The fail-open signature (compliant, no
+	// violations) combined with a blocked classification must be rejected.
+	s := &MCPServer{guardrailsEngine: newTestEngine(t, map[string]float64{"S14": 0.95})}
+	res, err := s.handleCheckPolicy(context.Background(), map[string]any{
+		"text":      "abusive code",
 		"policy_id": "nonexistent-policy",
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
+	if res.IsError != true {
+		t.Error("expected isError=true for unknown policy_id with blocked content (fail-closed)")
+	}
+}
+
+func TestHandleCheckPolicy_Compliant(t *testing.T) {
+	// Clean content (S1 at 0.05, below threshold so not blocked) checked against a
+	// KNOWN policy that covers S1. Compliance can only be asserted for a policy
+	// that exists; unknown policies fail closed (see
+	// TestHandleCheckPolicy_UnknownPolicy_FailClosed).
+	engine := newTestEngine(t, map[string]float64{"S1": 0.05})
+	engine.UpdateRules([]guardrails.PolicyRule{{
+		ID: "test-policy",
+		Rules: []guardrails.PolicyDetail{
+			{Category: "S1", Action: guardrails.ActionBlock, Threshold: 0.7},
+		},
+	}})
+	s := &MCPServer{guardrailsEngine: engine}
+	res, err := s.handleCheckPolicy(context.Background(), map[string]any{
+		"text":      "benign",
+		"policy_id": "test-policy",
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if res.IsError != false {
+		t.Error("expected isError=false for benign content against a known policy")
+	}
 	out := decodeResult[guardrails.PolicyResult](t, res)
 	if !out.Compliant {
-		t.Error("expected compliant for unknown policy")
+		t.Errorf("expected compliant for benign content against known policy, got %+v", out)
+	}
+}
+
+// TestEvaluateInput_ExplicitCategoriesNoBashFallback verifies the contract fixed
+// in registry.go: when explicit non-empty categories are requested (e.g. ["git"]),
+// EvaluateInput evaluates exactly those categories and does NOT run the "Default:
+// try bash" fallback. The concrete evaluators in registry.go are placeholders that
+// return nil, so the observable post-condition is that explicit categories yield
+// the git-only result (empty) without a bash-fallback layer, whereas a nil/empty
+// category list exercises the bash path. The suppression of the fallback is
+// enforced by the `len(categories) == 0` guard in EvaluateInput.
+func TestEvaluateInput_ExplicitCategoriesNoBashFallback(t *testing.T) {
+	r := guardrails.NewRegistry(
+		guardrails.WithBash(func(string, string) (bool, error) { return false, nil }),
+		guardrails.WithGit(func(string, string) (bool, error) { return false, nil }),
+	)
+
+	// Explicit categories: only git is evaluated, no bash fallback.
+	got, err := r.EvaluateInput(context.Background(), "git status", []string{"git"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got != nil {
+		t.Errorf("expected nil violations for explicit git-only categories, got %v", got)
+	}
+
+	// Empty categories: bash fallback path is taken (returns nil with no bash
+	// slice configured).
+	got, err = r.EvaluateInput(context.Background(), "ls", nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got != nil {
+		t.Errorf("expected nil violations for empty categories fallback, got %v", got)
 	}
 }

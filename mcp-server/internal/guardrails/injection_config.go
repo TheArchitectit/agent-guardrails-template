@@ -2,6 +2,7 @@ package guardrails
 
 import (
 	"fmt"
+	"maps"
 	"os"
 	"sync"
 
@@ -121,9 +122,7 @@ func (bm *BlocklistManager) Patterns() map[string]string {
 	bm.mu.RLock()
 	defer bm.mu.RUnlock()
 	result := make(map[string]string, len(bm.patterns))
-	for k, v := range bm.patterns {
-		result[k] = v
-	}
+	maps.Copy(result, bm.patterns)
 	return result
 }
 
@@ -143,9 +142,7 @@ func (bm *BlocklistManager) loadAll() error {
 		if err != nil {
 			return fmt.Errorf("load %s: %w", path, err)
 		}
-		for k, v := range pats {
-			merged[k] = v
-		}
+		maps.Copy(merged, pats)
 	}
 	bm.mu.Lock()
 	bm.patterns = merged

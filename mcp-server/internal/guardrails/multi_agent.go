@@ -205,13 +205,21 @@ func (sc *SafetyChain) Execute(ctx context.Context, agentID, output, context str
 
 		if !stepResult.Passed {
 			result.Passed = false
-			switch step.Action {
-			case ActionBlock, ActionScanAndBlock:
+			// Validator internal error (err != nil) always fails closed:
+			// treat as Block regardless of configured action, because a zero
+			// or unknown Action must not silently downgrade to warn.
+			if err != nil {
 				result.Decision = string(ActionBlock)
-			case ActionWarn, ActionScanAndWarn:
-				result.Decision = string(ActionWarn)
-			default:
-				result.Decision = string(ActionWarn)
+			} else {
+				switch step.Action {
+				case ActionBlock, ActionScanAndBlock:
+					result.Decision = string(ActionBlock)
+				case ActionWarn, ActionScanAndWarn:
+					result.Decision = string(ActionWarn)
+				default:
+					// Unknown/zero action fails closed to block.
+					result.Decision = string(ActionBlock)
+				}
 			}
 			if result.Decision == string(ActionBlock) {
 				break
@@ -277,12 +285,14 @@ type InheritanceResult struct {
 	OwnConstraints       []AgentConstraint `json:"own_effective_constraints"`
 	MergedConstraints    []AgentConstraint `json:"merged_constraints"`
 	DowngradePrevented   bool              `json:"downgrade_prevented"`
+	EqualReplacements    int               `json:"equal_severity_replacements"`
 }
 
 // ResolveConstraints merges parent and child constraints per the inheritance rule.
 // Child constraints with the same ID as a parent constraint override it only if
-// they are stronger (higher severity). Downgrade is prevented when a child tries
-// to weaken a parent constraint.
+// they are strictly stronger (higher severity). Downgrade is prevented when a
+// child tries to weaken a parent constraint, and equal-severity replacements are
+// tracked separately so downgrade accounting stays accurate.
 func ResolveConstraints(agentID, parentAgentID string, parent, child []AgentConstraint) InheritanceResult {
 	result := InheritanceResult{
 		AgentID:        agentID,
@@ -293,6 +303,14 @@ func ResolveConstraints(agentID, parentAgentID string, parent, child []AgentCons
 	severityRank := map[string]int{
 		"low": 1, "medium": 2, "high": 3, "critical": 4,
 	}
+	// An unknown/empty severity ranks below every defined severity, so it can
+	// never override a parent that has a defined severity.
+	rank := func(s string) int {
+		if v, ok := severityRank[s]; ok {
+			return v
+		}
+		return 0
+	}
 
 	childByID := make(map[string]AgentConstraint, len(child))
 	for _, c := range child {
@@ -301,18 +319,25 @@ func ResolveConstraints(agentID, parentAgentID string, parent, child []AgentCons
 
 	merged := make([]AgentConstraint, 0, len(parent)+len(child))
 	downgradePrevented := false
+	equalReplacements := 0
 
 	for _, c := range parent {
 		result.InheritedConstraints = append(result.InheritedConstraints, c)
 		if childOverride, ok := childByID[c.ID]; ok {
-			// Child tries to override parent — check severity
-			parentSev := severityRank[c.Severity]
-			childSev := severityRank[childOverride.Severity]
-			if childSev >= parentSev {
-				// Child is stronger or equal — use child's version
+			// Child tries to override parent — check severity strictly.
+			parentSev := rank(c.Severity)
+			childSev := rank(childOverride.Severity)
+			if childSev > parentSev {
+				// Child is strictly stronger — use child's version.
 				merged = append(merged, childOverride)
+			} else if childSev == parentSev {
+				// Equal severity: replacement is permitted (not a downgrade)
+				// but tracked separately so accounting stays accurate.
+				merged = append(merged, childOverride)
+				equalReplacements++
 			} else {
-				// Child is weaker — keep parent's version (downgrade prevented)
+				// Child is weaker (or empty/unknown) — keep parent's
+				// version; the downgrade is prevented.
 				merged = append(merged, c)
 				downgradePrevented = true
 			}
@@ -329,6 +354,8 @@ func ResolveConstraints(agentID, parentAgentID string, parent, child []AgentCons
 
 	result.MergedConstraints = merged
 	result.DowngradePrevented = downgradePrevented
+	// Expose equal-severity replacement count for accurate accounting.
+	result.EqualReplacements = equalReplacements
 
 	return result
 }

@@ -150,9 +150,20 @@ func (pe *PolicyEngine) CheckPolicy(result *ClassificationResult, policyID strin
 	}
 
 	if targetRule == nil {
+		// Fail closed: a policy_id that does not exist in the engine must not be
+		// treated as compliant. Reporting it as a violation forces every caller
+		// (Engine.CheckPolicy, handlers, tests) to reject unknown policies
+		// instead of silently passing.
 		return &PolicyResult{
 			PolicyID:  policyID,
-			Compliant: true,
+			Compliant: false,
+			Violations: []ContentViolation{{
+				CategoryID:   "POLICY",
+				CategoryName: "Unknown Policy",
+				Score:        1.0,
+				Action:       ActionBlock,
+				Reason:       fmt.Sprintf("unknown policy_id %q: cannot assert compliance", policyID),
+			}},
 		}
 	}
 
