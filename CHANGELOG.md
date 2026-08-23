@@ -8,6 +8,45 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- **Six 2026 guardrail-gap subsystems** as a new `internal/guardrails` Go package,
+  each backed by a design spec under `docs/specs/guardrail-gaps-2026/`:
+  - **Prompt injection defense** (Spec 01) — 4-layer pipeline (pattern → perplexity →
+    classifier → LLM self-check) with source-based trust policies.
+  - **Semantic content filtering** (Spec 02) — S1–S15 safety taxonomy (Llama Guard +
+    two coding-specific categories S14/S15), multi-backend (LlamaGuard via Ollama,
+    OpenAI Moderation), policy engine with per-category/rule thresholds and overrides,
+    result cache, fail-open/fail-closed.
+  - **Runtime sandbox isolation** (Spec 03) — L0/L1/L2 levels (direct / unshare
+    namespaces / podman-docker rootless) with resource limits and network isolation.
+  - **Multi-agent safety policies** (Spec 04) — safety-chain with
+    `scan_and_block`/`scan_and_warn`, constraint resolution, and FourLaws validators.
+  - **Indirect prompt injection / provenance** (Spec 05) — source-trust tracking,
+    ROT13/obfuscation decoding, provenance cache.
+  - **Regulatory compliance mapping** (Spec 06) — maps guardrail features to
+    frameworks (GDPR, SOC 2, ISO 27001, EU AI Act, etc.).
+- **`guardrail_classify_content` MCP tool** — classifies text against the S1–S15
+  taxonomy; returns per-category scores and actions.
+- **`guardrail_check_policy` MCP tool** — checks text against a named content policy;
+  returns violations.
+- **`SetGuardrailsEngine` setter** on `MCPServer` and `Engine.CheckPolicy` convenience
+  method; engine constructed in `cmd/server` when `OLLAMA_URL` is set (Llama Guard
+  backend) with `OLLAMA_MODEL` overriding the default `llama-guard-3`.
+
+### Changed
+
+- Resolved 12 QA review findings across the new subsystems (data races, taxonomy
+  mismatch, fail-closed error paths, cache pointer sharing, inert engine defaults,
+  sandbox violation detection, registry no-ops, dead config, provenance dedup, etc.).
+- Enforced the 500-line file limit across new `.go` files.
+
+### Fixed
+
+- ROT13 false positives in obfuscation decoding (English letter-frequency heuristic).
+- Glob matching for `**` now requires a path separator.
+- OpenAI Moderation backend category mapping aligned with the canonical taxonomy.
+
 ---
 
 ## [3.5.0] - 2026-08-18
