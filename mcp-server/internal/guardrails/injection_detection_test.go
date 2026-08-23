@@ -98,12 +98,14 @@ type testClassifier struct {
 	err      error
 }
 
+func (tc *testClassifier) Name() string { return "test" }
+
 func (tc *testClassifier) Classify(ctx context.Context, text string) (bool, float64, []InjectionCategory, error) {
 	return tc.safe, tc.conf, tc.categories, tc.err
 }
 
-func (tc *testClassifier) HealthCheck(ctx context.Context) error {
-	return tc.err
+func (tc *testClassifier) Available(_ context.Context) bool {
+	return tc.err == nil
 }
 
 func TestNoOpClassifier(t *testing.T) {
@@ -124,8 +126,8 @@ func TestNoOpClassifier(t *testing.T) {
 		t.Errorf("expected nil categories, got %v", cats)
 	}
 
-	if err := nc.HealthCheck(ctx); err != nil {
-		t.Errorf("unexpected health error: %v", err)
+	if !nc.Available(ctx) {
+		t.Error("expected NoOpClassifier to be available")
 	}
 }
 

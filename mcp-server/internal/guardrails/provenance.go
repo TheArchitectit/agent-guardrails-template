@@ -20,14 +20,6 @@ const (
 	TrustLevelUnknown   SourceTrustLevel = "unknown"
 )
 
-// TrustAction defines the action to take when content is encountered.
-type TrustAction string
-
-const (
-	ActionScanAndWarn   TrustAction = "scan_and_warn"
-	ActionScanAndBlock  TrustAction = "scan_and_block"
-)
-
 // Provenance tracks the origin and trust level of a piece of content.
 type Provenance struct {
 	Source      string           `json:"source"`       // e.g., "file", "api", "user", "tool_output", "system"
@@ -42,7 +34,7 @@ type Provenance struct {
 type TrustPolicy struct {
 	SourcePattern string          `yaml:"source_pattern"`
 	TrustLevel    SourceTrustLevel `yaml:"trust_level"`
-	Action        TrustAction     `yaml:"action"`
+	Action        Action          `yaml:"action"`
 }
 
 // ProvenanceTracker manages the provenance of content entering the agent's context.
@@ -116,7 +108,7 @@ func (pt *ProvenanceTracker) TagContent(ctx context.Context, content string, sou
 }
 
 // resolveTrust matches a source path against registered policies.
-func (pt *ProvenanceTracker) resolveTrust(path string) (SourceTrustLevel, TrustAction) {
+func (pt *ProvenanceTracker) resolveTrust(path string) (SourceTrustLevel, Action) {
 	pt.mu.RLock()
 	defer pt.mu.RUnlock()
 
