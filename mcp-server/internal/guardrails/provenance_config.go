@@ -32,16 +32,16 @@ func DefaultProvenanceConfig() *ProvenanceConfig {
 		CacheTTL: 1, // 1 hour as per spec 4.1
 		SourceTrustPolicies: []TrustPolicy{
 			// Trusted sources first (specific patterns must precede wildcards)
-			{SourcePattern: "CLAUDE.md", TrustLevel: TrustLevelTrusted, Action: TrustAction("allow")},
-			{SourcePattern: "AGENTS.md", TrustLevel: TrustLevelTrusted, Action: TrustAction("allow")},
-			{SourcePattern: "docs/**/*.md", TrustLevel: TrustLevelTrusted, Action: TrustAction("allow")},
-			{SourcePattern: "config/guardrails.yaml", TrustLevel: TrustLevelTrusted, Action: TrustAction("allow")},
-			{SourcePattern: "config/guardrails.yml", TrustLevel: TrustLevelTrusted, Action: TrustAction("allow")},
+			{SourcePattern: "CLAUDE.md", TrustLevel: TrustLevelTrusted, Action: ActionAllow},
+			{SourcePattern: "AGENTS.md", TrustLevel: TrustLevelTrusted, Action: ActionAllow},
+			{SourcePattern: "docs/**/*.md", TrustLevel: TrustLevelTrusted, Action: ActionAllow},
+			{SourcePattern: "config/guardrails.yaml", TrustLevel: TrustLevelTrusted, Action: ActionAllow},
+			{SourcePattern: "config/guardrails.yml", TrustLevel: TrustLevelTrusted, Action: ActionAllow},
 
 			// API-based sources
 			{SourcePattern: "github.com", TrustLevel: TrustLevelUntrusted, Action: ActionScanAndBlock},
-			{SourcePattern: "api.internal.*", TrustLevel: TrustLevelTrusted, Action: TrustAction("allow")},
-			{SourcePattern: "localhost", TrustLevel: TrustLevelTrusted, Action: TrustAction("allow")},
+			{SourcePattern: "api.internal.*", TrustLevel: TrustLevelTrusted, Action: ActionAllow},
+			{SourcePattern: "localhost", TrustLevel: TrustLevelTrusted, Action: ActionAllow},
 
 			// File-based sources are untrusted by default (wildcards after specific patterns)
 			{SourcePattern: "*.json", TrustLevel: TrustLevelUntrusted, Action: ActionScanAndWarn},
@@ -115,7 +115,7 @@ func (c *ProvenanceConfig) Validate() error {
 		   p.TrustLevel != TrustLevelUnknown {
 			return errInvalidTrustLevel
 		}
-		if p.Action != TrustAction("allow") &&
+		if p.Action != ActionAllow &&
 		   p.Action != ActionScanAndWarn &&
 		   p.Action != ActionScanAndBlock {
 			return errInvalidAction
@@ -125,7 +125,7 @@ func (c *ProvenanceConfig) Validate() error {
 }
 
 // ResolveTrustForPath returns the trust level and action for a given source path.
-func (c *ProvenanceConfig) ResolveTrustForPath(path string) (SourceTrustLevel, TrustAction) {
+func (c *ProvenanceConfig) ResolveTrustForPath(path string) (SourceTrustLevel, Action) {
 	for _, p := range c.SourceTrustPolicies {
 		if matchPattern(p.SourcePattern, path) {
 			return p.TrustLevel, p.Action
