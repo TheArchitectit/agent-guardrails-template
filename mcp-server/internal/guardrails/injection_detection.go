@@ -11,18 +11,10 @@ package guardrails
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
-	"encoding/json"
 	"fmt"
-	"log/slog"
-	"math"
-	"os"
 	"strings"
 	"sync"
 	"time"
-
-	"github.com/dlclark/regexp2"
 )
 
 // Source represents the origin of text being analyzed.
@@ -109,20 +101,13 @@ type AuditEvent struct {
 
 // InjectionClassifier defines the contract for L3 classifier backends.
 type InjectionClassifier interface {
-	// Name returns the backend identifier (e.g., "ollama-llama-guard", "noop").
 	Name() string
-
-	// Classify analyzes text and returns a safety assessment.
-	// Returns safe=true if no injection detected, safe=false with confidence and categories if detected.
 	Classify(ctx context.Context, text string) (safe bool, confidence float64, categories []InjectionCategory, err error)
-
-	// Available returns true if the backend is reachable and ready.
 	Available(ctx context.Context) bool
 }
 
 // ClassifierBackend is a factory for creating classifier instances.
 type ClassifierBackend interface {
-	// Create returns a configured InjectionClassifier.
 	Create(config ClassifierConfig) (InjectionClassifier, error)
 }
 
@@ -147,10 +132,10 @@ type Pipeline struct {
 
 // PipelineConfig configures the detection pipeline.
 type PipelineConfig struct {
-	Enabled        bool                    `yaml:"enabled" json:"enabled"`
-	Layers         LayersConfig            `yaml:"layers" json:"layers"`
-	FailPolicy     FailPolicy              `yaml:"fail_policy" json:"fail_policy"`
-	SourcePolicies map[Source]FailPolicy   `yaml:"source_policies" json:"source_policies"`
+	Enabled        bool                  `yaml:"enabled" json:"enabled"`
+	Layers         LayersConfig          `yaml:"layers" json:"layers"`
+	FailPolicy     FailPolicy            `yaml:"fail_policy" json:"fail_policy"`
+	SourcePolicies map[Source]FailPolicy `yaml:"source_policies" json:"source_policies"`
 }
 
 // LayersConfig configures individual detection layers.
@@ -194,7 +179,6 @@ func NewPipeline(config PipelineConfig, classifier InjectionClassifier, auditLog
 		auditLogger: auditLogger,
 	}
 
-	// Initialize pattern matcher
 	if config.Layers.PatternMatching.Enabled {
 		patterns, err := NewPatternMatcher(config.Layers.PatternMatching)
 		if err != nil {
@@ -203,7 +187,6 @@ func NewPipeline(config PipelineConfig, classifier InjectionClassifier, auditLog
 		p.patterns = patterns
 	}
 
-	// Initialize perplexity analyzer
 	if config.Layers.Perplexity.Enabled {
 		p.perplexity = NewPerplexityAnalyzer(config.Layers.Perplexity)
 	}
@@ -225,7 +208,6 @@ func (p *Pipeline) Detect(ctx context.Context, text string, source Source) Injec
 		return result
 	}
 
-	// Determine effective policy for this source
 	policy := p.config.FailPolicy
 	if sp, ok := p.config.SourcePolicies[source]; ok {
 		policy = sp
@@ -264,7 +246,6 @@ func (p *Pipeline) Detect(ctx context.Context, text string, source Source) Injec
 	if p.classifier != nil {
 		safe, confidence, categories, err := p.classifier.Classify(ctx, text)
 		if err != nil {
-			// Fail closed on classifier error
 			result.Safe = false
 			result.Confidence = 1.0
 			result.Layer = string(LayerClassifier)
@@ -274,13 +255,11 @@ func (p *Pipeline) Detect(ctx context.Context, text string, source Source) Injec
 			return result
 		}
 		if !safe {
-			// Gate decision on configured threshold (H3 fix)
 			threshold := p.config.Layers.Classifier.Threshold
 			if threshold <= 0 {
-				threshold = 0.7 // Default threshold
+				threshold = 0.7
 			}
 			if confidence < threshold {
-				// Below threshold — log but don't block
 				result.Layer = string(LayerClassifier)
 				result.Categories = categoriesToStrings(categories)
 				result.Reason = fmt.Sprintf("Classifier flagged injection (confidence %.2f < threshold %.2f): %s",
@@ -305,11 +284,9 @@ func (p *Pipeline) Detect(ctx context.Context, text string, source Source) Injec
 	return result
 }
 
-// maxConcurrentDetections limits parallel goroutines in DetectBatch.
 const maxConcurrentDetections = 8
 
 // DetectBatch runs injection detection on multiple texts.
-// Results are returned in the same order as the input items.
 func (p *Pipeline) DetectBatch(ctx context.Context, items []BatchItem) BatchResult {
 	if len(items) == 0 {
 		return BatchResult{}
@@ -317,16 +294,14 @@ func (p *Pipeline) DetectBatch(ctx context.Context, items []BatchItem) BatchResu
 
 	results := make([]BatchItemResult, len(items))
 	var wg sync.WaitGroup
-
-	// Semaphore to bound concurrency
 	sem := make(chan struct{}, maxConcurrentDetections)
 
 	for i, item := range items {
 		wg.Add(1)
 		go func(idx int, item BatchItem) {
 			defer wg.Done()
-			sem <- struct{}{}        // Acquire
-			defer func() { <-sem }() // Release
+			sem <- struct{}{}
+			defer func() { <-sem }()
 
 			result := p.Detect(ctx, item.Text, item.Source)
 			results[idx] = BatchItemResult{
@@ -358,7 +333,6 @@ func (p *Pipeline) ReloadPatterns() error {
 	return p.patterns.Reload()
 }
 
-// logAudit emits an audit event for the detection result.
 func (p *Pipeline) logAudit(ctx context.Context, result InjectionResult, source Source) {
 	if p.auditLogger == nil {
 		return
@@ -374,258 +348,4 @@ func (p *Pipeline) logAudit(ctx context.Context, result InjectionResult, source 
 		TextHash:   result.TextHash,
 		Decision:   result.Decision,
 	})
-}
-
-// PatternMatcher implements L1 pattern matching detection.
-type PatternMatcher struct {
-	config   PatternMatchingConfig
-	patterns []*regexp2.Regexp
-	mu       sync.RWMutex
-}
-
-// NewPatternMatcher creates a new pattern matcher with compiled regexes.
-func NewPatternMatcher(config PatternMatchingConfig) (*PatternMatcher, error) {
-	pm := &PatternMatcher{config: config}
-	if err := pm.loadPatterns(); err != nil {
-		return nil, err
-	}
-	return pm, nil
-}
-
-// loadPatterns compiles all patterns from blocklists and custom patterns.
-func (pm *PatternMatcher) loadPatterns() error {
-	var patterns []*regexp2.Regexp
-
-	// Load from blocklist files
-	for _, path := range pm.config.BlocklistPaths {
-		lines, err := ReadBlocklistFile(path)
-		if err != nil {
-			slog.Warn("Failed to read blocklist", "path", path, "error", err)
-			continue
-		}
-		for _, line := range lines {
-			re, err := regexp2.Compile(line, regexp2.None)
-			if err != nil {
-				slog.Warn("Failed to compile pattern", "pattern", line, "error", err)
-				continue
-			}
-			patterns = append(patterns, re)
-		}
-	}
-
-	// Load custom patterns
-	for _, pattern := range pm.config.CustomPatterns {
-		re, err := regexp2.Compile(pattern, regexp2.None)
-		if err != nil {
-			slog.Warn("Failed to compile custom pattern", "pattern", pattern, "error", err)
-			continue
-		}
-		patterns = append(patterns, re)
-	}
-
-	pm.mu.Lock()
-	pm.patterns = patterns
-	pm.mu.Unlock()
-
-	return nil
-}
-
-// Match checks text against all compiled patterns.
-func (pm *PatternMatcher) Match(ctx context.Context, text string) (bool, []InjectionCategory, error) {
-	pm.mu.RLock()
-	patterns := pm.patterns
-	pm.mu.RUnlock()
-
-	var categories []InjectionCategory
-	matched := false
-
-	for _, re := range patterns {
-		isMatch, err := re.MatchString(text)
-		if err != nil {
-			continue
-		}
-		if isMatch {
-			matched = true
-			categories = append(categories, categorizePattern(re.String()))
-		}
-	}
-
-	return matched, categories, nil
-}
-
-// Reload recompiles patterns from source files.
-func (pm *PatternMatcher) Reload() error {
-	return pm.loadPatterns()
-}
-
-// PerplexityAnalyzer implements L2 statistical anomaly detection.
-type PerplexityAnalyzer struct {
-	config PerplexityConfig
-}
-
-// NewPerplexityAnalyzer creates a new perplexity analyzer.
-func NewPerplexityAnalyzer(config PerplexityConfig) *PerplexityAnalyzer {
-	return &PerplexityAnalyzer{config: config}
-}
-
-// Analyze computes a perplexity-like score for the text.
-// Returns the score and whether it exceeds the anomaly threshold.
-func (pa *PerplexityAnalyzer) Analyze(ctx context.Context, text string) (float64, bool) {
-	// Simplified perplexity proxy: measure character distribution anomaly
-	// Real implementation would use a language model
-	if len(text) == 0 {
-		return 0, false
-	}
-
-	runes := []rune(text)
-	n := float64(len(runes))
-
-	// Calculate character entropy as a proxy for perplexity
-	freq := make(map[rune]int)
-	for _, r := range runes {
-		freq[r]++
-	}
-
-	entropy := 0.0
-	for _, count := range freq {
-		p := float64(count) / n
-		if p > 0 {
-			entropy -= p * math.Log2(p)
-		}
-	}
-
-	// Normalize: high entropy (random-looking) or very low entropy (repetitive) = suspicious
-	// Normal text typically has entropy 3.5-4.5 bits per character
-	var score float64
-	if entropy > 5.0 {
-		score = (entropy - 5.0) / 3.0 // High entropy anomaly
-	} else if entropy < 2.0 {
-		score = (2.0 - entropy) / 2.0 // Low entropy anomaly
-	}
-
-	// Check for unusual character ratios (e.g., lots of special chars)
-	specialCount := 0
-	alphaCount := 0
-	for _, r := range runes {
-		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') {
-			alphaCount++
-		} else if (r >= 33 && r <= 47) || (r >= 58 && r <= 64) {
-			specialCount++
-		}
-	}
-
-	if alphaCount > 0 {
-		specialRatio := float64(specialCount) / float64(alphaCount)
-		if specialRatio > 0.5 {
-			if specialRatio > score {
-				score = specialRatio
-			}
-		}
-	}
-
-	return score, score > pa.config.Threshold
-}
-
-// NoOpClassifier is a classifier backend that always returns safe.
-// Used when no L3 backend is configured.
-type NoOpClassifier struct{}
-
-// Name implements InjectionClassifier.
-func (n *NoOpClassifier) Name() string { return "noop" }
-
-// Classify implements InjectionClassifier.
-func (n *NoOpClassifier) Classify(ctx context.Context, text string) (bool, float64, []InjectionCategory, error) {
-	return true, 0.0, nil, nil
-}
-
-// Available implements InjectionClassifier.
-func (n *NoOpClassifier) Available(_ context.Context) bool { return true }
-
-// hashText returns a SHA-256 hash of the text for privacy-preserving audit logs.
-func hashText(text string) string {
-	h := sha256.Sum256([]byte(text))
-	return "sha256:" + hex.EncodeToString(h[:])
-}
-
-// categoriesToStrings converts InjectionCategory slice to string slice.
-func categoriesToStrings(cats []InjectionCategory) []string {
-	result := make([]string, len(cats))
-	for i, c := range cats {
-		result[i] = string(c)
-	}
-	return result
-}
-
-// categorizePattern attempts to categorize a matched pattern.
-// More specific patterns are checked first to avoid false attribution.
-func categorizePattern(pattern string) InjectionCategory {
-	p := strings.ToLower(pattern)
-
-	// Data exfiltration — check first (most specific compound conditions)
-	if (strings.Contains(p, "print") || strings.Contains(p, "echo") || strings.Contains(p, "cat")) &&
-		(strings.Contains(p, "prompt") || strings.Contains(p, "secret") || strings.Contains(p, "key") || strings.Contains(p, "token")) {
-		return CategoryDataExfiltration
-	}
-
-	// Encoding bypass
-	if strings.Contains(p, "base64") || strings.Contains(p, "rot13") || strings.Contains(p, "unicode") || strings.Contains(p, "\\u[0-9") {
-		return CategoryEncodingBypass
-	}
-
-	// Context manipulation — check before role_play (system prompt is more specific)
-	if strings.Contains(p, "system prompt") || strings.Contains(p, "system message") || strings.Contains(p, "initial prompt") {
-		return CategoryContextManipulation
-	}
-
-	// Role play
-	if strings.Contains(p, "you are now") || strings.Contains(p, "act as") || strings.Contains(p, "pretend") || strings.Contains(p, "roleplay") {
-		return CategoryRolePlay
-	}
-
-	// Privilege escalation — check after exfil (both use "root"/"admin")
-	if strings.Contains(p, "sudo") || strings.Contains(p, "chmod") || strings.Contains(p, " privilege") {
-		return CategoryPrivilegeEscalation
-	}
-
-	// Directive override — broadest category, check last
-	if strings.Contains(p, "ignore") || strings.Contains(p, "disregard") || strings.Contains(p, "override") || strings.Contains(p, "forget") || strings.Contains(p, "bypass") {
-		return CategoryDirectiveOverride
-	}
-
-	return CategoryDirectiveOverride
-}
-
-// DefaultAuditLogger implements AuditLogger using slog.
-type DefaultAuditLogger struct{}
-
-// LogInjection logs an injection detection event.
-func (d *DefaultAuditLogger) LogInjection(ctx context.Context, event AuditEvent) {
-	data, err := json.Marshal(event)
-	if err != nil {
-		slog.Error("Failed to marshal audit event", "error", err)
-		return
-	}
-	slog.Info("INJECTION_AUDIT", "event", string(data))
-}
-
-// Compile time interface checks
-var _ InjectionClassifier = (*NoOpClassifier)(nil)
-var _ AuditLogger = (*DefaultAuditLogger)(nil)
-
-// ReadBlocklistFile reads a blocklist file and returns non-comment lines.
-func ReadBlocklistFile(path string) ([]string, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-
-	var lines []string
-	for _, line := range strings.Split(string(data), "\n") {
-		line = strings.TrimSpace(line)
-		if line == "" || strings.HasPrefix(line, "#") {
-			continue
-		}
-		lines = append(lines, line)
-	}
-	return lines, nil
 }
