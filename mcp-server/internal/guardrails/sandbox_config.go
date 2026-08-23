@@ -93,8 +93,13 @@ func DefaultSandboxConfig() *SandboxConfig {
 		},
 		ToolPolicies: map[string]SandboxPolicy{
 			"bash": {
-				DefaultLevel:   LevelL1,
-				ResourceLimits: ResourceLimits{},
+				DefaultLevel: LevelL1,
+				ResourceLimits: ResourceLimits{
+					Time: struct {
+						MaxSeconds     int `yaml:"max_seconds"`
+						MaxWallSeconds int `yaml:"max_wall_seconds"`
+					}{MaxSeconds: 120, MaxWallSeconds: 300},
+				},
 			},
 			"git": {
 				DefaultLevel: LevelL1,
@@ -103,11 +108,20 @@ func DefaultSandboxConfig() *SandboxConfig {
 						Enabled      bool     `yaml:"enabled"`
 						AllowedHosts []string `yaml:"allowed_hosts"`
 					}{Enabled: true, AllowedHosts: []string{"github.com", "gitlab.com"}},
+					Time: struct {
+						MaxSeconds     int `yaml:"max_seconds"`
+						MaxWallSeconds int `yaml:"max_wall_seconds"`
+					}{MaxSeconds: 60, MaxWallSeconds: 120},
 				},
 			},
 			"file_edit": {
-				DefaultLevel:   LevelL0,
-				ResourceLimits: ResourceLimits{},
+				DefaultLevel: LevelL0,
+				ResourceLimits: ResourceLimits{
+					Time: struct {
+						MaxSeconds     int `yaml:"max_seconds"`
+						MaxWallSeconds int `yaml:"max_wall_seconds"`
+					}{MaxSeconds: 30, MaxWallSeconds: 60},
+				},
 			},
 		},
 	}
@@ -126,6 +140,18 @@ func (c *SandboxConfig) Validate() error {
 	}
 	if c.GlobalDefaults.Memory.MaxMB < 0 {
 		return fmt.Errorf("sandbox max_memory_mb must be >= 0")
+	}
+	// Validate tool policies
+	for name, policy := range c.ToolPolicies {
+		if policy.ResourceLimits.Time.MaxSeconds < 0 {
+			return fmt.Errorf("tool policy %q: max_seconds must be >= 0", name)
+		}
+		if policy.ResourceLimits.CPU.MaxPercent < 0 || policy.ResourceLimits.CPU.MaxPercent > 100 {
+			return fmt.Errorf("tool policy %q: max_cpu_percent must be 0-100", name)
+		}
+		if policy.ResourceLimits.Memory.MaxMB < 0 {
+			return fmt.Errorf("tool policy %q: max_memory_mb must be >= 0", name)
+		}
 	}
 	return nil
 }
