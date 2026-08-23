@@ -35,6 +35,8 @@ htmlcov/
 # Team runtime artifacts (regenerated at runtime — never commit)
 .teams/*.lock
 .teams/metrics.json
+.teams/backups/
+.teams/integration-test-json.json
 mcp-server/internal/mcp/.teams/
 
 # Secrets (NEVER commit these)
@@ -50,9 +52,6 @@ mcp-server/bin/guardrail-mcp
 mcp-server/test_tools
 cmd/team-cli/team
 *.tar.gz
-
-# Ignore test artifacts
-mcp-server/internal/mcp/*_test.go
 
 # Deep research output (internal analysis, never commit)
 research/
