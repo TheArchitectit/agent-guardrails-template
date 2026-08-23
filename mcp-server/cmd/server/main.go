@@ -18,6 +18,7 @@ import (
 	"github.com/thearchitectit/guardrail-mcp/internal/cache"
 	"github.com/thearchitectit/guardrail-mcp/internal/config"
 	"github.com/thearchitectit/guardrail-mcp/internal/database"
+	"github.com/thearchitectit/guardrail-mcp/internal/guardrails"
 	mcpServer "github.com/thearchitectit/guardrail-mcp/internal/mcp"
 	"github.com/thearchitectit/guardrail-mcp/internal/notifications"
 	"github.com/thearchitectit/guardrail-mcp/internal/validation"
@@ -122,6 +123,22 @@ func main() {
 	// Create MCP server
 	haltEventStore := database.NewHaltEventStore(db)
 	mcpSrv := mcpServer.NewMCPServer(cfg, db, redisClient, auditLogger, validationEngine, fileReadStore, taskAttemptStore, haltEventStore)
+
+	// Initialize the guardrails engine (content filter + policy engine) for
+	// the guardrail_classify_content and guardrail_check_policy tools. The
+	// Llama Guard backend is enabled when an Ollama URL is configured.
+	if ollamaURL := os.Getenv("OLLAMA_URL"); ollamaURL != "" {
+		engine := guardrails.NewEngine(nil, slog.Default())
+		model := os.Getenv("OLLAMA_MODEL")
+		if model == "" {
+			model = "llama-guard-3"
+		}
+		engine.AddContentFilterBackend(guardrails.NewLlamaGuardBackend(model, ollamaURL))
+		mcpSrv.SetGuardrailsEngine(engine)
+		slog.Info("Guardrails engine initialized", "backend", "llama-guard", "model", model)
+	} else {
+		slog.Info("Guardrails engine disabled (OLLAMA_URL not set); content filter tools will return not-configured")
+	}
 
 	// Initialize webhook notifications
 	webhookStore := database.NewWebhookStore(db)

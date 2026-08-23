@@ -14,37 +14,39 @@ import (
 	"github.com/mark3labs/mcp-go/server"
 	"github.com/thearchitectit/guardrail-mcp/internal/audit"
 	"github.com/thearchitectit/guardrail-mcp/internal/budget"
-	"github.com/thearchitectit/guardrail-mcp/internal/notifications"
 	"github.com/thearchitectit/guardrail-mcp/internal/cache"
 	"github.com/thearchitectit/guardrail-mcp/internal/config"
 	"github.com/thearchitectit/guardrail-mcp/internal/database"
+	"github.com/thearchitectit/guardrail-mcp/internal/guardrails"
 	"github.com/thearchitectit/guardrail-mcp/internal/models"
+	"github.com/thearchitectit/guardrail-mcp/internal/notifications"
 	"github.com/thearchitectit/guardrail-mcp/internal/validation"
 )
 
 // MCPServer handles MCP protocol requests
 type MCPServer struct {
-	mcpServer         *server.MCPServer
-	httpServer        *server.StreamableHTTPServer
-	db                *database.DB
-	cache             *cache.Client
-	audit             *audit.Logger
-	validator         *validation.ValidationEngine
-	config            *config.Config
-	version           string
-	visionTools       *VisionToolSet
-	webhookStore      *database.WebhookStore
-	webhookDispatcher *notifications.Dispatcher
-	budgetStore       *database.BudgetStore
-	budgetGovernor    *budget.Governor
-	agentStateStore   *database.AgentStateStore
-	fileReadStore     *database.FileReadStore
-	taskAttemptStore  *database.TaskAttemptStore
-	haltEventStore    *database.HaltEventStore
-	uncertaintyStore  *database.UncertaintyStore
-	sessions          map[string]*models.Session
-	sessionsMu        sync.RWMutex
-	productionCodeStore *database.ProductionCodeStore
+	mcpServer            *server.MCPServer
+	httpServer           *server.StreamableHTTPServer
+	db                   *database.DB
+	cache                *cache.Client
+	audit                *audit.Logger
+	validator            *validation.ValidationEngine
+	config               *config.Config
+	guardrailsEngine     *guardrails.Engine
+	version              string
+	visionTools          *VisionToolSet
+	webhookStore         *database.WebhookStore
+	webhookDispatcher    *notifications.Dispatcher
+	budgetStore          *database.BudgetStore
+	budgetGovernor       *budget.Governor
+	agentStateStore      *database.AgentStateStore
+	fileReadStore        *database.FileReadStore
+	taskAttemptStore     *database.TaskAttemptStore
+	haltEventStore       *database.HaltEventStore
+	uncertaintyStore     *database.UncertaintyStore
+	sessions             map[string]*models.Session
+	sessionsMu           sync.RWMutex
+	productionCodeStore  *database.ProductionCodeStore
 	fixVerificationStore *database.FixVerificationStore
 }
 
@@ -77,17 +79,17 @@ func NewMCPServer(cfg *config.Config, db *database.DB, cacheClient *cache.Client
 			cfg.SchemaVersion,
 			server.WithResourceCapabilities(true, true),
 		),
-		db:               db,
-		cache:            cacheClient,
-		audit:            auditLogger,
-		validator:        validator,
-		config:           cfg,
-		fileReadStore:    fileReadStore,
-		taskAttemptStore: taskAttemptStore,
-		haltEventStore:   haltEventStore,
-		uncertaintyStore: database.NewUncertaintyStore(db.DB),
-		sessions:            make(map[string]*models.Session),
-		productionCodeStore: database.NewProductionCodeStore(db),
+		db:                   db,
+		cache:                cacheClient,
+		audit:                auditLogger,
+		validator:            validator,
+		config:               cfg,
+		fileReadStore:        fileReadStore,
+		taskAttemptStore:     taskAttemptStore,
+		haltEventStore:       haltEventStore,
+		uncertaintyStore:     database.NewUncertaintyStore(db.DB),
+		sessions:             make(map[string]*models.Session),
+		productionCodeStore:  database.NewProductionCodeStore(db),
 		fixVerificationStore: database.NewFixVerificationStore(db),
 	}
 
@@ -108,6 +110,13 @@ func NewMCPServer(cfg *config.Config, db *database.DB, cacheClient *cache.Client
 // VisionTools returns the vision tool set if enabled, or nil.
 func (s *MCPServer) VisionTools() *VisionToolSet {
 	return s.visionTools
+}
+
+// SetGuardrailsEngine sets the guardrails engine for content classification and
+// policy checks. The guardrail_classify_content and guardrail_check_policy tools
+// are registered regardless, but return a "not configured" error until set.
+func (s *MCPServer) SetGuardrailsEngine(engine *guardrails.Engine) {
+	s.guardrailsEngine = engine
 }
 
 // Start starts the MCP server on the given address.
@@ -215,6 +224,10 @@ func (s *MCPServer) handleToolCall(ctx context.Context, name string, args map[st
 		return s.handleTeamHealth(ctx, args)
 	case "guardrail_install_skills":
 		return s.handleInstallSkills(ctx, args)
+	case "guardrail_classify_content":
+		return s.handleClassifyContent(ctx, args)
+	case "guardrail_check_policy":
+		return s.handleCheckPolicy(ctx, args)
 	// Webhook notification tools
 	case "configure_webhook":
 		return s.handleConfigureWebhook(ctx, args)
@@ -296,9 +309,9 @@ func (s *MCPServer) handleGetContext(ctx context.Context, args map[string]interf
 
 	ruleCount := s.validator.GetCachedRulesCount()
 	result := map[string]interface{}{
-		"path":            path,
+		"path":             path,
 		"applicable_rules": ruleCount,
-		"timestamp":       time.Now().Format(time.RFC3339),
+		"timestamp":        time.Now().Format(time.RFC3339),
 	}
 
 	return buildToolResult(result, false)
