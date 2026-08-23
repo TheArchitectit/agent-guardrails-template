@@ -903,7 +903,7 @@ func (s *MCPServer) handleRecordHalt(ctx context.Context, args map[string]interf
 	haltType, _ := args["halt_type"].(string)
 	description, _ := args["description"].(string)
 	severity, _ := args["severity"].(string)
-	contextData, _ := args["context"].(interface{})
+	contextData, _ := args["context"]
 
 	// Validate required parameters
 	if sessionToken == "" {

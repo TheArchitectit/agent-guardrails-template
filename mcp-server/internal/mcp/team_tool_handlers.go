@@ -314,7 +314,7 @@ func sanitizePhase(phase string) string {
 // Team tool handler implementations for MCP server
 
 // handleTeamInit initializes team structure for a project
-func (s *MCPServer) handleTeamInit(ctx context.Context, args map[string]interface{}) (*mcp.CallToolResult, error) {
+func (s *MCPServer) handleTeamInit(ctx context.Context, args map[string]any) (*mcp.CallToolResult, error) {
 	start := time.Now()
 	metrics.IncrementTeamToolActive("team_init")
 	defer func() {
@@ -370,7 +370,7 @@ func (s *MCPServer) handleTeamInit(ctx context.Context, args map[string]interfac
 }
 
 // handleTeamList lists all teams and their status
-func (s *MCPServer) handleTeamList(ctx context.Context, args map[string]interface{}) (*mcp.CallToolResult, error) {
+func (s *MCPServer) handleTeamList(ctx context.Context, args map[string]any) (*mcp.CallToolResult, error) {
 	start := time.Now()
 	metrics.IncrementTeamToolActive("team_list")
 	defer func() {
@@ -393,6 +393,19 @@ func (s *MCPServer) handleTeamList(ctx context.Context, args map[string]interfac
 			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: err.Error()}},
 			IsError: true,
 		}, nil
+	}
+
+	// Validate phase filter first (SEC-010) so invalid phases are rejected
+	// before any project load attempt.
+	if phase, ok := args["phase"].(string); ok && phase != "" {
+		if err := validatePhase(phase); err != nil {
+			metrics.RecordTeamToolError("team_list", "validation_error")
+			metrics.RecordTeamToolCall("team_list", false)
+			return &mcp.CallToolResult{
+				Content: []mcp.Content{mcp.TextContent{Type: "text", Text: fmt.Sprintf("Error: %v", err)}},
+				IsError: true,
+			}, nil
+		}
 	}
 
 	// Use Go implementation
@@ -418,13 +431,6 @@ func (s *MCPServer) handleTeamList(ctx context.Context, args map[string]interfac
 
 	var teams []team.Team
 	if phase, ok := args["phase"].(string); ok && phase != "" {
-		if err := team.ValidatePhase(phase); err != nil {
-			metrics.RecordTeamToolError("team_list", "validation_error")
-			return &mcp.CallToolResult{
-				Content: []mcp.Content{mcp.TextContent{Type: "text", Text: fmt.Sprintf("Error: %v", err)}},
-				IsError: true,
-			}, nil
-		}
 		teams = mgr.GetTeamsByPhase(phase)
 	} else {
 		teams = mgr.GetAllTeams()
@@ -433,8 +439,8 @@ func (s *MCPServer) handleTeamList(ctx context.Context, args map[string]interfac
 
 	// Build result
 	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("\n📋 Teams for project '%s':\n\n", projectName))
-	sb.WriteString(fmt.Sprintf("%-5s %-35s %-30s %s\n", "ID", "Name", "Phase", "Status"))
+	fmt.Fprintf(&sb, "\n📋 Teams for project '%s':\n\n", projectName)
+	fmt.Fprintf(&sb, "%-5s %-35s %-30s %s\n", "ID", "Name", "Phase", "Status")
 	sb.WriteString(strings.Repeat("-", 100) + "\n")
 
 	for _, t := range teams {
@@ -448,7 +454,7 @@ func (s *MCPServer) handleTeamList(ctx context.Context, args map[string]interfac
 		if t.Status == team.TeamStatusNotStarted && assignedCount > 0 {
 			statusStr = fmt.Sprintf("%s (%d/%d assigned)", t.Status, assignedCount, len(t.Roles))
 		}
-		sb.WriteString(fmt.Sprintf("%-5d %-35s %-30s %s\n", t.ID, t.Name, t.Phase, statusStr))
+		fmt.Fprintf(&sb, "%-5d %-35s %-30s %s\n", t.ID, t.Name, t.Phase, statusStr)
 	}
 
 	resultText := sb.String()
@@ -459,7 +465,7 @@ func (s *MCPServer) handleTeamList(ctx context.Context, args map[string]interfac
 }
 
 // handleTeamAssign assigns a person to a role in a team
-func (s *MCPServer) handleTeamAssign(ctx context.Context, args map[string]interface{}) (*mcp.CallToolResult, error) {
+func (s *MCPServer) handleTeamAssign(ctx context.Context, args map[string]any) (*mcp.CallToolResult, error) {
 	start := time.Now()
 	metrics.IncrementTeamToolActive("team_assign")
 	defer func() {
@@ -593,7 +599,7 @@ func (s *MCPServer) handleTeamAssign(ctx context.Context, args map[string]interf
 }
 
 // handleTeamUnassign removes a person from a role in a team
-func (s *MCPServer) handleTeamUnassign(ctx context.Context, args map[string]interface{}) (*mcp.CallToolResult, error) {
+func (s *MCPServer) handleTeamUnassign(ctx context.Context, args map[string]any) (*mcp.CallToolResult, error) {
 	start := time.Now()
 	metrics.IncrementTeamToolActive("team_unassign")
 	defer func() {
@@ -696,7 +702,7 @@ func (s *MCPServer) handleTeamUnassign(ctx context.Context, args map[string]inte
 
 // handleTeamStart starts a team (marks as active)
 // FUNC-010: Supports override for admin users
-func (s *MCPServer) handleTeamStart(ctx context.Context, args map[string]interface{}) (*mcp.CallToolResult, error) {
+func (s *MCPServer) handleTeamStart(ctx context.Context, args map[string]any) (*mcp.CallToolResult, error) {
 	start := time.Now()
 	metrics.IncrementTeamToolActive("team_start")
 	defer func() {
@@ -801,7 +807,7 @@ func (s *MCPServer) handleTeamStart(ctx context.Context, args map[string]interfa
 }
 
 // handleTeamStatus gets phase or project status
-func (s *MCPServer) handleTeamStatus(ctx context.Context, args map[string]interface{}) (*mcp.CallToolResult, error) {
+func (s *MCPServer) handleTeamStatus(ctx context.Context, args map[string]any) (*mcp.CallToolResult, error) {
 	start := time.Now()
 	metrics.IncrementTeamToolActive("team_status")
 	defer func() {
@@ -866,7 +872,7 @@ func (s *MCPServer) handleTeamStatus(ctx context.Context, args map[string]interf
 }
 
 // handlePhaseGateCheck checks if phase gate requirements are met
-func (s *MCPServer) handlePhaseGateCheck(ctx context.Context, args map[string]interface{}) (*mcp.CallToolResult, error) {
+func (s *MCPServer) handlePhaseGateCheck(ctx context.Context, args map[string]any) (*mcp.CallToolResult, error) {
 	start := time.Now()
 	metrics.IncrementTeamToolActive("phase_gate_check")
 	defer func() {
@@ -940,15 +946,15 @@ func (s *MCPServer) handlePhaseGateCheck(ctx context.Context, args map[string]in
 
 	// Build response
 	var response strings.Builder
-	response.WriteString(fmt.Sprintf("# Phase Gate: %s\n\n", gate.Name))
+	fmt.Fprintf(&response, "# Phase Gate: %s\n\n", gate.Name)
 	response.WriteString("**Required Teams:**\n")
 	for _, teamID := range gate.RequiredTeams {
-		response.WriteString(fmt.Sprintf("- Team %d\n", teamID))
+		fmt.Fprintf(&response, "- Team %d\n", teamID)
 	}
 
 	response.WriteString("\n**Required Deliverables:**\n")
 	for _, deliverable := range gate.Deliverables {
-		response.WriteString(fmt.Sprintf("- [ ] %s\n", deliverable))
+		fmt.Fprintf(&response, "- [ ] %s\n", deliverable)
 	}
 
 	metrics.RecordTeamToolCall("phase_gate_check", true)
@@ -958,7 +964,7 @@ func (s *MCPServer) handlePhaseGateCheck(ctx context.Context, args map[string]in
 }
 
 // handleAgentTeamMap gets the team assignment for an agent type
-func (s *MCPServer) handleAgentTeamMap(ctx context.Context, args map[string]interface{}) (*mcp.CallToolResult, error) {
+func (s *MCPServer) handleAgentTeamMap(ctx context.Context, args map[string]any) (*mcp.CallToolResult, error) {
 	start := time.Now()
 	metrics.IncrementTeamToolActive("agent_team_map")
 	defer func() {
@@ -1021,7 +1027,7 @@ func (s *MCPServer) handleAgentTeamMap(ctx context.Context, args map[string]inte
 }
 
 // handleTeamSizeValidate validates team sizes meet 4-6 member requirement
-func (s *MCPServer) handleTeamSizeValidate(ctx context.Context, args map[string]interface{}) (*mcp.CallToolResult, error) {
+func (s *MCPServer) handleTeamSizeValidate(ctx context.Context, args map[string]any) (*mcp.CallToolResult, error) {
 	start := time.Now()
 	metrics.IncrementTeamToolActive("team_size_validate")
 	defer func() {
@@ -1131,7 +1137,7 @@ type AgentTeam struct {
 }
 
 // handleTeamDelete deletes a specific team from a project
-func (s *MCPServer) handleTeamDelete(ctx context.Context, args map[string]interface{}) (*mcp.CallToolResult, error) {
+func (s *MCPServer) handleTeamDelete(ctx context.Context, args map[string]any) (*mcp.CallToolResult, error) {
 	start := time.Now()
 	metrics.IncrementTeamToolActive("team_delete")
 	defer func() {
@@ -1219,7 +1225,7 @@ func (s *MCPServer) handleTeamDelete(ctx context.Context, args map[string]interf
 }
 
 // handleProjectDelete deletes an entire project
-func (s *MCPServer) handleProjectDelete(ctx context.Context, args map[string]interface{}) (*mcp.CallToolResult, error) {
+func (s *MCPServer) handleProjectDelete(ctx context.Context, args map[string]any) (*mcp.CallToolResult, error) {
 	start := time.Now()
 	metrics.IncrementTeamToolActive("project_delete")
 	defer func() {
@@ -1288,7 +1294,7 @@ func (s *MCPServer) handleProjectDelete(ctx context.Context, args map[string]int
 }
 
 // handleTeamHealth performs health check on team_manager.py
-func (s *MCPServer) handleTeamHealth(ctx context.Context, args map[string]interface{}) (*mcp.CallToolResult, error) {
+func (s *MCPServer) handleTeamHealth(ctx context.Context, args map[string]any) (*mcp.CallToolResult, error) {
 	start := time.Now()
 	metrics.IncrementTeamToolActive("team_health")
 	defer func() {
@@ -1312,7 +1318,7 @@ func (s *MCPServer) handleTeamHealth(ctx context.Context, args map[string]interf
 	mgr, err := team.NewManager(projectName)
 	if err != nil {
 		// For health check, we still want to report status even if project doesn't exist
-		health := map[string]interface{}{
+		health := map[string]any{
 			"status":  "healthy",
 			"project": projectName,
 			"note":    "Project not initialized, but team manager is operational",

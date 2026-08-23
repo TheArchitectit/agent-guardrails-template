@@ -125,11 +125,21 @@ func (v *FourLawsValidator) Validate(ctx context.Context, input ValidatorInput) 
 	lowerNorm := strings.ToLower(norm)
 
 	harmPatterns := []*regexp.Regexp{
-		regexp.MustCompile(`(?i)rm\s+-rf\s+/`),
+		// rm with any ordering of recursive/force flags (-rf, -fr, -Rf,
+		// -r -f, -f -r, -rR) followed by an absolute path, home-relative
+		// path, or variable expansion. Catches `rm -fr /`,
+		// `rm -rf --no-preserve-root /`, `rm -rf /home`, `rm -rf "$var"`,
+		// `rm -r -f /`.
+		regexp.MustCompile(`(?i)\brm\b[^;|&\n]*-[a-z]*[rR][a-z]*[fF][a-z]*\b[^;|&\n]*\s+(\/|~|\$\{?\w|\$\w|"[^"]*\$)`),
+		regexp.MustCompile(`(?i)\brm\b[^;|&\n]*-[a-z]*[fF][a-z]*[rR][a-z]*\b[^;|&\n]*\s+(\/|~|\$\{?\w|\$\w|"[^"]*\$)`),
+		regexp.MustCompile(`(?i)\brm\b[^;|&\n]*-[a-z]*[rR]\b[^;|&\n]*-[a-z]*[fF]\b[^;|&\n]*\s+(\/|~|\$\{?\w|\$\w|"[^"]*\$)`),
+		regexp.MustCompile(`(?i)\brm\b[^;|&\n]*-[a-z]*[fF]\b[^;|&\n]*-[a-z]*[rR]\b[^;|&\n]*\s+(\/|~|\$\{?\w|\$\w|"[^"]*\$)`),
 		regexp.MustCompile(`(?i)mkfs\.[a-z0-9]+`),
 		regexp.MustCompile(`(?i)dd\s+if=/dev/zero`),
 		regexp.MustCompile(`:\(\)\s*\{\s*:\s*\|\s*:\s*&\s*\}\s*;\s*:`),
-		regexp.MustCompile(`(?i)chmod\s+-R\s+777\s+/`),
+		// chmod 777 (with or without -R) on an absolute path. Catches
+		// `chmod -R 777 /`, `chmod 777 /etc`, `chmod 777 /`.
+		regexp.MustCompile(`(?i)\bchmod\b[^;|&\n]*(?:-[a-z]*[rR]?\b[^;|&\n]*)?\b777\b\s+(\/|\$\{?\w|\$\w)`),
 		regexp.MustCompile(`(?i)>\s*/dev/sda`),
 	}
 
@@ -144,16 +154,30 @@ func (v *FourLawsValidator) Validate(ctx context.Context, input ValidatorInput) 
 		}
 	}
 
-	// Law 2: scope check — use normalized text for consistent matching
-	if input.Context != "" {
-		for _, pattern := range v.scopePatterns {
-			if strings.Contains(lowerNorm, strings.ToLower(pattern)) {
+	// Law 2: scope check — use normalized text for consistent matching.
+	// Scope validation runs even when Context is empty: with no declared
+	// scope the output cannot be verified against one, so the check must
+	// flag that scope could not be confirmed rather than silently skip it.
+	{
+		if input.Context == "" {
+			if len(v.scopePatterns) > 0 {
 				return &ValidatorResult{
 					Passed:     false,
-					Reason:     fmt.Sprintf("Law 2 violation: output exceeds declared scope (%s)", pattern),
-					Violations: []string{"scope_violation"},
+					Reason:     "Law 2 violation: scope could not be verified (no declared context)",
+					Violations: []string{"scope_unverified"},
 					Confidence: 0.9,
 				}, nil
+			}
+		} else {
+			for _, pattern := range v.scopePatterns {
+				if strings.Contains(lowerNorm, strings.ToLower(pattern)) {
+					return &ValidatorResult{
+						Passed:     false,
+						Reason:     fmt.Sprintf("Law 2 violation: output exceeds declared scope (%s)", pattern),
+						Violations: []string{"scope_violation"},
+						Confidence: 0.9,
+					}, nil
+				}
 			}
 		}
 	}

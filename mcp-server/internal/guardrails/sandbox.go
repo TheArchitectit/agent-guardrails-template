@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os/exec"
+	"regexp"
 	"strings"
 	"time"
 )
@@ -45,13 +46,62 @@ func NewSandboxManager(cfg *SandboxConfig, logger *slog.Logger) *SandboxManager 
 	}
 }
 
-// Execute runs the given command under the appropriate isolation level and resource limits.
+// sandboxSetupErr wraps an infrastructure error that occurred BEFORE the
+// command itself began executing under isolation. Only these errors may
+// justify a fallback to a lower isolation level.
+type sandboxSetupErr struct{ msg string }
+
+func (e *sandboxSetupErr) Error() string { return e.msg }
+
+// isSetupError reports whether err is a genuine infrastructure-setup failure
+// (e.g. the container runtime or unshare binary is missing, or the container
+// could not be started at all) rather than a rejection of the command that
+// actually ran inside the sandbox. Container runtime exit codes 125/126 mean
+// the container failed to start — treated as setup, NOT a command denial.
+func isSetupError(err error) bool {
+	if err == nil {
+		return false
+	}
+	var s *sandboxSetupErr
+	if errors.As(err, &s) {
+		return true
+	}
+	msg := err.Error()
+	if strings.Contains(msg, "executable file not found") ||
+		strings.Contains(msg, "No such image") ||
+		strings.Contains(msg, "unshare") ||
+		strings.Contains(msg, "exit status 125") ||
+		strings.Contains(msg, "exit status 126") {
+		return true
+	}
+	return false
+}
+
+// Execute runs the given command under the appropriate isolation level and
+// resource limits.
+//
+// Fail-closed policy: isolation level is never DOWNGRADED on error. If a
+// command is denied or fails while executing under L2/L1, Execute returns the
+// error immediately instead of re-running the same command on a less
+// isolated level (which would run it on the host with no isolation at all).
+//
+// The only permitted downgrade is for genuine infrastructure-setup errors —
+// failures that occur before the command ever begins executing, such as a
+// missing container runtime or unshare binary. Those are surfaced via
+// sandboxSetupErr. A command that actually began running under isolation and
+// was then denied (permission denied, exit 125/126 from a started container,
+// etc.) is treated as a security rejection and fails closed.
 func (m *SandboxManager) Execute(ctx context.Context, command string, level SandboxLevel, limits ResourceLimits) (*SandboxResult, error) {
 	start := time.Now()
 	var result *SandboxResult
 	var err error
 
 	actualLevel := level
+	// fallbackWasFailClosed is true when the chain downgraded because a
+	// command was denied/rejected while executing under isolation (as opposed
+	// to a genuine setup-time infrastructure error). A fail-closed downgrade
+	// is itself a security boundary breach; a setup fallback is not.
+	fallbackWasFailClosed := false
 
 	for {
 		switch actualLevel {
@@ -68,17 +118,22 @@ func (m *SandboxManager) Execute(ctx context.Context, command string, level Sand
 		if err == nil || !m.config.FallbackEnabled {
 			break
 		}
-		if !m.isRecoverable(err) {
+		// Only genuine setup-time failures may justify a downgrade. A command
+		// that was denied while executing under isolation fails closed.
+		if !isSetupError(err) {
+			m.logger.Warn("sandbox execution failed closed (no downgrade)",
+				"requested_level", level, "actual_level", actualLevel, "error", err)
+			fallbackWasFailClosed = true
 			break
 		}
 
 		switch actualLevel {
 		case LevelL2:
-			m.logger.Warn("L2 sandbox failed, falling back to L1", "error", err)
+			m.logger.Warn("L2 container runtime unavailable, falling back to L1", "error", err)
 			actualLevel = LevelL1
 			continue
 		case LevelL1:
-			m.logger.Warn("L1 sandbox failed, falling back to L0", "error", err)
+			m.logger.Warn("L1 namespace setup unavailable, falling back to L0", "error", err)
 			actualLevel = LevelL0
 			continue
 		}
@@ -92,27 +147,18 @@ func (m *SandboxManager) Execute(ctx context.Context, command string, level Sand
 	if result != nil {
 		result.ActualIsolationLvl = actualLevel
 		result.ExecutionTime = time.Since(start)
+		// A command that ran at a lower isolation level than requested due to
+		// a fail-closed denial (NOT a setup fallback) is a security breach.
+		if fallbackWasFailClosed && actualLevel < level {
+			result.SandboxViolations = append(result.SandboxViolations,
+				fmt.Sprintf("requested isolation %s but executed at lower level %s due to execution denial", level, actualLevel))
+		}
+		if len(result.SandboxViolations) > 0 {
+			return result, SandboxViolationsError(result.SandboxViolations)
+		}
 	}
 
 	return result, err
-}
-
-func (m *SandboxManager) isRecoverable(err error) bool {
-	msg := err.Error()
-	// Infrastructure failures that justify fallback to a lower isolation level
-	if strings.Contains(msg, "executable file not found") ||
-		strings.Contains(msg, "No such image") ||
-		strings.Contains(msg, "unshare") ||
-		strings.Contains(msg, "not found") ||
-		strings.Contains(msg, "permission denied") {
-		return true
-	}
-	// Exit codes 125/126 are container runtime failures (Docker/Podman)
-	// that indicate the container couldn't start — recoverable
-	if strings.Contains(msg, "exit status 125") || strings.Contains(msg, "exit status 126") {
-		return true
-	}
-	return false
 }
 
 // execL0 executes the command directly on the host.
@@ -138,11 +184,14 @@ func (m *SandboxManager) execL0(ctx context.Context, command string, limits Reso
 		}
 	}
 
-	return &SandboxResult{
-		ExitCode: exitCode,
-		Stdout:   stdout.String(),
-		Stderr:   stderr.String(),
-	}, err
+	result := &SandboxResult{
+		ExitCode:          exitCode,
+		Stdout:            stdout.String(),
+		Stderr:            stderr.String(),
+		ActualIsolationLvl: LevelL0,
+	}
+	m.detectViolations(result, LevelL0, limits, ctx, err)
+	return result, err
 }
 
 // execL1 executes the command using Linux namespaces via unshare(2).
@@ -181,11 +230,14 @@ func (m *SandboxManager) execL1(ctx context.Context, command string, limits Reso
 		}
 	}
 
-	return &SandboxResult{
-		ExitCode: exitCode,
-		Stdout:   stdout.String(),
-		Stderr:   stderr.String(),
-	}, err
+	result := &SandboxResult{
+		ExitCode:          exitCode,
+		Stdout:            stdout.String(),
+		Stderr:            stderr.String(),
+		ActualIsolationLvl: LevelL1,
+	}
+	m.detectViolations(result, LevelL1, limits, ctx, err)
+	return result, err
 }
 
 // execL2 executes the command inside a rootless container.
@@ -197,7 +249,10 @@ func (m *SandboxManager) execL2(ctx context.Context, command string, limits Reso
 	if _, err := exec.LookPath(runtime); err != nil {
 		runtime = "docker"
 		if _, err := exec.LookPath(runtime); err != nil {
-			return nil, fmt.Errorf("neither podman nor docker found in PATH")
+			// Setup-time failure: the container runtime is simply not
+			// installed. This is a sandboxSetupErr so a fallback to a lower
+			// isolation level is permitted — the command never ran.
+			return nil, &sandboxSetupErr{msg: "neither podman nor docker found in PATH"}
 		}
 	}
 
@@ -212,12 +267,20 @@ func (m *SandboxManager) execL2(ctx context.Context, command string, limits Reso
 		"--security-opt", "no-new-privileges",
 	}
 
-	// Network isolation — honor limits.Network if configured
-	if len(limits.Network.AllowedHosts) == 0 {
-		args = append(args, "--network=none")
+	// Network isolation. Per-host whitelisting requires a pre-provisioned
+	// container network that is out of scope here, so we fail closed:
+	//   - no AllowedHosts => --network=none (fully offline)
+	//   - AllowedHosts set => we still default to --network=none because true
+	//     host whitelisting is not implemented. A dedicated network should be
+	//     created in advance and the NetworkMode config field set to use it.
+	if m.config.NetworkMode != "" {
+		args = append(args, "--network="+m.config.NetworkMode)
 	} else {
-		// Use host network with DNS-based filtering via /etc/hosts
-		args = append(args, "--network=host")
+		args = append(args, "--network=none")
+	}
+	if len(limits.Network.AllowedHosts) > 0 {
+		m.logger.Warn("per-host network whitelisting not enforced; using network=none (fail-closed)",
+			"allowed_hosts", limits.Network.AllowedHosts)
 	}
 
 	// Resource limits — guard against zero values
@@ -234,12 +297,21 @@ func (m *SandboxManager) execL2(ctx context.Context, command string, limits Reso
 		args = append(args, "--cpus=1.0") // Safe default
 	}
 
-	// Bind mount declared workspace paths (read-write)
+	// Bind mount declared workspace paths (read-write). Paths containing ':'
+	// or ',' corrupt the -v spec (':' separates host:container:mode and ','
+	// separates mount options), so reject them instead of building a malformed
+	// mount that could escape the intended path.
 	for _, path := range limits.Disk.ReadWritePaths {
+		if err := validateMountPath(path); err != nil {
+			return nil, err
+		}
 		args = append(args, "-v", fmt.Sprintf("%s:%s:rw", path, path))
 	}
 	// Bind mount declared read-only paths
 	for _, path := range limits.Disk.ReadOnlyPaths {
+		if err := validateMountPath(path); err != nil {
+			return nil, err
+		}
 		args = append(args, "-v", fmt.Sprintf("%s:%s:ro", path, path))
 	}
 
@@ -269,9 +341,94 @@ func (m *SandboxManager) execL2(ctx context.Context, command string, limits Reso
 		}
 	}
 
-	return &SandboxResult{
-		ExitCode: exitCode,
-		Stdout:   stdout.String(),
-		Stderr:   stderr.String(),
-	}, err
+	result := &SandboxResult{
+		ExitCode:          exitCode,
+		Stdout:            stdout.String(),
+		Stderr:            stderr.String(),
+		ActualIsolationLvl: LevelL2,
+	}
+	m.detectViolations(result, LevelL2, limits, ctx, err)
+	return result, err
+}
+
+// detectViolations inspects an executed result and records any sandbox
+// security boundary breaches in result.SandboxViolations. A non-empty
+// SandboxViolations means ErrSandboxViolation is returned by the caller path.
+//
+// Detected cases:
+//   - resource limit exceeded: exit code 137 (OOM/sigkill) or ctx timeout
+//   - network access attempt outside AllowedHosts (best-effort)
+//
+// The "ran at a lower isolation level than requested" breach is recorded by
+// Execute against the requested level, not here (exec funcs don't know it).
+func (m *SandboxManager) detectViolations(result *SandboxResult, actualLevel SandboxLevel, limits ResourceLimits, ctx context.Context, execErr error) {
+	// Resource limit exceeded: OOM kill / SIGKILL, or the execution context
+	// deadline was hit (timeout). When the context deadline fires, exec kills
+	// the process and returns "signal: killed"; we also check ctx.Err() so
+	// the timeout is reliably detected regardless of how the error surfaces.
+	if result.ExitCode == 137 || errors.Is(ctx.Err(), context.DeadlineExceeded) ||
+		(errors.Is(execErr, context.DeadlineExceeded)) {
+		result.SandboxViolations = append(result.SandboxViolations,
+			"resource limit exceeded (OOM/timeout)")
+	}
+	// Network egress outside the declared allowlist (best-effort detection).
+	if len(limits.Network.AllowedHosts) > 0 {
+		for _, addr := range extractNetworkTargets(result.Stderr + result.Stdout) {
+			if !hostAllowed(addr, limits.Network.AllowedHosts) {
+				result.SandboxViolations = append(result.SandboxViolations,
+					fmt.Sprintf("network access to non-allowed host: %s", addr))
+			}
+		}
+	}
+}
+
+// validateMountPath rejects paths that would corrupt the container -v mount
+// spec. The ':' character separates host:container:mode and ',' separates
+// mount options, so either character in a path produces an ambiguous or
+// exploitable mount.
+func validateMountPath(path string) error {
+	if strings.ContainsAny(path, ":,") {
+		return fmt.Errorf("invalid bind-mount path %q: must not contain ':' or ','", path)
+	}
+	if path == "" {
+		return fmt.Errorf("invalid bind-mount path: empty path")
+	}
+	return nil
+}
+
+// hostAllowed reports whether the given hostname matches the allowlist.
+// Matching is suffix-based so subdomains of an allowed host are permitted.
+func hostAllowed(host string, allowed []string) bool {
+	host = strings.TrimSpace(strings.ToLower(host))
+	for _, a := range allowed {
+		a = strings.ToLower(a)
+		if host == a || strings.HasSuffix(host, "."+a) {
+			return true
+		}
+	}
+	return false
+}
+
+// extractNetworkTargets pulls candidate hostnames out of command/tool output
+// (e.g. curl/wget/ssh target hosts) for best-effort network-violation checks.
+func extractNetworkTargets(text string) []string {
+	var hosts []string
+	// URLs with explicit scheme.
+	urlRe := regexp.MustCompile(`(?i)(?:https?://|ssh://|ftp://|//)([a-z0-9.-]+)`)
+	// Tool-reported host resolution failures, e.g. curl's
+	// "Could not resolve host: evil.example.com".
+	resolveRe := regexp.MustCompile(`(?i)(?:could not resolve host|resolve host|to|connect to|connected to):\s*([a-z0-9.-]+)`)
+	for _, mt := range urlRe.FindAllStringSubmatch(text, -1) {
+		hosts = append(hosts, mt[1])
+	}
+	for _, mt := range resolveRe.FindAllStringSubmatch(text, -1) {
+		hosts = append(hosts, mt[1])
+	}
+	return hosts
+}
+
+// ErrSandboxViolation is returned by Execute when a security boundary is
+// breached (i.e. result.SandboxViolations is non-empty).
+func SandboxViolationsError(violations []string) error {
+	return fmt.Errorf("%w: %s", ErrSandboxViolation, strings.Join(violations, "; "))
 }

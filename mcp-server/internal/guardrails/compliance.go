@@ -127,14 +127,22 @@ func (r *ComplianceReporter) GenerateReport(ctx context.Context, framework strin
 
 	for id, req := range fw {
 		totalReqs++
-		compliant, _, _ := r.mapper.CheckRequirement(framework, id)
+		compliant, evidence, gaps := r.mapper.CheckRequirement(framework, id)
 		if compliant {
 			totalCovered++
 		}
+		// Surface dynamic gaps from the live check (e.g. feature not active).
+		if !compliant && len(gaps) > 0 {
+			for _, g := range gaps {
+				report.CriticalGaps = append(report.CriticalGaps, fmt.Sprintf("%s: %s", id, g))
+			}
+		}
+		// Also surface statically-declared gaps.
 		if req.ComplianceStatus == "gap" {
 			report.CriticalGaps = append(report.CriticalGaps, fmt.Sprintf("%s: %s", id, req.Title))
 		}
 		report.Recommendations = append(report.Recommendations, req.Recommendations...)
+		_ = evidence
 	}
 
 	if totalReqs > 0 {
@@ -163,7 +171,7 @@ func (r *ComplianceReporter) ExportReport(report *ComplianceReport, path string,
 	case FormatJSON:
 		data, err = json.MarshalIndent(report, "", "  ")
 	case FormatMarkdown:
-		data = []byte(fmt.Sprintf("# Compliance Report: %s\n\nScore: %.2f%%\n\nGenerated: %s", report.Framework, report.OverallScore, report.GeneratedAt))
+		data = fmt.Appendf(nil, "# Compliance Report: %s\n\nScore: %.2f%%\n\nGenerated: %s", report.Framework, report.OverallScore, report.GeneratedAt)
 	default:
 		return "", fmt.Errorf("unsupported format: %s", format)
 	}

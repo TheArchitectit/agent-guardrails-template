@@ -117,7 +117,7 @@ func TestHandleTeamInit_Valid(t *testing.T) {
 
 	// Use a unique project name for testing
 	projectName := "test-project-init"
-	args := map[string]interface{}{
+	args := map[string]any{
 		"project_name": projectName,
 	}
 
@@ -152,7 +152,7 @@ func TestHandleTeamInit_MissingProjectName(t *testing.T) {
 
 	tests := []struct {
 		name string
-		args map[string]interface{}
+		args map[string]any
 	}{
 		{
 			name: "nil args",
@@ -160,15 +160,15 @@ func TestHandleTeamInit_MissingProjectName(t *testing.T) {
 		},
 		{
 			name: "empty args",
-			args: map[string]interface{}{},
+			args: map[string]any{},
 		},
 		{
 			name: "empty project_name",
-			args: map[string]interface{}{"project_name": ""},
+			args: map[string]any{"project_name": ""},
 		},
 		{
 			name: "wrong type",
-			args: map[string]interface{}{"project_name": 123},
+			args: map[string]any{"project_name": 123},
 		},
 	}
 
@@ -220,7 +220,7 @@ func TestHandleTeamInit_InvalidProjectName(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			args := map[string]interface{}{"project_name": tt.project}
+			args := map[string]any{"project_name": tt.project}
 			result, err := s.handleTeamInit(ctx, args)
 			if err != nil {
 				t.Fatalf("handleTeamInit returned error: %v", err)
@@ -245,11 +245,11 @@ func TestHandleTeamList_Valid(t *testing.T) {
 	projectName := "test-project-list"
 
 	// Initialize project first
-	initArgs := map[string]interface{}{"project_name": projectName}
+	initArgs := map[string]any{"project_name": projectName}
 	s.handleTeamInit(ctx, initArgs)
 
 	// Now list teams
-	args := map[string]interface{}{
+	args := map[string]any{
 		"project_name": projectName,
 	}
 
@@ -276,7 +276,7 @@ func TestHandleTeamList_MissingProjectName(t *testing.T) {
 	s := mockMCPServer()
 	ctx := context.Background()
 
-	result, err := s.handleTeamList(ctx, map[string]interface{}{})
+	result, err := s.handleTeamList(ctx, map[string]any{})
 	if err != nil {
 		t.Fatalf("handleTeamList returned error: %v", err)
 	}
@@ -298,11 +298,11 @@ func TestHandleTeamList_WithPhaseFilter(t *testing.T) {
 	projectName := "test-project-list-phase"
 
 	// Initialize project
-	initArgs := map[string]interface{}{"project_name": projectName}
+	initArgs := map[string]any{"project_name": projectName}
 	s.handleTeamInit(ctx, initArgs)
 
 	// List with phase filter - SEC-010: Now uses strict "Phase 1" format
-	args := map[string]interface{}{
+	args := map[string]any{
 		"project_name": projectName,
 		"phase":        "Phase 1",
 	}
@@ -332,11 +332,11 @@ func TestHandleTeamAssign_Valid(t *testing.T) {
 	projectName := "test-project-assign"
 
 	// Initialize project first
-	initArgs := map[string]interface{}{"project_name": projectName}
+	initArgs := map[string]any{"project_name": projectName}
 	s.handleTeamInit(ctx, initArgs)
 
 	// Assign role
-	args := map[string]interface{}{
+	args := map[string]any{
 		"project_name": projectName,
 		"team_id":      float64(1),
 		"role_name":    "Business Relationship Manager",
@@ -368,11 +368,11 @@ func TestHandleTeamAssign_MissingFields(t *testing.T) {
 
 	tests := []struct {
 		name string
-		args map[string]interface{}
+		args map[string]any
 	}{
 		{
 			name: "missing project_name",
-			args: map[string]interface{}{
+			args: map[string]any{
 				"team_id":   float64(1),
 				"role_name": "Test Role",
 				"person":    "Test Person",
@@ -380,7 +380,7 @@ func TestHandleTeamAssign_MissingFields(t *testing.T) {
 		},
 		{
 			name: "missing team_id",
-			args: map[string]interface{}{
+			args: map[string]any{
 				"project_name": "test",
 				"role_name":    "Test Role",
 				"person":       "Test Person",
@@ -388,7 +388,7 @@ func TestHandleTeamAssign_MissingFields(t *testing.T) {
 		},
 		{
 			name: "missing role_name",
-			args: map[string]interface{}{
+			args: map[string]any{
 				"project_name": "test",
 				"team_id":      float64(1),
 				"person":       "Test Person",
@@ -396,7 +396,7 @@ func TestHandleTeamAssign_MissingFields(t *testing.T) {
 		},
 		{
 			name: "missing person",
-			args: map[string]interface{}{
+			args: map[string]any{
 				"project_name": "test",
 				"team_id":      float64(1),
 				"role_name":    "Test Role",
@@ -447,7 +447,7 @@ func TestHandleTeamAssign_InvalidTeamID(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			args := map[string]interface{}{
+			args := map[string]any{
 				"project_name": "test-project",
 				"team_id":      tt.teamID,
 				"role_name":    "Test Role",
@@ -482,11 +482,11 @@ func TestHandleTeamStatus_Valid(t *testing.T) {
 	projectName := "test-project-status"
 
 	// Initialize project first
-	initArgs := map[string]interface{}{"project_name": projectName}
+	initArgs := map[string]any{"project_name": projectName}
 	s.handleTeamInit(ctx, initArgs)
 
 	// Get status
-	args := map[string]interface{}{
+	args := map[string]any{
 		"project_name": projectName,
 	}
 
@@ -515,11 +515,11 @@ func TestHandleTeamStatus_WithPhase(t *testing.T) {
 	projectName := "test-project-status-phase"
 
 	// Initialize project
-	initArgs := map[string]interface{}{"project_name": projectName}
+	initArgs := map[string]any{"project_name": projectName}
 	s.handleTeamInit(ctx, initArgs)
 
 	// Get status with phase - SEC-010: Now uses strict "Phase 1" format
-	args := map[string]interface{}{
+	args := map[string]any{
 		"project_name": projectName,
 		"phase":        "Phase 1",
 	}
@@ -542,7 +542,7 @@ func TestHandleTeamStatus_MissingProjectName(t *testing.T) {
 	s := mockMCPServer()
 	ctx := context.Background()
 
-	result, err := s.handleTeamStatus(ctx, map[string]interface{}{})
+	result, err := s.handleTeamStatus(ctx, map[string]any{})
 	if err != nil {
 		t.Fatalf("handleTeamStatus returned error: %v", err)
 	}
@@ -557,7 +557,7 @@ func TestHandlePhaseGateCheck_Valid(t *testing.T) {
 	s := mockMCPServer()
 	ctx := context.Background()
 
-	args := map[string]interface{}{
+	args := map[string]any{
 		"project_name": "test-project",
 		"from_phase":   float64(1),
 		"to_phase":     float64(2),
@@ -585,25 +585,25 @@ func TestHandlePhaseGateCheck_MissingFields(t *testing.T) {
 
 	tests := []struct {
 		name string
-		args map[string]interface{}
+		args map[string]any
 	}{
 		{
 			name: "missing project_name",
-			args: map[string]interface{}{
+			args: map[string]any{
 				"from_phase": float64(1),
 				"to_phase":   float64(2),
 			},
 		},
 		{
 			name: "missing from_phase",
-			args: map[string]interface{}{
+			args: map[string]any{
 				"project_name": "test",
 				"to_phase":     float64(2),
 			},
 		},
 		{
 			name: "missing to_phase",
-			args: map[string]interface{}{
+			args: map[string]any{
 				"project_name": "test",
 				"from_phase":   float64(1),
 			},
@@ -629,7 +629,7 @@ func TestHandlePhaseGateCheck_InvalidGate(t *testing.T) {
 	s := mockMCPServer()
 	ctx := context.Background()
 
-	args := map[string]interface{}{
+	args := map[string]any{
 		"project_name": "test-project",
 		"from_phase":   float64(5),
 		"to_phase":     float64(6),
@@ -673,7 +673,7 @@ func TestHandleAgentTeamMap_Valid(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.agentType, func(t *testing.T) {
-			args := map[string]interface{}{
+			args := map[string]any{
 				"agent_type": tt.agentType,
 			}
 
@@ -710,7 +710,7 @@ func TestHandleAgentTeamMap_MissingAgentType(t *testing.T) {
 	s := mockMCPServer()
 	ctx := context.Background()
 
-	result, err := s.handleAgentTeamMap(ctx, map[string]interface{}{})
+	result, err := s.handleAgentTeamMap(ctx, map[string]any{})
 	if err != nil {
 		t.Fatalf("handleAgentTeamMap returned error: %v", err)
 	}
@@ -725,7 +725,7 @@ func TestHandleAgentTeamMap_InvalidAgentType(t *testing.T) {
 	s := mockMCPServer()
 	ctx := context.Background()
 
-	args := map[string]interface{}{
+	args := map[string]any{
 		"agent_type": "nonexistent-agent",
 	}
 
@@ -756,11 +756,11 @@ func TestHandleTeamSizeValidate_Valid(t *testing.T) {
 	projectName := "test-project-validate"
 
 	// Initialize project first
-	initArgs := map[string]interface{}{"project_name": projectName}
+	initArgs := map[string]any{"project_name": projectName}
 	s.handleTeamInit(ctx, initArgs)
 
 	// Validate team sizes
-	args := map[string]interface{}{
+	args := map[string]any{
 		"project_name": projectName,
 	}
 
@@ -787,11 +787,11 @@ func TestHandleTeamSizeValidate_WithTeamID(t *testing.T) {
 	projectName := "test-project-validate-team"
 
 	// Initialize project
-	initArgs := map[string]interface{}{"project_name": projectName}
+	initArgs := map[string]any{"project_name": projectName}
 	s.handleTeamInit(ctx, initArgs)
 
 	// Validate specific team
-	args := map[string]interface{}{
+	args := map[string]any{
 		"project_name": projectName,
 		"team_id":      float64(1),
 	}
@@ -812,7 +812,7 @@ func TestHandleTeamSizeValidate_MissingProjectName(t *testing.T) {
 	s := mockMCPServer()
 	ctx := context.Background()
 
-	result, err := s.handleTeamSizeValidate(ctx, map[string]interface{}{})
+	result, err := s.handleTeamSizeValidate(ctx, map[string]any{})
 	if err != nil {
 		t.Fatalf("handleTeamSizeValidate returned error: %v", err)
 	}
@@ -978,13 +978,25 @@ func getResultText(result *mcp.CallToolResult) string {
 	return ""
 }
 
-// Helper function to cleanup test projects
+// Helper function to cleanup test projects. Cleans both the CWD-relative
+// .teams directory (where the Go manager writes when tests run from this
+// package dir) and the repo-root .teams directory (where tests that exec
+// team_manager.py with Dir=repoRoot write, e.g. TestIntegrationJSONParsing),
+// plus timestamped backups the Python manager leaves behind, so repeated test
+// runs don't accumulate artifacts.
 func cleanupTestProject(t *testing.T, projectName string) {
 	t.Helper()
-	// Clean up the test project file if it exists (repo root .teams directory)
-	configPath := filepath.Join("..", "..", "..", ".teams", projectName+".json")
-	if err := os.Remove(configPath); err != nil && !os.IsNotExist(err) {
-		t.Logf("Failed to cleanup test project %s: %v", projectName, err)
+	for _, dir := range []string{".teams", filepath.Join("..", "..", "..", ".teams")} {
+		configPath := filepath.Join(dir, projectName+".json")
+		if err := os.Remove(configPath); err != nil && !os.IsNotExist(err) {
+			t.Logf("Failed to cleanup test project %s: %v", projectName, err)
+		}
+	}
+	backups, err := filepath.Glob(filepath.Join("..", "..", "..", ".teams", "backups", projectName+"_*.json.gz"))
+	if err == nil {
+		for _, b := range backups {
+			_ = os.Remove(b)
+		}
 	}
 }
 
@@ -1352,7 +1364,7 @@ func TestHandleTeamAssign_InvalidRole(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			args := map[string]interface{}{
+			args := map[string]any{
 				"project_name": "test-project",
 				"team_id":      float64(1),
 				"role_name":    tt.roleName,
@@ -1394,7 +1406,7 @@ func TestHandleTeamAssign_InvalidPerson(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			args := map[string]interface{}{
+			args := map[string]any{
 				"project_name": "test-project",
 				"team_id":      float64(1),
 				"role_name":    "Lead Product Manager",
@@ -1446,7 +1458,7 @@ func TestHandleTeamList_InvalidPhase(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			args := map[string]interface{}{
+			args := map[string]any{
 				"project_name": "test-project",
 				"phase":        tt.phase,
 			}
