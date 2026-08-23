@@ -130,8 +130,14 @@ func (r *Registry) EvaluateInput(ctx context.Context, input string, categories [
 	if len(allViolations) > 0 {
 		return allViolations, nil
 	}
-	// Default: try bash
-	return r.EvaluateCommand(ctx, input)
+	// Only fall back to bash when no explicit categories were requested.
+	// When callers ask for specific categories, evaluate exactly those and
+	// never silently expand scope (which would also double-evaluate bash that
+	// was already in the requested list).
+	if len(categories) == 0 {
+		return r.EvaluateCommand(ctx, input)
+	}
+	return nil, nil
 }
 
 func (r *Registry) CheckFileRead(ctx context.Context, sessionID, filePath string) (*domain.FileReadVerification, error) {

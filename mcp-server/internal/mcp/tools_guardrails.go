@@ -59,7 +59,7 @@ func (s *MCPServer) guardrailsToolList() []mcp.Tool {
 // handleClassifyContent implements the guardrail_classify_content tool:
 // it classifies text against the S1-S15 safety taxonomy and returns the
 // per-category scores and actions.
-func (s *MCPServer) handleClassifyContent(ctx context.Context, args map[string]interface{}) (*mcp.CallToolResult, error) {
+func (s *MCPServer) handleClassifyContent(ctx context.Context, args map[string]any) (*mcp.CallToolResult, error) {
 	text, _ := args["text"].(string)
 	if text == "" {
 		return errorResult(`{"safe":true,"error":"text is required"}`), nil
@@ -84,7 +84,7 @@ func (s *MCPServer) handleClassifyContent(ctx context.Context, args map[string]i
 
 // handleCheckPolicy implements the guardrail_check_policy tool: it checks
 // whether text complies with a specific named content policy.
-func (s *MCPServer) handleCheckPolicy(ctx context.Context, args map[string]interface{}) (*mcp.CallToolResult, error) {
+func (s *MCPServer) handleCheckPolicy(ctx context.Context, args map[string]any) (*mcp.CallToolResult, error) {
 	text, _ := args["text"].(string)
 	policyID, _ := args["policy_id"].(string)
 
@@ -99,9 +99,28 @@ func (s *MCPServer) handleCheckPolicy(ctx context.Context, args map[string]inter
 		return errorResult(`{"policy_id":"` + policyID + `","compliant":false,"error":"guardrails engine not configured"}`), nil
 	}
 
+	// Classify first so we can tell the fail-open case apart from a genuine
+	// clean result. PolicyEngine.CheckPolicy returns Compliant:true with no
+	// violations both when a known policy passes AND when the policy_id is
+	// unknown (no rule to evaluate). The latter is fail-open: blocked content
+	// that the policy should have caught slips through. Fail closed instead.
+	classification, err := s.guardrailsEngine.ClassifyContent(ctx, text, guardrails.DirectionOutput)
+	if err != nil {
+		return errorResult(`{"policy_id":"` + policyID + `","compliant":false,"error":"classification failed"}`), nil
+	}
+
 	result, err := s.guardrailsEngine.CheckPolicy(ctx, text, policyID)
 	if err != nil {
 		return errorResult(`{"policy_id":"` + policyID + `","compliant":false,"error":"policy check failed"}`), nil
+	}
+
+	// Fail-open guard: a compliant result with no violations is only valid
+	// when the policy actually evaluated the content. If the classification
+	// found blocked content that the policy should have caught, the
+	// compliant-with-no-violations response means the policy_id was unknown
+	// (or the engine has no rules for it). Return an explicit error.
+	if result.Compliant && len(result.Violations) == 0 && classification.IsBlocked() {
+		return errorResult(`{"policy_id":"` + policyID + `","compliant":false,"error":"unknown policy_id: policy does not exist or has no rules"}`), nil
 	}
 
 	return jsonToolResult(result, !result.Compliant)

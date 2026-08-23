@@ -57,6 +57,7 @@ type SandboxConfig struct {
 	GlobalDefaults  ResourceLimits           `yaml:"global_defaults"`
 	ToolPolicies    map[string]SandboxPolicy `yaml:"tool_policies"`
 	FallbackEnabled bool                     `yaml:"fallback_enabled"` // Fallback L2 -> L1 -> L0
+	NetworkMode     string                   `yaml:"network_mode"`     // Pre-provisioned container network for L2 (e.g. "agentnet")
 }
 
 // DefaultSandboxConfig returns a secure base configuration based on Spec 03.

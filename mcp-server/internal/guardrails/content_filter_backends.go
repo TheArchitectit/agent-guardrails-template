@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"maps"
 	"net/http"
 	"os"
 	"strings"
@@ -181,9 +182,7 @@ func (b *LlamaGuardBackend) parseLlamaGuardResponse(response string) map[string]
 	}
 	if err := json.Unmarshal([]byte(jsonStr), &parsed); err == nil && len(parsed.Categories) > 0 {
 		scores := b.emptyScores()
-		for key, val := range parsed.Categories {
-			scores[key] = val
-		}
+		maps.Copy(scores, parsed.Categories)
 		return scores
 	}
 
@@ -321,6 +320,13 @@ func (b *OpenAIModerationBackend) Classify(ctx context.Context, text string) (ma
 	} else if r.Categories.Violence {
 		scores["S1"] = 0.8
 	}
+	// violence/graphic also maps to S1; take the max so the more severe
+	// subcategory is not silently dropped.
+	if val, ok := r.CategoryScores["violence/graphic"]; ok {
+		scores["S1"] = max(scores["S1"], val)
+	} else if r.Categories.ViolenceGraphic {
+		scores["S1"] = max(scores["S1"], 0.8)
+	}
 
 	if val, ok := r.CategoryScores["harassment"]; ok {
 		scores["S10"] = val
@@ -354,7 +360,9 @@ func (b *OpenAIModerationBackend) Classify(ctx context.Context, text string) (ma
 		scores["S12"] = 0.8
 	}
 
-	if r.Categories.SexualMinors {
+	if val, ok := r.CategoryScores["sexual/minors"]; ok {
+		scores["S4"] = val
+	} else if r.Categories.SexualMinors {
 		scores["S4"] = 0.95
 	}
 

@@ -40,6 +40,38 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   mismatch, fail-closed error paths, cache pointer sharing, inert engine defaults,
   sandbox violation detection, registry no-ops, dead config, provenance dedup, etc.).
 - Enforced the 500-line file limit across new `.go` files.
+- **Second full QA review pass** (5 subsystem reviewers) resolved 36 further findings:
+  - **Sandbox (2× P0)**: security denials at L2/L1 no longer cascade down to
+    host execution — fallback is restricted to genuine setup errors and fails
+    closed; `SandboxViolations` / `ErrSandboxViolation` are now actually
+    populated and returned (previously a no-op behind passing tests).
+  - **Sandbox network**: `AllowedHosts` no longer silently uses `--network=host`;
+    default is `--network=none` (fail-closed) with a `NetworkMode` escape hatch.
+  - **Policy engine**: unknown `policy_id` fails closed (was `Compliant: true`).
+  - **Engine.Evaluate**: Trusted-source tagging no longer bypasses the content
+    filter — trusted sources skip only the injection deep-scan.
+  - **Injection pipeline**: classifier-flagged input with low confidence reports
+    `Safe: false`; unparseable Ollama output fails closed; `regexp2` patterns get
+    a 2s match timeout; multi-agent validator errors fail closed; FourLaws scope
+    check runs without context; destructive-command patterns resist flag-order and
+    path obfuscation.
+  - **Content filter**: bounded result cache with max-size eviction, stoppable
+    prune loop, cache invalidation on rule/backend changes, correct
+    violence/graphic and sexual/minors score mapping.
+  - **Provenance**: glob `*` respects segment boundaries, cache keys include
+    source/agent, `**` matches root files and requires a real middle segment,
+    base64 decoding needs an explicit marker, ROT13 detection strengthened,
+    case-insensitive pattern matching.
+  - **Registry/MCP**: `EvaluateInput` honors explicit categories (no bash
+    fallback), `guardrail_check_policy` / `guardrail_classify_content` docs match
+    their registered schemas.
+- Removed unreferenced `internal/adapters` package (broken build since v3.2.0).
+- Fixed 5 pre-existing team-tool test failures (phase validation used the wrong
+  validator, ran after project load, and read fixtures from the repo root instead
+  of the package `.teams/` dir); test cleanup now removes repo-root artifacts.
+- `.gitignore`: removed a rule that silently ignored new
+  `mcp-server/internal/mcp/*_test.go` files; ignored transient team-manager
+  backups and lock-file artifacts.
 
 ### Fixed
 
