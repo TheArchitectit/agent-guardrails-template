@@ -54,42 +54,64 @@ Scans multiple text blocks for policy violations in a single call.
 ---
 
 ### `guardrail_classify_content`
-Classifies content into predefined security or topical categories.
+Classifies text against the safety taxonomy (S1-S15) and returns per-category scores and actions.
 
 **Input Parameters**
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `text` | string | Yes | The text to classify. |
-| `categories` | array[string] | Yes | List of possible category labels. |
+| `direction` | string | No | Whether the text is entering (`input`) or leaving (`output`) the agent. Enum: `input`, `output`. |
+| `context` | string | No | Optional context for classification (e.g. source tool or channel). |
 
-**Output Format**
+**Output Format** (full `ClassificationResult`)
 ```json
 {
-  "classification": "category_label",
-  "confidence": float
+  "safe": boolean,
+  "overall_risk": float,
+  "categories": [
+    {
+      "id": "S10",
+      "name": "Hate",
+      "score": 0.95,
+      "action": "block",
+      "reason": "above threshold 0.70"
+    }
+  ],
+  "backend": "fake",
+  "latency_ms": 0,
+  "direction": "input"
 }
 ```
+On a blocked classification the tool returns `isError: true`.
 
 ---
 
 ### `guardrail_check_policy`
-Validates if a proposed action adheres to a specific named security policy.
+Checks if text complies with a specific named content policy and returns violations.
 
 **Input Parameters**
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `action` | string | Yes | The action to validate. |
-| `policy_id` | string | Yes | The identifier of the policy. |
-| `context` | object | No | Additional environmental context. |
+| `text` | string | Yes | The text to check against the policy. |
+| `policy_id` | string | Yes | Identifier of the policy to check (e.g. `coding-safety`). |
 
-**Output Format**
+**Output Format** (full `PolicyResult`)
 ```json
 {
-  "allowed": boolean,
-  "reason": "explanation for the decision",
-  "mitigation": "suggested way to make the action compliant"
+  "policy_id": "coding-safety",
+  "compliant": boolean,
+  "violations": [
+    {
+      "category_id": "S14",
+      "category_name": "Code Abuse",
+      "score": 0.9,
+      "action": "block",
+      "reason": "no code abuse"
+    }
+  ]
 }
 ```
+An unknown `policy_id` returns `isError: true` (fail-closed) rather than silently compliant.
 
 ---
 

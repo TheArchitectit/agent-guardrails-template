@@ -3,6 +3,7 @@ package guardrails
 import (
 	"context"
 	"log/slog"
+	"strings"
 	"testing"
 )
 
@@ -63,6 +64,33 @@ func TestComplianceReporter_GenerateReport(t *testing.T) {
 
 	if len(report.Sections) == 0 {
 		t.Error("report should have at least one section")
+	}
+}
+
+// Finding #8: GenerateReport must surface dynamic gaps returned by
+// CheckRequirement, not discard them.
+func TestComplianceReporter_GenerateReport_SurfacesGaps(t *testing.T) {
+	mapper, err := NewComplianceMapper("compliance_requirements.json")
+	if err != nil {
+		t.Fatalf("NewComplianceMapper failed: %v", err)
+	}
+	reporter := NewComplianceReporter(mapper, slog.Default())
+
+	ctx := context.Background()
+	report, err := reporter.GenerateReport(ctx, "eu_ai_act", FormatJSON)
+	if err != nil {
+		t.Fatalf("GenerateReport failed: %v", err)
+	}
+
+	// art_50 is statically declared as a gap and should appear in CriticalGaps.
+	foundArt50 := false
+	for _, g := range report.CriticalGaps {
+		if strings.HasPrefix(g, "art_50:") {
+			foundArt50 = true
+		}
+	}
+	if !foundArt50 {
+		t.Errorf("expected art_50 in critical gaps, got %v", report.CriticalGaps)
 	}
 }
 

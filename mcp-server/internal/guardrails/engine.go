@@ -112,9 +112,14 @@ func (e *Engine) SetClassifier(classifier InjectionClassifier) {
 // AddContentFilterBackend adds a semantic classification backend.
 func (e *Engine) AddContentFilterBackend(backend SemanticClassifier) {
 	if e.filter != nil {
-		e.filter.mu.Lock()
-		e.filter.backends = append(e.filter.backends, backend)
-		e.filter.mu.Unlock()
+		e.filter.AddContentFilterBackend(backend)
+	}
+}
+
+// Stop releases background resources owned by the engine (cache prune loop, etc.).
+func (e *Engine) Stop() {
+	if e.filter != nil {
+		e.filter.Stop()
 	}
 }
 
@@ -165,6 +170,7 @@ func (e *Engine) Evaluate(ctx context.Context, input EvalInput) *EvalResult {
 	}
 
 	// 1. Provenance tracking
+	trustedSource := false
 	if e.tracker != nil && input.Text != "" {
 		prov, err := e.tracker.TagContent(ctx, input.Text,
 			string(input.Source), input.SourceTool, "engine")
@@ -174,15 +180,16 @@ func (e *Engine) Evaluate(ctx context.Context, input EvalInput) *EvalResult {
 		} else {
 			result.Provenance = prov
 			if prov.TrustLevel == TrustLevelTrusted {
-				e.logger.Debug("trusted source, skipping deep scan", "source", input.SourceTool)
-				result.LatencyMs = time.Since(start).Milliseconds()
-				return result
+				trustedSource = true
 			}
 		}
 	}
 
-	// 2. Injection detection
-	if e.pipeline != nil && e.config.Injection.Enabled && input.Text != "" {
+	// 2. Injection detection.
+	// Trusted sources skip the injection deep-scan only — they are still
+	// subject to content-filter classification and sandbox checks below.
+	// A trusted tag must never unconditionally allow content.
+	if e.pipeline != nil && e.config.Injection.Enabled && input.Text != "" && !trustedSource {
 		injResult := e.pipeline.Detect(ctx, input.Text, input.Source)
 		result.Injection = &injResult
 		if !injResult.Safe {
@@ -269,6 +276,15 @@ func (e *Engine) ClassifyContent(ctx context.Context, text string, direction Con
 		return &ClassificationResult{Safe: true, Backend: "none"}, nil
 	}
 	return e.filter.Classify(ctx, text, direction)
+}
+
+// UpdateRules replaces the content filter's policy rules (hot-reload). It is a
+// convenience wrapper around ContentFilter.UpdateRules and invalidates the
+// filter's result cache.
+func (e *Engine) UpdateRules(rules []PolicyRule) {
+	if e.filter != nil {
+		e.filter.UpdateRules(rules)
+	}
 }
 
 // CheckPolicy is a convenience method for policy-only checks.

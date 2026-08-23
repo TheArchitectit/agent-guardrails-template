@@ -21,7 +21,7 @@ func (s *MCPServer) determineUncertaintyLevel(selfAssessment string, contextData
 		"critical", "urgent", "emergency", "broken", "error", "fail",
 	}
 	for _, indicator := range criticalIndicators {
-		if containsIgnoreCase(selfAssessment, indicator) || containsIgnoreCase(selfAssessment, indicator) {
+		if containsIgnoreCase(selfAssessment, indicator) {
 			return models.UncertaintyCritical
 		}
 	}
@@ -33,7 +33,7 @@ func (s *MCPServer) determineUncertaintyLevel(selfAssessment string, contextData
 	}
 	highCount := 0
 	for _, indicator := range highIndicators {
-		if containsIgnoreCase(selfAssessment, indicator) || containsIgnoreCase(selfAssessment, indicator) {
+		if containsIgnoreCase(selfAssessment, indicator) {
 			highCount++
 		}
 		if highCount >= 2 {

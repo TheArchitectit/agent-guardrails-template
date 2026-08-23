@@ -116,6 +116,13 @@ func WithCacheTTL(ttl time.Duration) FilterOption {
 	}
 }
 
+// WithCacheMaxSize overrides the default cache entry cap (DefaultCacheMaxSize).
+func WithCacheMaxSize(maxSize int) FilterOption {
+	return func(cf *ContentFilter) {
+		cf.cache = newResultCache(cf.cache.ttl, maxSize)
+	}
+}
+
 // WithConfig sets the content filter configuration.
 func WithConfig(cfg *ContentFilterConfig) FilterOption {
 	return func(cf *ContentFilter) {
@@ -215,6 +222,39 @@ func (cf *ContentFilter) Classify(ctx context.Context, text string, direction Co
 
 	// Return a copy so the caller cannot mutate the cached entry.
 	return copyResult(result), nil
+}
+
+// Stop releases the background cache prune goroutine.
+func (cf *ContentFilter) Stop() {
+	cf.mu.Lock()
+	defer cf.mu.Unlock()
+	if cf.cache != nil {
+		cf.cache.Stop()
+	}
+}
+
+// AddContentFilterBackend appends a semantic classification backend. Adding a
+// backend changes which classification results are produced, so the cache is
+// invalidated to avoid serving stale results.
+func (cf *ContentFilter) AddContentFilterBackend(backend SemanticClassifier) {
+	cf.mu.Lock()
+	defer cf.mu.Unlock()
+	cf.backends = append(cf.backends, backend)
+	if cf.cache != nil {
+		cf.cache.Clear()
+	}
+}
+
+// UpdateRules replaces the policy rules used for classification. Because rule
+// changes can flip category actions, the cache is invalidated so stale results
+// are not served until the TTL expires.
+func (cf *ContentFilter) UpdateRules(rules []PolicyRule) {
+	cf.mu.Lock()
+	defer cf.mu.Unlock()
+	cf.policyEngine = NewPolicyEngineWithThresholds(rules, cf.config.Thresholds)
+	if cf.cache != nil {
+		cf.cache.Clear()
+	}
 }
 
 // CheckPolicy checks if text complies with a specific named policy.

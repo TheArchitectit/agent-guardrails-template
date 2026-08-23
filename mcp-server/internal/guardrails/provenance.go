@@ -77,10 +77,11 @@ func (pt *ProvenanceTracker) TagContent(ctx context.Context, content string, sou
 		)
 	}
 
-	// Hash the sanitized+decoded content + source path for caching.
-	// Including source prevents cross-source cache poisoning (same content
-	// from untrusted source returning provenance cached by trusted writer).
-	hash := hashText(decoded + "::" + sourcePath)
+	// Hash the sanitized+decoded content + source + source path + agentID for
+	// caching. Including source and agentID prevents re-tagging the same path
+	// with a different source/agent from returning stale cached provenance
+	// (wrong .Source/.ReadBy).
+	hash := hashText(decoded + "::" + source + "::" + sourcePath + "::" + agentID)
 
 	// Check cache first
 	if pt.cache != nil {
@@ -127,7 +128,13 @@ func (pt *ProvenanceTracker) resolveTrust(path string) (SourceTrustLevel, Action
 // matchPattern checks if a path matches a glob-like pattern.
 // Supported: exact match, * (any chars within one segment), ** (any path depth),
 // basename match for simple filenames (no wildcards, no slashes).
+// Matching is case-insensitive: on case-insensitive filesystems (the common
+// case for project config) this only broadens trust, and untrusted is the
+// fail-safe side, so case folding is safe.
 func matchPattern(pattern, path string) bool {
+	pattern = strings.ToLower(pattern)
+	path = strings.ToLower(path)
+
 	// Wildcard matches everything
 	if pattern == "*" {
 		return true
@@ -156,27 +163,34 @@ func matchPattern(pattern, path string) bool {
 		return pattern == basename
 	}
 	// ** glob: prefix / ** / suffix  →  path must start with prefix, contain
-	// a '/' separator (so ** doesn't collapse to zero segments), and end with suffix.
+	// at least one path segment between prefix and suffix (so ** never collapses
+	// to zero segments), and end with suffix. Bare "**" matches any path.
 	if strings.Contains(pattern, "**") {
+		// Bare "**" matches everything.
+		if pattern == "**" {
+			return true
+		}
 		parts := strings.SplitN(pattern, "**", 2)
 		prefix := strings.TrimSuffix(parts[0], "/")
 		suffix := strings.TrimLeft(parts[1], "*/")
 		if prefix != "" && !strings.HasPrefix(path, prefix) {
 			return false
 		}
-		// ** must match at least one path segment — require '/' in path after prefix
-		if prefix != "" {
-			rest := path[len(prefix):]
-			if !strings.Contains(rest, "/") {
-				return false
-			}
-		} else if !strings.Contains(path, "/") {
-			return false
-		}
 		if suffix != "" && !strings.HasSuffix(path, suffix) {
 			return false
 		}
-		return true
+		// ** must match at least one path segment: the substring strictly
+		// between prefix and suffix must contain a '/' and have non-empty
+		// trimmed content, so ** cannot collapse to zero segments
+		// (e.g. "a/**/c.md" must NOT match "a/c.md").
+		between := path
+		if prefix != "" {
+			between = between[len(prefix):]
+		}
+		if suffix != "" {
+			between = between[:len(between)-len(suffix)]
+		}
+		return strings.Contains(between, "/") && strings.Trim(between, "/") != ""
 	}
 	// Single * glob: split on *, each segment must appear in order
 	// e.g. "api.internal.*" matches "api.internal.example.com"
@@ -208,6 +222,16 @@ func globMatch(pattern, path string) bool {
 			return false
 		}
 		idx += pos + len(seg)
+	}
+	// A trailing '*' (pattern ends with *) imposes a single-segment boundary:
+	// the matched remainder must not span further '.' or '/' separators, so
+	// "api.internal.*" matches "api.internal.foo" but NOT
+	// "api.internal.evil.attacker.com".
+	if strings.HasSuffix(pattern, "*") {
+		tail := path[idx:]
+		if strings.ContainsAny(tail, "./") {
+			return false
+		}
 	}
 	return true
 }
@@ -245,8 +269,10 @@ func SanitizeContent(content string) string {
 func DecodeObfuscation(content string) (string, bool) {
 	decoded := false
 
-	// 1. Try base64 decode — look for base64-encoded segments
-	if strings.Contains(content, "base64") || looksLikeBase64(content) {
+	// 1. Try base64 decode — only when explicitly marked. We require an explicit
+	// label/marker (e.g. "base64:" prefix or a data-URI scheme) rather than
+	// guessing on bare alphabet runs, which would rewrite ordinary tokens to garbage.
+	if hasBase64Marker(content) {
 		if decoded_text, ok := tryBase64Decode(content); ok {
 			content = decoded_text
 			decoded = true
@@ -272,38 +298,14 @@ func DecodeObfuscation(content string) (string, bool) {
 	return content, decoded
 }
 
-// looksLikeBase64 checks if content contains a base64-encoded segment.
-func looksLikeBase64(content string) bool {
-	// Look for base64 blocks (4+ chars, valid alphabet, padded)
-	for i := 0; i <= len(content)-4; i++ {
-		end := i + 76 // Standard base64 line length
-		if end > len(content) {
-			end = len(content)
-		}
-		segment := content[i:end]
-		if isBase64Segment(segment) {
-			return true
-		}
-	}
-	return false
-}
-
-// isBase64Segment checks if a string segment looks like base64.
-func isBase64Segment(s string) bool {
-	if len(s) < 4 {
-		return false
-	}
-	for _, c := range s {
-		if !((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '+' || c == '/' || c == '=') {
-			return false
-		}
-	}
-	// Check for padding consistency
-	padCount := 0
-	for i := len(s) - 1; i >= 0 && s[i] == '='; i-- {
-		padCount++
-	}
-	return padCount <= 2
+// hasBase64Marker reports whether content carries an explicit base64 label or
+// data-URI scheme, signalling intentional base64 encoding rather than an
+// incidental alphabet run.
+func hasBase64Marker(content string) bool {
+	lower := strings.ToLower(content)
+	return strings.Contains(lower, "base64:") ||
+		strings.Contains(lower, "data:") ||
+		strings.Contains(lower, ";base64,")
 }
 
 // tryBase64Decode attempts to decode base64 content.
@@ -341,9 +343,12 @@ func isPrintableText(s string) bool {
 	return float64(printable)/float64(len(runes)) > 0.8
 }
 
-// looksLikeROT13 checks if content might be ROT13-encoded.
-// Uses English letter frequency analysis: ROT13-encoded English has lower
-// frequency of common English letters (e,t,a,o,i,n,s,h,r) than decoded text.
+// looksLikeROT13 checks if content might be ROT13-encoded using two signals:
+// (1) a high proportion of known rotated English words (gur→the, naq→and,
+//     gung→that, jvgu→with, sbk→fox, etc.), which letter-frequency analysis
+//     misses because ROT13 preserves letter frequencies; and
+// (2) improved bigram frequency after ROT13 decoding, a structural check that
+//     resists single-letter-frequency games. Either signal alone is enough.
 func looksLikeROT13(content string) bool {
 	if len(content) < 10 {
 		return false
@@ -359,33 +364,70 @@ func looksLikeROT13(content string) bool {
 		return false
 	}
 
-	// Score how "English-like" a string is based on common letter frequency.
-	// English top letters: e,t,a,o,i,n,s,h,r (~65% of text)
-	englishScore := func(s string) float64 {
-		common := map[rune]float64{
-			'e': 13, 't': 9, 'a': 8, 'o': 8, 'i': 7,
-			'n': 7, 's': 6, 'h': 6, 'r': 6,
-		}
-		total := 0.0
-		for _, r := range s {
-			rl := r
-			if rl >= 'A' && rl <= 'Z' {
-				rl = rl + 32
+	// Signal 1: known rotated-word density. These are common English words in
+	// ROT13 form; seeing several in a short string is a strong indicator.
+	rotatedWords := []string{
+		"gur", "naq", "gung", "jvgu", "sbk", "oebja", "dhvpx", "bzcf",
+		"nah", "ber", "lhe", "znx", "rire", "jvgu", "guvf", "gurl",
+		"jung", "urer", "oybbq", "jbeyq", "ceboyrz", "hfr",
+	}
+	words := strings.Fields(strings.ToLower(content))
+	if len(words) == 0 {
+		return false
+	}
+	matchCount := 0
+	for _, w := range words {
+		// Strip trailing punctuation for matching.
+		cleaned := strings.Trim(w, ".,;:!?")
+		for _, rw := range rotatedWords {
+			if cleaned == rw {
+				matchCount++
+				break
 			}
-			if v, ok := common[rl]; ok {
-				total += v
-			}
 		}
-		return total / float64(len(s))
+	}
+	// At least 30% of words are known rotated forms, with an absolute minimum
+	// of 2 matches (avoids false positives on 1-word coincidences).
+	if matchCount >= 2 && float64(matchCount)/float64(len(words)) >= 0.30 {
+		return true
 	}
 
-	originalScore := englishScore(content)
-	decoded := tryROT13(content)
-	decodedScore := englishScore(decoded)
+	// Signal 2: bigram frequency improvement after ROT13 decoding. English has
+	// characteristic common bigrams (th, he, in, er, an, re, on, en); ROT13
+	// shifts these to (gu, ur, va, re, na, er, ba, ra). A meaningful jump in
+	// common-English-bigram count after decoding signals ROT13.
+	commonBigrams := []string{
+		"th", "he", "in", "er", "an", "re", "on", "en", "nd", "ti",
+		"es", "or", "te", "of", "ed", "is", "it", "al", "ar", "st",
+	}
+	bigramSet := make(map[string]bool, len(commonBigrams))
+	for _, b := range commonBigrams {
+		bigramSet[b] = true
+	}
+	countBigrams := func(s string) int {
+		lower := strings.ToLower(s)
+		clean := make([]rune, 0, len(lower))
+		for _, r := range lower {
+			if r >= 'a' && r <= 'z' {
+				clean = append(clean, r)
+			}
+		}
+		n := 0
+		for i := 0; i < len(clean)-1; i++ {
+			if bigramSet[string(clean[i:i+2])] {
+				n++
+			}
+		}
+		return n
+	}
 
-	// ROT13 text should have lower English score than decoded text.
-	// Threshold: decoded must be at least 1.5x more English-like.
-	return decodedScore > originalScore*1.5 && decodedScore > 5.0
+	originalBigrams := countBigrams(content)
+	decoded := tryROT13(content)
+	decodedBigrams := countBigrams(decoded)
+
+	// Decoded must show a clear bigram improvement (at least 50% more common
+	// bigrams than the original, and at least 3).
+	return decodedBigrams >= 3 && float64(decodedBigrams) > float64(originalBigrams)*1.5
 }
 
 // tryROT13 applies ROT13 decoding.

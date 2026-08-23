@@ -264,7 +264,7 @@ func TestAdversarial_CombinationAttack(t *testing.T) {
 
 func BenchmarkSanitizeContent(b *testing.B) {
 	input := "Hello​World‮foo‬bar⁦baz"
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		SanitizeContent(input)
 	}
 }
@@ -278,7 +278,7 @@ func BenchmarkProvenanceTracker_TagContent(b *testing.B) {
 	content := "test content for benchmarking"
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_, _ = tracker.TagContent(ctx, content, "file", "test.json", "agent-001")
 	}
 }
