@@ -54,6 +54,9 @@ cmd/team-cli/team
 # Ignore test artifacts
 mcp-server/internal/mcp/*_test.go
 
+# Deep research output (internal analysis, never commit)
+research/
+
 # Vision pipeline (NEVER commit real config or DBs)
 mcp-server/config/vision.yaml
 *.db
