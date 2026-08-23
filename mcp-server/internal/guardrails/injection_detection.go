@@ -271,6 +271,21 @@ func (p *Pipeline) Detect(ctx context.Context, text string, source Source) Injec
 			return result
 		}
 		if !safe {
+			// Gate decision on configured threshold (H3 fix)
+			threshold := p.config.Layers.Classifier.Threshold
+			if threshold <= 0 {
+				threshold = 0.7 // Default threshold
+			}
+			if confidence < threshold {
+				// Below threshold — log but don't block
+				result.Layer = string(LayerClassifier)
+				result.Categories = categoriesToStrings(categories)
+				result.Reason = fmt.Sprintf("Classifier flagged injection (confidence %.2f < threshold %.2f): %s",
+					confidence, threshold, strings.Join(result.Categories, ", "))
+				result.Decision = string(FailPolicyLogOnly)
+				p.logAudit(ctx, result, source)
+				return result
+			}
 			result.Safe = false
 			result.Confidence = confidence
 			result.Layer = string(LayerClassifier)
@@ -287,28 +302,38 @@ func (p *Pipeline) Detect(ctx context.Context, text string, source Source) Injec
 	return result
 }
 
+// maxConcurrentDetections limits parallel goroutines in DetectBatch.
+const maxConcurrentDetections = 8
+
 // DetectBatch runs injection detection on multiple texts.
+// Results are returned in the same order as the input items.
 func (p *Pipeline) DetectBatch(ctx context.Context, items []BatchItem) BatchResult {
-	results := make([]BatchItemResult, 0, len(items))
-	var mu sync.Mutex
+	if len(items) == 0 {
+		return BatchResult{}
+	}
+
+	results := make([]BatchItemResult, len(items))
 	var wg sync.WaitGroup
 
-	// Process concurrently for throughput
-	for _, item := range items {
+	// Semaphore to bound concurrency
+	sem := make(chan struct{}, maxConcurrentDetections)
+
+	for i, item := range items {
 		wg.Add(1)
-		go func(item BatchItem) {
+		go func(idx int, item BatchItem) {
 			defer wg.Done()
+			sem <- struct{}{}        // Acquire
+			defer func() { <-sem }() // Release
+
 			result := p.Detect(ctx, item.Text, item.Source)
-			mu.Lock()
-			results = append(results, BatchItemResult{
+			results[idx] = BatchItemResult{
 				ID:         item.ID,
 				Safe:       result.Safe,
 				Confidence: result.Confidence,
 				Layer:      result.Layer,
 				Reason:     result.Reason,
-			})
-			mu.Unlock()
-		}(item)
+			}
+		}(i, item)
 	}
 
 	wg.Wait()
@@ -528,24 +553,42 @@ func categoriesToStrings(cats []InjectionCategory) []string {
 }
 
 // categorizePattern attempts to categorize a matched pattern.
+// More specific patterns are checked first to avoid false attribution.
 func categorizePattern(pattern string) InjectionCategory {
 	p := strings.ToLower(pattern)
-	switch {
-	case strings.Contains(p, "ignore") || strings.Contains(p, "disregard") || strings.Contains(p, "override"):
-		return CategoryDirectiveOverride
-	case strings.Contains(p, "you are now") || strings.Contains(p, "act as") || strings.Contains(p, "pretend"):
-		return CategoryRolePlay
-	case strings.Contains(p, "base64") || strings.Contains(p, "rot13") || strings.Contains(p, "decode"):
-		return CategoryEncodingBypass
-	case strings.Contains(p, "system prompt") || strings.Contains(p, "system message"):
-		return CategoryContextManipulation
-	case strings.Contains(p, "root") || strings.Contains(p, "sudo") || strings.Contains(p, "admin"):
-		return CategoryPrivilegeEscalation
-	case strings.Contains(p, "print") && strings.Contains(p, "prompt"):
+
+	// Data exfiltration — check first (most specific compound conditions)
+	if (strings.Contains(p, "print") || strings.Contains(p, "echo") || strings.Contains(p, "cat")) &&
+		(strings.Contains(p, "prompt") || strings.Contains(p, "secret") || strings.Contains(p, "key") || strings.Contains(p, "token")) {
 		return CategoryDataExfiltration
-	default:
+	}
+
+	// Encoding bypass
+	if strings.Contains(p, "base64") || strings.Contains(p, "rot13") || strings.Contains(p, "unicode") || strings.Contains(p, "\\u[0-9") {
+		return CategoryEncodingBypass
+	}
+
+	// Context manipulation — check before role_play (system prompt is more specific)
+	if strings.Contains(p, "system prompt") || strings.Contains(p, "system message") || strings.Contains(p, "initial prompt") {
+		return CategoryContextManipulation
+	}
+
+	// Role play
+	if strings.Contains(p, "you are now") || strings.Contains(p, "act as") || strings.Contains(p, "pretend") || strings.Contains(p, "roleplay") {
+		return CategoryRolePlay
+	}
+
+	// Privilege escalation — check after exfil (both use "root"/"admin")
+	if strings.Contains(p, "sudo") || strings.Contains(p, "chmod") || strings.Contains(p, " privilege") {
+		return CategoryPrivilegeEscalation
+	}
+
+	// Directive override — broadest category, check last
+	if strings.Contains(p, "ignore") || strings.Contains(p, "disregard") || strings.Contains(p, "override") || strings.Contains(p, "forget") || strings.Contains(p, "bypass") {
 		return CategoryDirectiveOverride
 	}
+
+	return CategoryDirectiveOverride
 }
 
 // DefaultAuditLogger implements AuditLogger using slog.

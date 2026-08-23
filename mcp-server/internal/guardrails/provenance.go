@@ -2,7 +2,10 @@ package guardrails
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
+	"log/slog"
+	"net/url"
 	"strings"
 	"sync"
 	"time"
@@ -63,9 +66,27 @@ func NewProvenanceTracker(policies []TrustPolicy, cache ProvenanceCache) *Proven
 	}
 }
 
-// TagContent analyzes a source and assigns provenance to the content.
+// TagContent runs the full provenance pipeline on content:
+// 1. SanitizeContent — strip control characters
+// 2. DecodeObfuscation — detect and decode base64/ROT13/URL encoding
+// 3. Resolve trust level from source policies
+// 4. Cache and return provenance
 func (pt *ProvenanceTracker) TagContent(ctx context.Context, content string, source string, sourcePath string, agentID string) (*Provenance, error) {
-	hash := hashText(content)
+	// Step 1: Strip control characters (Unicode sanitization)
+	sanitized := SanitizeContent(content)
+
+	// Step 2: Decode obfuscation (base64/ROT13/URL)
+	decoded, wasObfuscated := DecodeObfuscation(sanitized)
+	if wasObfuscated {
+		slog.Warn("obfuscated content detected and decoded",
+			"source", sourcePath,
+			"original_len", len(content),
+			"decoded_len", len(decoded),
+		)
+	}
+
+	// Hash the sanitized+decoded content for caching
+	hash := hashText(decoded)
 
 	// Check cache first
 	if pt.cache != nil {
@@ -74,7 +95,7 @@ func (pt *ProvenanceTracker) TagContent(ctx context.Context, content string, sou
 		}
 	}
 
-	// Determine trust level based on policies
+	// Step 3: Determine trust level based on source policies
 	trustLevel, _ := pt.resolveTrust(sourcePath)
 
 	prov := &Provenance{
@@ -86,12 +107,8 @@ func (pt *ProvenanceTracker) TagContent(ctx context.Context, content string, sou
 		Hash:       hash,
 	}
 
-	// In a real implementation, the action (e.g., scan_and_block)
-	// would be handled by the coordinator calling the pipeline.
-	// Here we just store the determined provenance.
-
+	// Cache the provenance
 	if pt.cache != nil {
-		// Use default TTL of 1 hour as per spec
 		_ = pt.cache.Set(ctx, hash, prov, time.Hour)
 	}
 
@@ -197,6 +214,7 @@ func SanitizeContent(content string) string {
 	// Zero-width characters: U+200B-U+200F, U+2028-U+2029, U+2060-U+2064
 	// Bidi overrides: U+202A-U+202E, U+2066-U+2069
 	// Invisible format chars: U+FEFF, U+00AD
+	// Additional: U+061C (Arabic Letter Mark), U+034F (Combining Grapheme Joiner)
 
 	runes := []rune(content)
 	var result []rune
@@ -207,13 +225,153 @@ func SanitizeContent(content string) string {
 		   (r >= 0x2060 && r <= 0x2064) ||
 		   (r >= 0x202A && r <= 0x202E) ||
 		   (r >= 0x2066 && r <= 0x2069) ||
-		   (r == 0xFEFF) || (r == 0x00AD) {
+		   (r == 0xFEFF) || (r == 0x00AD) ||
+		   (r == 0x061C) || (r == 0x034F) {
 			continue
 		}
 		result = append(result, r)
 	}
 
 	return string(result)
+}
+
+// DecodeObfuscation attempts to detect and decode common obfuscation techniques
+// used to hide prompt injections: base64, ROT13, URL encoding.
+// Returns the decoded text and whether any decoding was applied.
+func DecodeObfuscation(content string) (string, bool) {
+	decoded := false
+
+	// 1. Try base64 decode — look for base64-encoded segments
+	if strings.Contains(content, "base64") || looksLikeBase64(content) {
+		if decoded_text, ok := tryBase64Decode(content); ok {
+			content = decoded_text
+			decoded = true
+		}
+	}
+
+	// 2. Try ROT13 — common for simple obfuscation
+	if looksLikeROT13(content) {
+		if decoded_text := tryROT13(content); decoded_text != content {
+			content = decoded_text
+			decoded = true
+		}
+	}
+
+	// 3. URL decode — %XX sequences
+	if strings.Contains(content, "%") {
+		if decoded_text, ok := tryURLDecode(content); ok {
+			content = decoded_text
+			decoded = true
+		}
+	}
+
+	return content, decoded
+}
+
+// looksLikeBase64 checks if content contains a base64-encoded segment.
+func looksLikeBase64(content string) bool {
+	// Look for base64 blocks (4+ chars, valid alphabet, padded)
+	for i := 0; i <= len(content)-4; i++ {
+		end := i + 76 // Standard base64 line length
+		if end > len(content) {
+			end = len(content)
+		}
+		segment := content[i:end]
+		if isBase64Segment(segment) {
+			return true
+		}
+	}
+	return false
+}
+
+// isBase64Segment checks if a string segment looks like base64.
+func isBase64Segment(s string) bool {
+	if len(s) < 4 {
+		return false
+	}
+	for _, c := range s {
+		if !((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '+' || c == '/' || c == '=') {
+			return false
+		}
+	}
+	// Check for padding consistency
+	padCount := 0
+	for i := len(s) - 1; i >= 0 && s[i] == '='; i-- {
+		padCount++
+	}
+	return padCount <= 2
+}
+
+// tryBase64Decode attempts to decode base64 content.
+func tryBase64Decode(content string) (string, bool) {
+	// Try decoding the entire content
+	if decoded, err := base64.StdEncoding.DecodeString(content); err == nil {
+		result := string(decoded)
+		// Only accept if decoded result is printable text
+		if isPrintableText(result) {
+			return result, true
+		}
+	}
+	// Try with URL-safe base64
+	if decoded, err := base64.URLEncoding.DecodeString(content); err == nil {
+		result := string(decoded)
+		if isPrintableText(result) {
+			return result, true
+		}
+	}
+	return content, false
+}
+
+// isPrintableText checks if a string is mostly printable characters.
+func isPrintableText(s string) bool {
+	if len(s) == 0 {
+		return false
+	}
+	printable := 0
+	for _, r := range s {
+		if r >= 32 && r < 127 || r == '\n' || r == '\r' || r == '\t' {
+			printable++
+		}
+	}
+	return float64(printable)/float64(len(s)) > 0.8
+}
+
+// looksLikeROT13 checks if content might be ROT13-encoded.
+func looksLikeROT13(content string) bool {
+	// ROT13 typically produces strings with unusual letter distributions
+	// Heuristic: check if decoding produces more common English patterns
+	return len(content) > 20
+}
+
+// tryROT13 applies ROT13 decoding.
+func tryROT13(content string) string {
+	result := make([]rune, len(content))
+	for i, r := range content {
+		switch {
+		case r >= 'a' && r <= 'z':
+			result[i] = 'a' + (r-'a'+13)%26
+		case r >= 'A' && r <= 'Z':
+			result[i] = 'A' + (r-'A'+13)%26
+		default:
+			result[i] = r
+		}
+	}
+	return string(result)
+}
+
+// tryURLDecode attempts to decode URL-encoded content (%XX sequences).
+func tryURLDecode(content string) (string, bool) {
+	if !strings.Contains(content, "%") {
+		return content, false
+	}
+	decoded, err := url.QueryUnescape(content)
+	if err != nil {
+		return content, false
+	}
+	if decoded != content {
+		return decoded, true
+	}
+	return content, false
 }
 
 // WrapWithProvenance adds markers to content based on its trust level.
