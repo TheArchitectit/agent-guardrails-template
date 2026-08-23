@@ -11,11 +11,11 @@ import (
 
 // EngineConfig holds configuration for the orchestrating Engine.
 type EngineConfig struct {
-	Injection    PipelineConfig       `yaml:"injection" json:"injection"`
+	Injection     PipelineConfig      `yaml:"injection" json:"injection"`
 	ContentFilter ContentFilterConfig `yaml:"content_filter" json:"content_filter"`
-	Sandbox      SandboxConfig        `yaml:"sandbox" json:"sandbox"`
-	Provenance   *ProvenanceConfig    `yaml:"provenance" json:"provenance"`
-	Enabled      bool                 `yaml:"enabled" json:"enabled"`
+	Sandbox       SandboxConfig       `yaml:"sandbox" json:"sandbox"`
+	Provenance    *ProvenanceConfig   `yaml:"provenance" json:"provenance"`
+	Enabled       bool                `yaml:"enabled" json:"enabled"`
 }
 
 // DefaultEngineConfig returns a safe default Engine configuration.
@@ -136,15 +136,15 @@ type ToolPolicy struct {
 
 // EvalResult is the output of Engine.Evaluate.
 type EvalResult struct {
-	Safe       bool                   `json:"safe"`
-	Decision   string                 `json:"decision"`
-	Reason     string                 `json:"reason,omitempty"`
-	Injection  *InjectionResult       `json:"injection,omitempty"`
-	Content    *ClassificationResult  `json:"content,omitempty"`
-	Provenance *Provenance            `json:"provenance,omitempty"`
-	Sandbox    *SandboxResult         `json:"sandbox,omitempty"`
-	LatencyMs  int64                  `json:"latency_ms"`
-	Warnings   []string               `json:"warnings,omitempty"`
+	Safe       bool                  `json:"safe"`
+	Decision   string                `json:"decision"`
+	Reason     string                `json:"reason,omitempty"`
+	Injection  *InjectionResult      `json:"injection,omitempty"`
+	Content    *ClassificationResult `json:"content,omitempty"`
+	Provenance *Provenance           `json:"provenance,omitempty"`
+	Sandbox    *SandboxResult        `json:"sandbox,omitempty"`
+	LatencyMs  int64                 `json:"latency_ms"`
+	Warnings   []string              `json:"warnings,omitempty"`
 }
 
 // Evaluate runs the full guardrail pipeline on the given input.
@@ -269,6 +269,14 @@ func (e *Engine) ClassifyContent(ctx context.Context, text string, direction Con
 		return &ClassificationResult{Safe: true, Backend: "none"}, nil
 	}
 	return e.filter.Classify(ctx, text, direction)
+}
+
+// CheckPolicy is a convenience method for policy-only checks.
+func (e *Engine) CheckPolicy(ctx context.Context, text string, policyID string) (*PolicyResult, error) {
+	if e.filter == nil {
+		return &PolicyResult{PolicyID: policyID, Compliant: true}, nil
+	}
+	return e.filter.CheckPolicy(ctx, text, policyID)
 }
 
 // ExecuteSandbox is a convenience method for sandbox-only execution.
