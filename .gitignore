@@ -62,3 +62,6 @@ mcp-server/config/vision.yaml
 *.db
 screenshots/
 vision_data/
+
+# Playwright MCP browser artifacts (transient logs + page snapshots)
+.playwright-mcp/
