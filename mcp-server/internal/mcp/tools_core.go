@@ -16,14 +16,14 @@ import (
 
 // validationResult is a shared shape for core guardrail validation responses.
 type validationResult struct {
-	Valid            bool                  `json:"valid"`
-	Violations       []validation.Violation `json:"violations"`
-	CheckedAt        string                `json:"checked_at"`
-	Command          string                `json:"command,omitempty"`
-	FilePath         string                `json:"file_path,omitempty"`
-	WasRead          bool                  `json:"was_read,omitempty"`
-	ReadAt           string                `json:"read_at,omitempty"`
-	Message          string                `json:"message,omitempty"`
+	Valid      bool                   `json:"valid"`
+	Violations []validation.Violation `json:"violations"`
+	CheckedAt  string                 `json:"checked_at"`
+	Command    string                 `json:"command,omitempty"`
+	FilePath   string                 `json:"file_path,omitempty"`
+	WasRead    bool                   `json:"was_read,omitempty"`
+	ReadAt     string                 `json:"read_at,omitempty"`
+	Message    string                 `json:"message,omitempty"`
 }
 
 // handleValidateBash validates a bash command against prevention rules.
@@ -155,11 +155,11 @@ func (s *MCPServer) handleValidateGitOperation(ctx context.Context, args map[str
 
 // preWorkCheckResult is the response shape for handlePreWorkCheck.
 type preWorkCheckResult struct {
-	Safe              bool                    `json:"safe"`
-	TaskDescription   string                  `json:"task_description"`
-	CheckedAt         string                  `json:"checked_at"`
-	KnownRegressions  []preWorkRegression     `json:"known_regressions"`
-	Message           string                  `json:"message"`
+	Safe             bool                `json:"safe"`
+	TaskDescription  string              `json:"task_description"`
+	CheckedAt        string              `json:"checked_at"`
+	KnownRegressions []preWorkRegression `json:"known_regressions"`
+	Message          string              `json:"message"`
 }
 
 // preWorkRegression summarizes a known failure registry entry that matches the
