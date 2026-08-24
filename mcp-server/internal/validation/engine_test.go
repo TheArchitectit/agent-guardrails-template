@@ -267,10 +267,10 @@ func TestViolation_Struct(t *testing.T) {
 
 func TestTruncateString(t *testing.T) {
 	tests := []struct {
-		name    string
-		input   string
-		maxLen  int
-		want    string
+		name   string
+		input  string
+		maxLen int
+		want   string
 	}{
 		{
 			name:   "short string",

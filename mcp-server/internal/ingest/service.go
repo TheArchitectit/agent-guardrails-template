@@ -3,8 +3,8 @@ package ingest
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"io"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"time"
@@ -16,13 +16,13 @@ import (
 
 // Service handles document ingestion operations
 type Service struct {
-	docStore      *database.DocumentStore
-	ruleStore     *database.RuleStore
-	parser        *Parser
-	ruleParser    *RuleParser
-	ruleSyncSvc   *RuleSyncService
-	watchedDirs   []string
-	rulesDir      string
+	docStore    *database.DocumentStore
+	ruleStore   *database.RuleStore
+	parser      *Parser
+	ruleParser  *RuleParser
+	ruleSyncSvc *RuleSyncService
+	watchedDirs []string
+	rulesDir    string
 }
 
 // NewService creates a new ingest service
