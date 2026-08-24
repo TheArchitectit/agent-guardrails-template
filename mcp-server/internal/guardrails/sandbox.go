@@ -185,9 +185,9 @@ func (m *SandboxManager) execL0(ctx context.Context, command string, limits Reso
 	}
 
 	result := &SandboxResult{
-		ExitCode:          exitCode,
-		Stdout:            stdout.String(),
-		Stderr:            stderr.String(),
+		ExitCode:           exitCode,
+		Stdout:             stdout.String(),
+		Stderr:             stderr.String(),
 		ActualIsolationLvl: LevelL0,
 	}
 	m.detectViolations(result, LevelL0, limits, ctx, err)
@@ -231,9 +231,9 @@ func (m *SandboxManager) execL1(ctx context.Context, command string, limits Reso
 	}
 
 	result := &SandboxResult{
-		ExitCode:          exitCode,
-		Stdout:            stdout.String(),
-		Stderr:            stderr.String(),
+		ExitCode:           exitCode,
+		Stdout:             stdout.String(),
+		Stderr:             stderr.String(),
 		ActualIsolationLvl: LevelL1,
 	}
 	m.detectViolations(result, LevelL1, limits, ctx, err)
@@ -258,29 +258,64 @@ func (m *SandboxManager) execL2(ctx context.Context, command string, limits Reso
 
 	args := []string{
 		"run", "--rm",
-		"--read-only", // Read-only root filesystem
+		"--read-only",                        // Read-only root filesystem
 		"--tmpfs", "/tmp:rw,noexec,size=64m", // Writable tmpfs for scratch
 		"--tmpfs", "/var/tmp:rw,noexec,size=32m",
 		"--cap-drop=ALL",
-		"--cap-add=SETUID",     // Needed by some shells
+		"--cap-add=SETUID", // Needed by some shells
 		"--cap-add=SETGID",
 		"--security-opt", "no-new-privileges",
 	}
 
-	// Network isolation. Per-host whitelisting requires a pre-provisioned
-	// container network that is out of scope here, so we fail closed:
-	//   - no AllowedHosts => --network=none (fully offline)
-	//   - AllowedHosts set => we still default to --network=none because true
-	//     host whitelisting is not implemented. A dedicated network should be
-	//     created in advance and the NetworkMode config field set to use it.
-	if m.config.NetworkMode != "" {
-		args = append(args, "--network="+m.config.NetworkMode)
+	// Network isolation.
+	//
+	//   - AllowedHosts empty => --network=none (fully offline). Fail-closed.
+	//   - AllowedHosts set AND no pre-configured NetworkMode =>
+	//       provision/reuse the "guardrail-egress" bridge network and run a
+	//       local CONNECT filtering proxy (sandbox_network.go). The container
+	//       routes HTTPS through the proxy via HTTPS_PROXY/HTTP_PROXY env.
+	//   - NetworkMode set => use it directly (operator-managed network); the
+	//       proxy is still wired when AllowedHosts is set.
+	//
+	// If proxy startup or network provisioning fails, we degrade the FEATURE
+	// (network egress), not the whole sandbox: fall back to --network=none and
+	// record a warning. This is NOT a sandboxSetupErr — execution setup for a
+	// requested feature failed, so we fail closed on the feature.
+	netMode := m.config.NetworkMode
+	egressProxyAddr := ""
+	if len(limits.Network.AllowedHosts) > 0 {
+		if err := ValidateAllowedHosts(limits.Network.AllowedHosts); err != nil {
+			// Overly broad allowlist (e.g. bare "*"): refuse to open egress.
+			m.logger.Warn("invalid AllowedHosts; using network=none (fail-closed)",
+				"error", err, "allowed_hosts", limits.Network.AllowedHosts)
+			netMode = ""
+		} else if proxy, addr, perr := startEgressProxy(limits.Network.AllowedHosts, m.logger); perr == nil {
+			defer proxy.stopEgressProxy()
+			egressProxyAddr = addr
+			if netMode == "" {
+				if nm, nerr := provisionEgressNetwork(runtime, m.logger); nerr == nil {
+					netMode = nm
+				} else {
+					// Provisioning failed: refuse egress entirely.
+					netMode = ""
+					egressProxyAddr = ""
+					proxy.stopEgressProxy()
+				}
+			}
+		} else {
+			m.logger.Warn("egress proxy startup failed; using network=none (fail-closed)",
+				"error", perr, "allowed_hosts", limits.Network.AllowedHosts)
+			netMode = ""
+		}
+	}
+	if netMode != "" {
+		args = append(args, "--network="+netMode)
 	} else {
 		args = append(args, "--network=none")
 	}
-	if len(limits.Network.AllowedHosts) > 0 {
-		m.logger.Warn("per-host network whitelisting not enforced; using network=none (fail-closed)",
-			"allowed_hosts", limits.Network.AllowedHosts)
+	if egressProxyAddr != "" {
+		proxyURL := egressProxyURL(egressProxyAddr)
+		args = append(args, "--env", "HTTPS_PROXY="+proxyURL, "--env", "HTTP_PROXY="+proxyURL)
 	}
 
 	// Resource limits — guard against zero values
@@ -342,9 +377,9 @@ func (m *SandboxManager) execL2(ctx context.Context, command string, limits Reso
 	}
 
 	result := &SandboxResult{
-		ExitCode:          exitCode,
-		Stdout:            stdout.String(),
-		Stderr:            stderr.String(),
+		ExitCode:           exitCode,
+		Stdout:             stdout.String(),
+		Stderr:             stderr.String(),
 		ActualIsolationLvl: LevelL2,
 	}
 	m.detectViolations(result, LevelL2, limits, ctx, err)
