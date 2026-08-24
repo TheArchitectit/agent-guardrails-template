@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [3.7.1] - 2026-08-23
+
+### Changed
+
+- Refreshed the README to cover the v3.7 guardrail subsystems (prompt injection
+  defense, content filtering, sandboxing, multi-agent safety, provenance, and
+  compliance mapping) and corrected the registered tool count to 37.
+
+---
+
 ## [3.7.0] - 2026-08-23
 
 ### Added
