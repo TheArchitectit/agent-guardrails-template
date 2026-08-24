@@ -2,7 +2,7 @@
 
 > Safety rails for AI agents that write code. Set the boundaries once, let the agent run at full speed.
 
-[![Version](https://img.shields.io/badge/version-v3.5.0-blue.svg)](./CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-v3.7.1-blue.svg)](./CHANGELOG.md)
 [![Powered by Atlas Cloud](https://www.atlascloud.ai/oss-program/powered-by-atlas-cloud.svg)](https://www.atlascloud.ai/?ref=F6TYTG)
 [![Go](https://img.shields.io/badge/Go-1.25+-00ADD8?style=flat&logo=go&logoColor=white)](https://golang.org)
 [![License](https://img.shields.io/badge/License-BSD--3--Clause-blue.svg)](./LICENSE)
@@ -41,7 +41,7 @@ See [four-laws.md](skills/shared-prompts/four-laws.md) and [halt-conditions.md](
 
 ## What's in the Box
 
-**MCP Server** (`mcp-server/`) — Go server with 35 tools, 11 resources, and a stateless StreamableHTTP transport (`POST /mcp`, no session management). Validates bash, file edits, git ops, and commits. Backed by PostgreSQL 16 and Redis 7. Includes a web UI, OpenAPI 3.1 spec, and 31 REST endpoints including `/api/v1/policy/check` for CI/CD gating.
+**MCP Server** (`mcp-server/`) — Go server with 37 tools, 11 resources, and a stateless StreamableHTTP transport (`POST /mcp`, no session management). Validates bash, file edits, git ops, and commits — and now defends against prompt injection, classifies content against an S1–S15 safety taxonomy, and sandboxes execution across L0–L2 levels. Backed by PostgreSQL 16 and Redis 7. Includes a web UI, OpenAPI 3.1 spec, and 31 REST endpoints including `/api/v1/policy/check` for CI/CD gating.
 
 **IDE Integrations** (`docs/integrations/`) — Native skills and rules for Claude Code, Cursor, OpenCode, Windsurf, and GitHub Copilot. Not generic prompts — each one is tailored to the platform's actual config format.
 
@@ -52,6 +52,19 @@ See [four-laws.md](skills/shared-prompts/four-laws.md) and [halt-conditions.md](
 **Standards** (`docs/standards/`) — Twenty-five engineering standards covering test/production separation, API specs, dependency governance, logging, rate limiting, retry/degradation, timeouts, operational circuit breakers, and prompting practices.
 
 **Examples** (`examples/`) — Fourteen languages: Go, TypeScript, Rust, Python, Java, Swift, Dart/Flutter, GDScript, Scala, R, C#, C++, PHP, and Ruby. Each demonstrates guardrails patterns in that language's idioms.
+
+## What's New in v3.7
+
+Through the summer we closed the six "2026 guardrail gaps" — the places an AI coding agent could still slip past the rules. Each is a new subsystem in the MCP server, with a design spec under `docs/specs/guardrail-gaps-2026/`:
+
+- **Prompt injection defense (Spec 01)** — a four-layer pipeline (pattern → perplexity → classifier → LLM self-check) that catches injected instructions before they reach your agent, with per-source trust policies.
+- **Semantic content filtering (Spec 02)** — safety classification over an S1–S15 taxonomy (Llama Guard plus two code-specific categories), with policies, thresholds, and overrides per category or rule.
+- **Runtime sandbox isolation (Spec 03)** — three levels: L0 runs in-process, L1 uses `unshare` namespaces, L2 uses rootless podman/docker. CPU, memory, and PID limits, plus network isolation — and when `AllowedHosts` is set, L2 egress goes through a local proxy instead of the open network.
+- **Multi-agent safety policies (Spec 04)** — guardrails for when several agents work the same codebase: scan-and-block or scan-and-warn chains, constraint resolution, and validators for the Four Laws.
+- **Indirect injection / provenance (Spec 05)** — tracks where content came from, decodes obfuscated payloads (ROT13, base64), and decides how much to trust a source.
+- **Regulatory compliance mapping (Spec 06)** — a map from each guardrail feature to the frameworks it helps you satisfy (GDPR, SOC 2, ISO 27001, the EU AI Act, and more).
+
+Balancing all of that is the point: these guardrails run in the background so the agent can move at full speed and you can stop second-guessing everything it does.
 
 ## Atlas Cloud (Sponsored)
 
@@ -105,10 +118,12 @@ All documents follow the **500-line max** rule for fast context loading. Use `in
 
 ## Version
 
-**Current:** v3.6.0 (2026-08-22)
+**Current:** v3.7.1 (2026-08-23)
 
 | Version | Date | Highlights |
 |---------|------|------------|
+| **v3.7.1** | 2026-08-23 | README refresh covering the v3.7 guardrail subsystems |
+| **v3.7.0** | 2026-08-23 | Six guardrail subsystems, two QA passes, AllowedHosts egress filtering |
 | **v3.6.0** | 2026-08-22 | Atlas Cloud sponsorship integration, GitHub Sponsors, README rewrite |
 | **v3.5.0** | 2026-08-18 | Interactive bash permission prompts, danger allow-list, catastrophic type-back |
 | **v3.4.0** | 2026-08-15 | Documentation reorganization, game/vision content split to private repos |
