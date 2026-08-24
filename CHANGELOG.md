@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
-## [Unreleased]
+## [3.7.0] - 2026-08-23
 
 ### Added
 
@@ -33,6 +33,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - **`SetGuardrailsEngine` setter** on `MCPServer` and `Engine.CheckPolicy` convenience
   method; engine constructed in `cmd/server` when `OLLAMA_URL` is set (Llama Guard
   backend) with `OLLAMA_MODEL` overriding the default `llama-guard-3`.
+- **AllowedHosts egress filtering at sandbox L2** — when `AllowedHosts` is set
+  (and `NetworkMode` is empty), L2 sandboxes route outbound traffic through a
+  local CONNECT forward proxy on a `guardrail-egress` bridge network with
+  `HTTP_PROXY`/`HTTPS_PROXY` injected; any setup failure falls back to
+  `--network=none` (fail-closed). Empty `AllowedHosts` keeps `--network=none`.
 
 ### Changed
 
@@ -40,6 +45,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   mismatch, fail-closed error paths, cache pointer sharing, inert engine defaults,
   sandbox violation detection, registry no-ops, dead config, provenance dedup, etc.).
 - Enforced the 500-line file limit across new `.go` files.
+- Enforced the 500-line file limit across pre-existing handler files, splitting
+  `internal/web/handlers.go`, `internal/team/manager.go`, the metrics package,
+  the MCP tool/handler and team-tool files (and their tests), and the
+  `validation`/`ingest`/`updates` internals into focused files under 500 lines.
 - **Second full QA review pass** (5 subsystem reviewers) resolved 36 further findings:
   - **Sandbox (2× P0)**: security denials at L2/L1 no longer cascade down to
     host execution — fallback is restricted to genuine setup errors and fails
