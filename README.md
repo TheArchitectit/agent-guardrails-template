@@ -136,18 +136,12 @@ Full history in [CHANGELOG.md](CHANGELOG.md).
 
 BSD-3-Clause — see [LICENSE](LICENSE).
 
-## Sponsor
+## ☕ Sponsor
 
-If this project helps you, consider [sponsoring on GitHub](https://github.com/sponsors/TheArchitectit).
+If this project helps you, consider sponsoring on GitHub: [github.com/sponsors/TheArchitectit](https://github.com/sponsors/TheArchitectit)
 
 [![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-TheArchitectit-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://www.buymeacoffee.com/TheArchitectit)
 
 ---
 
 Built by [TheArchitectit](https://github.com/TheArchitectit) with AI-assisted development.
-
----
-
-## ☕ Sponsor
-
-If this project helps you, consider sponsoring on GitHub: [github.com/sponsors/TheArchitectit](https://github.com/sponsors/TheArchitectit)
