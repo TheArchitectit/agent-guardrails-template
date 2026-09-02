@@ -145,3 +145,9 @@ If this project helps you, consider [sponsoring on GitHub](https://github.com/sp
 ---
 
 Built by [TheArchitectit](https://github.com/TheArchitectit) with AI-assisted development.
+
+---
+
+## ☕ Sponsor
+
+If this project helps you, consider sponsoring on GitHub: [github.com/sponsors/TheArchitectit](https://github.com/sponsors/TheArchitectit)
