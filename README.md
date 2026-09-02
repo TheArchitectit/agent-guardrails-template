@@ -144,7 +144,11 @@ Built by [TheArchitectit](https://github.com/TheArchitectit) with AI-assisted de
 
 ---
 
-### ☕ Support This Project
+#
+
+---
+
+## ☕ Support This Project
 
 Help keep this project going — use a referral link below and both of us get credits!
 
@@ -153,11 +157,11 @@ Help keep this project going — use a referral link below and both of us get cr
 | [**Neuralwatt**](https://portal.neuralwatt.com/auth/register?ref=NW-ROGER-ET3Y) | $10 in credits | Spend $10+ → you get $10, we get $20 | `NW-ROGER-ET3Y` |
 | [**Synthetic**](https://synthetic.new/?referral=UAWqkKQQLFkzMkY) | $10 in credits | Subscribe → both get $10 credit | `UAWqkKQQLFkzMkY` |
 
-## ☁️ Cloud Credits
+### ☁️ Cloud Credits
 
 Power your AI projects with [Ozore.com](https://ozore.com/?ref=cwe4kdx0) — use code **lundrog50** for 50% off your first month.
 
-## ☕ Support
+### 💖 Sponsor
 
 If this project helped you, consider buying me a coffee:
 
