@@ -64,3 +64,6 @@ vision_data/
 
 # Playwright MCP browser artifacts (transient logs + page snapshots)
 .playwright-mcp/
+cpofopencode
+.guardrails/cpofopencode
+.guardrails/cpofopencode*
