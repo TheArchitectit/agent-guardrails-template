@@ -28,6 +28,26 @@ That's it. The MCP server is live, the web dashboard is at `http://localhost:808
 
 For applying to an existing repo, see [how-to-apply.md](docs/getting-started/how-to-apply.md). For the 5-minute setup, see [quick-setup.md](docs/getting-started/quick-setup.md).
 
+## Reboot status: what is enforced and what is not
+
+This branch recovers the project from tag v3.7.1 and relabels every claim honestly. Connecting the MCP server to an assistant gives it access to checks. It does not force the assistant to call them.
+
+| Level | Meaning | Status today |
+|---|---|---|
+| Advisory | The agent can ask. It can also skip. | VS Code + Copilot wiring below |
+| Checked operation | The server verifies an operation it controls. | Server tools exist; per-host evidence not yet recorded |
+| Blocking | Only where a tested hook or wrapper denies. | Not enforced on any host until a test record exists |
+
+### Install for VS Code + GitHub Copilot (advisory)
+
+```bash
+scripts/guardrails-cli.sh init /path/to/your/project     # adds .vscode/mcp.json and a Copilot instructions addendum
+scripts/guardrails-cli.sh doctor /path/to/your/project   # prints PASS / FAIL / UNKNOWN, never green by default
+scripts/guardrails-cli.sh uninstall /path/to/your/project
+```
+
+The `/mcp` endpoint requires `Authorization: Bearer <MCP_API_KEY>`. See [integrations/copilot](integrations/copilot/README.md), [SECURITY.md](SECURITY.md) and [docs/reboot/FINDINGS.md](docs/reboot/FINDINGS.md).
+
 ## The Four Laws
 
 These are the backbone. Everything else extends them.

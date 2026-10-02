@@ -1,0 +1,10 @@
+{
+  "pack": "core/four-laws",
+  "version": "0.1.0",
+  "rules": [
+    { "id": "L1", "law": "Read before editing", "enforcement": "advisory", "tool": "guardrail_verify_file_read", "on_unknown": "stop" },
+    { "id": "L2", "law": "Stay in scope", "enforcement": "advisory", "tool": "guardrail_validate_scope", "on_unknown": "stop" },
+    { "id": "L3", "law": "Verify before committing", "enforcement": "advisory", "tool": "guardrail_validate_commit", "on_unknown": "stop" },
+    { "id": "L4", "law": "Halt when uncertain", "enforcement": "advisory", "tool": "guardrail_check_halt_conditions", "on_unknown": "stop" }
+  ]
+}
