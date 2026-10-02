@@ -53,6 +53,7 @@ mcp-server/server
 mcp-server/bin/guardrail-mcp
 mcp-server/test_tools
 cmd/team-cli/team
+*.exe
 *.tar.gz
 
 # Deep research output (internal analysis, never commit)
@@ -66,6 +67,3 @@ vision_data/
 
 # Playwright MCP browser artifacts (transient logs + page snapshots)
 .playwright-mcp/
-cpofopencode
-.guardrails/cpofopencode
-.guardrails/cpofopencode*
