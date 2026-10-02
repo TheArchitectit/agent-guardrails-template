@@ -1,0 +1,2 @@
+# Policy-pack hashes in LOCK.json are computed over raw bytes; CRLF checkout breaks them.
+policy-packs/**/*.json text eol=lf

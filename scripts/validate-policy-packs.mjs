@@ -26,7 +26,7 @@ const lock = {}
 for (const p of packs.sort()) {
   const pk = JSON.parse(readFileSync(p, 'utf8'))
   if (!/^\d+\.\d+\.\d+$/.test(pk.version)) { console.error(`FAIL ${p}: version must be semver`); bad++ }
-  lock[p] = { version: pk.version, sha256: createHash('sha256').update(readFileSync(p)).digest('hex') }
+  lock[p.replaceAll('\\', '/')] = { version: pk.version, sha256: createHash('sha256').update(readFileSync(p)).digest('hex') }
 }
 const lp = 'policy-packs/LOCK.json'
 if (process.argv.includes('--relock')) { writeFileSync(lp, JSON.stringify(lock, null, 2) + '\n'); console.log('relocked') }
