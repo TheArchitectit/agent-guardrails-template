@@ -73,17 +73,22 @@ func TestDangerousCommandCorpus(t *testing.T) {
 }
 
 func TestShippedPatternsCompile(t *testing.T) {
-	raw, err := os.ReadFile("../../../.guardrails/prevention-rules/extracted-rules.json")
-	if err != nil {
-		t.Skip(err)
-	}
-	var doc struct {
-		Rules []auditRule `json:"rules"`
-	}
-	_ = json.Unmarshal(raw, &doc)
-	for _, r := range doc.Rules {
-		if _, err := MatchPattern(r.Pattern, "x"); err != nil {
-			t.Errorf("%s pattern does not compile and would be silently skipped: %v", r.RuleID, err)
+	for _, f := range []string{"extracted-rules.json", "pattern-rules.json"} {
+		raw, err := os.ReadFile("../../../.guardrails/prevention-rules/" + f)
+		if err != nil {
+			t.Skip(err)
+		}
+		var doc struct {
+			Rules []auditRule `json:"rules"`
+		}
+		if err := json.Unmarshal(raw, &doc); err != nil {
+			t.Fatal(err)
+		}
+		for _, r := range doc.Rules {
+			// The loader now refuses a rule set containing an invalid pattern, so every shipped rule must validate.
+			if err := ValidatePattern(r.Pattern); err != nil {
+				t.Errorf("%s %s: %v", f, r.RuleID, err)
+			}
 		}
 	}
 }

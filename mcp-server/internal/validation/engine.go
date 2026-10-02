@@ -129,7 +129,7 @@ func (e *ValidationEngine) ValidateBash(ctx context.Context, command string) ([]
 				"rule_id", compiled.Rule.RuleID,
 				"error", err,
 			)
-			continue
+			return nil, fmt.Errorf("rule %s could not be evaluated (verdict is ERROR, not PASS): %w", compiled.Rule.RuleID, err)
 		}
 
 		if matched {
@@ -171,7 +171,7 @@ func (e *ValidationEngine) ValidateGit(ctx context.Context, command string) ([]V
 				"rule_id", compiled.Rule.RuleID,
 				"error", err,
 			)
-			continue
+			return nil, fmt.Errorf("rule %s could not be evaluated (verdict is ERROR, not PASS): %w", compiled.Rule.RuleID, err)
 		}
 
 		if matched {
@@ -239,7 +239,7 @@ func (e *ValidationEngine) ValidateFileEdit(ctx context.Context, filePath string
 					"input_type", inputLabels[i],
 					"error", err,
 				)
-				continue
+				return nil, fmt.Errorf("rule %s could not be evaluated (verdict is ERROR, not PASS): %w", compiled.Rule.RuleID, err)
 			}
 
 			if matched {

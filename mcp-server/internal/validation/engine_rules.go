@@ -47,11 +47,11 @@ func (e *ValidationEngine) loadRulesFromDB(ctx context.Context) ([]compiledRule,
 	for _, rule := range rules {
 		// Validate pattern before adding
 		if err := ValidatePattern(rule.Pattern); err != nil {
-			slog.Warn("Skipping rule with invalid pattern",
+			slog.Error("Invalid rule pattern; refusing to evaluate with a partial rule set",
 				"rule_id", rule.RuleID,
 				"error", err,
 			)
-			continue
+			return nil, fmt.Errorf("rule %s has an invalid pattern (verdict is ERROR, not PASS): %w", rule.RuleID, err)
 		}
 
 		compiled = append(compiled, compiledRule{
@@ -205,7 +205,7 @@ func (e *ValidationEngine) ValidateInput(ctx context.Context, input string, cate
 				"rule_id", compiled.Rule.RuleID,
 				"error", err,
 			)
-			continue
+			return nil, fmt.Errorf("rule %s could not be evaluated (verdict is ERROR, not PASS): %w", compiled.Rule.RuleID, err)
 		}
 
 		if matched {
