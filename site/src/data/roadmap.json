@@ -1,0 +1,9 @@
+[
+  {"id":"M0","title":"Recovery and honest baseline","status":"in progress"},
+  {"id":"M1","title":"Manifest, health endpoints, error taxonomy","status":"planned"},
+  {"id":"M2","title":"Copilot / VS Code wiring and tested hooks","status":"planned"},
+  {"id":"M3","title":"Lighter storage options","status":"planned"},
+  {"id":"M4","title":"Claude Code and Cursor second wave","status":"planned"},
+  {"id":"M5","title":"Policy packs","status":"planned"},
+  {"id":"M6","title":"Community and docs","status":"planned"}
+]

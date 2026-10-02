@@ -1,0 +1,8 @@
+{
+  "generatedNote": "Evidence is recorded per host and version. No row is PASS until a test record exists.",
+  "hosts": [
+    { "host": "VS Code + GitHub Copilot", "advisory": "UNKNOWN", "checked": "UNKNOWN", "blocking": "UNKNOWN", "testedVersion": null, "testedOn": null },
+    { "host": "Claude Code", "advisory": "UNKNOWN", "checked": "UNKNOWN", "blocking": "UNKNOWN", "testedVersion": null, "testedOn": null },
+    { "host": "Cursor", "advisory": "UNKNOWN", "checked": "UNKNOWN", "blocking": "UNKNOWN", "testedVersion": null, "testedOn": null }
+  ]
+}
