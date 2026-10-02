@@ -96,6 +96,15 @@ func (m *SandboxManager) Execute(ctx context.Context, command string, level Sand
 	var result *SandboxResult
 	var err error
 
+	// Reject malformed mount paths before any level is tried, so a missing
+	// container runtime can never mask the error by falling back to a level
+	// that ignores the mount.
+	for _, p := range limits.Disk.ReadWritePaths {
+		if verr := validateMountPath(p); verr != nil {
+			return nil, verr
+		}
+	}
+
 	actualLevel := level
 	// fallbackWasFailClosed is true when the chain downgraded because a
 	// command was denied/rejected while executing under isolation (as opposed
