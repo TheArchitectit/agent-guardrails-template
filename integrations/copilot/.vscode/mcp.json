@@ -1,0 +1,19 @@
+{
+  "servers": {
+    "guardrails": {
+      "type": "http",
+      "url": "http://localhost:8080/mcp",
+      "headers": {
+        "Authorization": "Bearer ${input:guardrails-api-key}"
+      }
+    }
+  },
+  "inputs": [
+    {
+      "id": "guardrails-api-key",
+      "type": "promptString",
+      "description": "Guardrails MCP API key (server-side MCP_API_KEY). VS Code stores this as a secret.",
+      "password": true
+    }
+  ]
+}
