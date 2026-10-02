@@ -39,7 +39,7 @@ export const How = () => (<article><h1>How it works</h1>
   <EnforcementTable />
   <p>The server currently exposes {tools.count} tools, generated from source.</p></article>)
 export const Install = () => (<article><h1>Install</h1><p>Start the server, then point your host at it.</p><HostTabs />
-  <p>Use a placeholder key shown here only as an example. Never commit real keys.</p></article>)
+  <p>Bind the server to localhost only. Authentication on the MCP endpoint is not yet verified, so do not expose it to a network. Never commit keys.</p></article>)
 export const Compatibility = () => (<article><h1>Compatibility</h1><p>{compat.generatedNote}</p>
   <ul>{compat.hosts.map(h => <li key={h.host}>{h.host}: <VerdictBadge verdict={h.blocking} /> blocking</li>)}</ul></article>)
 export const Policies = () => (<article><h1>Policies</h1><ul>{LAWS.map(([t, d]) => <li key={t}><strong>{t}.</strong> {d}</li>)}</ul></article>)

@@ -3,7 +3,7 @@
 :root[data-theme=dark]{--ink:#F8FAFC;--paper:#0F172A;--advisory:#FBBF24;--checked:#93C5FD;--blocking:#86EFAC;--fail:#FCA5A5;--muted:#CBD5E1}
 body{margin:0;background:var(--paper);color:var(--ink);font:17px/1.6 system-ui,sans-serif}
 main,header nav,footer{max-width:68rem;margin:0 auto;padding:1rem 1.25rem}
-article,section{max-width:46rem}section{margin:2.5rem 0}
+article{max-width:46rem}section{margin:2.5rem 0}.hero,.hero+section{max-width:46rem}
 nav{display:flex;flex-wrap:wrap;gap:1rem;align-items:center}nav ul{display:flex;flex-wrap:wrap;gap:.75rem;list-style:none;padding:0;margin:0}
 a{color:var(--checked)}a:focus-visible,button:focus-visible,select:focus-visible{outline:3px solid var(--advisory);outline-offset:2px}
 .skip{position:absolute;left:-999px}.skip:focus{left:1rem;top:1rem;background:var(--paper);padding:.5rem}
