@@ -3,9 +3,9 @@ import { isStale } from '../status'
 import compat from '../data/compat.json'
 
 const SNIPPETS: Record<string, string> = {
-  'VS Code + GitHub Copilot': '{\n  "servers": {\n    "guardrails": { "type": "http", "url": "http://localhost:8080/mcp" }\n  }\n}',
-  'Claude Code': 'claude mcp add --transport http guardrails http://localhost:8080/mcp',
-  'Cursor': '{\n  "mcpServers": {\n    "guardrails": { "url": "http://localhost:8080/mcp" }\n  }\n}',
+  'VS Code + GitHub Copilot': '{\n  "servers": {\n    "guardrails": {\n      "type": "http",\n      "url": "http://localhost:8080/mcp",\n      "headers": { "Authorization": "Bearer ${input:guardrails-key}" }\n    }\n  },\n  "inputs": [\n    { "id": "guardrails-key", "type": "promptString", "description": "Guardrails MCP API key", "password": true }\n  ]\n}',
+  'Claude Code': 'claude mcp add --transport http guardrails http://localhost:8080/mcp --header "Authorization: Bearer YOUR_KEY"',
+  'Cursor': '{\n  "mcpServers": {\n    "guardrails": { "url": "http://localhost:8080/mcp", "headers": { "Authorization": "Bearer YOUR_KEY" } }\n  }\n}',
 }
 export default function HostTabs() {
   const hosts = compat.hosts

@@ -33,13 +33,20 @@ export const Story = () => (<article>
   <h1>Why we are rebooting</h1>
   <p>This is the maintainer's own account, limited to verified facts. The main branch of the original template repository was reduced to a retirement notice. The code survived because tag v3.7.1 still holds all 816 files, including the MCP server and the editor adapters. We are recovering from that tag with a new branch and no history rewrite.</p>
   <p>The lesson is the product: a boundary is only worth what you can prove it stopped. So this project labels every check as advisory, checked, or blocking, and says "Not enforced" when it cannot show evidence.</p>
+  <h2>Three principles</h2>
+  <ol>
+    <li><strong>Boundaries over vigilance.</strong> Do not rely on an agent being careful. Give it limits and a way back.</li>
+    <li><strong>Say what is enforced.</strong> Connecting an MCP server gives an agent access to checks. It does not force the agent to use them.</li>
+    <li><strong>Unknown is not a pass.</strong> If a check cannot run, you see UNKNOWN, not a green light.</li>
+  </ol>
+  <p>Note: the maintainer is still checking the exact sequence of events, so this page makes no claim about cause.</p>
 </article>)
 export const How = () => (<article><h1>How it works</h1>
   <p>Connecting an MCP tool to an assistant does not force the assistant to call it. Advisory checks can be skipped. Checked operations are verified by the server for actions it controls. Blocking needs a tested hook or wrapper on a named host version.</p>
   <EnforcementTable />
   <p>The server currently exposes {tools.count} tools, generated from source.</p></article>)
 export const Install = () => (<article><h1>Install</h1><p>Start the server, then point your host at it.</p><HostTabs />
-  <p>Bind the server to localhost only. Authentication on the MCP endpoint is not yet verified, so do not expose it to a network. Never commit keys.</p></article>)
+  <p>The MCP endpoint requires the configured MCP_API_KEY as a bearer token (covered by unit tests, not yet verified against a live deployment). Keep the key out of source control.</p></article>)
 export const Compatibility = () => (<article><h1>Compatibility</h1><p>{compat.generatedNote}</p>
   <ul>{compat.hosts.map(h => <li key={h.host}>{h.host}: <VerdictBadge verdict={h.blocking} /> blocking</li>)}</ul></article>)
 export const Policies = () => (<article><h1>Policies</h1><ul>{LAWS.map(([t, d]) => <li key={t}><strong>{t}.</strong> {d}</li>)}</ul></article>)

@@ -7,7 +7,7 @@ then in Copilot Chat agent mode enable the `guardrails` tools.
 - **Advisory.** Copilot may call `guardrail_*` tools. Nothing forces it to. It can skip them.
 - **Checked operation / Blocking: not enforced here.** Blocking needs a tested hook or wrapper on a named Copilot/VS Code version. Until a test record exists, the compatibility matrix stays UNKNOWN.
 - Add `.github/copilot-instructions.md` (already in this repo) so Copilot is told to call `guardrail_pre_work_check` before edits. That is still a request, not enforcement.
-- Bind the server to localhost. Authentication on `/mcp` was not found in `cmd/server/main.go` or `internal/mcp/server.go`; verify before any network exposure.
+- `/mcp` now requires `Authorization: Bearer <MCP_API_KEY>` (unit and handler tests pass; not yet run against a live deployment). VS Code prompts for the key and stores it as a secret input.
 
 ## Verify
 1. `tools/list` over the endpoint returns the tools in `site/src/data/tools.json`.

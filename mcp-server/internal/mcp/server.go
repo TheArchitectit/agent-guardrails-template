@@ -3,10 +3,13 @@ package mcp
 import (
 	"context"
 	"crypto/rand"
+	"crypto/subtle"
 	"encoding/hex"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -27,6 +30,7 @@ import (
 type MCPServer struct {
 	mcpServer            *server.MCPServer
 	httpServer           *server.StreamableHTTPServer
+	rawServer            *http.Server
 	db                   *database.DB
 	cache                *cache.Client
 	audit                *audit.Logger
@@ -126,6 +130,9 @@ func (s *MCPServer) Start(addr string) error {
 
 // Shutdown gracefully shuts down the MCP server.
 func (s *MCPServer) Shutdown(ctx context.Context) error {
+	if s.rawServer != nil {
+		return s.rawServer.Shutdown(ctx)
+	}
 	if s.httpServer != nil {
 		return s.httpServer.Shutdown(ctx)
 	}
@@ -298,7 +305,25 @@ func (s *MCPServer) Serve(addr string) error {
 		server.WithEndpointPath("/mcp"),
 		server.WithStateLess(true),
 	)
-	return s.httpServer.Start(addr)
+	mux := http.NewServeMux()
+	mux.Handle("/mcp", requireBearer(s.config.MCPAPIKey, s.httpServer))
+	s.rawServer = &http.Server{Addr: addr, Handler: mux, ReadHeaderTimeout: 10 * time.Second}
+	return s.rawServer.ListenAndServe()
+}
+
+// requireBearer rejects requests lacking the configured MCP API key.
+// An empty configured key fails closed (everything is rejected).
+func requireBearer(key string, next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		parts := strings.SplitN(r.Header.Get("Authorization"), " ", 2)
+		if key == "" || len(parts) != 2 || !strings.EqualFold(parts[0], "bearer") ||
+			subtle.ConstantTimeCompare([]byte(parts[1]), []byte(key)) != 1 {
+			w.Header().Set("WWW-Authenticate", "Bearer")
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
 func (s *MCPServer) handleGetContext(ctx context.Context, args map[string]interface{}) (*mcp.CallToolResult, error) {
