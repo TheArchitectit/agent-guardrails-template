@@ -1,6 +1,6 @@
 // Package main provides configuration loading functionality.
 // This demonstrates guardrails-compliant patterns for environment-based config.
-package main
+package configdemo
 
 import (
 	"fmt"

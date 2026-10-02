@@ -4,12 +4,10 @@
 // Last Updated: 2026-03-14
 // Go Version: 1.22+
 
-package main
+package adminui
 
 import (
-	"encoding/json"
 	"fmt"
-	"html/template"
 	"log"
 	"net/http"
 	"sync"
@@ -33,23 +31,23 @@ type EconomyResource struct {
 
 // EconomyTransaction represents a faucet/sink event
 type EconomyTransaction struct {
-	ID          string      `json:"id"`
-	Resource    string      `json:"resource"`
-	Type        string      `json:"type"` // "faucet" or "sink"
-	Amount      float64     `json:"amount"`
-	PlayerID    string      `json:"player_id"`
-	Sequence    uint64      `json:"sequence"`
-	Timestamp   time.Time   `json:"timestamp"`
-	Source      string      `json:"source"` // "server" authority
-	AuditLog    string      `json:"audit_log"`
+	ID        string    `json:"id"`
+	Resource  string    `json:"resource"`
+	Type      string    `json:"type"` // "faucet" or "sink"
+	Amount    float64   `json:"amount"`
+	PlayerID  string    `json:"player_id"`
+	Sequence  uint64    `json:"sequence"`
+	Timestamp time.Time `json:"timestamp"`
+	Source    string    `json:"source"` // "server" authority
+	AuditLog  string    `json:"audit_log"`
 }
 
 // EconomyMonitor implements faucet/sink tracking with validation
 type EconomyMonitor struct {
-	resources   map[string]*EconomyResource
+	resources    map[string]*EconomyResource
 	transactions []EconomyTransaction
-	sequence    uint64
-	mu          sync.RWMutex
+	sequence     uint64
+	mu           sync.RWMutex
 
 	// Prometheus metrics
 	faucetCounter prometheus.Counter
@@ -104,7 +102,7 @@ func (m *EconomyMonitor) AddResource(name string, cap float64) error {
 	}
 
 	m.resources[name] = &EconomyResource{
-		Name:       name,
+		Name:        name,
 		TotalFaucet: 0,
 		TotalSink:   0,
 		Balance:     0,
@@ -138,15 +136,15 @@ func (m *EconomyMonitor) AddFaucet(resource string, amount float64, playerID str
 
 	m.sequence++
 	txn := EconomyTransaction{
-		ID:          fmt.Sprintf("txn-%d", m.sequence),
-		Resource:    resource,
-		Type:        "faucet",
-		Amount:      amount,
-		PlayerID:    playerID,
-		Sequence:    m.sequence,
-		Timestamp:   time.Now(),
-		Source:      "server",
-		AuditLog:    fmt.Sprintf("Faucet: %s +%.2f (player: %s)", resource, amount, playerID),
+		ID:        fmt.Sprintf("txn-%d", m.sequence),
+		Resource:  resource,
+		Type:      "faucet",
+		Amount:    amount,
+		PlayerID:  playerID,
+		Sequence:  m.sequence,
+		Timestamp: time.Now(),
+		Source:    "server",
+		AuditLog:  fmt.Sprintf("Faucet: %s +%.2f (player: %s)", resource, amount, playerID),
 	}
 
 	res.TotalFaucet += amount
@@ -189,15 +187,15 @@ func (m *EconomyMonitor) AddSink(resource string, amount float64, playerID strin
 
 	m.sequence++
 	txn := EconomyTransaction{
-		ID:          fmt.Sprintf("txn-%d", m.sequence),
-		Resource:    resource,
-		Type:        "sink",
-		Amount:      amount,
-		PlayerID:    playerID,
-		Sequence:    m.sequence,
-		Timestamp:   time.Now(),
-		Source:      "server",
-		AuditLog:    fmt.Sprintf("Sink: %s -%.2f (player: %s)", resource, amount, playerID),
+		ID:        fmt.Sprintf("txn-%d", m.sequence),
+		Resource:  resource,
+		Type:      "sink",
+		Amount:    amount,
+		PlayerID:  playerID,
+		Sequence:  m.sequence,
+		Timestamp: time.Now(),
+		Source:    "server",
+		AuditLog:  fmt.Sprintf("Sink: %s -%.2f (player: %s)", resource, amount, playerID),
 	}
 
 	res.TotalSink += amount
@@ -264,8 +262,6 @@ func (m *EconomyMonitor) EconomyHandler(w http.ResponseWriter, r *http.Request) 
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	inflation := m.DetectInflation()
-
 	fmt.Fprint(w, `
 		<!DOCTYPE html>
 		<html lang="en">
@@ -312,6 +308,10 @@ func (m *EconomyMonitor) ResourcesHandler(w http.ResponseWriter, r *http.Request
 		if inflation[name] {
 			inflationClass = "inflation"
 		}
+		alert := ""
+		if inflation[name] {
+			alert = `<span role="alert">INFLATION DETECTED</span>`
+		}
 
 		fmt.Fprintf(w, `
 			<div class="resource-card %s" role="region" aria-label="%s economy">
@@ -328,7 +328,7 @@ func (m *EconomyMonitor) ResourcesHandler(w http.ResponseWriter, r *http.Request
 			res.TotalFaucet, res.TotalSink,
 			res.Rate,
 			res.LastUpdate,
-			inflation[name] ? `<span role="alert">INFLATION DETECTED</span>` : "")
+			alert)
 	}
 }
 

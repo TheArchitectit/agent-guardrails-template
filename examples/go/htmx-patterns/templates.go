@@ -11,6 +11,7 @@ import (
 	"html/template"
 	"io"
 	"strings"
+	"time"
 )
 
 // TemplateBlocks defines reusable HTMX component templates
@@ -247,8 +248,8 @@ func ExecuteTemplate(w io.Writer, name string, data interface{}) error {
 {{end}}
 `))
 	return tmpl.ExecuteTemplate(w, name, struct {
-		Name   string
-		Data   interface{}
+		Name    string
+		Data    interface{}
 		Content template.HTML
 	}{
 		Name:    name,

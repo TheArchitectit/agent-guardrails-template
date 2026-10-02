@@ -4,7 +4,7 @@
 // Last Updated: 2026-03-14
 // Go Version: 1.22+
 
-package main
+package adminui
 
 import (
 	"context"
@@ -21,12 +21,13 @@ import (
 
 // WSEventStreamConfig defines WebSocket configuration
 type WSEventStreamConfig struct {
-	WriteBufferSize   int           `json:"write_buffer_size"`
-	ReadBufferSize    int           `json:"read_buffer_size"`
-	MaxMessageSize    int64         `json:"max_message_size"`
-	PingInterval      time.Duration `json:"ping_interval"`
-	WriteTimeout      time.Duration `json:"write_timeout"`
-	AllowedOrigins    []string      `json:"allowed_origins"`
+	WriteBufferSize int           `json:"write_buffer_size"`
+	ReadBufferSize  int           `json:"read_buffer_size"`
+	MaxMessageSize  int64         `json:"max_message_size"`
+	PingInterval    time.Duration `json:"ping_interval"`
+	ReadTimeout     time.Duration `json:"read_timeout"`
+	WriteTimeout    time.Duration `json:"write_timeout"`
+	AllowedOrigins  []string      `json:"allowed_origins"`
 }
 
 // GameEventWS represents WebSocket game event
@@ -42,13 +43,13 @@ type GameEventWS struct {
 
 // WSClient represents connected WebSocket client
 type WSClient struct {
-	ID          string
-	Conn        *websocket.Conn
-	EventChan   chan GameEventWS
-	Context     context.Context
-	Cancel      context.CancelFunc
-	LastPing    time.Time
-	Sequence    uint64 // Client last received sequence
+	ID        string
+	Conn      *websocket.Conn
+	EventChan chan GameEventWS
+	Context   context.Context
+	Cancel    context.CancelFunc
+	LastPing  time.Time
+	Sequence  uint64 // Client last received sequence
 }
 
 // WSEventStream implements WebSocket event streaming
@@ -68,11 +69,10 @@ func NewWSEventStream(config WSEventStreamConfig) (*WSEventStream, error) {
 		clients:   make(map[string]*WSClient),
 		broadcast: make(chan GameEventWS, 100),
 		sequence:  0,
-		upgrader:  &websocket.Upgrader{
-			WriteBufferSize:   config.WriteBufferSize,
-			ReadBufferSize:    config.ReadBufferSize,
-			MaxMessageSize:    config.MaxMessageSize,
-			CheckOrigin:       func(r *http.Request) bool {
+		upgrader: &websocket.Upgrader{
+			WriteBufferSize: config.WriteBufferSize,
+			ReadBufferSize:  config.ReadBufferSize,
+			CheckOrigin: func(r *http.Request) bool {
 				for _, origin := range config.AllowedOrigins {
 					if r.Header.Get("Origin") == origin {
 						return true
@@ -94,21 +94,24 @@ func (s *WSEventStream) ConnectClient(w http.ResponseWriter, r *http.Request) (*
 	}
 
 	// Upgrade to WebSocket
-	conn, err := s.upgrader.Upgrader(w, r, nil)
+	conn, err := s.upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Printf("[WS] Upgrade failed: %v", err)
 		return nil, err
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
+	if s.config.MaxMessageSize > 0 {
+		conn.SetReadLimit(s.config.MaxMessageSize)
+	}
 	client := &WSClient{
-		ID:       clientID,
-		Conn:     conn,
+		ID:        clientID,
+		Conn:      conn,
 		EventChan: make(chan GameEventWS, 100),
-		Context:  ctx,
-		Cancel:   cancel,
-		LastPing: time.Now(),
-		Sequence: 0,
+		Context:   ctx,
+		Cancel:    cancel,
+		LastPing:  time.Now(),
+		Sequence:  0,
 	}
 
 	s.mu.Lock()
@@ -134,10 +137,10 @@ func (s *WSEventStream) handleClientMessages(client *WSClient) {
 			return
 		default:
 			// Read message with timeout
-			client.Conn.SetReadDeadline(time.Now().Add(s.config.ReadBufferSize))
+			client.Conn.SetReadDeadline(time.Now().Add(s.config.ReadTimeout))
 			_, message, err := client.Conn.ReadMessage()
 			if err != nil {
-				if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosed) {
+				if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
 					log.Printf("[WS] Read error for %s: %v", client.ID, err)
 				}
 				return
@@ -173,7 +176,7 @@ func (s *WSEventStream) handleClientEvents(client *WSClient) {
 		select {
 		case <-client.Context.Done():
 			return
-		case event := range client.EventChan:
+		case event := <-client.EventChan:
 			// Eventual consistency: sequence validation
 			data, _ := json.Marshal(event)
 			client.Conn.SetWriteDeadline(time.Now().Add(s.config.WriteTimeout))
@@ -255,7 +258,7 @@ func (s *WSEventStream) ReSyncClient(clientID string, fromSequence uint64) error
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	client, ok := s.clients[clientID]
+	_, ok := s.clients[clientID]
 	if !ok {
 		return fmt.Errorf("client not found")
 	}
@@ -356,20 +359,20 @@ func (s *WSEventStream) registerWSRoutes(r *mux.Router) {
 func (s *WSEventStream) initDemoEvents() {
 	// Broadcast demo events
 	s.BroadcastEvent(GameEventWS{
-		Type:      "GAME_START",
-		Payload:   map[string]string{"message": "Game started"},
-		Source:    "server",
+		Type:    "GAME_START",
+		Payload: map[string]string{"message": "Game started"},
+		Source:  "server",
 	})
 
 	s.BroadcastEvent(GameEventWS{
-		Type:      "PLAYER_LOGIN",
-		Payload:   map[string]string{"player_id": "player-1"},
-		Source:    "server",
+		Type:    "PLAYER_LOGIN",
+		Payload: map[string]string{"player_id": "player-1"},
+		Source:  "server",
 	})
 
 	s.BroadcastEvent(GameEventWS{
-		Type:      "ECONOMY_UPDATE",
-		Payload:   map[string]string{"resource": "gold", "change": "+100"},
-		Source:    "server",
+		Type:    "ECONOMY_UPDATE",
+		Payload: map[string]string{"resource": "gold", "change": "+100"},
+		Source:  "server",
 	})
 }

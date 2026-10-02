@@ -8,10 +8,7 @@
 package main
 
 import (
-	"context"
-	"embed"
 	"fmt"
-	"html/template"
 	"log"
 	"net/http"
 	"sync"
@@ -20,28 +17,25 @@ import (
 	"github.com/gorilla/mux"
 )
 
-//go:embed templates/*.tmpl
-var templatesFS embed.FS
-
 // GameState represents the server-authority game state
 type GameState struct {
-	Players    map[string]*Player
-	Events     chan GameEvent
-	mu         sync.RWMutex
-	Sequence   uint64
-	Timestamp  time.Time
+	Players   map[string]*Player
+	Events    chan GameEvent
+	mu        sync.RWMutex
+	Sequence  uint64
+	Timestamp time.Time
 }
 
 // Player represents a game player with HTMX-compatible state
 type Player struct {
-	ID          string `json:"id"`
-	Name        string `json:"name"`
-	Level       int    `json:"level"`
-	HP          int    `json:"hp"`
-	MP          int    `json:"mp"`
-	XP          int    `json:"xp"`
-	LastAction  string `json:"last_action"`
-	UpdatedAt   time.Time `json:"updated_at"`
+	ID         string    `json:"id"`
+	Name       string    `json:"name"`
+	Level      int       `json:"level"`
+	HP         int       `json:"hp"`
+	MP         int       `json:"mp"`
+	XP         int       `json:"xp"`
+	LastAction string    `json:"last_action"`
+	UpdatedAt  time.Time `json:"updated_at"`
 }
 
 // GameEvent represents a server-driven game event
@@ -64,9 +58,9 @@ type GameStateServer struct {
 func NewGameStateServer() *GameStateServer {
 	return &GameStateServer{
 		state: &GameState{
-			Players: make(map[string]*Player),
-			Events:  make(chan GameEvent, 100),
-			Sequence: 0,
+			Players:   make(map[string]*Player),
+			Events:    make(chan GameEvent, 100),
+			Sequence:  0,
 			Timestamp: time.Now(),
 		},
 		clients: make(map[string]chan GameEvent),
@@ -134,7 +128,7 @@ func (s *GameStateServer) UpdatePlayer(id string, action string) error {
 	}
 
 	s.state.Events <- event
-	log.Printf("[AUDIT] Player %s updated: %s -> %+v", id, action, player)
+	log.Printf("[AUDIT] Player %s updated: %s %+v -> %+v", id, action, oldState, player)
 
 	// Broadcast to WebSocket clients
 	s.broadcastEvent(event)
@@ -242,7 +236,11 @@ func (s *GameStateServer) playerHandler(w http.ResponseWriter, r *http.Request) 
 	}
 
 	w.Header().Set("Content-Type", "text/html")
+	s.renderPlayerCard(w, player)
+}
 
+// renderPlayerCard writes the player card partial for the given player
+func (s *GameStateServer) renderPlayerCard(w http.ResponseWriter, player *Player) {
 	// Template block pattern from templates.go
 	// hx-swap="innerHTML" for partial updates
 	fmt.Fprintf(w, `
@@ -403,7 +401,7 @@ func main() {
 		server.mu.Lock()
 		defer server.mu.Unlock()
 		for _, player := range server.state.Players {
-			server.playerHandler(w, r)
+			server.renderPlayerCard(w, player)
 		}
 	}).Methods("GET")
 

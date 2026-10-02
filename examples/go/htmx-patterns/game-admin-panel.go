@@ -10,7 +10,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"html/template"
 	"log"
 	"net/http"
 	"sync"
@@ -22,10 +21,10 @@ import (
 
 // AdminPanelConfig defines admin panel configuration
 type AdminPanelConfig struct {
-	AuthEnabled    bool      `json:"auth_enabled"`
-	RateLimit      int       `json:"rate_limit"` // requests per minute
+	AuthEnabled    bool          `json:"auth_enabled"`
+	RateLimit      int           `json:"rate_limit"` // requests per minute
 	SessionTimeout time.Duration `json:"session_timeout"`
-	AllowedOrigins []string  `json:"allowed_origins"`
+	AllowedOrigins []string      `json:"allowed_origins"`
 }
 
 // AdminSession represents authenticated admin session
@@ -40,11 +39,11 @@ type AdminSession struct {
 
 // GameAdmin implements HTMX admin panel handlers
 type GameAdmin struct {
-	config    AdminPanelConfig
-	state     *GameStateServer
-	templates *TemplateBlocks
-.sessions   map[string]*AdminSession
-	mu        sync.RWMutex
+	config     AdminPanelConfig
+	state      *GameStateServer
+	templates  *TemplateBlocks
+	sessions   map[string]*AdminSession
+	mu         sync.RWMutex
 	wsUpgrader *websocket.Upgrader
 }
 
@@ -56,10 +55,10 @@ func NewGameAdmin(config AdminPanelConfig, state *GameStateServer) (*GameAdmin, 
 	}
 
 	return &GameAdmin{
-		config:     config,
-		state:      state,
-		templates:  templates,
-		sessions:   make(map[string]*AdminSession),
+		config:    config,
+		state:     state,
+		templates: templates,
+		sessions:  make(map[string]*AdminSession),
 		wsUpgrader: &websocket.Upgrader{
 			CheckOrigin: func(r *http.Request) bool {
 				for _, origin := range config.AllowedOrigins {
@@ -270,7 +269,7 @@ func (a *GameAdmin) EventsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Upgrade to WebSocket
-	conn, err := a.wsUpgrader.Upgrader(w, r, nil)
+	conn, err := a.wsUpgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Printf("[WS] Upgrade failed: %v", err)
 		return
@@ -294,7 +293,7 @@ func (a *GameAdmin) EventsHandler(w http.ResponseWriter, r *http.Request) {
 			select {
 			case <-ctx.Done():
 				return
-			case event := range eventChan:
+			case event := <-eventChan:
 				// Eventual consistency: sequence numbers
 				data, _ := json.Marshal(event)
 				if err := conn.WriteMessage(websocket.TextMessage, data); err != nil {

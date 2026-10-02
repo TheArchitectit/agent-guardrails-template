@@ -4,11 +4,10 @@
 // Last Updated: 2026-03-14
 // Go Version: 1.22+
 
-package main
+package adminui
 
 import (
 	"fmt"
-	"html/template"
 	"log"
 	"net/http"
 	"sync"
@@ -17,12 +16,13 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/prometheus/client_golang/prometheus/testutil"
 )
 
 // MetricsDashboard implements Grafana-style metrics visualization
 type MetricsDashboard struct {
-	metrics   map[string]MetricData
-	mu        sync.RWMutex
+	metrics map[string]MetricData
+	mu      sync.RWMutex
 
 	// Prometheus metric types
 	counterVec   *prometheus.CounterVec
@@ -33,11 +33,11 @@ type MetricsDashboard struct {
 
 // MetricData represents dashboard metric display
 type MetricData struct {
-	Name      string    `json:"name"`
-	Type      string    `json:"type"` // "counter", "gauge", "histogram", "summary"
-	Value     float64   `json:"value"`
-	Labels    []string  `json:"labels"`
-	Help      string    `json:"help"`
+	Name       string    `json:"name"`
+	Type       string    `json:"type"` // "counter", "gauge", "histogram", "summary"
+	Value      float64   `json:"value"`
+	Labels     []string  `json:"labels"`
+	Help       string    `json:"help"`
 	LastUpdate time.Time `json:"last_update"`
 }
 
@@ -88,7 +88,7 @@ func (d *MetricsDashboard) RecordEvent(eventType, region string) {
 	d.metrics["game_events_total"] = MetricData{
 		Name:       "game_events_total",
 		Type:       "counter",
-		Value:      d.counterVec.WithLabelValues(eventType, region).(prometheus.Counter).Get(),
+		Value:      testutil.ToFloat64(d.counterVec.WithLabelValues(eventType, region)),
 		Labels:     []string{eventType, region},
 		Help:       "Total game events",
 		LastUpdate: time.Now(),
@@ -211,7 +211,7 @@ func (d *MetricsDashboard) EventsHandler(w http.ResponseWriter, r *http.Request)
 	metrics := d.GetMetricsSummary()
 
 	fmt.Fprint(w, `<div class="metric-panel counter" role="region" aria-label="Event counter">`)
-	for name, m := range metrics {
+	for _, m := range metrics {
 		if m.Type == "counter" {
 			fmt.Fprintf(w, `
 				<div class="metric" role="listitem">
@@ -233,7 +233,7 @@ func (d *MetricsDashboard) PlayersHandler(w http.ResponseWriter, r *http.Request
 	metrics := d.GetMetricsSummary()
 
 	fmt.Fprint(w, `<div class="metric-panel gauge" role="region" aria-label="Player gauges">`)
-	for name, m := range metrics {
+	for _, m := range metrics {
 		if m.Type == "gauge" {
 			fmt.Fprintf(w, `
 				<div class="metric" role="listitem">
@@ -255,7 +255,7 @@ func (d *MetricsDashboard) ActionsHandler(w http.ResponseWriter, r *http.Request
 	metrics := d.GetMetricsSummary()
 
 	fmt.Fprint(w, `<div class="metric-panel histogram" role="region" aria-label="Action histogram">`)
-	for name, m := range metrics {
+	for _, m := range metrics {
 		if m.Type == "histogram" {
 			fmt.Fprintf(w, `
 				<div class="metric" role="listitem">
@@ -277,7 +277,7 @@ func (d *MetricsDashboard) EconomyHandler(w http.ResponseWriter, r *http.Request
 	metrics := d.GetMetricsSummary()
 
 	fmt.Fprint(w, `<div class="metric-panel summary" role="region" aria-label="Economy summary">`)
-	for name, m := range metrics {
+	for _, m := range metrics {
 		if m.Type == "summary" {
 			fmt.Fprintf(w, `
 				<div class="metric" role="listitem">
