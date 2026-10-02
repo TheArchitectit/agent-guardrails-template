@@ -9,7 +9,8 @@
     "build": "npm run gen && tsc --noEmit && vite build",
     "test": "vitest run",
     "preview": "vite preview",
-    "scrub": "node scripts/scrub-scan.mjs"
+    "scrub": "node scripts/scrub-scan.mjs",
+    "contrast": "node scripts/contrast.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",
