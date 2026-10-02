@@ -50,14 +50,14 @@ func TestScanContent(t *testing.T) {
 		},
 		{
 			name:          "Generic API key",
-			content:       `api_key: "***REDACTED***"`,
+			content:       `api_key: "not-a-real-key-0123456789-fake"`,
 			wantCount:     1,
 			wantPattern:   "Generic API Key",
 			containsMatch: "api_key",
 		},
 		{
 			name:          "JWT token",
-			content:       "***REDACTED***",
+			content:       "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJBTElDRSIsIm5hbWUiOiJGQUtFIFRFU1QgVE9LRU4ifQ.ZmFrZS1zaWduYXR1cmUtZm9yLXRlc3RzLW9ubHk",
 			wantCount:     1,
 			wantPattern:   "JWT Token",
 			containsMatch: "eyJ",
