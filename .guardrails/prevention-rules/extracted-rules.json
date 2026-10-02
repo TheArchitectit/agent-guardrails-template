@@ -7,14 +7,16 @@
     {
       "rule_id": "PREVENT-GIT-001",
       "failure_id": null,
-      "name": "No Force Push",
+      "name": "No Force Push (RE2-compatible; lookahead removed)",
       "enabled": true,
-      "pattern": "git\\s+push\\s+--force(?!-with-lease)",
+      "pattern": "git\\s+push\\s+(.*\\s)?(--force([^-]|$)|-[a-zA-Z]*f[a-zA-Z]*(\\s|$))",
       "forbidden_context": null,
       "message": "Force push without lease is prohibited by guardrails - can cause data loss and history corruption",
       "severity": "error",
       "category": "git",
-      "file_glob": ["*"],
+      "file_glob": [
+        "*"
+      ],
       "suggestion": "Use 'git push --force-with-lease' instead, or ask for explicit permission"
     },
     {
@@ -27,7 +29,9 @@
       "message": "Hard reset can destroy uncommitted work and is prohibited on shared branches",
       "severity": "error",
       "category": "git",
-      "file_glob": ["*"],
+      "file_glob": [
+        "*"
+      ],
       "suggestion": "Use 'git stash' or commit changes first. If needed, ask for explicit permission"
     },
     {
@@ -40,7 +44,9 @@
       "message": "Modifying git config is prohibited - can cause security/identity issues",
       "severity": "error",
       "category": "git",
-      "file_glob": ["*"],
+      "file_glob": [
+        "*"
+      ],
       "suggestion": "Do not modify git configuration in automated operations"
     },
     {
@@ -53,7 +59,9 @@
       "message": "Amending commits you didn't create this session breaks collaborator history",
       "severity": "warning",
       "category": "git",
-      "file_glob": ["*"],
+      "file_glob": [
+        "*"
+      ],
       "suggestion": "Only amend commits created in current session, or ask for explicit permission"
     },
     {
@@ -66,7 +74,9 @@
       "message": "Skipping hooks bypasses safety checks and is prohibited",
       "severity": "error",
       "category": "git",
-      "file_glob": ["*"],
+      "file_glob": [
+        "*"
+      ],
       "suggestion": "Run all hooks. If hooks fail, fix the underlying issue"
     },
     {
@@ -79,20 +89,24 @@
       "message": "Rebasing shared branches destroys collaborator work",
       "severity": "error",
       "category": "git",
-      "file_glob": ["*"],
+      "file_glob": [
+        "*"
+      ],
       "suggestion": "Use merge instead, or only rebase local branches that haven't been pushed"
     },
     {
       "rule_id": "PREVENT-SYS-001",
       "failure_id": null,
-      "name": "No Dangerous RM-RF",
+      "name": "No recursive delete of root or home",
       "enabled": true,
-      "pattern": "rm\\s+-rf\\s+/",
+      "pattern": "rm\\s+(-\\w+\\s+)+(/|~|\\$HOME)(/?\\*)?(\\s|$)",
       "forbidden_context": null,
       "message": "CRITICAL: Dangerous deletion pattern detected - can destroy system",
       "severity": "critical",
       "category": "system",
-      "file_glob": ["*"],
+      "file_glob": [
+        "*"
+      ],
       "suggestion": "Never use rm -rf on system directories. Verify path carefully"
     },
     {
@@ -105,7 +119,9 @@
       "message": "Possible hardcoded credential detected - secrets must not be committed",
       "severity": "critical",
       "category": "security",
-      "file_glob": ["*"],
+      "file_glob": [
+        "*"
+      ],
       "suggestion": "Use environment variables or secret management system"
     },
     {
@@ -118,7 +134,10 @@
       "message": "Test code may be using production database - CRITICAL violation",
       "severity": "critical",
       "category": "security",
-      "file_glob": ["*test*", "*spec*"],
+      "file_glob": [
+        "*test*",
+        "*spec*"
+      ],
       "suggestion": "Use separate test database. Never connect tests to production DB"
     },
     {
@@ -131,8 +150,85 @@
       "message": "Pre-work regression check must be performed before modifying files",
       "severity": "warning",
       "category": "process",
-      "file_glob": ["*"],
+      "file_glob": [
+        "*"
+      ],
       "suggestion": "Read .guardrails/pre-work-check.md and check failure registry"
+    },
+    {
+      "rule_id": "PREVENT-GIT-007",
+      "failure_id": null,
+      "name": "No plus-refspec push",
+      "enabled": true,
+      "pattern": "git\\s+push\\s+(.*\\s)?\\+\\S",
+      "forbidden_context": null,
+      "message": "A +ref refspec force-pushes and can overwrite remote history",
+      "severity": "error",
+      "category": "git",
+      "file_glob": [
+        "*"
+      ],
+      "suggestion": "Push normally or ask for explicit permission"
+    },
+    {
+      "rule_id": "PREVENT-GIT-008",
+      "failure_id": null,
+      "name": "No remote branch delete",
+      "enabled": true,
+      "pattern": "git\\s+push\\s+(.*\\s)?(--delete\\b|-d\\s|:\\S)",
+      "forbidden_context": null,
+      "message": "Deleting a remote branch can lose work",
+      "severity": "error",
+      "category": "git",
+      "file_glob": [
+        "*"
+      ],
+      "suggestion": "Ask for explicit permission"
+    },
+    {
+      "rule_id": "PREVENT-GIT-009",
+      "failure_id": null,
+      "name": "No forced local branch delete of main",
+      "enabled": true,
+      "pattern": "git\\s+branch\\s+(-D|--delete\\s+--force)\\s+(main|master)\\b",
+      "forbidden_context": null,
+      "message": "Deleting main/master locally is prohibited",
+      "severity": "error",
+      "category": "git",
+      "file_glob": [
+        "*"
+      ],
+      "suggestion": "Ask for explicit permission"
+    },
+    {
+      "rule_id": "PREVENT-GIT-010",
+      "failure_id": null,
+      "name": "No history rewrite tools",
+      "enabled": true,
+      "pattern": "git\\s+(filter-repo|filter-branch)\\b",
+      "forbidden_context": null,
+      "message": "History rewriting can destroy the only copy of work",
+      "severity": "error",
+      "category": "git",
+      "file_glob": [
+        "*"
+      ],
+      "suggestion": "Work on a copy and ask for explicit permission"
+    },
+    {
+      "rule_id": "PREVENT-GIT-011",
+      "failure_id": null,
+      "name": "No forced clean",
+      "enabled": true,
+      "pattern": "git\\s+clean\\s+(-\\w*f\\w*)",
+      "forbidden_context": null,
+      "message": "git clean -f deletes untracked files permanently",
+      "severity": "error",
+      "category": "git",
+      "file_glob": [
+        "*"
+      ],
+      "suggestion": "Use git clean -n first and ask"
     }
   ]
 }

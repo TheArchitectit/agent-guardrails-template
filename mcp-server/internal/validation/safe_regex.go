@@ -63,7 +63,7 @@ func SafeRegex(pattern string, input string, timeout time.Duration) (bool, error
 		re, err := CompilePattern(pattern)
 		if err != nil {
 			select {
-			case resultChan <- false:
+			case panicChan <- fmt.Errorf("invalid pattern: %w", err):
 			case <-doneChan:
 			}
 			return

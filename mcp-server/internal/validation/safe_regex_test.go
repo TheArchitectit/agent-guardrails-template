@@ -55,7 +55,7 @@ func TestSafeRegex(t *testing.T) {
 			input:     "test",
 			timeout:   100 * time.Millisecond,
 			wantMatch: false,
-			wantErr:   false, // Returns false, nil for compile errors
+			wantErr:   true, // compile errors surface; never read as "no match"
 		},
 		{
 			name:      "empty pattern",
@@ -242,7 +242,7 @@ func TestMatchPattern(t *testing.T) {
 			pattern:   `[invalid(`,
 			input:     "test",
 			wantMatch: false,
-			wantErr:   false, // Returns false for compile errors
+			wantErr:   true, // compile errors surface; never read as "no match"
 		},
 	}
 
