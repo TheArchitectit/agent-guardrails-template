@@ -16,3 +16,8 @@ Recovery: branch `reboot/from-v3.7.1` from tag v3.7.1 (commit 67ae13dec309). 816
 - **Copilot/VS Code behavior.** Advisory only; no hook test exists, so compat matrix is UNKNOWN for all hosts.
 - gofmt reports many pre-existing unformatted files; left alone to keep the diff small.
 - Site stack deviation: plain CSS variables instead of Tailwind (spec allowed either). No Framer Motion, MDX or Playwright yet.
+
+## Later findings (see own docs)
+- F021-AUDIT.md: force-push rule never worked (regex lookahead unsupported in Go, error read as no-match); invalid rules now produce ERROR; new git rules.
+- F013-AUDIT.md: scope validator prefix bug and empty-scope pass fixed.
+- Decisions needed from Roger before merge: /mcp bearer auth; more commands flagged; fail-closed rule loading; empty scope now fails.

@@ -47,21 +47,18 @@ func (s *MCPServer) handleValidateScope(ctx context.Context, args map[string]int
 	}
 
 	if scope == "" {
+		// Unknown is not a pass: with no authorized scope there is nothing to validate against.
 		result := models.ScopeValidationResult{
-			Valid:    true,
-			Message:  "No scope restriction specified - file allowed",
+			Valid:    false,
+			Message:  "UNKNOWN: no authorized_scope provided, cannot confirm the file is in scope",
 			FilePath: filePath,
 			Scope:    scope,
 		}
-		return buildToolResult(result, false)
+		return buildToolResult(result, true)
 	}
 
-	// Clean paths for comparison
-	cleanPath := filepath.Clean(filePath)
-	cleanScope := filepath.Clean(scope)
-
-	// Check if file is within scope
-	isValid := strings.HasPrefix(cleanPath, cleanScope)
+	// Boundary-aware containment (a plain string prefix lets /repo/src-evil pass for /repo/src).
+	isValid := pathWithinScope(filePath, scope)
 
 	var result models.ScopeValidationResult
 	if isValid {
@@ -404,4 +401,31 @@ func buildToolResult(result interface{}, isError bool) (*mcp.CallToolResult, err
 		Content: []mcp.Content{mcp.TextContent{Type: "text", Text: string(resultJSON)}},
 		IsError: isError,
 	}, nil
+}
+
+// pathWithinScope reports whether path is the scope directory or inside it.
+// Relative paths resolve against the working directory; symlinks are resolved when the path exists.
+func pathWithinScope(path, scope string) bool {
+	abs := func(p string) string {
+		if !filepath.IsAbs(p) {
+			if cwd, err := os.Getwd(); err == nil {
+				p = filepath.Join(cwd, p)
+			}
+		}
+		p = filepath.Clean(p)
+		if r, err := filepath.EvalSymlinks(p); err == nil {
+			return r
+		}
+		// Path may not exist yet (new file): resolve the deepest existing parent.
+		dir, base := filepath.Split(p)
+		if r, err := filepath.EvalSymlinks(filepath.Clean(dir)); err == nil {
+			return filepath.Join(r, base)
+		}
+		return p
+	}
+	rel, err := filepath.Rel(abs(scope), abs(path))
+	if err != nil {
+		return false
+	}
+	return rel == "." || (rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)))
 }
