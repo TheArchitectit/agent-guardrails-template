@@ -3,10 +3,70 @@ package mcp
 import (
 	"context"
 	"fmt"
+	"net"
+	"net/url"
+	"strings"
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/thearchitectit/guardrail-mcp/internal/notifications"
 )
+
+// validateWebhookURL rejects webhook targets that would turn the dispatcher
+// into a server-side request forgery vector.
+//
+// The URL was previously stored verbatim: no scheme check, no host check, no
+// address filtering. Because the dispatcher POSTs to whatever is stored, any
+// caller could direct the server at loopback, link-local or private-range
+// services, including cloud metadata endpoints.
+//
+// Resolution happens at configuration time, so this does not defend against
+// DNS rebinding between configuration and delivery; it removes the trivial
+// class of targets and the stored-internal-address case.
+func validateWebhookURL(raw string) error {
+	u, err := url.Parse(raw)
+	if err != nil {
+		return fmt.Errorf("invalid url: %w", err)
+	}
+	if u.Scheme != "http" && u.Scheme != "https" {
+		return fmt.Errorf("invalid url: scheme must be http or https")
+	}
+
+	host := u.Hostname()
+	if host == "" {
+		return fmt.Errorf("invalid url: host is required")
+	}
+	if strings.EqualFold(host, "localhost") || strings.HasSuffix(strings.ToLower(host), ".localhost") {
+		return fmt.Errorf("refusing webhook to loopback host %q", host)
+	}
+
+	// A literal IP needs no resolution.
+	if ip := net.ParseIP(host); ip != nil {
+		return checkWebhookIP(ip, host)
+	}
+
+	ips, err := net.LookupIP(host)
+	if err != nil {
+		return fmt.Errorf("cannot resolve webhook host %q: %w", host, err)
+	}
+	if len(ips) == 0 {
+		return fmt.Errorf("cannot resolve webhook host %q", host)
+	}
+	for _, ip := range ips {
+		if err := checkWebhookIP(ip, host); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func checkWebhookIP(ip net.IP, host string) error {
+	if ip.IsLoopback() || ip.IsPrivate() || ip.IsUnspecified() ||
+		ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() ||
+		ip.IsInterfaceLocalMulticast() {
+		return fmt.Errorf("refusing webhook to non-public address %s for host %q", ip, host)
+	}
+	return nil
+}
 
 // notificationToolList returns the tool definitions for webhook notification tools.
 func (s *MCPServer) notificationToolList() []mcp.Tool {
@@ -113,7 +173,14 @@ func (s *MCPServer) handleConfigureWebhook(ctx context.Context, args map[string]
 	teamID, _ := args["team_id"].(string)
 	url, _ := args["url"].(string)
 	secretHMAC, _ := args["secret_hmac"].(string)
-	enabled, _ := args["enabled"].(bool)
+	// enabled defaults to true, matching the documented schema. A bare type
+	// assertion made an omitted value false, so creating a webhook without
+	// explicitly passing enabled produced a disabled one that silently
+	// received nothing.
+	enabled := true
+	if v, ok := args["enabled"].(bool); ok {
+		enabled = v
+	}
 	webhookID, _ := args["webhook_id"].(string)
 
 	eventsRaw, ok := args["events"].([]interface{})
@@ -133,6 +200,12 @@ func (s *MCPServer) handleConfigureWebhook(ctx context.Context, args map[string]
 	if teamID == "" || url == "" || secretHMAC == "" || len(events) == 0 {
 		return buildToolResult(map[string]interface{}{
 			"error": "team_id, url, events, and secret_hmac are required",
+		}, true)
+	}
+
+	if err := validateWebhookURL(url); err != nil {
+		return buildToolResult(map[string]interface{}{
+			"error": err.Error(),
 		}, true)
 	}
 
