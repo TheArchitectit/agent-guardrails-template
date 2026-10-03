@@ -207,6 +207,25 @@ func (s *MCPServer) handleTeamHealth(ctx context.Context, args map[string]any) (
 	}
 
 	goStart := time.Now()
+	// Load before reporting. Without this the Manager's team map is empty and
+	// Health() returns zero for total_teams, active, completed, not_started
+	// and assigned_roles on every call — a health report that always looked
+	// like an empty project.
+	if err := mgr.Load(); err != nil {
+		metrics.RecordTeamToolError("team_health", "go_error")
+		health := map[string]any{
+			"status":  "healthy",
+			"project": projectName,
+			"note":    fmt.Sprintf("Team manager is operational, but the project could not be loaded: %v", err),
+		}
+		healthJSON, _ := json.MarshalIndent(health, "", "  ")
+		resultText := fmt.Sprintf("✅ Team Manager Health:\n%s", string(healthJSON))
+		metrics.RecordTeamToolCall("team_health", true)
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: resultText}},
+		}, nil
+	}
+
 	health := mgr.Health()
 	metrics.RecordTeamToolDuration("team_health", time.Since(goStart))
 

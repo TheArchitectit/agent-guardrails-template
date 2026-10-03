@@ -211,31 +211,33 @@ func TestValidatePhase(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name:    "valid Phase 4",
+			phase:   "Phase 4",
+			wantErr: false,
+		},
+		{
+			name:    "valid Phase 5",
+			phase:   "Phase 5",
+			wantErr: false,
+		},
+		{
 			name:    "empty phase (optional)",
 			phase:   "",
 			wantErr: false,
 		},
 		{
-			name:    "invalid - old full name Phase 1",
+			name:    "valid full label Phase 1",
 			phase:   "Phase 1: Strategy, Governance & Planning",
-			wantErr: true,
-			errMsg:  "invalid phase",
+			wantErr: false,
 		},
 		{
-			name:    "invalid - old full name Phase 2",
+			name:    "valid full label Phase 2",
 			phase:   "Phase 2: Platform & Foundation",
-			wantErr: true,
-			errMsg:  "invalid phase",
+			wantErr: false,
 		},
 		{
-			name:    "invalid - Phase 4",
-			phase:   "Phase 4",
-			wantErr: true,
-			errMsg:  "invalid phase",
-		},
-		{
-			name:    "invalid - Phase 5",
-			phase:   "Phase 5",
+			name:    "invalid - unknown full label",
+			phase:   "Phase 1: Made Up Phase",
 			wantErr: true,
 			errMsg:  "invalid phase",
 		},
@@ -455,8 +457,8 @@ func TestHandleTeamList_InvalidPhase(t *testing.T) {
 			wantError: "invalid phase",
 		},
 		{
-			name:      "old format phase",
-			phase:     "Phase 1: Strategy, Governance & Planning",
+			name:      "unknown phase label",
+			phase:     "Phase 1: Made Up Phase",
 			wantError: "invalid phase",
 		},
 	}

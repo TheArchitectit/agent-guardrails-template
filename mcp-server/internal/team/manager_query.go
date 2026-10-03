@@ -1,6 +1,9 @@
 package team
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 // GetTeamByID returns a team by ID
 func (m *Manager) GetTeamByID(teamID int) (Team, error) {
@@ -27,18 +30,33 @@ func (m *Manager) GetAllTeams() []Team {
 	return teams
 }
 
-// GetTeamsByPhase returns teams filtered by phase
+// GetTeamsByPhase returns teams filtered by phase.
+//
+// Accepts either the full phase label ("Phase 1: Strategy, Governance &
+// Planning") or the short form ("Phase 1"). Callers validate and pass the
+// short form, while Team.Phase always holds the full label, so an exact
+// comparison alone returned nothing for every valid request.
 func (m *Manager) GetTeamsByPhase(phase string) []Team {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
 	teams := make([]Team, 0)
 	for _, team := range m.teams {
-		if team.Phase == phase {
+		if phaseMatches(team.Phase, phase) {
 			teams = append(teams, copyTeam(team))
 		}
 	}
 	return teams
+}
+
+// phaseMatches reports whether a team's full phase label satisfies the
+// requested phase, which may be either the full label or the short form.
+func phaseMatches(teamPhase, requested string) bool {
+	if teamPhase == requested {
+		return true
+	}
+	// Short form: "Phase 1" matches "Phase 1: Strategy, ...".
+	return strings.HasPrefix(teamPhase, requested+":")
 }
 
 // GetProjectStatus returns overall project status

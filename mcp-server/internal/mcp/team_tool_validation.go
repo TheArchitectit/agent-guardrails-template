@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+
+	"github.com/thearchitectit/guardrail-mcp/internal/team"
 )
 
 func validateProjectName(name string) error {
@@ -158,19 +160,27 @@ func validatePersonName(name string) error {
 	return nil
 }
 
-// validatePhase validates phase filter value (SEC-010: Phase injection hardening)
-// Whitelist: Phase 1, Phase 2, Phase 3 (strict regex validation)
+// validatePhase validates phase filter value (SEC-010: Phase injection hardening).
+//
+// Accepts the short form ("Phase 1" through "Phase 5") or a full phase label
+// taken from the team model. The whitelist is derived from StandardTeams, so
+// an accepted value is always a known phase and never arbitrary text.
 func validatePhase(phase string) error {
 	if phase == "" {
 		return nil // Phase is optional
 	}
-	// SEC-010: Strict regex validation - only allow "Phase 1", "Phase 2", "Phase 3"
-	// This prevents injection attacks through the phase parameter
-	validPhaseRegex := regexp.MustCompile(`^Phase [1-3]$`)
-	if !validPhaseRegex.MatchString(phase) {
-		return fmt.Errorf("invalid phase: must be 'Phase 1', 'Phase 2', or 'Phase 3'")
+	// SEC-010: Strict regex for the short form. The upper bound must cover
+	// every phase in the model — it was capped at 3, so Phase 4 and Phase 5
+	// could not be filtered at all.
+	if regexp.MustCompile(`^Phase [1-5]$`).MatchString(phase) {
+		return nil
 	}
-	return nil
+	for _, t := range team.StandardTeams {
+		if t.Phase == phase {
+			return nil
+		}
+	}
+	return fmt.Errorf("invalid phase: expected 'Phase 1'-'Phase 5' or a known phase label")
 }
 
 // sanitizePhase sanitizes phase string for safe command execution (SEC-010)

@@ -281,6 +281,18 @@ func (s *MCPServer) handleTeamRemove(ctx context.Context, args map[string]interf
 	}
 
 	goStart := time.Now()
+	// Load the project before deleting: a freshly constructed Manager has an
+	// empty team map, so DeleteTeam would report "team not found" for every
+	// real project and this tool could never succeed.
+	if err := mgr.Load(); err != nil {
+		metrics.RecordTeamToolError("team_remove", "go_error")
+		metrics.RecordTeamToolCall("team_remove", false)
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: fmt.Sprintf("Error loading project: %v", err)}},
+			IsError: true,
+		}, nil
+	}
+
 	if err := mgr.DeleteTeam(teamIDInt, confirmed); err != nil {
 		metrics.RecordTeamToolDuration("team_remove", time.Since(goStart))
 		if strings.Contains(err.Error(), "requires confirmation") {

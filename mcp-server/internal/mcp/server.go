@@ -386,6 +386,17 @@ func (s *MCPServer) handleGetContext(ctx context.Context, args map[string]interf
 		path, _ = os.Getwd()
 	}
 
+	// Guard the validator the way the validate_* tools do. Without this a
+	// server built without a validation engine panics here instead of
+	// returning an error.
+	if s.validator == nil {
+		return buildToolResult(map[string]interface{}{
+			"path":      path,
+			"error":     "validation engine not configured",
+			"timestamp": time.Now().Format(time.RFC3339),
+		}, true)
+	}
+
 	ruleCount := s.validator.GetCachedRulesCount()
 	result := map[string]interface{}{
 		"path":             path,
