@@ -1,4 +1,4 @@
-﻿# OpenSpec: Regulatory Compliance Mapping
+# OpenSpec: Regulatory Compliance Mapping
 
 > **Do not trust scores from this code.** The mapper exists but `CheckRequirement` restates a hand-written database string rather than measuring the system, and evidence collection is simulated. See [STATUS.md](STATUS.md).
 
@@ -243,3 +243,45 @@ compliance_gaps:
 - [ISO/IEC 42001](https://www.iso.org/standard/81230.html) — AI management system standard
 - [OWASP ASVS](https://owasp.org/www-project-application-security-verification-standard/) — application security verification
 - [NIST AI RMF Generative AI Profile](https://www.nist.gov/itl/ai-rmf) — generative AI-specific guidance
+
+---
+
+## 8. Implementation Status (reconciled 2026-10-03)
+
+Evidence: `docs/specs/guardrail-gaps-2026/STATUS.md`.
+
+| § | Requirement | Status | Evidence |
+|---|-------------|--------|----------|
+| 3.1 | `guardrail_generate_compliance_report` | **Not implemented** | name absent from every `.go` file |
+| 3.1 | `guardrail_check_compliance` | **Not implemented** | same |
+| 3.1 | `guardrail_collect_evidence` | **Not implemented** | same |
+| 3.2 | Requirement DB | Implemented as **data** | `internal/guardrails/compliance_requirements.json` covers `eu_ai_act` art. 9, 10, 12, 13, 14, 15, 50; `nist_rmf` govern/map/measure/manage; `iso_42001` |
+| 3.2 | **Art. 11** | **Missing** | absent from the JSON although this spec lists it as a gap — so §5.1's own acceptance criterion fails today |
+| 4.1 | `ComplianceMapper` / `CalculateComplianceScore` | Built, **not wired** | `compliance.go:64,228`; constructed only in `compliance_test.go` |
+| 4.2 | Report generation | Built, not wired | `ComplianceReporter` / `GenerateReport` / `ExportReport` (`compliance.go:105,113,163`) |
+| 4.x | Evidence collection | **Simulated** | `CollectEvidence` hardcodes `Value: "Query result for [%s]: 12 events found"` and returns `completeness = 1.0` for any non-empty query (`compliance.go:213`) |
+| 3.4 | `compliance_gaps` tracking, `compliance_dashboard` | **Not implemented** | no code |
+| — | Config | Never constructed | `ComplianceConfig` / `DefaultComplianceConfig` (`compliance_config.go:7,17`) have no production call site |
+
+**Do not quote a score from this code.** `CheckRequirement` returns `true`
+purely because the hand-written `compliance_status` string in the JSON equals
+`"full"` (`compliance.go:90-93`), with the in-code comment *"In a real
+implementation, this would check if the features are actually enabled."* A
+score produced this way restates the database; it does not measure the system.
+Presenting it as compliance evidence to an auditor would be inaccurate — this
+is the single most consequential gap in the six specs.
+
+**Deviations:** `GenerateReport` emits one undifferentiated
+`"General Compliance"` section (`compliance.go:153-157`) rather than the five
+sections of §4.2; formats are json/markdown (`compliance_config.go:51-52`)
+while the spec asked for json/pdf/markdown.
+
+**Blocking decisions:**
+
+1. **What does a requirement actually check?** §5.x criteria ("scores match
+   manual audit", "evidence satisfies auditor requirements") have no oracle,
+   threshold or pass condition, so they cannot pass or fail as written. Each
+   needs a defined measurement before any score is produced.
+2. Add art. 11 to the DB or record explicitly why it is excluded.
+3. Real evidence collection needs named sources (PostgreSQL tables, Prometheus
+   queries) — the current simulator returns a fixed string.

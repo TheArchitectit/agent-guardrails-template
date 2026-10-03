@@ -4,8 +4,11 @@ Design specifications and change proposals for the guardrails MCP server.
 
 | Document | Purpose |
 |----------|---------|
+| [09-system-roadmap-and-phase-gates.md](09-system-roadmap-and-phase-gates.md) | Master roadmap: transform the repo into a verified MCP guardrail system |
 | [AUTH-01-mcp-endpoint-auth.md](AUTH-01-mcp-endpoint-auth.md) | Bearer authentication on `/mcp` — implemented and merged |
-| [guardrail-gaps-2026/index.md](guardrail-gaps-2026/index.md) | Gap analysis specs vs 2026 AI safety guardrail systems |
+| [guardrail-gaps-2026/index.md](guardrail-gaps-2026/index.md) | Six gap-analysis specs vs 2026 AI safety systems |
+| [07-versioned-policy-pack-governance.md](07-versioned-policy-pack-governance.md) | Proposed immutable policy-pack resolution, overlays, trust boundaries, and lock records |
+| [08-control-plane-composition-and-evidence.md](08-control-plane-composition-and-evidence.md) | Proposed component composition, integration states, and replayable evidence |
 
 ## Guardrail gaps 2026
 

@@ -129,6 +129,9 @@ safety guardrail systems.
 | indirect injection, file injection, provenance | [specs/guardrail-gaps-2026/05-indirect-prompt-injection.md](docs/specs/guardrail-gaps-2026/05-indirect-prompt-injection.md) |
 | compliance, EU AI Act, NIST RMF, regulatory | [specs/guardrail-gaps-2026/06-regulatory-compliance-mapping.md](docs/specs/guardrail-gaps-2026/06-regulatory-compliance-mapping.md) |
 | mcp endpoint auth, bearer, 401, /mcp authentication | [specs/AUTH-01-mcp-endpoint-auth.md](docs/specs/AUTH-01-mcp-endpoint-auth.md) |
+| policy packs, policy lock, overlays, trust boundary | [specs/07-versioned-policy-pack-governance.md](docs/specs/07-versioned-policy-pack-governance.md) |
+| control plane, component composition, evidence bundle, replay | [specs/08-control-plane-composition-and-evidence.md](docs/specs/08-control-plane-composition-and-evidence.md) |
+| product roadmap, implementation phases, system exit gates | [specs/09-system-roadmap-and-phase-gates.md](docs/specs/09-system-roadmap-and-phase-gates.md) |
 
 ## Reboot
 

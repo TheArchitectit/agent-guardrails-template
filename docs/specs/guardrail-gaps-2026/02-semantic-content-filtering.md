@@ -1,4 +1,4 @@
-﻿# OpenSpec: Semantic Content Filtering
+# OpenSpec: Semantic Content Filtering
 
 > **This spec shipped in part.** Both proposed tools exist and are exposed. Note the production defect: policies are never loaded, so `guardrail_check_policy` returns non-compliant for every call. See [STATUS.md](STATUS.md).
 
@@ -229,3 +229,45 @@ For real-time agent output filtering:
 - [NVIDIA NeMo Guardrails](https://github.com/NVIDIA/NeMo-Guardrails) — input/output moderation
 - [OpenAI Moderation API](https://platform.openai.com/docs/guides/moderation) — content classification
 - [OWASP LLM Top 10](https://owasp.org/www-project-top-10-for-large-language-model-applications/) — content risks
+
+---
+
+## 8. Implementation Status (reconciled 2026-10-03)
+
+Evidence: `docs/specs/guardrail-gaps-2026/STATUS.md`. **This spec is the only
+one whose tools actually shipped.**
+
+| § | Requirement | Status | Evidence |
+|---|-------------|--------|----------|
+| 3.1 | `guardrail_classify_content` | **Implemented** | dispatched `server.go:234`; handler `tools_guardrails.go:62-83` |
+| 3.1 | `guardrail_check_policy` | **Implemented** | dispatched `server.go:236`; handler `tools_guardrails.go:87-127` |
+| 2.x | S1–S15 taxonomy | Implemented | `content_filter_policy.go:14-28` matches the spec table |
+| 3.4 | Result format | Implemented | `content_filter.go:39-46` |
+| 3.2 | Llama Guard backend | Implemented, wired | registered at `cmd/server/main.go:136` |
+| 3.2 | OpenAI Moderation backend | Built, never registered | `content_filter_backends.go:232`; no construction site |
+| 3.2 | NeMo backend | **Not implemented** | no code; `BackendConfig` (`content_filter_config.go:42-45`) has no `nemo` key |
+| 3.3 | Policy engine | Implemented | `content_filter_config.go:71-92`, `content_filter_policy.go:88-116` |
+| 3.2 | `taxonomy.enabled_categories` / `custom_categories` | **No effect** | declared (`content_filter_config.go:60-61`) but never read at request time |
+| 4.x | 60s result cache | Implemented | `content_filter.go:96` |
+| 4.x | `fail_policy: block` | Implemented | synthetic block result, `content_filter.go:184-205` |
+| 4.3 | Streaming | **Not implemented** | no streaming path in `content_filter*.go` |
+| — | YAML loader | Library only | `LoadContentConfig` (`content_filter_config.go:130`) has zero callers; production uses `DefaultFilterConfig()` |
+
+**Fixed since drafting:** `NewEngine` discarded
+`config.ContentFilter.Policies`, so every `check_policy` call took the
+fail-closed unknown-policy branch. Configured policies now reach the filter
+(`engine.go:83`); the fix is pinned by `engine_policy_test.go`.
+
+**Remaining gaps:**
+
+1. **The engine is optional.** It exists only when `OLLAMA_URL` is set
+   (`main.go:130`); otherwise both tools answer "guardrails engine not
+   configured" and `classify_content` **fails open** (`safe:true`,
+   `tools_guardrails.go:69`). A deployment that forgets the env var has no
+   content filtering and no error telling it so.
+2. **§5.3 accuracy criteria are untestable.** FP <5%, FN <1% and
+   precision/recall within 10% of Llama Guard require a labelled evaluation
+   harness; none exists in the repo.
+3. **Backend failover is list order, not a declared chain**
+   (`content_filter.go:161-181`), and today only one backend is ever
+   registered.

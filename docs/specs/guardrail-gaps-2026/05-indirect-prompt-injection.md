@@ -1,4 +1,4 @@
-﻿# OpenSpec: Indirect Prompt Injection Handling
+# OpenSpec: Indirect Prompt Injection Handling
 
 > **The most completely built of the six — and still unreachable.** Config keys and the sanitisation pipeline shipped, but the tracker is only called from code that no tool reaches. See [STATUS.md](STATUS.md).
 
@@ -268,3 +268,47 @@ Critical characters to strip from untrusted content:
 - [OWASP LLM Top 10 — LLM01](https://owasp.org/www-project-top-10-for-large-language-model-applications/) — prompt injection
 - [Unicode Security](https://unicode.org/reports/tr36/) — Unicode technical report on security
 - [OWASP ASVS](https://owasp.org/www-project-application-security-verification-standard/) — input validation patterns
+
+---
+
+## 8. Implementation Status (reconciled 2026-10-03)
+
+Evidence: `docs/specs/guardrail-gaps-2026/STATUS.md`. **Of the six specs this
+is the most completely built — and it is still unreachable.**
+
+| § | Requirement | Status | Evidence |
+|---|-------------|--------|----------|
+| 3.1 | `guardrail_scan_external_content` | **Not implemented** | name absent from every `.go` file |
+| 3.1 | `guardrail_mark_provenance` | **Not implemented** | same |
+| 3.1 | `guardrail_check_provenance` | **Not implemented** | same |
+| 3.2 | Config keys `indirect_injection.source_trust_policies`, `untrusted_overrides` | **Implemented** | `provenance_config.go:14-15`; `DefaultProvenanceConfig` (`:28`) reproduces the spec's trust table — `CLAUDE.md` trusted, `*.json/yaml/md/txt/go/py` untrusted `scan_and_warn`, `github.com` `scan_and_block`, 0.5/0.5 thresholds |
+| 2.2 | `Provenance` struct | Implemented field-for-field | `provenance.go:24` |
+| 2.3 | Sanitization (zero-width, bidi, control chars) | Implemented, unwired | `SanitizeContent` `provenance.go:240` |
+| 2.3 | base64 / ROT13 / URL decoding | Implemented, unwired | `DecodeObfuscation` `provenance.go:269` (`:312`, `:434`, `:450`) |
+| 2.4 | Provenance marker wrapping | Implemented, unwired | `WrapWithProvenance` `provenance.go:465` |
+| 4.1 | Redis-backed hash cache | **Differs** — in-memory | `NewInMemoryProvenanceCache` (`engine.go:87`); the spec names Redis |
+| 4.x | SHA-256 hashing + TTL | Implemented | in-memory cache |
+| 6 | YAML loader | Library only | `LoadProvenanceConfigFromYAML` (`provenance_config.go:68`) has zero callers; no `guardrails.yaml` exists in the repo |
+
+**Where the wiring dies.** The tracker is genuinely constructed
+(`engine.go:88`) and genuinely called with trust-based gating (`engine.go:175`;
+trusted content skips the injection deep-scan at `:192`). But the only path
+that reaches it is `Engine.Evaluate`, and **`Evaluate` is called exclusively
+from `engine_test.go:34,78`**. The two MCP handlers use `ClassifyContent` and
+`CheckPolicy`, which bypass provenance entirely. Real code on a dead path.
+
+**Not a substitute.** `guardrail_record_file_read` /
+`guardrail_verify_file_read` are session-gated file-read attestation for
+Law-3 transparency (`tools_extended_fileread.go:14,84`, backed by
+`FileReadStore`). They never reference the provenance tracker, trust levels or
+content scanning, and do not satisfy this spec.
+
+**Blocking decisions:**
+
+1. Give `Engine.Evaluate` a caller, or accept provenance tagging as internal
+   only. This is the single change that decides whether spec 05 exists in
+   practice.
+2. §3.2 ("provenance-aware agent instructions") is not implemented at all —
+   decide whether it is in scope.
+3. Reconcile the cache: in-memory contradicts §4.1/§6's Redis. Pick one and
+   correct the other.

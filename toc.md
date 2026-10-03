@@ -43,7 +43,10 @@ Flat listing of documentation in this repo. For keyword lookup, see
 
 ### specs/
 - [INDEX.md](docs/specs/INDEX.md)
+- [09-system-roadmap-and-phase-gates.md](docs/specs/09-system-roadmap-and-phase-gates.md) — master product roadmap and release gates
 - [AUTH-01-mcp-endpoint-auth.md](docs/specs/AUTH-01-mcp-endpoint-auth.md) — /mcp bearer auth, merged
+- [07-versioned-policy-pack-governance.md](docs/specs/07-versioned-policy-pack-governance.md) — proposed policy distribution and trust contract
+- [08-control-plane-composition-and-evidence.md](docs/specs/08-control-plane-composition-and-evidence.md) — proposed composition and evidence contract
 - [guardrail-gaps-2026/STATUS.md](docs/specs/guardrail-gaps-2026/STATUS.md) — spec vs shipped code, requirement by requirement
 - [guardrail-gaps-2026/index.md](docs/specs/guardrail-gaps-2026/index.md)
 

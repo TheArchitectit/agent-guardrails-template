@@ -1,4 +1,4 @@
-﻿# OpenSpec: Multi-Agent Safety Policies
+# OpenSpec: Multi-Agent Safety Policies
 
 > **This is a proposal, not a description of the system.** The chain engine and three validators exist as an unwired library; none of the three proposed tools exists. See [STATUS.md](STATUS.md).
 
@@ -266,3 +266,43 @@ When Agent A delegates to Agent B:
 - [LangGraph Agent Supervision](https://langchain-ai.github.io/langgraph/) — agent graph safety
 - [NeMo Guardrails](https://github.com/NVIDIA/NeMo-Guardrails) — Colang-based multi-turn safety
 - [Anthropic Constitutional AI](https://www.anthropic.com/research/constitutional-ai-harmlessness-from-ai-feedback) — principle-based safety
+
+---
+
+## 8. Implementation Status (reconciled 2026-10-03)
+
+Evidence: `docs/specs/guardrail-gaps-2026/STATUS.md`.
+
+| § | Requirement | Status | Evidence |
+|---|-------------|--------|----------|
+| 3.1 | `guardrail_validate_agent_output` | **Not implemented** | name absent from every `.go` file |
+| 3.1 | `guardrail_check_agent_constraints` | **Not implemented** | same |
+| 3.1 | `guardrail_resolve_conflicts` | **Not implemented** | same |
+| 2.x | Safety chain engine | Built, **not wired** | `multi_agent.go:131` `NewSafetyChain` is called only from `multi_agent_findings_test.go:13` |
+| 2.x | Validators: injection_defense, content_filter, four_laws_check | Built, not wired | `multi_agent_validators.go:38,96,227` — no production call sites |
+| 2.x | `code_review_agent` validator | **Not implemented** | no LLM code-review validator exists |
+| 2.x | Conflict strategies | Built, not wired | `multi_agent_conflict.go:51-58`; shipped name is `escalate`, spec says `human_escalate` |
+| 3.x | Constraint inheritance | Built, not wired | `ResolveConstraints` (`multi_agent.go:296`), test-only callers |
+| 3.3 | Audit trail | Partial | `AuditEntry` mirrors the spec shape; the only logger writes to slog, not a durable store |
+| 3.2 | Config keys `safety_chains`, `cross_agent_policies`, `agent_registry` | **Not implemented** | zero occurrences in any `.go` file; no loader exists, no shipped YAML uses them |
+
+**Bug recorded here rather than silently fixed:** the `four_laws_check`
+Law-2 scope test (`multi_agent_validators.go:172-181`) flags a violation when
+output merely **contains** a configured scope keyword. Mentioning a declared
+scope word therefore fails the check — that is not "output exceeds declared
+scope", and it will misfire on compliant output once the chain is wired. It
+also hard-fails as `scope_unverified` when `Context` is empty, which the spec
+does not describe.
+
+**Net position.** A complete domain model with no wiring and no configuration
+path. Nothing in this spec runs today.
+
+**Blocking decisions:**
+
+1. §5.3 ("Agent A instructs Agent B to bypass guardrails") presupposes an
+   agent-to-agent runtime this repo does not have. Either that transport
+   becomes a requirement here or §5.3 moves to a spec that owns it.
+2. Decide whether multi-agent validation runs in-process (chains) or via MCP
+   tools (§3.1) — currently both are described and neither is built.
+3. Fix the Law-2 keyword logic before wiring the chain, or the wiring ships a
+   false-positive generator.

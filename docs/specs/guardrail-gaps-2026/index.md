@@ -36,6 +36,26 @@ Full requirement-by-requirement position: **[STATUS.md](STATUS.md)**.
 
 ---
 
+## Follow-up proposals — separate from the six gap specs
+
+Two adjacent ideas came from reviewing the private
+`guardrails-control-plane` and `guardrail-policy-packs` repositories. They are
+separate proposals, not requirements silently folded into the six gap specs:
+
+- [07 — Versioned Policy-Pack Governance](../07-versioned-policy-pack-governance.md)
+  defines immutable policy identity, overlays, exceptions, and trust handling.
+  The private policy-pack repo is prior art; its domain packs are empty seeds,
+  not implemented policy coverage.
+- [08 — Control-Plane Composition and Evidence](../08-control-plane-composition-and-evidence.md)
+  defines how verified components could be composed and how evaluations could
+  prove which controls ran. DevGate's game-quality OpenSpecs remain outside
+  this guardrail scope.
+
+Both are **proposed only**. Neither is evidence of an existing loader,
+control plane, or evidence service.
+
+---
+
 ## Design Principles
 
 1. **Backward-compatible** — All specs extend the existing MCP server; no breaking changes to current tools.
@@ -46,28 +66,34 @@ Full requirement-by-requirement position: **[STATUS.md](STATUS.md)**.
 
 ---
 
-## Cross-Cutting Concerns
+## Cross-Cutting Concerns — Proposed vs Shipped
 
-All specs share:
-- **Configuration**: `guardrails.yaml` (extends existing config)
-- **Logging**: Structured JSON events to PostgreSQL (extends existing audit trail)
-- **Metrics**: Prometheus-compatible counters for guardrail decisions
-- **Testing**: Unit + integration tests per spec, plus cross-spec integration tests
+These were design assumptions when the specs were drafted. They are **not**
+all current system guarantees:
+
+| Concern | Spec assumption | Current position |
+|---------|-----------------|------------------|
+| Configuration | `guardrails.yaml` extends existing config | No `guardrails.yaml` exists; several YAML loaders are library-only and have no production caller |
+| Logging | Structured JSON events to PostgreSQL | Go `slog` and audit stores exist, but the injection pipeline only logs via slog; no unified guardrail-decision trail |
+| Metrics | Prometheus counters for guardrail decisions | HTTP/MCP and circuit-breaker metrics exist in `internal/metrics`; the guardrail subsystems do not emit per-decision metrics |
+| Testing | Unit + integration + cross-spec tests | Unit tests exist, but several end-to-end acceptance paths have no harness or request-path wiring |
+
+See [STATUS.md](STATUS.md) for the detailed evidence and
+[the implementation status section](01-prompt-injection-defense.md#8-implementation-status-reconciled-2026-10-03)
+in each spec for its requirement-level position.
 
 ---
 
-## Implementation Order
+## Original Proposed Order
 
-```
-Phase 1 (Critical):
-  → 01-prompt-injection-defense (foundation for 05)
-  → 02-semantic-content-filtering (foundation for 04)
+The phase order below records the original proposal, **not shipped status**.
 
-Phase 2 (Important):
-  → 03-runtime-sandbox-isolation (independent)
-  → 05-indirect-prompt-injection (builds on 01)
-  → 04-multi-agent-safety-policies (builds on 02)
+- **Phase 1:** 01 Prompt Injection Defense (foundation for 05); 02 Semantic
+  Content Filtering (foundation for 04).
+- **Phase 2:** 03 Runtime Sandbox Isolation; 05 Indirect Prompt Injection
+  (builds on 01); 04 Multi-Agent Safety Policies (builds on 02).
+- **Phase 3:** 06 Regulatory Compliance Mapping (builds on all).
 
-Phase 3 (Nice-to-have):
-  → 06-regulatory-compliance-mapping (builds on all)
-```
+For delivery status see [the reconciliation](STATUS.md). The key distinction:
+02 has two registered tools; the other five specs' proposed tools do not
+exist, even where library code is present.

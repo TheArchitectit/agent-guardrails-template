@@ -1,4 +1,4 @@
-﻿# OpenSpec: Prompt Injection Defense
+# OpenSpec: Prompt Injection Defense
 
 > **This is a proposal, not a description of the system.** The library code
 > largely exists in `mcp-server/internal/guardrails/injection_detection*.go`
@@ -206,3 +206,42 @@ Every detection produces a structured log event:
 - [NVIDIA NeMo Guardrails](https://github.com/NVIDIA/NeMo-Guardrails) — `check jailbreak` input rail
 - [Llama Guard 3](https://developer.meta.com/ai/docs/model-cards-and-prompt-formats/llama-guard-3/) — S1-S13 categories
 - [Lakera Guard](https://lakera.ai/) — real-time injection detection
+
+---
+
+## 8. Implementation Status (reconciled 2026-10-03)
+
+Evidence: `docs/specs/guardrail-gaps-2026/STATUS.md`. Section 5 checkboxes are
+left as the original acceptance plan; the table below records where each
+requirement actually stands.
+
+| § | Requirement | Status | Evidence |
+|---|-------------|--------|----------|
+| 3.1 | `guardrail_detect_injection` | **Not implemented** | name absent from every `.go` file; not dispatched in `server.go:163-273` |
+| 3.1 | `guardrail_scan_text_batch` | **Not implemented** (library only) | `DetectBatch` exists at `injection_detection.go:317` with no tool |
+| 2.2 | L1 pattern matching | Built, **unwired** | `injection_detection_patterns.go:20`; reached only via `Engine.Evaluate`, which has no non-test caller |
+| 2.2 | L2 perplexity | Partial — **disabled by default** | `injection_detection.go:150-153` |
+| 2.2 | L3 classifier | Effectively dead | `engine.go:75` wires `NoOpClassifier{}` (always returns safe); `NewOllamaClassifier` and `SetClassifier` have zero callers |
+| 2.2 | L4 LLM self-check | **Not implemented** | config struct exists (`injection_detection.go:190-194`); `Pipeline` has no field for it and `Detect` never runs it |
+| 3.2 | Config keys | **Shape mismatch** | shipped `InjectionConfig` is flat (`l1_enabled`, `l2_enabled`, …); the nested `layers:` form is never YAML-loaded (`LoadInjectionConfigFromYAML` has zero callers) |
+| 3.2 | Blocklist files | **Not implemented** | `config/blocklists/` does not exist |
+| 4.x | Hot reload | Library only | `BlocklistManager` (`injection_config.go:92`), no callers |
+| 4.x | Audit trail | Partial | slog only; `SourceTool`/`ToolCallID` declared but never populated; no PostgreSQL trail |
+
+**Net position.** The detection layer described in §2 is a complete library
+with no request-path integration and a classifier that always answers "safe".
+Nothing in this spec is active protection today.
+
+**Blocking decisions before this spec can proceed:**
+
+1. **Wire or retire.** `Engine.Evaluate` is the only path that would reach the
+   pipeline. Either give it a caller in the request path or delete the
+   library so it stops reading as shipped capability.
+2. **Choose the config shape** — flat (what ships) or nested `layers:` (what
+   §3.2 specifies). One of the two is wrong.
+3. **Source the blocklist corpus.** §3.2 assumes pattern files that do not
+   exist; someone must decide where they come from and who maintains them.
+4. **Acceptance criteria in §5 are untestable as written.** The latency
+   budgets have no benchmark (only `BenchmarkPerplexityAnalyzer` exists), and
+   the adversarial suites have no harness. Each needs a reproducible command
+   before any box can be honestly checked.
