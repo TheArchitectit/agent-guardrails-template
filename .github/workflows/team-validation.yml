@@ -18,6 +18,14 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Stage the example project
+        run: |
+          # The CLI resolves projects to .teams/<project>.json. Use the
+          # full-project fixture so validate-size runs against realistic,
+          # fully-staffed teams instead of an unpopulated project (which is
+          # undersized by design and would fail every CI run).
+          cp .teams/fixtures/full-project.json .teams/example.json
+
       - name: Validate team sizes
         run: |
           python3 scripts/team_manager.py --project example validate-size

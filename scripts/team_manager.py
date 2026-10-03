@@ -16,6 +16,7 @@ import sys
 import tempfile
 import traceback
 from dataclasses import dataclass, asdict
+from copy import deepcopy
 from datetime import datetime, timedelta
 from pathlib import Path
 import time
@@ -1658,7 +1659,15 @@ class TeamManager:
         self.performance_metrics.start_operation("init", project=self.project_name)
         try:
             self._require_auth("initialize project")
-            self.teams = {team_id: team for team_id, team in self.STANDARD_TEAMS.items()}
+            if not self.test_mode and not self.user_context.has_permission("admin"):
+                raise PermissionDenied(
+                    f"User '{self.user_context.user_id}' with role '{self.user_context.role}' "
+                    f"does not have permission to initialize a project"
+                )
+            # Deep-copy: STANDARD_TEAMS is class-level state, so aliasing it
+            # would leak this project's assignments and statuses into every
+            # other manager built later in the same process.
+            self.teams = {team_id: deepcopy(team) for team_id, team in self.STANDARD_TEAMS.items()}
             self.save()
             print(f"✅ Initialized project '{self.project_name}' with {len(self.teams)} teams")
             self.performance_metrics.end_operation("init", success=True, team_count=len(self.teams))
@@ -2347,7 +2356,11 @@ class TeamManager:
                     "team_name": team.name,
                     "issue": "undersized",
                     "assigned": assigned_count,
-                    "required": MIN_TEAM_SIZE
+                    "required": MIN_TEAM_SIZE,
+                    "message": (
+                        f"Team {team.id} ({team.name}) is undersized: "
+                        f"{assigned_count}/{MIN_TEAM_SIZE} roles assigned"
+                    )
                 })
                 self.logger.warn("team_undersized", {
                     "team_id": team.id,
@@ -2362,7 +2375,11 @@ class TeamManager:
                     "team_name": team.name,
                     "issue": "oversized",
                     "assigned": assigned_count,
-                    "maximum": MAX_TEAM_SIZE
+                    "maximum": MAX_TEAM_SIZE,
+                    "message": (
+                        f"Team {team.id} ({team.name}) is oversized: "
+                        f"{assigned_count}/{MAX_TEAM_SIZE} roles assigned"
+                    )
                 })
                 self.logger.warn("team_oversized", {
                     "team_id": team.id,
@@ -2493,6 +2510,8 @@ class TeamManager:
             result["message"] = f"✅ Project '{self.project_name}' ({team_count} teams) deleted successfully"
         except Exception as e:
             result["message"] = f"❌ Error deleting project: {e}"
+
+        return result
 
 
     # FUNC-012: Duplicate Detection Methods

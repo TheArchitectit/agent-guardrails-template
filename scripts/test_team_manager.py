@@ -18,7 +18,7 @@ from pathlib import Path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from scripts.team_manager import (
-    TeamManager, Role, Team, validate_project_name,
+    TeamManager, Role, Team, validate_project_name, validate_project_path,
     UserContext, StructuredLogger, PermissionDenied
 )
 
@@ -147,9 +147,11 @@ class TestTeamManagerInitialization(unittest.TestCase):
         self.assertEqual(manager.teams, {})
 
     def test_init_creates_config_path(self):
-        """Test that initialization uses correct config path."""
+        """Test that initialization resolves a project path inside .teams/."""
         manager = TeamManager("test-project", user_context=self.user_ctx, logger=self.logger)
-        self.assertEqual(manager.config_path, Path(".teams/test-project.json"))
+        # SEC-006 resolves the path to its real location to prevent traversal.
+        self.assertEqual(manager.config_path, validate_project_path("test-project"))
+        self.assertEqual(manager.config_path.parent.name, ".teams")
 
     def test_init_requires_auth(self):
         """Test that operations require authentication."""
@@ -204,6 +206,25 @@ class TestTeamManagerInitializeProject(unittest.TestCase):
         manager = TeamManager("test-project", self.config_path, team_lead_ctx, self.logger)
         with self.assertRaises(PermissionDenied):
             manager.initialize_project()
+
+    def test_initialize_project_rejects_viewer(self):
+        """Test that initialize_project rejects a viewer outright."""
+        viewer_ctx = UserContext(user_id="test-viewer", role="viewer")
+        manager = TeamManager("test-project", self.config_path, viewer_ctx, self.logger)
+        with self.assertRaises(PermissionDenied):
+            manager.initialize_project()
+
+    def test_initialize_project_does_not_mutate_standard_teams(self):
+        """Test that initialized projects do not share STANDARD_TEAMS state."""
+        self.manager.initialize_project()
+        self.manager.teams[1].status = "completed"
+        self.manager.teams[1].roles[0].assigned_to = "Someone Else"
+
+        other = TeamManager("other-project", self.config_path, self.user_ctx, self.logger)
+        other.initialize_project()
+
+        self.assertEqual(other.teams[1].status, "not_started")
+        self.assertIsNone(other.teams[1].roles[0].assigned_to)
 
 
 class TestTeamManagerLoad(unittest.TestCase):
@@ -319,13 +340,13 @@ class TestTeamManagerAssignRole(unittest.TestCase):
 
     def test_assign_role_requires_permission(self):
         """Test that assign_role requires team-lead or admin permission."""
-        # Create viewer context
+        # setUp already initialized the project as admin.
         viewer_ctx = UserContext(user_id="test-viewer", role="viewer")
-        manager = TeamManager("test-project", self.config_path, viewer_ctx, self.logger)
-        manager.initialize_project()
+        viewer_manager = TeamManager("test-project", self.config_path, viewer_ctx, self.logger)
+        viewer_manager.load()
 
         with self.assertRaises(PermissionDenied):
-            manager.assign_role(1, "Business Relationship Manager", "John Doe")
+            viewer_manager.assign_role(1, "Business Relationship Manager", "John Doe")
 
 
 class TestTeamManagerStartTeam(unittest.TestCase):
@@ -420,12 +441,12 @@ class TestTeamManagerGetPhaseStatus(unittest.TestCase):
         """Test progress percentage calculation."""
         # Initially all not started
         status = self.manager.get_phase_status("Phase 1: Strategy, Governance & Planning")
-        self.assertEqual(status["progress_pct"], 0.0)
+        self.assertAlmostEqual(status["progress_pct"], 0.0)
 
         # Complete one team
         self.manager.complete_team(1)
         status = self.manager.get_phase_status("Phase 1: Strategy, Governance & Planning")
-        self.assertEqual(status["progress_pct"], 100.0 / 3.0)
+        self.assertAlmostEqual(status["progress_pct"], 100.0 / 3.0)
 
     def test_get_phase_status_invalid_phase(self):
         """Test phase status for non-existent phase."""
@@ -629,20 +650,31 @@ class TestTeamManagerDelete(unittest.TestCase):
         self.assertFalse(result)
 
     def test_delete_team_valid(self):
-        """Test deleting a team."""
-        result = self.manager.delete_team(1)
-        self.assertTrue(result)
+        """Test deleting a team after confirmation."""
+        pending = self.manager.delete_team(1)
+        self.assertFalse(pending["success"])
+        self.assertTrue(pending["requires_confirmation"])
+        self.assertIn(1, self.manager.teams)
+
+        result = self.manager.delete_team(1, confirmed=True)
+        self.assertTrue(result["success"])
         self.assertNotIn(1, self.manager.teams)
 
     def test_delete_team_invalid(self):
         """Test deleting invalid team."""
         result = self.manager.delete_team(99)
-        self.assertFalse(result)
+        self.assertFalse(result["success"])
+        self.assertFalse(result["requires_confirmation"])
 
     def test_delete_project_valid(self):
-        """Test deleting entire project."""
-        result = self.manager.delete_project()
-        self.assertTrue(result)
+        """Test deleting entire project after confirmation."""
+        pending = self.manager.delete_project()
+        self.assertFalse(pending["success"])
+        self.assertTrue(pending["requires_confirmation"])
+        self.assertTrue(self.manager.config_path.exists())
+
+        result = self.manager.delete_project(confirmed=True)
+        self.assertTrue(result["success"])
         self.assertFalse(self.manager.config_path.exists())
 
 
@@ -724,21 +756,17 @@ class TestStructuredLogger(unittest.TestCase):
     def test_logger_log_output(self):
         """Test log output is valid JSON."""
         import io
-        import sys
+        from contextlib import redirect_stderr
 
         logger = StructuredLogger("test", request_id="test-123")
 
-        # Capture stderr
-        old_stderr = sys.stderr
-        sys.stderr = io.StringIO()
+        buf = io.StringIO()
+        with redirect_stderr(buf):
+            logger.info("test_event", {"key": "value"})
 
-        logger.info("test_event", {"key": "value"})
-
-        output = sys.stderr.getvalue()
-        sys.stderr = old_stderr
-
-        # Parse as JSON
-        log_entry = json.loads(output.strip())
+        # Parse the last non-empty line (loggers may emit preamble)
+        lines = [ln for ln in buf.getvalue().splitlines() if ln.strip()]
+        log_entry = json.loads(lines[-1])
         self.assertEqual(log_entry["component"], "test")
         self.assertEqual(log_entry["event"], "test_event")
         self.assertEqual(log_entry["level"], "INFO")
