@@ -107,8 +107,13 @@ func (s *MCPServer) lifecycleToolList() []mcp.Tool {
 						"type":        "string",
 						"description": "Justification for the override (required)",
 					},
+					"confirm_override": map[string]interface{}{
+						"type": "boolean",
+						"description": "Must be true to proceed. This tool bypasses " +
+							"transition validation, so it will not act on a bare call.",
+					},
 				},
-				Required: []string{"session_id", "to_state", "reason"},
+				Required: []string{"session_id", "to_state", "reason", "confirm_override"},
 			},
 		},
 	}
@@ -235,6 +240,20 @@ func (s *MCPServer) handleForceAgentState(ctx context.Context, args map[string]i
 	if sessionID == "" || toState == "" || reason == "" {
 		return buildToolResult(map[string]interface{}{
 			"error": "session_id, to_state, and reason are all required for admin override",
+		}, true)
+	}
+
+	// This bypasses transition validation, so require explicit confirmation
+	// rather than acting on a bare call. Note that this is an intent check,
+	// not authorization: the server has no role model, so the only real
+	// access control on this endpoint is the bearer key and the network.
+	confirmed, _ := args["confirm_override"].(bool)
+	if !confirmed {
+		return buildToolResult(map[string]interface{}{
+			"success":               false,
+			"requires_confirmation": true,
+			"message": "⚠️  Forcing agent state bypasses transition validation. " +
+				"Set confirm_override=true to proceed.",
 		}, true)
 	}
 
