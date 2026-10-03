@@ -13,6 +13,10 @@ import (
 	"github.com/thearchitectit/guardrail-mcp/internal/models"
 )
 
+// errorRateHaltThreshold is the failure fraction (0.0-1.0) at or above which
+// a reported error_rate in context is treated as a halt condition.
+const errorRateHaltThreshold = 0.5
+
 func (s *MCPServer) handleCheckHaltConditions(ctx context.Context, args map[string]interface{}) (*mcp.CallToolResult, error) {
 	// Panic recovery to prevent HTTP 500
 	defer func() {
@@ -86,8 +90,10 @@ func (s *MCPServer) handleCheckHaltConditions(ctx context.Context, args map[stri
 			}
 		}
 
-		// Check for error rate
-		if errorRate, exists := contextData["error_rate"].(float64); exists && errorRate < 0.5 {
+		// Check for error rate. error_rate is the failure fraction (0.0-1.0),
+		// so a *high* value is what warrants halting — the comparison here was
+		// previously inverted and fired on low error rates.
+		if errorRate, exists := contextData["error_rate"].(float64); exists && errorRate > errorRateHaltThreshold {
 			haltReasons = append(haltReasons, fmt.Sprintf("High error rate: %.0f%%", errorRate*100))
 			if severity == "" || severity == "low" || severity == "medium" {
 				severity = "high"
@@ -213,9 +219,10 @@ func (s *MCPServer) handleRecordHalt(ctx context.Context, args map[string]interf
 		}
 	}
 
-	// Record the halt event
+	// Record the halt event. Argument order matters and matches the store
+	// signature: (sessionID, haltType, description, severity, contextData).
 	haltStore := database.NewHaltEventStore(s.db)
-	recordID, haltErr := haltStore.Create(ctx, sessionToken, haltType, severity, description, contextMap)
+	recordID, haltErr := haltStore.Create(ctx, sessionToken, haltType, description, severity, contextMap)
 	if haltErr != nil {
 		slog.Error("Failed to record halt", "error", haltErr, "session_token", sessionToken)
 		return &mcp.CallToolResult{
@@ -272,9 +279,11 @@ func (s *MCPServer) handleAcknowledgeHalt(ctx context.Context, args map[string]i
 		}, nil
 	}
 
-	// Get UUID from halt_id
-	haltUUID := uuid.UUID{}
-	if err := haltUUID.UnmarshalBinary([]byte(haltID)); err != nil {
+	// Parse halt_id. The value is a hyphenated UUID string as returned by
+	// guardrail_record_halt, so it must be parsed rather than fed to
+	// UnmarshalBinary, which expects 16 raw bytes.
+	haltUUID, parseErr := uuid.Parse(haltID)
+	if parseErr != nil {
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: `{"success":false,"error":"Invalid halt_id format"}`}},
 			IsError: true,
