@@ -1,4 +1,10 @@
-# OpenSpec: Prompt Injection Defense
+﻿# OpenSpec: Prompt Injection Defense
+
+> **This is a proposal, not a description of the system.** The library code
+> largely exists in `mcp-server/internal/guardrails/injection_detection*.go`
+> but is unreachable from any MCP tool — neither proposed tool exists, and
+> the pipeline is constructed with a no-op classifier. See
+> [STATUS.md](STATUS.md) for the requirement-by-requirement position.
 
 **Gap:** Critical — No native defense against prompt injection attacks
 **Priority:** 🔴 Critical (Phase 1)

@@ -1,0 +1,40 @@
+# Specs
+
+Design specifications and change proposals for the guardrails MCP server.
+
+| Document | Purpose |
+|----------|---------|
+| [AUTH-01-mcp-endpoint-auth.md](AUTH-01-mcp-endpoint-auth.md) | Bearer authentication on `/mcp` — implemented and merged |
+| [guardrail-gaps-2026/index.md](guardrail-gaps-2026/index.md) | Gap analysis specs vs 2026 AI safety guardrail systems |
+
+## Guardrail gaps 2026
+
+Six OpenSpecs written against a 2026 gap analysis (NeMo, Llama Guard,
+Lakera, Constitutional AI, NIST AI RMF, EU AI Act).
+
+| # | Spec | Priority |
+|---|------|----------|
+| 1 | [Prompt injection defense](guardrail-gaps-2026/01-prompt-injection-defense.md) | Critical |
+| 2 | [Semantic content filtering](guardrail-gaps-2026/02-semantic-content-filtering.md) | Critical |
+| 3 | [Runtime sandbox isolation](guardrail-gaps-2026/03-runtime-sandbox-isolation.md) | Important |
+| 4 | [Multi-agent safety policies](guardrail-gaps-2026/04-multi-agent-safety-policies.md) | Important |
+| 5 | [Indirect prompt injection](guardrail-gaps-2026/05-indirect-prompt-injection.md) | Important |
+| 6 | [Regulatory compliance mapping](guardrail-gaps-2026/06-regulatory-compliance-mapping.md) | Nice-to-have |
+
+**These specs are proposals, not descriptions of shipped behaviour.** Part of
+the underlying code exists in `mcp-server/internal/guardrails/`, but several
+of the tools these specs propose were never exposed over MCP. Before acting
+on one, verify the tool exists — see
+[guardrail-gaps-2026/STATUS.md](guardrail-gaps-2026/STATUS.md) for a
+requirement-by-requirement reconciliation, and
+[../mcp-server/tools-reference.md](../mcp-server/tools-reference.md) for
+what the server actually exposes.
+
+## Verifying a proposed tool
+
+```bash
+grep -n "case \"<tool_name>\"" mcp-server/internal/mcp/server.go
+grep -rn "<tool_name>" -g "*.go" mcp-server/
+```
+
+No hits in Go means the library may exist, but nothing can call it.

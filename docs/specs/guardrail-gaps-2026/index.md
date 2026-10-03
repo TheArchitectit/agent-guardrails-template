@@ -1,8 +1,13 @@
 # Guardrail Gaps 2026 — OpenSpec Index
 
 **Created:** 2026-08-22
-**Status:** Draft
+**Status:** Reconciled 2026-10-03 — see [STATUS.md](STATUS.md)
 **Context:** Gap analysis of agent-guardrails-template vs 2026 AI safety guardrail systems (NeMo, Llama Guard, Lakera, Constitutional AI, NIST AI RMF, EU AI Act)
+
+> **These specs describe work that was proposed, not work that shipped.**
+> Of the 13 MCP tools they specify, 2 exist. Much of the underlying library
+> code was written but is unreachable from any tool. Read
+> [STATUS.md](STATUS.md) before acting on any requirement here.
 
 ---
 
@@ -16,14 +21,18 @@ The specs are ordered by priority (critical → important → nice-to-have).
 
 ## Spec Documents
 
+Status is from the 2026-10-03 reconciliation, not from the original drafting.
+
 | # | Gap | Priority | Spec File | Status |
 |---|-----|----------|-----------|--------|
-| 1 | [Prompt Injection Defense](01-prompt-injection-defense.md) | 🔴 Critical | `01-prompt-injection-defense.md` | Draft |
-| 2 | [Semantic Content Filtering](02-semantic-content-filtering.md) | 🔴 Critical | `02-semantic-content-filtering.md` | Draft |
-| 3 | [Runtime Sandbox Isolation](03-runtime-sandbox-isolation.md) | 🟡 Important | `03-runtime-sandbox-isolation.md` | Draft |
-| 4 | [Multi-Agent Safety Policies](04-multi-agent-safety-policies.md) | 🟡 Important | `04-multi-agent-safety-policies.md` | Draft |
-| 5 | [Indirect Prompt Injection Handling](05-indirect-prompt-injection.md) | 🟡 Important | `05-indirect-prompt-injection.md` | Draft |
-| 6 | [Regulatory Compliance Mapping](06-regulatory-compliance-mapping.md) | 🟢 Nice-to-have | `06-regulatory-compliance-mapping.md` | Draft |
+| 1 | [Prompt Injection Defense](01-prompt-injection-defense.md) | 🔴 Critical | `01-prompt-injection-defense.md` | Library only — no tool, unwired |
+| 2 | [Semantic Content Filtering](02-semantic-content-filtering.md) | 🔴 Critical | `02-semantic-content-filtering.md` | **Shipped** — both tools live |
+| 3 | [Runtime Sandbox Isolation](03-runtime-sandbox-isolation.md) | 🟡 Important | `03-runtime-sandbox-isolation.md` | Library only — no tool, unwired |
+| 4 | [Multi-Agent Safety Policies](04-multi-agent-safety-policies.md) | 🟡 Important | `04-multi-agent-safety-policies.md` | Library only — no tool, unwired |
+| 5 | [Indirect Prompt Injection Handling](05-indirect-prompt-injection.md) | 🟡 Important | `05-indirect-prompt-injection.md` | Config shipped; tracker unwired |
+| 6 | [Regulatory Compliance Mapping](06-regulatory-compliance-mapping.md) | 🟢 Nice-to-have | `06-regulatory-compliance-mapping.md` | Library only — and scores are simulated |
+
+Full requirement-by-requirement position: **[STATUS.md](STATUS.md)**.
 
 ---
 

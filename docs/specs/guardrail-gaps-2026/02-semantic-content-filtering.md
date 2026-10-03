@@ -1,4 +1,6 @@
-# OpenSpec: Semantic Content Filtering
+﻿# OpenSpec: Semantic Content Filtering
+
+> **This spec shipped in part.** Both proposed tools exist and are exposed. Note the production defect: policies are never loaded, so `guardrail_check_policy` returns non-compliant for every call. See [STATUS.md](STATUS.md).
 
 **Gap:** Critical — No native semantic content moderation
 **Priority:** 🔴 Critical (Phase 1)

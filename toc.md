@@ -27,7 +27,12 @@ Flat listing of documentation in this repo. For keyword lookup, see
 - [halt-conditions-design.md](docs/designs/halt-conditions-design.md)
 
 ### mcp-server/
-- [tools-reference.md](docs/mcp-server/tools-reference.md)
+- [tools-reference.md](docs/mcp-server/tools-reference.md) — index of all 58 registered tools
+- [tools/core-validation.md](docs/mcp-server/tools/core-validation.md) — 7 tools: bash / file-edit / git validation, scope, session
+- [tools/workflow-and-git.md](docs/mcp-server/tools/workflow-and-git.md) — 8 tools: commit, push, regression, production-first
+- [tools/halt-attempts-content.md](docs/mcp-server/tools/halt-attempts-content.md) — 12 tools: provenance, three strikes, halt, classification
+- [tools/teams-and-advisors.md](docs/mcp-server/tools/teams-and-advisors.md) — 10 tools: project lifecycle, assignment, advisors
+- [tools/conditional-and-integrations.md](docs/mcp-server/tools/conditional-and-integrations.md) — 21 conditionally registered tools
 - [version-migration.md](docs/mcp-server/version-migration.md) — migration overview
 - [python-to-go-migration.md](docs/mcp-server/python-to-go-migration.md)
 - [migration-breaking-changes.md](docs/mcp-server/migration-breaking-changes.md)
@@ -35,6 +40,26 @@ Flat listing of documentation in this repo. For keyword lookup, see
 - [migration-rollback.md](docs/mcp-server/migration-rollback.md)
 - [migration-examples.md](docs/mcp-server/migration-examples.md)
 - [migration-troubleshooting.md](docs/mcp-server/migration-troubleshooting.md)
+
+### specs/
+- [INDEX.md](docs/specs/INDEX.md)
+- [AUTH-01-mcp-endpoint-auth.md](docs/specs/AUTH-01-mcp-endpoint-auth.md) — /mcp bearer auth, merged
+- [guardrail-gaps-2026/STATUS.md](docs/specs/guardrail-gaps-2026/STATUS.md) — spec vs shipped code, requirement by requirement
+- [guardrail-gaps-2026/index.md](docs/specs/guardrail-gaps-2026/index.md)
+
+### reboot/
+- [INDEX.md](docs/reboot/INDEX.md) — reboot planning material (site, story, features, stars)
+- [01-site.md](docs/reboot/01-site.md)
+- [02-story.md](docs/reboot/02-story.md) — draft, held for review
+- [03-features.md](docs/reboot/03-features.md)
+- [04-stars.md](docs/reboot/04-stars.md)
+- [changes/INDEX.md](docs/reboot/changes/INDEX.md) — F001–F100 change files
+
+### releases/
+- [INDEX.md](docs/releases/INDEX.md)
+
+### superpowers/
+- [INDEX.md](docs/superpowers/INDEX.md) — working designs and plans
 
 ### integrations/
 - [agents-and-skills-setup.md](docs/integrations/agents-and-skills-setup.md)

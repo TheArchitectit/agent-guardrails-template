@@ -1,4 +1,6 @@
-# OpenSpec: Runtime Sandbox Isolation
+﻿# OpenSpec: Runtime Sandbox Isolation
+
+> **The library shipped; neither tool exists.** The sandbox is fully built in `internal/guardrails/sandbox.go` but no MCP tool exposes it. §4.3 fallback text is also wrong — see the amendment note in [STATUS.md](STATUS.md).
 
 **Gap:** Important — Pre-execution validation only; no OS-level isolation
 **Priority:** 🟡 Important (Phase 2)

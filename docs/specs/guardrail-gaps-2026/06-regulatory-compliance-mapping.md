@@ -1,4 +1,6 @@
-# OpenSpec: Regulatory Compliance Mapping
+﻿# OpenSpec: Regulatory Compliance Mapping
+
+> **Do not trust scores from this code.** The mapper exists but `CheckRequirement` restates a hand-written database string rather than measuring the system, and evidence collection is simulated. See [STATUS.md](STATUS.md).
 
 **Gap:** Nice-to-have — No explicit EU AI Act or NIST RMF compliance mapping
 **Priority:** 🟢 Nice-to-have (Phase 3)

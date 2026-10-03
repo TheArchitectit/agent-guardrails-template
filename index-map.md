@@ -115,17 +115,33 @@ ownership, release calendar, tech stack.
 
 ## Specs (Guardrail Gaps 2026)
 
-See [specs/guardrail-gaps-2026/index.md](docs/specs/guardrail-gaps-2026/index.md) — full OpenSpecs
-closing identified gaps vs 2026 AI safety guardrail systems.
+See [specs/INDEX.md](docs/specs/INDEX.md) — design specs and change
+proposals, including the OpenSpecs closing identified gaps vs 2026 AI
+safety guardrail systems.
 
 | Keyword | Document |
 |---------|----------|
+| spec status, spec vs shipped, what actually shipped | [specs/guardrail-gaps-2026/STATUS.md](docs/specs/guardrail-gaps-2026/STATUS.md) |
 | prompt injection, injection defense, LLM security | [specs/guardrail-gaps-2026/01-prompt-injection-defense.md](docs/specs/guardrail-gaps-2026/01-prompt-injection-defense.md) |
 | content filtering, semantic safety, llama guard, moderation | [specs/guardrail-gaps-2026/02-semantic-content-filtering.md](docs/specs/guardrail-gaps-2026/02-semantic-content-filtering.md) |
 | sandbox, runtime isolation, containers, namespaces | [specs/guardrail-gaps-2026/03-runtime-sandbox-isolation.md](docs/specs/guardrail-gaps-2026/03-runtime-sandbox-isolation.md) |
 | multi-agent, agent validation, safety chains | [specs/guardrail-gaps-2026/04-multi-agent-safety-policies.md](docs/specs/guardrail-gaps-2026/04-multi-agent-safety-policies.md) |
 | indirect injection, file injection, provenance | [specs/guardrail-gaps-2026/05-indirect-prompt-injection.md](docs/specs/guardrail-gaps-2026/05-indirect-prompt-injection.md) |
 | compliance, EU AI Act, NIST RMF, regulatory | [specs/guardrail-gaps-2026/06-regulatory-compliance-mapping.md](docs/specs/guardrail-gaps-2026/06-regulatory-compliance-mapping.md) |
+| mcp endpoint auth, bearer, 401, /mcp authentication | [specs/AUTH-01-mcp-endpoint-auth.md](docs/specs/AUTH-01-mcp-endpoint-auth.md) |
+
+## Reboot
+
+See [reboot/INDEX.md](docs/reboot/INDEX.md) — planning material for the
+Go-server rewrite: site design, story narrative (draft), feature breakdown,
+star roadmap, and the F001–F100 change files.
+
+## Releases and archive
+
+See [releases/INDEX.md](docs/releases/INDEX.md) for release notes and
+[archive/INDEX.md](docs/archive/INDEX.md) for historical sprints, plans and
+reviews. Neither is maintained; see the navigation maps above for current
+documentation.
 
 ## Archive
 

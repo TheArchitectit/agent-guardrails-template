@@ -1,4 +1,6 @@
-# OpenSpec: Indirect Prompt Injection Handling
+﻿# OpenSpec: Indirect Prompt Injection Handling
+
+> **The most completely built of the six — and still unreachable.** Config keys and the sanitisation pipeline shipped, but the tracker is only called from code that no tool reaches. See [STATUS.md](STATUS.md).
 
 **Gap:** Important — No protection against malicious file contents that override safety instructions
 **Priority:** 🟡 Important (Phase 2)

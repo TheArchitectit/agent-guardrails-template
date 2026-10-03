@@ -1,4 +1,6 @@
-# OpenSpec: Multi-Agent Safety Policies
+﻿# OpenSpec: Multi-Agent Safety Policies
+
+> **This is a proposal, not a description of the system.** The chain engine and three validators exist as an unwired library; none of the three proposed tools exists. See [STATUS.md](STATUS.md).
 
 **Gap:** Important — No agent-validates-agent mechanism
 **Priority:** 🟡 Important (Phase 2)
