@@ -79,8 +79,11 @@ func NewEngine(config *EngineConfig, logger *slog.Logger) *Engine {
 		e.pipeline = pipeline
 	}
 
-	// Initialize content filter (backends added via AddBackend in production)
-	e.filter = NewContentFilter(nil, nil)
+	// Initialize content filter. Configured policies must be passed here:
+	// without them the policy engine has no rules, and every
+	// guardrail_check_policy call falls through to the fail-closed
+	// "unknown policy_id" branch regardless of the policy requested.
+	e.filter = NewContentFilter(nil, config.ContentFilter.Policies)
 
 	// Initialize provenance tracker
 	if config.Provenance != nil && config.Provenance.Enabled {
