@@ -10,7 +10,9 @@ first.**
 
 - **No RBAC anywhere.** A repo-wide grep for `admin|RBAC|RequireRole|team-lead`
   across `mcp-server/internal` returns zero hits in any team or advisor
-  handler. Any authenticated bearer caller can perform any operation.
+  handler, so any authenticated bearer caller can perform any operation.
+  `guardrail_team_init` also overwrites a project file silently, and
+  `guardrail_project_delete` deletes it with no backup or audit trail.
 - `team.WithTestMode(true)` is a **no-op** — the parameter is discarded
   (`internal/team/manager.go:71-76`).
 - State lives in `.teams/<project>.json`, path resolved by
@@ -49,10 +51,12 @@ Lists teams as an ASCII table (`ID / Name / Phase / Status`).
 Read-only. Status gains an `(n/m assigned)` suffix when `not_started` with
 assignments.
 
-> **Known issue.** `phase` must match `^Phase [1-3]$` to pass validation, but
-> `Team.Phase` holds full strings like `"Phase 1: Strategy, Governance &
-> Planning"` and `GetTeamsByPhase` compares with exact equality. A validated
-> `phase` filter therefore **always returns an empty table**.
+> **Fixed 2026-10-03.** The filter could not work for any input: validation
+> permitted only the short form "Phase 1"–"Phase 3" while the query compared
+> for exact equality against the full label (`"Phase 1: Strategy, …"`), and
+> the model defines five phases, not three. Validation now accepts
+> "Phase 1"–"Phase 5" or a full label whitelisted from the team model, and
+> matching accepts either form.
 
 ### guardrail_team_config_get
 
@@ -102,9 +106,10 @@ Unconfirmed returns `⚠️  Team removal requires confirmation. Set
 confirmed=true to proceed.` with `IsError:false`; success returns
 `✅ Removed team <n> from project '<p>'`.
 
-> **Known issue.** The handler never calls `mgr.Load()` first, so
-> `m.teams` is empty and `DeleteTeam` reports "team <n> not found" against
-> any real, initialized project. As written this tool cannot succeed.
+> **Fixed 2026-10-03.** The handler never loaded the project first, so the
+> Manager's team map was empty and `DeleteTeam` reported "team not found"
+> against any real project — the tool could never succeed. It now loads
+> before deleting.
 
 ### guardrail_project_delete
 
@@ -134,10 +139,14 @@ Reports team configuration health.
 `{status, project, note:"Project not initialized, but team manager is
 operational"}` when the manager fails to construct.
 
-> **Known issues.** The handler never calls `mgr.Load()`, so on the healthy
-> path every count is `0`. The schema description claims it validates the
-> Python backend — it never invokes `team_manager.py`;
-> `getTeamManagerPath()` (`team_tool_handlers.go:13`) is dead code.
+> **Fixed 2026-10-03.** The handler never loaded the project, so every count
+> (`total_teams`, `active`, `completed`, `not_started`, `assigned_roles`)
+> was `0` — a health report that always described an empty project. It now
+> loads, and reports why if the project cannot be loaded.
+>
+> The schema description still claims it validates the Python backend — it
+> never invokes `team_manager.py`; `getTeamManagerPath()`
+> (`team_tool_handlers.go:13`) is dead code.
 
 ---
 

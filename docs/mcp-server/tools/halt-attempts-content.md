@@ -153,9 +153,13 @@ where severity is `critical`; (3) context flags `should_halt` (bool) and
 critical event → `critical`; context → `medium`/`high`. Depends on
 `guardrail_record_attempt` and `guardrail_record_halt`.
 
-> **Known issue.** `error_rate < 0.5` triggers "High error rate"
-> (`tools_extended_halt.go:90`) — the comparison looks inverted. Documented
-> as-is; needs an owner decision.
+> **Fixed 2026-10-03.** The comparison was inverted (`error_rate < 0.5`
+> raised "High error rate", so a *low* error rate halted and a high one did
+> not). It now fires above a named threshold.
+>
+> **Still open (feature work).** The halt-condition design
+> (`docs/designs/halt-conditions-design.md`) enumerates ~22 conditions; this
+> tool implements 3. Closing that is design work, not a bug fix.
 
 ### guardrail_record_halt
 
@@ -188,10 +192,10 @@ Acknowledges a halt to resume work.
 
 **Fails closed; mutates state.**
 
-> **Known issue.** `halt_id` is parsed with `uuid.UnmarshalBinary`, which
-> expects 16 raw bytes, but `guardrail_record_halt` returns a hyphenated
-> UUID **string**. Passing that value straight through will fail — callers
-> must strip the hyphens first.
+> **Fixed 2026-10-03.** `halt_id` was parsed with `uuid.UnmarshalBinary`,
+> which expects 16 raw bytes, so acknowledging a halt that
+> `guardrail_record_halt` had just returned always failed. It is now parsed
+> with `uuid.Parse`, and the two tools work as a pair.
 
 ---
 

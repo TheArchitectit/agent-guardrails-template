@@ -27,10 +27,11 @@ Creates a session identifier for provenance tracking.
 
 The `session_id` is 24 crypto-random bytes, hex-encoded.
 
-> **Known issue.** The handler never registers the token in `s.sessions`, so
-> tools that validate against that map (`guardrail_record_file_read`,
-> `guardrail_record_attempt`, `guardrail_validate_production_first`, …)
-> reject it as `"Invalid session token"`. Advisory only; never blocks.
+> **Fixed 2026-10-03.** The handler used to return a token without recording
+> it in the session map, so tools that validate `session_token` rejected
+> freshly issued tokens as `"Invalid session token"`. The token is now
+> registered with an 8-hour TTL and every validating tool consults the same
+> expiry-aware lookup. Advisory only; never blocks.
 
 ---
 
@@ -88,10 +89,9 @@ enforced **only** when a session token is supplied *and* `s.fileReadStore`
 is set; otherwise `was_read` defaults to `true` and the check silently
 passes. Violation id `FILE-READ-001` (`critical`).
 
-> **Known issue.** Because `guardrail_init_session` does not register its
-> token, `guardrail_record_file_read` rejects it — so the read-before-edit
-> path is effectively unreachable through the normal
-> init → record → edit flow.
+> **Fixed 2026-10-03.** Because `guardrail_init_session` now registers its
+> token, the read-before-edit path (`record_file_read` → `verify_file_read`)
+> is reachable through the normal init → record → edit flow.
 
 ---
 

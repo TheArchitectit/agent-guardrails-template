@@ -88,12 +88,12 @@ The best-executed spec, and the only one whose tools shipped.
 | OpenAI Moderation backend | Implemented but never registered |
 | Streaming | Not implemented |
 
-**Material defect:** production policies are always empty. `NewEngine` builds
-the filter as `NewContentFilter(nil, nil)` (`engine.go:83`), ignoring the
-configured policy set, and `UpdateRules` has no production caller. So
-**every `guardrail_check_policy` call in production returns
-`compliant: false`** — it cannot distinguish a real violation from a policy
-that was never loaded.
+**Defect fixed 2026-10-03:** `NewEngine` built the filter as
+`NewContentFilter(nil, nil)`, discarding `config.ContentFilter.Policies`. With
+no rules loaded, every `guardrail_check_policy` call took the fail-closed
+"unknown policy" branch. The configured policy set is now passed to the
+filter, so a correctly configured policy resolves; unknown policies still
+fail closed by design.
 
 ### 03 — Runtime sandbox isolation
 
