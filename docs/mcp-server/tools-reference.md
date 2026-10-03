@@ -1,321 +1,155 @@
 # MCP Tools Reference
 
-Complete reference for Guardrails MCP validation tools.
+The guardrails MCP server registers **37 core tools**, dispatched from the
+switch in `mcp-server/internal/mcp/server.go:163-270` and defined by
+`toolList()` in `tools_registry.go`.
 
----
+A further **21 tools** are registered only when their backing store is
+initialised — 6 vision, 5 webhook, 5 budget, 5 agent-lifecycle. So a
+deployment exposes between 37 and 58 tools depending on configuration; see
+[Conditionally registered tools](tools/conditional-and-integrations.md).
 
-## Quick Reference Table
+This page is the index; the detail pages carry per-tool parameters, outputs
+and policy behaviour.
 
-| Tool | Purpose | Input | Categories Validated |
-|------|---------|-------|---------------------|
-| `guardrail_validate_bash` | Validate bash commands | Command string | bash |
-| `guardrail_validate_git_operation` | Validate git operations | Operation + args | git |
-| `guardrail_validate_file_edit` | Validate file edits | Path + content | file_edit, content, edit, security |
+> **Previous versions of this file documented only 3 tools.** If you learned
+> the API from it, assume anything not listed in the table below is new to
+> you — and check the handler before trusting a parameter name, because the
+> published schemas are unreliable (see
+> [Shared behaviour](#shared-behaviour)).
 
----
+## Detailed references
 
-## guardrail_validate_bash
+| Page | Tools | Covers |
+|------|-------|--------|
+| [Core validation](tools/core-validation.md) | 7 | bash / file-edit / git validation, scope, session |
+| [Workflow and git](tools/workflow-and-git.md) | 8 | commit, push, regression, production-first, replacements |
+| [Halt, attempts and content](tools/halt-attempts-content.md) | 12 | provenance, three strikes, halt conditions, classification |
+| [Teams and advisors](tools/teams-and-advisors.md) | 10 | project lifecycle, assignment, advisors |
+| [Conditionally registered](tools/conditional-and-integrations.md) | 21 | vision, webhooks, budgets, agent lifecycle |
 
-Validates bash commands against dangerous patterns.
+## Quick reference
 
-### Description
-Analyzes bash commands for potentially destructive or dangerous operations like `rm -rf /`, fork bombs, and data destruction patterns.
+### Core validation
 
-### Input Parameters
+| Tool | Purpose | Key parameters |
+|------|---------|----------------|
+| `guardrail_init_session` | Create a session id | `user_id`, `environment` |
+| `guardrail_validate_bash` | Validate a bash command | `command`, `working_dir` |
+| `guardrail_validate_file_edit` | Validate an edit + read-before-edit | `file_path`, `old_string`, `new_string`, `session_token` |
+| `guardrail_validate_git_operation` | Validate a git operation | `operation`, `args[]` |
+| `guardrail_pre_work_check` | Check planned work against known regressions | `task_description` |
+| `guardrail_get_context` | Rule count for a path | `path` |
+| `guardrail_validate_scope` | Path within authorized scope | `file_path`, `authorized_scope` |
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `command` | string | Yes | The bash command to validate |
+### Workflow and git
 
-### Return Value
+| Tool | Purpose | Key parameters |
+|------|---------|----------------|
+| `guardrail_validate_commit` | Conventional Commits check | `message` |
+| `guardrail_prevent_regression` | Match planned changes to failure registry | `file_paths[]`, `code_content` |
+| `guardrail_check_test_prod_separation` | Test/prod isolation | `file_path`, `environment` |
+| `guardrail_validate_push` | Pre-push branch safety | `branch`, `is_force`, `has_unpushed_commits` |
+| `guardrail_validate_production_first` | Production code before test code | `session_token`, `file_path`, `code_type` |
+| `guardrail_detect_feature_creep` | Diff exceeds task scope | `session_token`, `file_path`, `git_diff` |
+| `guardrail_verify_fixes_intact` | Recorded fixes still present | `session_token`, `file_path`, `modified_content` |
+| `guardrail_validate_exact_replacement` | Edit was an exact replacement | `session_token`, `file_path`, `original_content`, `modified_content` |
 
-```json
-{
-  "violations": [
-    {
-      "rule_id": "BASH-001",
-      "severity": "critical",
-      "message": "Dangerous bash command detected",
-      "category": "bash"
-    }
-  ]
-}
-```
+### Halt, attempts and content
 
-### Example Usage
+| Tool | Purpose | Key parameters |
+|------|---------|----------------|
+| `guardrail_record_file_read` | Record a file read | `session_token`, `file_path` |
+| `guardrail_verify_file_read` | Verify read-before-edit | `session_token`, `file_path` |
+| `guardrail_record_attempt` | Record a failed attempt | `session_token`, `task_id`, `error_message`, `error_category` |
+| `guardrail_reset_attempts` | Clear attempt counter | `session_token`, `task_id` |
+| `guardrail_validate_three_strikes` | Three-strikes threshold | `session_token`, `task_id` |
+| `guardrail_check_uncertainty` | Self-reflection + escalation level | `session_token`, `current_task`, `self_assessment`, `context_data` |
+| `guardrail_check_halt_conditions` | Does this need a human? | `session_token`, `context`, `task_id` |
+| `guardrail_record_halt` | Record a halt event | `session_token`, `halt_type`, `description`, `severity` |
+| `guardrail_acknowledge_halt` | Acknowledge and resume | `session_token`, `halt_id`, `resolution` |
+| `guardrail_classify_content` | S1–S15 taxonomy classification | `text`, `direction` |
+| `guardrail_check_policy` | Check against a named policy | `text`, `policy_id` |
+| `guardrail_install_skills` | Install skill configs | `action`, `platforms`, `mode`, `dry_run` |
 
-**Request:**
-```json
-{
-  "tool": "guardrail_validate_bash",
-  "arguments": {
-    "command": "rm -rf /"
-  }
-}
-```
+### Teams and advisors
 
-**Response:**
-```json
-{
-  "violations": [
-    {
-      "rule_id": "BASH-001",
-      "severity": "critical",
-      "message": "Dangerous bash command detected",
-      "category": "bash"
-    }
-  ]
-}
-```
+| Tool | Purpose | Key parameters |
+|------|---------|----------------|
+| `guardrail_team_init` | Create project + 12 teams | `project_name` |
+| `guardrail_team_list` | List teams | `project_name`, `phase` |
+| `guardrail_team_config_get` | Read project config | `project_name`, `team_name` |
+| `guardrail_team_config_update` | Merge config fragment | `project_name`, `config` |
+| `guardrail_team_assign` | Assign a person to a role | `project_name`, `team_id`, `role_name`, `person` |
+| `guardrail_team_remove` | Remove a team | `project_name`, `team_id`, `confirmed` |
+| `guardrail_project_delete` | Delete the project | `project_name`, `confirmed` |
+| `guardrail_team_health` | Config health report | `project_name` |
+| `guardrail_advisor_list` | List advisors | — |
+| `guardrail_advisor_query` | Consult an advisor | `advisor_id`, `context`, `file_paths[]` |
 
-**Valid Command (no violations):**
-```json
-{
-  "tool": "guardrail_validate_bash",
-  "arguments": {
-    "command": "ls -la /home/user"
-  }
-}
-```
+## Shared behaviour
 
-**Response:**
-```json
-{
-  "violations": []
-}
-```
+### Result envelope
 
-### Validated Rule Categories
+Every tool returns a single `mcp.TextContent` holding a JSON object. The
+second argument to the result helper becomes MCP's `IsError` flag. There are
+three slightly different helpers — `jsonToolResult`, `buildToolResult` and
+`errorResult` — with identical observable behaviour, so clients cannot tell
+them apart.
 
-| Category | Rules | Severity |
-|----------|-------|----------|
-| bash | BASH-001 | critical |
+### The published schemas are not trustworthy
 
----
+This is the most important thing to know before integrating a client:
 
-## guardrail_validate_git_operation
+- **Handlers frequently read parameters the schema does not declare.** Nearly
+  every tool that needs a session reads `session_token`, which is absent from
+  the published `InputSchema`.
+- **Schemas frequently declare parameters handlers ignore.** Declared-but-dead
+  examples: `files` on `validate_commit`, `remote` on `validate_push`,
+  `bug_id` on `verify_fixes_intact`, `target_string` on
+  `validate_exact_replacement`, `advisor_name`/`role` on `team_assign`,
+  `advisor_name`/`query` on `advisor_query`, `teams` on `team_init`,
+  `context` on `classify_content`.
+- **Required-ness differs between schema and handler** in both directions —
+  `old_string`/`new_string` are schema-required but not enforced, while
+  `authorized_scope`, `session_token`, `role_name` and `code_type` are
+  required in code but not in the schema.
 
-Validates git operations for safety and compliance.
+**Treat the handler as the contract.** Where this document and a schema
+disagree, the documented value is what the code actually does.
 
-### Description
-Checks git commands against rules preventing force pushes, branch deletions, and history rewrites.
+### Fail-closed vs advisory
 
-### Input Parameters
+Two distinct postures, and neither is universal:
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `operation` | string | Yes | Git operation (push, commit, rebase, etc.) |
-| `args` | array[string] | Yes | Command arguments |
+- **Fail closed** — the tool returns `IsError=true` (or `valid:false`) when
+  it cannot prove the action is safe. Used by the `validate_*` family.
+- **Advisory** — the tool reports a signal the caller decides what to do
+  with; it does not block. Used by `validate_three_strikes`,
+  `check_halt_conditions`, `verify_file_read` and `get_context`.
 
-### Return Value
+Two tools fail **open** by design and should not be relied on as gates:
+`classify_content` (returns `safe:true` when the engine is absent) and
+`check_test_prod_separation` (produces no violations for an unreadable
+file).
 
-```json
-{
-  "violations": [
-    {
-      "rule_id": "GIT-001",
-      "severity": "error",
-      "message": "Force push to main/master is blocked",
-      "category": "git"
-    }
-  ]
-}
-```
+### Sessions
 
-### Example Usage
+Tools taking `session_token` validate it against the in-memory `s.sessions`
+map. That map is **never written by `guardrail_init_session`** — see
+[Core validation](tools/core-validation.md#guardrail_init_session). In
+practice these tools reject freshly issued tokens with `"Invalid session
+token"`.
 
-**Request (Force Push Blocked):**
-```json
-{
-  "tool": "guardrail_validate_git_operation",
-  "arguments": {
-    "operation": "push",
-    "args": ["--force", "origin", "main"]
-  }
-}
-```
+### Security posture
 
-**Response:**
-```json
-{
-  "violations": [
-    {
-      "rule_id": "GIT-001",
-      "severity": "error",
-      "message": "Force push to main/master is blocked",
-      "category": "git"
-    }
-  ]
-}
-```
+`guardrail_project_delete` and `guardrail_team_config_update` are destructive
+and run with no authentication beyond the bearer token, no backup and no
+audit trail. `guardrail_team_*` handlers contain no RBAC at all. Treat MCP
+bearer auth as the only access control on this server.
 
-**Request (Safe Operation):**
-```json
-{
-  "tool": "guardrail_validate_git_operation",
-  "arguments": {
-    "operation": "push",
-    "args": ["origin", "feature-branch"]
-  }
-}
-```
+## Related
 
-**Response:**
-```json
-{
-  "violations": []
-}
-```
-
-### Validated Rule Categories
-
-| Category | Rules | Severity Range |
-|----------|-------|----------------|
-| git | GIT-001 to GIT-006 | error, warning |
-
----
-
-## guardrail_validate_file_edit
-
-Validates file edits for security and safety compliance.
-
-### Description
-Multi-purpose validation tool checking file paths, content changes, and security patterns in edits.
-
-### Input Parameters
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `path` | string | Yes | File path being edited |
-| `content` | string | Yes | New file content |
-| `original_content` | string | No | Previous content (for diff analysis) |
-
-### Return Value
-
-```json
-{
-  "violations": [
-    {
-      "rule_id": "API-001",
-      "severity": "critical",
-      "message": "API key exposure detected",
-      "category": "security"
-    }
-  ]
-}
-```
-
-### Example Usage
-
-**Request (Secret Detection):**
-```json
-{
-  "tool": "guardrail_validate_file_edit",
-  "arguments": {
-    "path": "config.js",
-    "content": "const apiKey = '***REDACTED***';"
-  }
-}
-```
-
-**Response:**
-```json
-{
-  "violations": [
-    {
-      "rule_id": "API-001",
-      "severity": "critical",
-      "message": "API key exposure",
-      "category": "security"
-    }
-  ]
-}
-```
-
-**Request (Protected File):**
-```json
-{
-  "tool": "guardrail_validate_file_edit",
-  "arguments": {
-    "path": ".claude/config.json",
-    "content": "{}",
-    "original_content": "{\"key\": \"value\"}"
-  }
-}
-```
-
-**Response:**
-```json
-{
-  "violations": [
-    {
-      "rule_id": "GENERAL-001",
-      "severity": "error",
-      "message": "Cannot modify protected files (.claude/, docs/, .md files)",
-      "category": "general"
-    }
-  ]
-}
-```
-
-### Validated Rule Categories
-
-| Category | Rules | Purpose |
-|----------|-------|---------|
-| file_edit | GENERAL-001 | Protected path patterns |
-| content | CODE-xxx | Code security patterns |
-| edit | GIT-xxx | Git-related content |
-| security | API-xxx, DB-xxx, CONT-xxx, CFG-xxx | Security credentials |
-
----
-
-## Validation Engine Features
-
-### Caching
-- **TTL:** 30 seconds
-- **Scope:** Rule patterns cached to reduce database load
-- **Invalidation:** Automatic after TTL expires
-
-### Severity Levels
-
-| Level | Color | Action |
-|-------|-------|--------|
-| critical | Red | Blocks operation |
-| error | Orange | Blocks operation |
-| warning | Yellow | Warns, allows with confirmation |
-| info | Blue | Informational only |
-
-### Pattern Matching
-- **Engine:** Go regexp package
-- **Flags:** Case-insensitive (?i) by default
-- **Validation:** Pre-compiled for performance
-
----
-
-## Tool Selection Guide
-
-### Use `guardrail_validate_bash` when:
-- Executing shell commands via Bash tool
-- Running system commands
-- Processing user-provided command strings
-
-### Use `guardrail_validate_git_operation` when:
-- Performing git push operations
-- Executing git commands with arguments
-- Automating git workflows
-
-### Use `guardrail_validate_file_edit` when:
-- Writing to files
-- Modifying configuration files
-- Processing file uploads
-- Checking code for secrets before commit
-
----
-
-## Related Documentation
-
-| Document | Purpose |
-|----------|---------|
-| [RULES_INDEX_MAP.md](../../index-map.md) | Complete rule reference |
-| [RULE_PATTERNS_GUIDE.md](../rules/writing-rules.md) | Writing custom patterns |
-| [AGENT_GUARDRAILS.md](../getting-started/agent-guardrails.md) | Main guardrails guide |
+- [Team tools](../teams/team-tools.md)
+- [Architecture](../architecture/system-architecture.md)
+- [Security audit — API](../security/security-audit-api.md)

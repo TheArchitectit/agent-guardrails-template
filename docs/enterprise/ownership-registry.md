@@ -15,18 +15,17 @@
 
 ## Initial ownership (sample)
 
-- docs/AGENT_GUARDRAILS.md — owner: TBD — cadence: Quarterly
-- docs/TESTING_VALIDATION.md — owner: TBD — cadence: Monthly
-- docs/INFRASTRUCTURE_STANDARDS.md — owner: TBD — cadence: Quarterly
-- docs/OPERATIONAL_PATTERNS.md — owner: TBD — cadence: Quarterly
-- docs/workflows/AGENT_EXECUTION.md — owner: TBD — cadence: Monthly
-- docs/workflows/AGENT_REVIEW_PROTOCOL.md — owner: TBD — cadence: Monthly
-- docs/workflows/INDEX.md — owner: TBD — cadence: Monthly
-- docs/standards/DEPENDENCY_GOVERNANCE.md — owner: TBD — cadence: Quarterly
-- docs/game-design/2026_GAME_DESIGN.md — owner: TBD — cadence: Semi-Annual
-- docs/ui-ux/2026_UI_UX_STANDARD.md — owner: TBD — cadence: Quarterly
-- docs/accessibility/ACCESSIBILITY_GUIDE.md — owner: TBD — cadence: Quarterly
-- docs/spatial/SPATIAL_COMPUTING_UI.md — owner: Kai Nakamura, XR/Spatial Lead — cadence: Quarterly
+- [docs/getting-started/agent-guardrails.md](../getting-started/agent-guardrails.md) — owner: TBD — cadence: Quarterly
+- [docs/workflows/testing-validation.md](../workflows/testing-validation.md) — owner: TBD — cadence: Monthly
+- [docs/standards/infrastructure-standards.md](../standards/infrastructure-standards.md) — owner: TBD — cadence: Quarterly
+- [docs/standards/operational-patterns.md](../standards/operational-patterns.md) — owner: TBD — cadence: Quarterly
+- [docs/workflows/agent-execution.md](../workflows/agent-execution.md) — owner: TBD — cadence: Monthly
+- [docs/workflows/agent-review-protocol.md](../workflows/agent-review-protocol.md) — owner: TBD — cadence: Monthly
+- [docs/workflows/INDEX.md](../workflows/INDEX.md) — owner: TBD — cadence: Monthly
+- [docs/standards/dependency-governance.md](../standards/dependency-governance.md) — owner: TBD — cadence: Quarterly
+- [docs/ui-ux/ui-ux-standard.md](../ui-ux/ui-ux-standard.md) — owner: TBD — cadence: Quarterly
+- [docs/accessibility/accessibility-guide.md](../accessibility/accessibility-guide.md) — owner: TBD — cadence: Quarterly
+- [docs/spatial/spatial-computing-ui.md](../spatial/spatial-computing-ui.md) — owner: Kai Nakamura, XR/Spatial Lead — cadence: Quarterly
 
 ## Process for updates
 

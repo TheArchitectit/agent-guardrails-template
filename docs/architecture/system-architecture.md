@@ -48,7 +48,7 @@ flowchart TB
 |-------|---------------|------------|
 | Client | User interface | CLI, IDE extensions, CI/CD |
 | MCP | Protocol handling | Stateless StreamableHTTP server, validation |
-| Tools | Business logic | Team, guardrail, agent operations (35 tools) |
+| Tools | Business logic | Team, guardrail, agent operations (37 core tools) |
 | Backend | Core services | Team manager, rule engine, audit logger |
 | Storage | Persistence | PostgreSQL, Redis, JSON configs |
 

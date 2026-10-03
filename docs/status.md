@@ -127,7 +127,7 @@ Tailscale). Ports are bound to the Tailscale interface by default via
 - Version: v3.4.0
 - Status: ✅ Running (MCP + Web UI healthy)
 - Transport: Stateless StreamableHTTP (`POST /mcp`)
-- Features: Full tool set (35 tools, 11 resources), migrations applied cleanly
+- Features: Full tool set (37 core tools, 11 resources), migrations applied cleanly
 
 ---
 

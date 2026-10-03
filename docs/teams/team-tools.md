@@ -4,7 +4,7 @@
 
 The Team Layout Management system provides MCP tools to initialize, manage, and validate team structures for software development projects. It enforces a standardized 12-team structure across 5 phases of the development lifecycle, ensuring proper governance, phase gates, and role assignments.
 
-These tools are part of the 35 MCP tools and 11 resources exposed by the Agent Guardrails server. They use the Go `team` package (Go 1.25+, BSD-3-Clause licensed) in `mcp-server/internal/team/` to provide real-time team management capabilities through the MCP protocol. Project data is stored in `.teams/{project_name}.json`.
+These tools are part of the 37 core MCP tools and 11 resources exposed by the Agent Guardrails server. They use the Go `team` package (Go 1.25+, BSD-3-Clause licensed) in `mcp-server/internal/team/` to provide real-time team management capabilities through the MCP protocol. Project data is stored in `.teams/{project_name}.json`.
 
 ---
 

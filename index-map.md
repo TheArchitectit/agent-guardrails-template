@@ -23,7 +23,7 @@ For a flat file listing, see [toc.md](toc.md); for an overview, start at the
 
 | Keyword | Document |
 |---------|----------|
-| tools, mcp tools, validation, 35 tools | [mcp-server/tools-reference.md](docs/mcp-server/tools-reference.md) |
+| tools, mcp tools, validation, 37 core tools | [mcp-server/tools-reference.md](docs/mcp-server/tools-reference.md) |
 | api, endpoints, rest | [mcp-server/API.md](mcp-server/api.md) |
 | migration, version upgrade, rollback | [mcp-server/version-migration.md](docs/mcp-server/version-migration.md) |
 | python to go, team manager migration | [mcp-server/python-to-go-migration.md](docs/mcp-server/python-to-go-migration.md) |
