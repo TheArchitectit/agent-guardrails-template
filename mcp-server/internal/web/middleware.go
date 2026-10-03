@@ -52,18 +52,24 @@ func APIKeyAuth(cfg *config.Config) echo.MiddlewareFunc {
 				requestPath == "/web" {
 				return next(c)
 			}
-			// Check for common web file extensions that should be public
-			if strings.HasSuffix(requestPath, ".js") ||
-				strings.HasSuffix(requestPath, ".css") ||
-				strings.HasSuffix(requestPath, ".html") ||
-				strings.HasSuffix(requestPath, ".svg") ||
-				strings.HasSuffix(requestPath, ".png") ||
-				strings.HasSuffix(requestPath, ".jpg") ||
-				strings.HasSuffix(requestPath, ".ico") ||
-				strings.HasSuffix(requestPath, ".woff") ||
-				strings.HasSuffix(requestPath, ".woff2") ||
-				strings.HasSuffix(requestPath, ".ttf") {
-				return next(c)
+			// Static assets are public, but only when genuinely fetched as
+			// assets. Both guards are load-bearing: without the method check
+			// and the /api/ exclusion, any request whose path merely *ends*
+			// in ".js" — such as POST /api/ingest/x.js — would skip
+			// authentication entirely.
+			if m := c.Request().Method; (m == http.MethodGet || m == http.MethodHead) && !strings.HasPrefix(requestPath, "/api/") {
+				if strings.HasSuffix(requestPath, ".js") ||
+					strings.HasSuffix(requestPath, ".css") ||
+					strings.HasSuffix(requestPath, ".html") ||
+					strings.HasSuffix(requestPath, ".svg") ||
+					strings.HasSuffix(requestPath, ".png") ||
+					strings.HasSuffix(requestPath, ".jpg") ||
+					strings.HasSuffix(requestPath, ".ico") ||
+					strings.HasSuffix(requestPath, ".woff") ||
+					strings.HasSuffix(requestPath, ".woff2") ||
+					strings.HasSuffix(requestPath, ".ttf") {
+					return next(c)
+				}
 			}
 
 			// Skip read-only API endpoints for public browsing (GET and OPTIONS requests)
@@ -164,18 +170,22 @@ func RateLimitMiddleware(limiter *cache.DistributedRateLimiter, cfg *config.Conf
 				requestPath == "/web" {
 				return next(c)
 			}
-			// Check for common web file extensions that should be public
-			if strings.HasSuffix(requestPath, ".js") ||
-				strings.HasSuffix(requestPath, ".css") ||
-				strings.HasSuffix(requestPath, ".html") ||
-				strings.HasSuffix(requestPath, ".svg") ||
-				strings.HasSuffix(requestPath, ".png") ||
-				strings.HasSuffix(requestPath, ".jpg") ||
-				strings.HasSuffix(requestPath, ".ico") ||
-				strings.HasSuffix(requestPath, ".woff") ||
-				strings.HasSuffix(requestPath, ".woff2") ||
-				strings.HasSuffix(requestPath, ".ttf") {
-				return next(c)
+			// Static assets are public, but only when genuinely fetched as
+			// assets. Same load-bearing guards as APIKeyAuth: a request whose
+			// path merely ends in ".js" must not escape rate limiting.
+			if m := c.Request().Method; (m == http.MethodGet || m == http.MethodHead) && !strings.HasPrefix(requestPath, "/api/") {
+				if strings.HasSuffix(requestPath, ".js") ||
+					strings.HasSuffix(requestPath, ".css") ||
+					strings.HasSuffix(requestPath, ".html") ||
+					strings.HasSuffix(requestPath, ".svg") ||
+					strings.HasSuffix(requestPath, ".png") ||
+					strings.HasSuffix(requestPath, ".jpg") ||
+					strings.HasSuffix(requestPath, ".ico") ||
+					strings.HasSuffix(requestPath, ".woff") ||
+					strings.HasSuffix(requestPath, ".woff2") ||
+					strings.HasSuffix(requestPath, ".ttf") {
+					return next(c)
+				}
 			}
 
 			// Skip read-only API endpoints for public browsing (GET and OPTIONS requests)
@@ -194,12 +204,10 @@ func RateLimitMiddleware(limiter *cache.DistributedRateLimiter, cfg *config.Conf
 				return next(c)
 			}
 
-			// Skip safe write operations for public browsing
-			if method == "POST" && (path == "/api/ingest" ||
-				path == "/api/ingest/sync" ||
-				path == "/api/updates/check") {
-				return next(c)
-			}
+			// Write endpoints are deliberately NOT skipped here. /api/ingest
+			// and /api/updates/check are the most expensive handlers in the
+			// server; exempting them let any caller issue them without limit,
+			// which is the resource-exhaustion vector closed in APIKeyAuth.
 
 			// Determine rate limit based on endpoint and key type
 			var limit int
