@@ -53,9 +53,7 @@ func (s *MCPServer) handleValidateProductionFirst(ctx context.Context, args map[
 	codeType := models.CodeType(codeTypeStr)
 
 	// Validate session exists
-	s.sessionsMu.RLock()
-	_, exists := s.sessions[sessionToken]
-	s.sessionsMu.RUnlock()
+	exists := s.sessionValid(sessionToken)
 
 	if !exists {
 		result := models.ProductionCodeValidationResult{
@@ -162,9 +160,7 @@ func (s *MCPServer) handleDetectFeatureCreep(ctx context.Context, args map[strin
 	}
 
 	// Validate session exists
-	s.sessionsMu.RLock()
-	_, exists := s.sessions[sessionToken]
-	s.sessionsMu.RUnlock()
+	exists := s.sessionValid(sessionToken)
 
 	if !exists {
 		result := models.FeatureCreepDetectionResult{

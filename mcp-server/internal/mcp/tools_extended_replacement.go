@@ -39,9 +39,7 @@ func (s *MCPServer) handleVerifyFixesIntact(ctx context.Context, args map[string
 	}
 
 	// Validate session exists
-	s.sessionsMu.RLock()
-	_, exists := s.sessions[sessionToken]
-	s.sessionsMu.RUnlock()
+	exists := s.sessionValid(sessionToken)
 
 	if !exists {
 		result := models.FixVerificationResult{
@@ -254,9 +252,7 @@ func (s *MCPServer) handleValidateExactReplacement(ctx context.Context, args map
 	}
 
 	// Validate session exists
-	s.sessionsMu.RLock()
-	_, exists := s.sessions[sessionToken]
-	s.sessionsMu.RUnlock()
+	exists := s.sessionValid(sessionToken)
 
 	if !exists {
 		result := models.ExactReplacementValidationResult{

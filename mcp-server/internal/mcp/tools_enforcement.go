@@ -28,9 +28,7 @@ func (s *MCPServer) handleLogViolation(ctx context.Context, args map[string]inte
 	}
 
 	// Validate session
-	s.sessionsMu.RLock()
-	session, exists := s.sessions[sessionToken]
-	s.sessionsMu.RUnlock()
+	session, exists := s.lookupSession(sessionToken)
 
 	if !exists {
 		return &mcp.CallToolResult{

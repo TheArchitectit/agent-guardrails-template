@@ -33,9 +33,7 @@ func (s *MCPServer) handleVerifyFileRead(ctx context.Context, args map[string]in
 	}
 
 	// Validate session exists
-	s.sessionsMu.RLock()
-	session, exists := s.sessions[sessionToken]
-	s.sessionsMu.RUnlock()
+	session, exists := s.lookupSession(sessionToken)
 
 	if !exists {
 		result := models.FileReadVerificationResult{
@@ -101,9 +99,7 @@ func (s *MCPServer) handleRecordFileRead(ctx context.Context, args map[string]in
 	}
 
 	// Validate session exists
-	s.sessionsMu.RLock()
-	_, exists := s.sessions[sessionToken]
-	s.sessionsMu.RUnlock()
+	exists := s.sessionValid(sessionToken)
 
 	if !exists {
 		return &mcp.CallToolResult{
@@ -160,9 +156,7 @@ func (s *MCPServer) handleRecordAttempt(ctx context.Context, args map[string]int
 	}
 
 	// Validate session exists
-	s.sessionsMu.RLock()
-	_, exists := s.sessions[sessionToken]
-	s.sessionsMu.RUnlock()
+	exists := s.sessionValid(sessionToken)
 
 	if !exists {
 		return &mcp.CallToolResult{
@@ -230,9 +224,7 @@ func (s *MCPServer) handleValidateThreeStrikes(ctx context.Context, args map[str
 	}
 
 	// Validate session exists
-	s.sessionsMu.RLock()
-	_, exists := s.sessions[sessionToken]
-	s.sessionsMu.RUnlock()
+	exists := s.sessionValid(sessionToken)
 
 	if !exists {
 		return &mcp.CallToolResult{
@@ -309,9 +301,7 @@ func (s *MCPServer) handleResetAttempts(ctx context.Context, args map[string]int
 	}
 
 	// Validate session exists
-	s.sessionsMu.RLock()
-	_, exists := s.sessions[sessionToken]
-	s.sessionsMu.RUnlock()
+	exists := s.sessionValid(sessionToken)
 
 	if !exists {
 		return &mcp.CallToolResult{

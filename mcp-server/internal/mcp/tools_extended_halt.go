@@ -37,9 +37,7 @@ func (s *MCPServer) handleCheckHaltConditions(ctx context.Context, args map[stri
 	}
 
 	// Validate session exists
-	s.sessionsMu.RLock()
-	_, exists := s.sessions[sessionToken]
-	s.sessionsMu.RUnlock()
+	exists := s.sessionValid(sessionToken)
 
 	if !exists {
 		return &mcp.CallToolResult{
@@ -192,9 +190,7 @@ func (s *MCPServer) handleRecordHalt(ctx context.Context, args map[string]interf
 	}
 
 	// Validate session exists
-	s.sessionsMu.RLock()
-	_, exists := s.sessions[sessionToken]
-	s.sessionsMu.RUnlock()
+	exists := s.sessionValid(sessionToken)
 
 	if !exists {
 		return &mcp.CallToolResult{
@@ -268,9 +264,7 @@ func (s *MCPServer) handleAcknowledgeHalt(ctx context.Context, args map[string]i
 	}
 
 	// Validate session exists
-	s.sessionsMu.RLock()
-	_, exists := s.sessions[sessionToken]
-	s.sessionsMu.RUnlock()
+	exists := s.sessionValid(sessionToken)
 
 	if !exists {
 		return &mcp.CallToolResult{

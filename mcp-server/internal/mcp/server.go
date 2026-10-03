@@ -276,6 +276,49 @@ func (s *MCPServer) handleToolCall(ctx context.Context, name string, args map[st
 // buildToolResult removed — use the version in tools_extended.go
 // which takes (result interface{}, isError bool)
 
+// sessionTTL bounds how long a session issued by guardrail_init_session
+// remains valid.
+const sessionTTL = 8 * time.Hour
+
+// lookupSession returns the session for a token, treating an expired session
+// as absent. This is the single place expiry is enforced, so every tool that
+// validates a session token agrees on the answer.
+func (s *MCPServer) lookupSession(token string) (*models.Session, bool) {
+	s.sessionsMu.RLock()
+	defer s.sessionsMu.RUnlock()
+
+	session, ok := s.sessions[token]
+	if !ok {
+		return nil, false
+	}
+	if !session.ExpiresAt.IsZero() && time.Now().After(session.ExpiresAt) {
+		return nil, false
+	}
+	return session, true
+}
+
+// sessionValid reports whether a token refers to a live session.
+func (s *MCPServer) sessionValid(token string) bool {
+	_, ok := s.lookupSession(token)
+	return ok
+}
+
+// registerSession records a newly issued session and evicts expired ones so
+// the map does not grow without bound.
+func (s *MCPServer) registerSession(session *models.Session) {
+	now := time.Now()
+
+	s.sessionsMu.Lock()
+	defer s.sessionsMu.Unlock()
+
+	for token, existing := range s.sessions {
+		if !existing.ExpiresAt.IsZero() && now.After(existing.ExpiresAt) {
+			delete(s.sessions, token)
+		}
+	}
+	s.sessions[session.Token] = session
+}
+
 func (s *MCPServer) handleInitSession(ctx context.Context, args map[string]interface{}) (*mcp.CallToolResult, error) {
 	userID, _ := args["user_id"].(string)
 	env, _ := args["environment"].(string)
@@ -288,11 +331,22 @@ func (s *MCPServer) handleInitSession(ctx context.Context, args map[string]inter
 	}
 	sessionID := hex.EncodeToString(token)
 
+	now := time.Now()
+	// Register the token before returning it. Nothing used to write to this
+	// map, so every tool that validates session_token against it rejected
+	// tokens issued here as invalid — making the read-before-edit flow and
+	// the whole halt/attempt family unusable.
+	s.registerSession(&models.Session{
+		Token:     sessionID,
+		CreatedAt: now,
+		ExpiresAt: now.Add(sessionTTL),
+	})
+
 	result := models.SessionInfo{
 		SessionID:   sessionID,
 		UserID:      userID,
 		Environment: env,
-		StartTime:   time.Now(),
+		StartTime:   now,
 	}
 
 	return buildToolResult(result, false)
