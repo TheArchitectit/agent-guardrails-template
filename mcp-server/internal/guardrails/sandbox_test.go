@@ -4,12 +4,23 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"os/exec"
 	"strings"
 	"testing"
 	"time"
 )
 
+// requireSh skips tests whose commands need a POSIX shell; Windows hosts
+// without sh cannot run any sandbox execution path.
+func requireSh(t *testing.T) {
+	t.Helper()
+	if _, err := exec.LookPath("sh"); err != nil {
+		t.Skip("sh not available on this host")
+	}
+}
+
 func TestSandboxManager_Execute_L0(t *testing.T) {
+	requireSh(t)
 	mgr := NewSandboxManager(nil, slog.Default())
 	ctx := context.Background()
 
@@ -38,6 +49,7 @@ func TestSandboxManager_Execute_L0(t *testing.T) {
 }
 
 func TestSandboxManager_Timeout(t *testing.T) {
+	requireSh(t)
 	mgr := NewSandboxManager(nil, slog.Default())
 	ctx := context.Background()
 
@@ -53,27 +65,40 @@ func TestSandboxManager_Timeout(t *testing.T) {
 }
 
 func TestSandboxManager_Fallback(t *testing.T) {
+	requireSh(t)
 	mgr := NewSandboxManager(nil, slog.Default())
 	ctx := context.Background()
 	limits := DefaultSandboxConfig().GlobalDefaults
 
-	t.Run("L2FallbackToL0", func(t *testing.T) {
+	t.Run("L2RequestNeverSilentlyDowngrades", func(t *testing.T) {
+		// Fail-closed contract: an L2 request either succeeds at the
+		// requested level, succeeds via a genuine setup-time fallback
+		// (runtime missing), or surfaces the downgrade as a violation.
+		// It must never silently execute at a lower isolation level.
 		res, err := mgr.Execute(ctx, "echo 'fallback'", LevelL2, limits)
-		if err != nil {
-			t.Fatalf("execution failed during fallback: %v", err)
+		if err == nil {
+			if res == nil {
+				t.Fatal("nil result with nil error")
+			}
+			if res.ActualIsolationLvl == LevelL2 {
+				t.Log("L2 runtime available; executed as requested")
+			} else {
+				t.Logf("setup fallback to %s (allowed: runtime unavailable before command start)", res.ActualIsolationLvl)
+			}
+			return
 		}
-		if res == nil {
-			t.Fatal("result is nil")
+		// A lower-level run that itself failed is not a silent downgrade;
+		// only a lower-level run that SUCCEEDED must carry a violation.
+		if res != nil && res.ExitCode == 0 && res.ActualIsolationLvl < LevelL2 && !errors.Is(err, ErrSandboxViolation) {
+			t.Errorf("executed successfully at %s after L2 failure without ErrSandboxViolation (silent downgrade): %v",
+				res.ActualIsolationLvl, err)
 		}
-		if res.ActualIsolationLvl == LevelL2 {
-			t.Log("L2 was actually available")
-		} else {
-			t.Logf("Fell back to %s as expected", res.ActualIsolationLvl)
-		}
+		t.Logf("fail-closed as designed: %v", err)
 	})
 }
 
 func TestSandboxManager_ViolationDetection(t *testing.T) {
+	requireSh(t)
 	mgr := NewSandboxManager(nil, slog.Default())
 	ctx := context.Background()
 	limits := DefaultSandboxConfig().GlobalDefaults
@@ -168,6 +193,7 @@ func TestSandboxManager_FailClosedNoDowngrade(t *testing.T) {
 }
 
 func TestSandboxManager_BashViolationDetection(t *testing.T) {
+	requireSh(t)
 	mgr := NewSandboxManager(nil, slog.Default())
 	ctx := context.Background()
 	limits := DefaultSandboxConfig().GlobalDefaults
@@ -229,6 +255,7 @@ func TestResourceLimitsDefaults(t *testing.T) {
 }
 
 func TestExecutionTimeTracked(t *testing.T) {
+	requireSh(t)
 	mgr := NewSandboxManager(nil, slog.Default())
 	ctx := context.Background()
 	limits := DefaultSandboxConfig().GlobalDefaults

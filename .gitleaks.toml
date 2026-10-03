@@ -26,10 +26,8 @@ paths = [
 regexes = [
   # AWS documentation example key (used in AWS's own docs worldwide)
   '''AKIAIOSFODNN7EXAMPLE''',
-  # Documentation examples showing what a hardcoded secret looks like
-  '''***REDACTED***''',
+  # Placeholder left by the history-redaction pass (valid literal regex)
   '''<REDACTED-ROTATED>''',
-  '''***REDACTED***''',
   # Truncated illustrative JWT in docs/plans/MCP_SERVER_PLAN.md
   '''eyJhbGciOiJIUzI1NiIs''',
   # Fake example API keys from older deployment docs
