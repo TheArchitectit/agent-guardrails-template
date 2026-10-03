@@ -30,20 +30,20 @@ ACTION: Write to TARGET_REPO/CLAUDE.md
 ACTION: Read .claudeignore from this template
 ACTION: Write to TARGET_REPO/.claudeignore
 
-STEP 2: Copy AGENT_GUARDRAILS.md
+STEP 2: Copy the guardrails overview
 ─────────────────────────────────────────────
-ACTION: Read docs/AGENT_GUARDRAILS.md from this template
+ACTION: Read docs/getting-started/agent-guardrails.md from this template
 ACTION: Write to TARGET_REPO/docs/AGENT_GUARDRAILS.md
 
 STEP 3: Copy Sprint Framework
 ─────────────────────────────────────────────
-ACTION: Read docs/sprints/SPRINT_TEMPLATE.md from this template
+ACTION: Read docs/archive/sprints/SPRINT_TEMPLATE.md from this template
 ACTION: Write to TARGET_REPO/docs/sprints/SPRINT_TEMPLATE.md
 
-ACTION: Read docs/sprints/SPRINT_GUIDE.md from this template
+ACTION: Read docs/archive/sprints/SPRINT_GUIDE.md from this template
 ACTION: Write to TARGET_REPO/docs/sprints/SPRINT_GUIDE.md
 
-ACTION: Read docs/sprints/INDEX.md from this template
+ACTION: Read docs/archive/sprints/INDEX.md from this template
 ACTION: Write to TARGET_REPO/docs/sprints/INDEX.md
 
 STEP 4: Update target README.md

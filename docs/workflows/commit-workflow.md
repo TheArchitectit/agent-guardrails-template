@@ -298,7 +298,7 @@ COMMIT
 [MCP CHECKPOINT: after-todo-2]
 ```
 
-See [MCP_CHECKPOINTING.md](./MCP_CHECKPOINTING.md) for details.
+See [mcp-checkpointing.md](./mcp-checkpointing.md) for details.
 
 ---
 
