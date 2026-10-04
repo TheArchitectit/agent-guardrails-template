@@ -50,6 +50,8 @@ jobs:
 
       - name: Run Go tests with race detection
         working-directory: mcp-server
+        env:
+          CGO_ENABLED: "1"
         run: go test ./... -v -race
 
       - name: Build MCP server
