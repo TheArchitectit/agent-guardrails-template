@@ -9,6 +9,7 @@ Design specifications and change proposals for the guardrails MCP server.
 | [11-authorization-scopes-and-roles.md](11-authorization-scopes-and-roles.md) | Proposed intersection of scoped API keys and named roles; migration plan |
 | [12-web-exposure-boundary.md](12-web-exposure-boundary.md) | Public routes, CORS, trusted proxies, and deployment exposure profiles |
 | [13-webhook-ssrf-hardening.md](13-webhook-ssrf-hardening.md) | Delivery-time DNS pinning, redirect policy, and bounded webhook egress |
+| [14-optional-oap-guardrail-checker/spec.md](14-optional-oap-guardrail-checker/spec.md) | Conditional OAP checker boundary; no identity or effect authority |
 | [AUTH-01-mcp-endpoint-auth.md](AUTH-01-mcp-endpoint-auth.md) | Bearer authentication on `/mcp` — implemented and merged |
 | [guardrail-gaps-2026/index.md](guardrail-gaps-2026/index.md) | Six gap-analysis specs vs 2026 AI safety systems |
 | [07-versioned-policy-pack-governance.md](07-versioned-policy-pack-governance.md) | Proposed immutable policy-pack resolution, overlays, trust boundaries, and lock records |

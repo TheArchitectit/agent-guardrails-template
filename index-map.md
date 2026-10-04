@@ -142,6 +142,7 @@ safety guardrail systems.
 | FastMCP parity, MCP prompts, resources, progress, protocol tests | [specs/10-mcp-protocol-and-fastmcp-parity.md](docs/specs/10-mcp-protocol-and-fastmcp-parity.md) |
 | public routes, CORS origins, trusted proxy, exposure profiles, bind address | [specs/12-web-exposure-boundary.md](docs/specs/12-web-exposure-boundary.md) |
 | webhook SSRF, DNS rebinding, pinned resolution, redirects, safe egress | [specs/13-webhook-ssrf-hardening.md](docs/specs/13-webhook-ssrf-hardening.md) |
+| optional OAP checker, host context, guardrail evidence, no effect authority | [specs/14-optional-oap-guardrail-checker/spec.md](docs/specs/14-optional-oap-guardrail-checker/spec.md) |
 
 ## Reboot
 

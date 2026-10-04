@@ -256,6 +256,9 @@ achieved phase and must not use the final-system claim before this global gate.
 ## 6. Sequencing constraints
 
 - Do Phase 0 before exposing new destructive or outbound-network tools.
+- Treat `14-optional-oap-guardrail-checker` as conditional integration work:
+  OAP-native identity/action/effect enforcement and a second real consumer must
+  exist before implementation; Guardrails evidence never authorizes a host effect.
 - Do Phase 1 before adding further MCP tools; otherwise schema drift grows.
 - Do Phase 2 per capability before claiming protection; do not wait for every
   library to be wired before fixing a specific high-value path.
