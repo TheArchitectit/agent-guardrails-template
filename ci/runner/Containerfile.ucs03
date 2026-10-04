@@ -1,0 +1,10 @@
+# UCS03 Podman runner for trusted-main validation.
+# Keep the GitHub Actions runner base pinned; CGO is required by `go test -race`
+# and by the server's SQLite-backed packages.
+FROM ghcr.io/actions/actions-runner@sha256:5036480998280bb21e32ade9fe1b02b493861ac314b62ba1aea320b94f56ec97
+
+USER root
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends build-essential \
+    && rm -rf /var/lib/apt/lists/*
+USER runner

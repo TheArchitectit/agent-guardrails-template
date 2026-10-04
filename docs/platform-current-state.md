@@ -208,10 +208,16 @@ client/server pair; label all others experimental or illustrative.
 
 ### CI workflows currently present
 
-- `team-validation.yml`: fixture-based team validation/status, Python unit
-  tests with coverage upload, `go test ./... -v -race`, Go build, and team-cli
-  build. It does not start Postgres/Redis, run migrations, launch Docker or
-  Podman, or test MCP transport end-to-end.
+- `team-validation.yml`: pull-request and manual validation on GitHub-hosted
+  runners. Runs fixture-based team validation/status, Python unit tests with
+  coverage upload, Go race tests/build, and team-cli build. It does not start
+  Postgres/Redis, run migrations, launch containers, or test MCP transport
+  end-to-end.
+- `team-validation-fleet.yml`: trusted `main` pushes and manual dispatch on
+  the repo-scoped UCS03 rootless-Podman runner (`guardrails-ucs03`). It has a
+  hard `refs/heads/main` guard; pull requests, including forks, remain hosted.
+  The pinned runner base plus GCC definition is versioned at
+  `ci/runner/Containerfile.ucs03`.
 - `secret-validation.yml`: Gitleaks history scan; `.env` files fail, while
   credential-file and hard-coded-secret scans are warning-only.
 - `regression-guard.yml`: invokes regression commands with `|| true`, so those
@@ -230,14 +236,18 @@ GitLab/Jenkins files are copy templates, not active GitHub workflows; they
 contain stale assumptions such as root `requirements.txt` and Go 1.21 versus
 the server module's Go 1.25.5.
 
-All checked-in workflows currently target `ubuntu-latest`; none targets a
-UCS03/fleet runner label. The private `infra-info` runbook identifies this
-repository as public and recommends hosted runners for public repos unless
-there is a specific reason to consume fleet capacity. It does not identify
-this repo as a configured fleet target. A live runner-registration query was
-blocked by GitHub API rate limiting, so a registered-but-unused runner cannot
-be ruled out here. Do not switch workflows to UCS03 without an explicit owner
-decision and runner-registration verification.
+The regular PR/secret/regression workflows stay on `ubuntu-latest`. Trusted
+main validation is now routed to `ucs03-guardrails`, a repo-scoped rootless
+Podman runner with the distinct `guardrails-ucs03` label. It was registered
+and observed online; its first end-to-end workflow run passed. The host-side
+runner image includes GCC for CGO race tests, defined reproducibly in
+`ci/runner/Containerfile.ucs03` and based on a pinned Actions runner digest.
+
+This routing is an explicit owner choice despite this being a public repo.
+Fork pull requests do not run on UCS03, protecting the private fleet network
+from untrusted contribution code. The fleet workflow itself also requires
+`refs/heads/main`, including for manual dispatch. No runner registration token
+or other fleet secret is stored in this repository.
 
 CI green means those particular jobs passed. It does not prove unwired
 subsystems enforce anything, the full client ecosystem interoperates, a
