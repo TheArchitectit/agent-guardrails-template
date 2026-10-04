@@ -34,8 +34,11 @@ jobs:
           python3 scripts/team_manager.py --project example validate-size
           python3 scripts/team_manager.py --project example status
 
+      - name: Install Python test dependencies
+        run: python3 -m pip install pytest pytest-cov
+
       - name: Run Python tests
-        run: python3 -m pytest scripts/ -v
+        run: python3 -m pytest scripts/ -v --cov=scripts --cov-report=xml
 
       - name: Set up Go
         uses: actions/setup-go@v5
