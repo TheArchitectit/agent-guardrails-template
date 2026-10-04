@@ -253,19 +253,33 @@ condition. All are to run in CI under the Phase 0 security gate.
 - **Docs.** `docs/platform-current-state.md` is updated to state the exposure
   contract and the selected profile; the route table here is the review record.
 
-## 6. Open decisions (owner)
+## 6. Open decisions and first-implementation defaults
 
-1. **Final public read set.** Which of the currently-public GET routes must
-   remain anonymous, and for which named consumer? Default proposal: all become
-   `authenticated` (§3.2).
-2. **`/metrics` exposure.** Authenticate, move to a separate internal listener,
-   or keep public only under `local`/`tailnet`?
-3. **`/docs` and `/openapi.yaml`.** Remain public in production, or gated?
-4. **Default deployment profile.** Should the shipped default be `localhost`
-   (safe, may break container reachability) or `public` (reachable, requires
-   hardening)? This determines whether existing deployments must opt in.
-5. **Trusted-proxy default.** Empty (trust none) is assumed; confirm whether any
-   current deployment sits behind a reverse proxy that must be declared.
+[Spec 16 §4](16-authentication-authorization-and-evidence-remediation.md)
+selects the conservative initial profile for implementation: only liveness,
+readiness and version are anonymous operational endpoints; metrics, docs and
+API data require authentication in production; static assets are explicit
+paths, not suffix exemptions; local bind is loopback; production CORS uses
+named origins and forwarded client IP is trusted only from configured proxy
+CIDRs. This is a proposed rollout target, not current behavior. Any required
+anonymous consumer or external bind needs a reviewed exception and negative
+route tests before enabling it.
+
+1. **Public reads:** existing document/rule/stats/project/failure GETs become
+   authenticated by default; only live/ready/version remain anonymous. Any
+   additional anonymous consumer needs a named, reviewed route exception.
+2. **Metrics/docs:** `/metrics`, `/docs` and `/openapi.yaml` require an
+   authenticated principal in production, or a separate restricted internal
+   listener with an authenticated scraper. They are not public by default.
+3. **Default profile:** `local` binds host loopback. Existing container users
+   must opt into a verified isolated bridge or `tailnet`/`public` profile; a
+   failed exposure preflight blocks startup rather than silently widening bind.
+4. **Trusted proxies:** empty by default; forwarded headers are ignored unless
+   the operator explicitly configures a verified CIDR. The `public` proxy
+   profile requires both edge sanitization and backend restriction.
+
+These are proposed implementation defaults. If a real client cannot migrate,
+stop and revise the profile with tests instead of enabling wildcard access.
 
 ## 7. Non-goals
 

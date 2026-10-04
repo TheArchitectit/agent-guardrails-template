@@ -28,7 +28,7 @@ Flat listing of documentation in this repo. For keyword lookup, see
 - [halt-conditions-design.md](docs/designs/halt-conditions-design.md)
 
 ### mcp-server/
-- [tools-reference.md](docs/mcp-server/tools-reference.md) — index of all 58 registered tools
+- [tools-reference.md](docs/mcp-server/tools-reference.md) — tool reference; live availability depends on startup configuration
 - [tools/core-validation.md](docs/mcp-server/tools/core-validation.md) — 7 tools: bash / file-edit / git validation, scope, session
 - [tools/workflow-and-git.md](docs/mcp-server/tools/workflow-and-git.md) — 8 tools: commit, push, regression, production-first
 - [tools/halt-attempts-content.md](docs/mcp-server/tools/halt-attempts-content.md) — 12 tools: provenance, three strikes, halt, classification
@@ -55,6 +55,10 @@ Flat listing of documentation in this repo. For keyword lookup, see
 - [AUTH-01-mcp-endpoint-auth.md](docs/specs/AUTH-01-mcp-endpoint-auth.md) — /mcp bearer auth, merged
 - [07-versioned-policy-pack-governance.md](docs/specs/07-versioned-policy-pack-governance.md) — proposed policy distribution and trust contract
 - [08-control-plane-composition-and-evidence.md](docs/specs/08-control-plane-composition-and-evidence.md) — proposed composition and evidence contract
+- [16-authentication-authorization-and-evidence-remediation.md](docs/specs/16-authentication-authorization-and-evidence-remediation.md) — source-audited auth, authorization, audit and evidence remediation
+- [17-deployment-tls-and-secret-boundary.md](docs/specs/17-deployment-tls-and-secret-boundary.md) — proposed deployment and secret-source gates
+- [18-migration-startup-and-readiness.md](docs/specs/18-migration-startup-and-readiness.md) — proposed migration and readiness contract
+- [19-phase0-ci-security-gates.md](docs/specs/19-phase0-ci-security-gates.md) — proposed blocking CI matrix
 - [guardrail-gaps-2026/STATUS.md](docs/specs/guardrail-gaps-2026/STATUS.md) — spec vs shipped code, requirement by requirement
 - [guardrail-gaps-2026/index.md](docs/specs/guardrail-gaps-2026/index.md)
 

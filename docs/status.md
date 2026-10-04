@@ -1,8 +1,14 @@
-# Project Status - Guardrail MCP Server
+# Project Status — Historical Snapshot
 
-**Last Updated:** 2026-08-15
-**Branch:** main
-**Current Version:** v3.4.0
+> **Historical document:** last updated 2026-08-15 for v3.4.0. It is retained
+> for release history, not current implementation status. For the current code,
+> runtime wiring, and security limitations, use
+> [`docs/platform-current-state.md`](platform-current-state.md) and the current
+> specs index.
+
+**Historical snapshot date:** 2026-08-15
+**Historical branch:** main
+**Historical version:** v3.4.0
 
 ---
 

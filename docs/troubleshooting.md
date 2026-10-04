@@ -26,7 +26,8 @@ curl -s -X POST http://localhost:8080/mcp \
 **Expected results:**
 - Health endpoint returns `{"status":"ready",...}`
 - `.teams/` and `.guardrails/` directories exist
-- Tools list returns the 35 guardrail tools
+- Tools list returns the tools available in the current configured startup
+  inventory; the registry maximum is not the live tool count
 
 ---
 

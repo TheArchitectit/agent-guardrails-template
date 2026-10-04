@@ -12,6 +12,9 @@ Design specifications and change proposals for the guardrails MCP server.
 | [14-optional-oap-guardrail-checker/spec.md](14-optional-oap-guardrail-checker/spec.md) | Conditional OAP checker boundary; no identity or effect authority |
 | [15-secure-cross-product-method/spec.md](15-secure-cross-product-method/spec.md) | Cross-Product Evidence Auth v1: identity, signing, replay, both sides |
 | [16-authentication-authorization-and-evidence-remediation.md](16-authentication-authorization-and-evidence-remediation.md) | Proposed source-audited remediation gates for auth, authorization, audit, lifecycle, and evidence; not shipped |
+| [17-deployment-tls-and-secret-boundary.md](17-deployment-tls-and-secret-boundary.md) | Proposed deployment profiles, TLS, secret sources and rotation |
+| [18-migration-startup-and-readiness.md](18-migration-startup-and-readiness.md) | Proposed migration ownership, startup ordering, readiness and outage behavior |
+| [19-phase0-ci-security-gates.md](19-phase0-ci-security-gates.md) | Proposed same-commit blocking CI matrix, UCS03 isolation and negative controls |
 | [AUTH-01-mcp-endpoint-auth.md](AUTH-01-mcp-endpoint-auth.md) | Bearer authentication on `/mcp` — implemented and merged |
 | [guardrail-gaps-2026/index.md](guardrail-gaps-2026/index.md) | Six gap-analysis specs vs 2026 AI safety systems |
 | [07-versioned-policy-pack-governance.md](07-versioned-policy-pack-governance.md) | Proposed immutable policy-pack resolution, overlays, trust boundaries, and lock records |

@@ -165,9 +165,12 @@ lifecycle API exists until one is implemented and protected.
 out-of-band trust roots, direction/audience-scoped identity, detached signed
 canonical evidence, bound subject/tenant/policy/request digests, freshness,
 nonce/idempotency replay state, revocation and separate transport/artifact/host
-policy checks may a cross-product artifact be represented as verified. Test
-both directions; receipts and signatures are not effect grants. Registry HMAC
-verifiers alone do not satisfy this requirement.
+policy checks may a cross-product artifact be represented as verified. The
+first candidate contract is AIGGP's `contract-v2.md`: one strict body/signature
+shape, full key ID and cross-language vectors; both conflicting v1 shapes deny.
+Start DevGate→Go OAP observe-only, and test a reverse direction only after a
+real second consumer exists. Receipts and signatures are not effect grants.
+Registry HMAC verifiers alone do not satisfy this requirement.
 
 - **WHEN** a signed artifact is altered, replayed, expired, wrong-audience,
   wrong-tenant, or signed by a revoked/unknown key **THEN** the receiving product
@@ -221,7 +224,62 @@ an authorization acceptance pass; rerun the full gate in a supported environment
 and investigate any remaining failures before release. Secret Validation was
 not rerun here; its latest reported failure needs the Gate 0 reconciliation.
 
-## 4. Migration and rollback
+## 4. Solo-maintainer decisions for the first implementation
+
+These are proposed implementation defaults chosen by the repository owner to
+unblock a bounded executor. They do not state that enforcement has shipped.
+Changes to these defaults require a new reviewed spec revision and negative
+tests, not a runtime permissive fallback.
+
+- **Role/scope matrix:** `reader` can read authenticated, project-scoped data;
+  `developer` can run validation and non-destructive project-owned writes but
+  cannot assign team membership, change security policy, force agent state or
+  delete projects; `security-operator` can change policy only with a separate
+  `policy:write` credential scope and cannot issue keys, assign roles or force
+  state; `administrator` needs a matching admin key scope, explicit resource
+  grant, confirmation where specified and durable audit for destructive/admin
+  effects. An empty/unknown scope, role or resource denies. A role never widens
+  a key scope; a key never widens a role.
+- **Legacy mapping:** `MCP_API_KEY` is limited to named read/validate MCP tools;
+  `IDE_API_KEY` to named IDE validation routes. Neither may invoke mutations,
+  resources containing config/secrets, team assignment, forced state or admin
+  tools. A shared legacy key represents one *legacy workload*, not individual
+  humans. Operators migrate each consumer to a distinct registered key before
+  removing the legacy key. The transition lasts at most 30 days after
+  enforcement begins and requires seven consecutive days of zero measured use
+  before removal. No implicit admin mapping or perpetual fallback.
+- **Credential authority:** use an operator-owned, versioned local registry
+  initially, not a newly invented online IdP. Validate the complete file and
+  role/scope catalog before listener startup; absent config can enter only a
+  bounded documented legacy mode, while configured-empty/invalid/unreadable
+  config is NOT_READY and refuses protected traffic. Reload replaces the whole
+  verified snapshot atomically; never restores broader prior permissions on
+  failure. No registry bytes or verifier key appear in resource reads/logs.
+- **Lifecycle bounds:** new credentials expire within 90 days; planned rotation
+  overlap is at most 24 hours; revocation and emergency disable must deny new
+  requests on both transports within 60 seconds in the supported deployment.
+  If the file-based reload cannot prove that bound, restart/replace the process
+  before claiming revocation. The keyed verifier secret is generated out of
+  band with at least 256 random bits; a character-count check alone is not an
+  entropy guarantee. Rotate it through a separately tested full registry
+  replacement, never by silently accepting old and new digests indefinitely.
+- **Exposure:** only `GET /health/live`, `GET /health/ready` and `GET /version`
+  are anonymous operational endpoints; safe-method web assets are public on
+  explicit static paths only. `/metrics`, docs, and all API data are
+  authenticated by default in production. Local bind defaults to loopback,
+  production CORS uses explicit origins, and no forwarded client IP is trusted
+  unless the operator supplies a named proxy CIDR. Preflight grants no action.
+- **Audit outage:** security-sensitive mutations and credential/policy changes
+  block before effect if their required audit intent cannot persist. A
+  post-effect log is not equivalent. Remove or replace `guardrail://config`
+  before admitting new peer credentials; no full-config serialization is safe.
+- **Rollout:** begin with negative fixtures on a non-production instance,
+  inventory the real clients, migrate one at a time, and make the above deny
+  rules blocking only after the named tests run on the exact commit. Rollback
+  to the last known-good *restrictive* snapshot; otherwise stop protected
+  traffic. A green UCS03 build alone cannot approve the cutover.
+
+## 5. Migration and rollback
 
 1. Record current clients, public consumers, config sources, and tool/resource
    permissions. Owner signs the matrix and bounds; provision separate scoped

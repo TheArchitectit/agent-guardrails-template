@@ -1,183 +1,122 @@
 # Agent Guardrails Template
 
-> Safety rails for AI agents that write code. Set the boundaries once, let the agent run at full speed.
+Agent Guardrails is a Go MCP/REST service and a set of integration materials for AI-assisted software development. It provides validation tools, advisory agent instructions, policy material, and a web/API surface. It does **not** automatically intercept every action an AI host takes, and a client integration is not blocking unless a tested host hook or CI gate proves that behavior.
 
 [![Version](https://img.shields.io/badge/version-v3.7.1-blue.svg)](./CHANGELOG.md)
-[![Powered by Atlas Cloud](https://www.atlascloud.ai/oss-program/powered-by-atlas-cloud.svg)](https://www.atlascloud.ai/?ref=F6TYTG)
-[![Go](https://img.shields.io/badge/Go-1.25+-00ADD8?style=flat&logo=go&logoColor=white)](https://golang.org)
+[![Go](https://img.shields.io/badge/Go-1.25%2B-00ADD8?style=flat&logo=go&logoColor=white)](https://go.dev/)
 [![License](https://img.shields.io/badge/License-BSD--3--Clause-blue.svg)](./LICENSE)
-[![Sponsor](https://img.shields.io/badge/Sponsor-TheArchitectit-FF69B4?style=flat&logo=github-sponsors)](https://github.com/sponsors/TheArchitectit)
+[![Powered by Atlas Cloud](https://www.atlascloud.ai/oss-program/powered-by-atlas-cloud.svg)](https://www.atlascloud.ai/?ref=F6TYTG)
 
----
+## Current status
 
-If you're letting AI agents write most of your code — and increasingly, you are — you need two things: clear boundaries so the agent knows what's allowed, and enforcement that's actually running when you're not watching. This repo gives you both.
+This is an active engineering repository, not a finished security product. The source-verified baseline is [`docs/platform-current-state.md`](docs/platform-current-state.md). It distinguishes what is wired and tested from what is conditional, library-only, proposed, or not yet connected to a production request path.
 
-The core is a **Go MCP server** that validates every bash command, file edit, and git operation against your rules before it runs. Around that, there's a full set of skills, IDE integrations, and workflows that get the guardrails into your actual development process without a lot of ceremony.
-
-## Quick Start
-
-```bash
-git clone https://github.com/TheArchitectit/agent-guardrails-template.git
-cd agent-guardrails-template
-cp .env.example .env  # Fill in your API keys
-cd mcp-server && make compose-up
-curl http://localhost:8081/health/ready
-```
-
-That's it. The MCP server is live, the web dashboard is at `http://localhost:8081/web`, and the API explorer is at `http://localhost:8081/docs`.
-
-For applying to an existing repo, see [how-to-apply.md](docs/getting-started/how-to-apply.md). For the 5-minute setup, see [quick-setup.md](docs/getting-started/quick-setup.md).
-
-## Reboot status: what is enforced and what is not
-
-This branch recovers the project from tag v3.7.1 and relabels every claim honestly. Connecting the MCP server to an assistant gives it access to checks. It does not force the assistant to call them.
-
-| Level | Meaning | Status today |
+| Area | Current state | Do not infer |
 |---|---|---|
-| Advisory | The agent can ask. It can also skip. | VS Code + Copilot wiring below |
-| Checked operation | The server verifies an operation it controls. | Server tools exist; per-host evidence not yet recorded |
-| Blocking | Only where a tested hook or wrapper denies. | Not enforced on any host until a test record exists |
+| MCP and REST | Go service with bearer-protected `/mcp`, REST routes, health endpoints, and web UI | The server does not intercept actions an assistant never submits |
+| Validation | Rule-based bash, file, and git validation tools are available | Tool availability is not host-level enforcement |
+| Guardrail engines | Content classification tools exist; some engines require optional runtime configuration | Injection, sandbox, provenance, multi-agent, and compliance libraries are not automatically active protection |
+| Authorization | Credential-to-principal registry groundwork exists | Scope/role/resource intersection is not fully enforced yet |
+| Integrations | Copilot, IDE, Pi, and other client material exists at mixed maturity | Every client/server pair is not yet contract-tested |
+| CI | Hosted PR checks plus trusted-main validation on the repo-scoped UCS03 Podman runner | Green CI does not prove every runtime guardrail is wired |
 
-### Install for VS Code + GitHub Copilot (advisory)
+The tool registry contains a core set plus conditional tools. The registry maximum is not the live startup inventory; configuration and initialization determine what is actually exposed. See the [tool reference](docs/mcp-server/tools-reference.md) and [gap reconciliation](docs/specs/guardrail-gaps-2026/STATUS.md).
 
-```bash
-scripts/guardrails-cli.sh init /path/to/your/project     # adds .vscode/mcp.json and a Copilot instructions addendum
-scripts/guardrails-cli.sh doctor /path/to/your/project   # prints PASS / FAIL / UNKNOWN, never green by default
-scripts/guardrails-cli.sh uninstall /path/to/your/project
+## Product family and responsibility boundaries
+
+This repository is one part of a broader, still-proposed security family:
+
+```text
+Agent Guardrails Template   agent/runtime checks, MCP/REST policy, evidence
+           │
+           │ bounded, signed evidence; never effect authority
+           ▼
+AIGGP / DevGate             repository gates, coherence, CI evidence, runners
+           │
+           │ optional organization-consumer contract
+           ▼
+Go OpenAgentPlatform        native tenant, grant, action and effect authority
+
+Rust radicalopenmcpplatform is a separate MCP/plugin server with its own
+transport, filesystem and plugin-trust boundary. It is not the Go OAP authority.
 ```
 
-The `/mcp` endpoint requires `Authorization: Bearer <MCP_API_KEY>`. See [integrations/copilot](integrations/copilot/README.md), [SECURITY.md](SECURITY.md) and [docs/reboot/FINDINGS.md](docs/reboot/FINDINGS.md).
+The products are not merged by implication. Cross-product evidence is proposed, must bind the exact subject/policy/evaluator context, and never authorizes an OAP effect by itself. See the [system roadmap](docs/specs/09-system-roadmap-and-phase-gates.md), [authorization contract](docs/specs/11-authorization-scopes-and-roles.md), and [cross-product method](docs/specs/15-secure-cross-product-method/spec.md).
 
-## The Four Laws
+## Evaluate the repository locally
 
-These are the backbone. Everything else extends them.
+For source validation, use Go 1.25.5 as declared by `mcp-server/go.mod`:
 
-1. **Read before editing** — Never modify code without reading it first.
-2. **Stay in scope** — Only touch files explicitly authorized.
-3. **Verify before committing** — Test and check all changes.
-4. **Halt when uncertain** — Ask for clarification instead of guessing.
-
-See [four-laws.md](skills/shared-prompts/four-laws.md) and [halt-conditions.md](skills/shared-prompts/halt-conditions.md) for the canonical prompts.
-
-## What's in the Box
-
-**MCP Server** (`mcp-server/`) — Go server with 37 tools, 11 resources, and a stateless StreamableHTTP transport (`POST /mcp`, no session management). Validates bash, file edits, git ops, and commits — and now defends against prompt injection, classifies content against an S1–S15 safety taxonomy, and sandboxes execution across L0–L2 levels. Backed by PostgreSQL 16 and Redis 7. Includes a web UI, OpenAPI 3.1 spec, and 31 REST endpoints including `/api/v1/policy/check` for CI/CD gating.
-
-**IDE Integrations** (`docs/integrations/`) — Native skills and rules for Claude Code, Cursor, OpenCode, Windsurf, and GitHub Copilot. Not generic prompts — each one is tailored to the platform's actual config format.
-
-**Skills** (`skills/shared-prompts/`) — Nine canonical shared prompts covering architecture, error recovery, scope validation, production-first thinking, and vibe coding. The same prompts work across every supported IDE.
-
-**Workflows** (`docs/workflows/`) — Twelve operational procedures: execution, escalation, code review, commit workflow, branch strategy, push safety, regression prevention, rollback, testing, and MCP checkpointing.
-
-**Standards** (`docs/standards/`) — Twenty-five engineering standards covering test/production separation, API specs, dependency governance, logging, rate limiting, retry/degradation, timeouts, operational circuit breakers, and prompting practices.
-
-**Examples** (`examples/`) — Fourteen languages: Go, TypeScript, Rust, Python, Java, Swift, Dart/Flutter, GDScript, Scala, R, C#, C++, PHP, and Ruby. Each demonstrates guardrails patterns in that language's idioms.
-
-## What's New in v3.7
-
-Through the summer we closed the six "2026 guardrail gaps" — the places an AI coding agent could still slip past the rules. Each is a new subsystem in the MCP server, with a design spec under `docs/specs/guardrail-gaps-2026/`:
-
-- **Prompt injection defense (Spec 01)** — a four-layer pipeline (pattern → perplexity → classifier → LLM self-check) that catches injected instructions before they reach your agent, with per-source trust policies.
-- **Semantic content filtering (Spec 02)** — safety classification over an S1–S15 taxonomy (Llama Guard plus two code-specific categories), with policies, thresholds, and overrides per category or rule.
-- **Runtime sandbox isolation (Spec 03)** — three levels: L0 runs in-process, L1 uses `unshare` namespaces, L2 uses rootless podman/docker. CPU, memory, and PID limits, plus network isolation — and when `AllowedHosts` is set, L2 egress goes through a local proxy instead of the open network.
-- **Multi-agent safety policies (Spec 04)** — guardrails for when several agents work the same codebase: scan-and-block or scan-and-warn chains, constraint resolution, and validators for the Four Laws.
-- **Indirect injection / provenance (Spec 05)** — tracks where content came from, decodes obfuscated payloads (ROT13, base64), and decides how much to trust a source.
-- **Regulatory compliance mapping (Spec 06)** — a map from each guardrail feature to the frameworks it helps you satisfy (GDPR, SOC 2, ISO 27001, the EU AI Act, and more).
-
-Balancing all of that is the point: these guardrails run in the background so the agent can move at full speed and you can stop second-guessing everything it does.
-
-## Atlas Cloud (Sponsored)
-
-This project is sponsored by [Atlas Cloud for Open Source](https://www.atlascloud.ai/?ref=F6TYTG) — $50/month in credits across 300+ image, video, audio, 3D, and LLM models. The guardrails' AI-backed checks (content-safety, AI advisors, output validation) can route through Atlas instead of pay-per-use endpoints. See [atlas-cloud.md](docs/integrations/atlas-cloud.md) for setup.
-
-## Project Structure
-
-```
-agent-guardrails-template/
-├── README.md                    ← You are here
-├── index-map.md                ← Keyword navigation (saves 60-80% tokens)
-├── CLAUDE.md                   ← Claude Code context
-├── CHANGELOG.md                ← Release history
-├── CONTRIBUTING.md             ← How to contribute
-├── docker-compose.yml          ← Local dev stack
-├── .github/FUNDING.yml         ← Sponsor this project
-├── docs/
-│   ├── getting-started/        ← Quick setup, apply guide, core rules
-│   ├── integrations/           ← Claude Code, Cursor, OpenCode, Windsurf, Copilot, Atlas
-│   ├── workflows/              ← 12 operational procedures
-│   ├── standards/              ← 25 engineering standards
-│   ├── ai-dev/                 ← AI-assisted dev patterns
-│   ├── security/               ← Security audit guides
-│   ├── enterprise/             ← Enterprise patterns
-│   ├── teams/                  ← Team management
-│   ├── accessibility/          ← WCAG 3.0+ compliance
-│   ├── spatial/                 ← XR/VR/AR patterns
-│   ├── ethical/                 ← Dark pattern prevention
-│   ├── monetization/            ← IAP and economy guardrails
-│   ├── multiplayer/             ← Chat moderation, fairness
-│   ├── analytics/               ← Consent and data minimization
-│   ├── deployment/              ← Cross-platform deployment
-│   ├── ui-ux/                   ← Component standards
-│   ├── advisors/                ← Cost, privacy, resilience
-│   ├── architecture/            ← Architecture decision records
-│   ├── rules/                   ← Rule definitions
-│   ├── state/                   ← State management patterns
-│   ├── generative/              ← Generative asset safety
-│   └── releases/               ← Release archive
-├── mcp-server/                 ← Go MCP server (PostgreSQL + Redis)
-├── pi-extension/                ← Pi coding agent extension
-├── examples/                    ← 14 language implementations
-├── skills/shared-prompts/      ← 9 canonical prompts
-├── scripts/                    ← Setup and utility tools
-├── tests/                      ← Test suite
-├── web/                        ← Web dashboard
-└── ci/                         ← CI/CD configuration
+```sh
+git clone https://github.com/TheArchitectit/agent-guardrails-template.git
+cd agent-guardrails-template/mcp-server
+go test ./...
+go build ./cmd/server
 ```
 
-All documents follow the **500-line max** rule for fast context loading. Use `index-map.md` for keyword-based navigation instead of reading the full tree.
+Some tests require Linux facilities or configured services. Record skipped or environment-specific failures; do not call an incomplete local run green. Running the service requires PostgreSQL, Redis, credentials, and an explicit migration step. The root Compose file is a local-development starting point, not a production deployment: it contains placeholder DB/Redis fallbacks and the application listeners are HTTP paths. Review [deployment and TLS](docs/specs/17-deployment-tls-and-secret-boundary.md), [readiness and migrations](docs/specs/18-migration-startup-and-readiness.md), and [Phase 0 CI gates](docs/specs/19-phase0-ci-security-gates.md) before exposing it.
 
-## Version
+## Advisory client setup
 
-**Current:** v3.7.1 (2026-08-23)
+For Copilot-style advisory wiring into an existing project, from Bash or WSL:
 
-| Version | Date | Highlights |
-|---------|------|------------|
-| **v3.7.1** | 2026-08-23 | README refresh covering the v3.7 guardrail subsystems |
-| **v3.7.0** | 2026-08-23 | Six guardrail subsystems, two QA passes, AllowedHosts egress filtering |
-| **v3.6.0** | 2026-08-22 | Atlas Cloud sponsorship integration, GitHub Sponsors, README rewrite |
-| **v3.5.0** | 2026-08-18 | Interactive bash permission prompts, danger allow-list, catastrophic type-back |
-| **v3.4.0** | 2026-08-15 | Documentation reorganization, game/vision content split to private repos |
-| **v3.3.0** | 2026-08-15 | Stateless StreamableHTTP transport, repo cleanup |
-| **v2.6.0** | 2026-02-15 | Python → Go migration complete |
+```sh
+bash scripts/guardrails-cli.sh init /path/to/project
+bash scripts/guardrails-cli.sh doctor /path/to/project
+```
 
-Full history in [CHANGELOG.md](CHANGELOG.md).
+This writes only the files recorded in the target project's manifest. `doctor` reports `UNKNOWN` when the local server is unavailable. The integration is advisory and does not block an agent. See [Copilot integration](integrations/copilot/README.md) and [how to apply the project](docs/getting-started/how-to-apply.md).
 
-## License
+## Repository layout
+
+| Path | Purpose |
+|---|---|
+| [`mcp-server/`](mcp-server/) | Go MCP/REST service and validation components; separate Go module |
+| [`cmd/team-cli/`](cmd/team-cli/) | Go frontend for the Python team manager; separate module |
+| [`scripts/`](scripts/) | Setup, validation, and team-management utilities |
+| [`integrations/`](integrations/) and [`pi-extension/`](pi-extension/) | Client and host integration material |
+| [`policy-packs/`](policy-packs/) and [`.guardrails/`](.guardrails/) | Policy and prevention-rule inputs; consumers vary by subsystem |
+| [`examples/`](examples/) | Illustrative language examples; verify commands before advertising support |
+| [`site/`](site/) and [`web/`](web/) | Separate site and web UI surfaces |
+| [`docs/`](docs/) | Onboarding, architecture, operations, specifications, audits, and history |
+
+Documentation is intentionally categorized but not physically reorganized in this pass. Use [`index-map.md`](index-map.md) for keyword navigation and [`toc.md`](toc.md) for the complete inventory. Historical and proposed material is labeled; file presence is not implementation evidence.
+
+## Documentation entry points
+
+- [Current platform baseline](docs/platform-current-state.md)
+- [Getting started](docs/getting-started/quick-setup.md)
+- [Apply to an existing repository](docs/getting-started/how-to-apply.md)
+- [MCP tool reference](docs/mcp-server/tools-reference.md)
+- [Architecture](docs/architecture/system-architecture.md)
+- [Roadmap and phase gates](docs/specs/09-system-roadmap-and-phase-gates.md)
+- [Security policy](SECURITY.md)
+- [Contributing](CONTRIBUTING.md)
+- [Keyword index](index-map.md)
+- [Complete file listing](toc.md)
+
+## Shared agent guidance
+
+The [Four Laws](skills/shared-prompts/four-laws.md) and [halt conditions](skills/shared-prompts/halt-conditions.md) describe safe agent behavior. They are workflow guidance, not a substitute for authorization, host enforcement, or a production security boundary.
+
+## Atlas Cloud sponsorship
+
+This project is sponsored by [Atlas Cloud for Open Source](https://www.atlascloud.ai/?ref=F6TYTG) — $50/month in credits across 300+ image, video, audio, 3D, and LLM models. AI-backed checks can route through Atlas instead of pay-per-use endpoints. See [Atlas Cloud setup](docs/integrations/atlas-cloud.md).
+
+## Version and history
+
+The repository baseline is v3.7.1; current `main` includes subsequent security specifications and remediation planning. Treat [`CHANGELOG.md`](CHANGELOG.md) and the source-verified baseline as separate: release notes describe historical releases, while the baseline describes current wiring.
+
+## License and support
 
 BSD-3-Clause — see [LICENSE](LICENSE).
 
-[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-TheArchitectit-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://www.buymeacoffee.com/TheArchitectit)
-
----
-
-Built by [TheArchitectit](https://github.com/TheArchitectit) with AI-assisted development.
-
----
-
-#
-
----
-
-## ☕ Support This Project
-
-If this project helps you, consider [sponsoring on GitHub](https://github.com/sponsors/TheArchitectit). Every donation goes straight back into the work — GPU hardware and cloud compute for AI development, API credits for the agents that build and test these projects, and keeping everything free and open source. As a solo architect shipping on nights and weekends, even a small monthly sponsor makes a real difference.
-
-Help keep this project going — use a referral link below and both of us get credits!
+Built by [TheArchitectit](https://github.com/TheArchitectit) with AI-assisted development. If this project helps you, consider [sponsoring on GitHub](https://github.com/sponsors/TheArchitectit). Support funds development, testing infrastructure, and model/API costs.
 
 | Service | Your Bonus | Details | Referral Code |
-| --------- | ----------- | --------- | --------------- |
-| [**Neuralwatt**](https://portal.neuralwatt.com/auth/register?ref=NW-ROGER-ET3Y) | $5 in credits | Refer a friend — when they use $25 in compute, you both earn $5 in credits | `NW-ROGER-ET3Y` |
-| [**Synthetic**](https://synthetic.new/?referral=UAWqkKQQLFkzMkY) | $10 in credits | Subscribe → both get $10 credit | `UAWqkKQQLFkzMkY` |
-| [**Ozore**](https://ozore.com/?ref=cwe4kdx0) | 50% off first month | AI-ready cloud — code **lundrog50** | `lundrog50` |
+|---|---:|---|---|
+| [**Neuralwatt**](https://portal.neuralwatt.com/auth/register?ref=NW-ROGER-ET3Y) | $5 in credits | Refer a friend; when they use $25 in compute, both earn $5 | `NW-ROGER-ET3Y` |
+| [**Synthetic**](https://synthetic.new/?referral=UAWqkKQQLFkzMkY) | $10 in credits | Subscribe and both receive a $10 credit | `UAWqkKQQLFkzMkY` |
+| [**Ozore**](https://ozore.com/?ref=cwe4kdx0) | 50% off first month | AI-ready cloud; use code `lundrog50` | `lundrog50` |
 
 [![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-TheArchitectit-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://www.buymeacoffee.com/TheArchitectit)

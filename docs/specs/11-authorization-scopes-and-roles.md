@@ -217,24 +217,44 @@ credentials, and whether any developer role may mutate team assignments.
 7. **Rollback:** define how to restore the prior credential set without
    re-enabling unrestricted admin access. Rollback MUST preserve auditability.
 
-## 8. Open decisions
+## 8. Open decisions and first-implementation defaults
 
-1. Confirm the initial role names and operation matrix in §6.
-2. Decide whether authorization data lives in Postgres, signed config, or a
-   hybrid. If config is used, define reload, review and rollback semantics.
-3. Define exact public REST routes and whether protected GET data requires
-   authentication by default.
-4. Define key expiry, rotation overlap, revocation propagation bound, and
-   emergency disable behavior.
-5. Decide whether a migration window may temporarily preserve legacy access;
-   if yes, specify the maximum duration and monitoring threshold.
-6. Define audit-store outage behavior for destructive operations.
+The solo-maintainer proposed choices in
+[Spec 16 §4](16-authentication-authorization-and-evidence-remediation.md)
+answer the initial matrix and migration posture for an executor: no developer
+team-assignment changes, security-operator policy write only under a distinct
+key scope, no implicit legacy administrator, file-backed registry validated
+before startup, 90-day key expiry, at most 24-hour rotation overlap and
+60-second revocation target. These are **implementation targets**, not claims
+that authorization is wired or that production rollout is approved. If a live
+client cannot migrate under them, stop and revise the spec rather than grant a
+silent exception.
+
+For the first implementation, use `reader`, `developer`,
+`security-operator`, and `administrator` with the restrictive matrix in
+Spec 16 §4. Store the initial credential-to-principal and role/scope mapping
+in an operator-owned versioned local registry; validate and atomically replace
+the whole snapshot before use, with no permissive fallback on invalid config.
+Postgres-backed administration is deferred until it has an equally testable
+trust and migration boundary. Public routes and credential bounds are the
+Spec 16 defaults. Legacy acceptance lasts **at most 30 days after enforcement
+is enabled** and requires seven consecutive days of zero observed use before
+removal; an integration that cannot migrate stops rollout rather than extending
+the window silently. Emergency disable must deny new calls within 60 seconds
+by verified reload or process replacement. Destructive/admin operations block
+if required audit persistence fails. These choices are proposed targets and
+require the negative tests in §5 before deployment.
 
 ## 9. Implementation status
 
-**Not implemented.** Current config has static `MCP_API_KEY` and `IDE_API_KEY`
-fields (`mcp-server/internal/config/config.go:78-79`); MCP checks the bearer
-key, web middleware identifies `mcp`/`ide` key types, but no principal/role
-records or permission checks are wired. Team MCP handlers have no RBAC.
-Confirmation flags are intent controls only. This spec must be accepted by the
+**Partial, not authorized.** A keyed-HMAC credential registry now loads
+credential/principal IDs, scopes, expiry and revocation flags
+(`mcp-server/internal/auth/registry.go`), and web/MCP authenticate registered
+keys. But `mcp-server/internal/web/middleware.go:115-130` forwards registered
+calls without scope/role/resource checks; `internal/mcp/server.go:388-415`
+accepts registered and legacy keys without principal context at tool dispatch.
+Invalid configured registries can fall back to legacy access. Static
+`MCP_API_KEY` and `IDE_API_KEY` remain; team MCP handlers have no RBAC.
+Confirmation flags are intent controls only. Spec 16 records the blocking
+audit and ordered remediation. This spec must be accepted by the
 owner before implementing the role matrix and legacy-key migration.

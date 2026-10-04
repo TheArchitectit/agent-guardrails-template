@@ -262,7 +262,16 @@ fixtures; no public DNS or external network access is required.
 6. Update the platform current-state document and webhook operator docs only
    after the tests demonstrate enforcement through the real delivery paths.
 
-## 7. Open decisions (owner)
+## 7. Open decisions and first-implementation defaults
+
+For the first deployment, select **no internal webhook exceptions**, HTTPS
+only, port 443 only, and no redirects. Keep denied configurations for operator
+review but never dial them. The implementation must pin a reviewed IANA IPv4/
+IPv6 special-purpose registry snapshot by version and digest, with a test
+fixture for every denied range; updating it is a reviewed policy change, not
+a live DNS fallback. These are proposed implementation choices, not shipped
+delivery-time enforcement. A deployment requiring an internal destination must
+stop and amend §3.5 before allowing it.
 
 1. Is any internal webhook required? If yes, name the exact deployment use case
    and approve the exact-host/CIDR/port allowlist model in §3.5. Default: no.
@@ -282,4 +291,5 @@ fixtures; no public DNS or external network access is required.
 - General outbound egress firewall, arbitrary URL fetching, or DNS resolver
   infrastructure beyond the webhook egress boundary.
 - Webhook receiver authentication or replay-window design.
-- CI phase-gate wiring, which is specified in Spec 16 (`T37.2.6`).
+- CI phase-gate wiring, specified in
+  [Spec 19](19-phase0-ci-security-gates.md) (`T37.2.6`).
