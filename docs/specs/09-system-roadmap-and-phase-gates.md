@@ -93,7 +93,8 @@ before adding capability surface.
   [`12-web-exposure-boundary.md`](12-web-exposure-boundary.md).
 - Validate webhook destinations at delivery time as well as configuration
   time; define the redirect, DNS-rebinding, IPv4/IPv6, and private-network
-  policy. Configuration-time validation alone is insufficient.
+  policy per [`13-webhook-ssrf-hardening.md`](13-webhook-ssrf-hardening.md).
+  Configuration-time validation alone is insufficient.
 - Confirm session lifetime, expiry enforcement, storage, and revocation
   semantics.
 - Repair the documentation CI checker so code examples, nested Markdown
