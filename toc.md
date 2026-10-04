@@ -47,8 +47,8 @@ Flat listing of documentation in this repo. For keyword lookup, see
 - [09-system-roadmap-and-phase-gates.md](docs/specs/09-system-roadmap-and-phase-gates.md) — master product roadmap and release gates
 - [10-mcp-protocol-and-fastmcp-parity.md](docs/specs/10-mcp-protocol-and-fastmcp-parity.md) — MCP contract/test parity informed by FastMCP
 - [11-authorization-scopes-and-roles.md](docs/specs/11-authorization-scopes-and-roles.md) — scoped API keys intersected with named roles
+- [12-web-exposure-boundary.md](docs/specs/12-web-exposure-boundary.md) — public routes, CORS, trusted proxies, exposure profiles
 - [AUTH-01-mcp-endpoint-auth.md](docs/specs/AUTH-01-mcp-endpoint-auth.md) — /mcp bearer auth, merged
-- [11-authorization-scopes-and-roles.md](docs/specs/11-authorization-scopes-and-roles.md) — proposed key-scope × role authorization contract
 - [07-versioned-policy-pack-governance.md](docs/specs/07-versioned-policy-pack-governance.md) — proposed policy distribution and trust contract
 - [08-control-plane-composition-and-evidence.md](docs/specs/08-control-plane-composition-and-evidence.md) — proposed composition and evidence contract
 - [guardrail-gaps-2026/STATUS.md](docs/specs/guardrail-gaps-2026/STATUS.md) — spec vs shipped code, requirement by requirement

@@ -7,8 +7,8 @@ Design specifications and change proposals for the guardrails MCP server.
 | [09-system-roadmap-and-phase-gates.md](09-system-roadmap-and-phase-gates.md) | Master roadmap: transform the repo into a verified MCP guardrail system |
 | [10-mcp-protocol-and-fastmcp-parity.md](10-mcp-protocol-and-fastmcp-parity.md) | MCP contract/test parity informed by FastMCP implementations |
 | [11-authorization-scopes-and-roles.md](11-authorization-scopes-and-roles.md) | Proposed intersection of scoped API keys and named roles; migration plan |
+| [12-web-exposure-boundary.md](12-web-exposure-boundary.md) | Public routes, CORS, trusted proxies, and deployment exposure profiles |
 | [AUTH-01-mcp-endpoint-auth.md](AUTH-01-mcp-endpoint-auth.md) | Bearer authentication on `/mcp` — implemented and merged |
-| [11-authorization-scopes-and-roles.md](11-authorization-scopes-and-roles.md) | Proposed intersection of scoped API keys and named roles; migration plan |
 | [guardrail-gaps-2026/index.md](guardrail-gaps-2026/index.md) | Six gap-analysis specs vs 2026 AI safety systems |
 | [07-versioned-policy-pack-governance.md](07-versioned-policy-pack-governance.md) | Proposed immutable policy-pack resolution, overlays, trust boundaries, and lock records |
 | [08-control-plane-composition-and-evidence.md](08-control-plane-composition-and-evidence.md) | Proposed component composition, integration states, and replayable evidence |

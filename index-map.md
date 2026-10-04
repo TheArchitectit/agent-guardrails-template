@@ -140,7 +140,7 @@ safety guardrail systems.
 | control plane, component composition, evidence bundle, replay | [specs/08-control-plane-composition-and-evidence.md](docs/specs/08-control-plane-composition-and-evidence.md) |
 | product roadmap, implementation phases, system exit gates | [specs/09-system-roadmap-and-phase-gates.md](docs/specs/09-system-roadmap-and-phase-gates.md) |
 | FastMCP parity, MCP prompts, resources, progress, protocol tests | [specs/10-mcp-protocol-and-fastmcp-parity.md](docs/specs/10-mcp-protocol-and-fastmcp-parity.md) |
-| authorization, RBAC, roles, scoped API keys, permissions | [specs/11-authorization-scopes-and-roles.md](docs/specs/11-authorization-scopes-and-roles.md) |
+| public routes, CORS origins, trusted proxy, exposure profiles, bind address | [specs/12-web-exposure-boundary.md](docs/specs/12-web-exposure-boundary.md) |
 
 ## Reboot
 

@@ -88,7 +88,9 @@ before adding capability surface.
   mutations, config updates, and deletes).
 - Close remaining API auth bypasses, narrow CORS to explicit origins, remove
   obsolete security headers, and use a non-truncated keyed digest for API-key
-  identifiers where identifiers are needed.
+  identifiers where identifiers are needed. Declare the public/authenticated
+  exposure contract, trusted-proxy stance, and deployment profiles per
+  [`12-web-exposure-boundary.md`](12-web-exposure-boundary.md).
 - Validate webhook destinations at delivery time as well as configuration
   time; define the redirect, DNS-rebinding, IPv4/IPv6, and private-network
   policy. Configuration-time validation alone is insufficient.
