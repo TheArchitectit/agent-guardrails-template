@@ -99,6 +99,12 @@ See [advisors/INDEX.md](docs/advisors/INDEX.md) — cost, privacy, resilience.
 | analytics, consent, a/b testing | [analytics/analytics-ethics.md](docs/analytics/analytics-ethics.md) |
 | deployment, cross-platform, app store | [deployment/cross-platform-deployment.md](docs/deployment/cross-platform-deployment.md) |
 
+## Platform baseline
+
+| Keyword | Document |
+|---------|----------|
+| current platform, architecture, runtime, what's actually wired | [platform-current-state.md](docs/platform-current-state.md) |
+
 ## Operations
 
 | Keyword | Document |

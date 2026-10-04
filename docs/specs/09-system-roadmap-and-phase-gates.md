@@ -31,8 +31,10 @@ The product should provide:
 
 ## 2. Current baseline (audit snapshot)
 
-The following are audit findings, not desired end state. Re-verify before
-starting each phase because implementation may change.
+The source-verified platform baseline is maintained in
+[`docs/platform-current-state.md`](../platform-current-state.md). This section
+summarizes the material starting conditions; re-verify them before starting
+each phase because implementation may change.
 
 - The MCP server has 37 core tools and up to 21 conditionally registered
   tools. Published schemas and handlers disagree on required names and types

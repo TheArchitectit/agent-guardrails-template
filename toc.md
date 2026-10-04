@@ -7,6 +7,7 @@ Flat listing of documentation in this repo. For keyword lookup, see
 ## Root
 
 - [README.md](README.md) — project overview
+- [platform-current-state.md](docs/platform-current-state.md) — source-verified platform baseline
 - [CHANGELOG.md](CHANGELOG.md) — release history
 - [CONTRIBUTING.md](CONTRIBUTING.md) — how to contribute
 - [CLAUDE.md](CLAUDE.md) — Claude Code context
