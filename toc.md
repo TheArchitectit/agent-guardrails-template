@@ -50,6 +50,7 @@ Flat listing of documentation in this repo. For keyword lookup, see
 - [12-web-exposure-boundary.md](docs/specs/12-web-exposure-boundary.md) — public routes, CORS, trusted proxies, exposure profiles
 - [13-webhook-ssrf-hardening.md](docs/specs/13-webhook-ssrf-hardening.md) — delivery-time DNS validation, pinning, and redirect policy
 - [14-optional-oap-guardrail-checker/spec.md](docs/specs/14-optional-oap-guardrail-checker/spec.md) — conditional OAP checker; no identity/effect authority
+- [15-secure-cross-product-method/spec.md](docs/specs/15-secure-cross-product-method/spec.md) — Cross-Product Evidence Auth v1 for both sides
 - [AUTH-01-mcp-endpoint-auth.md](docs/specs/AUTH-01-mcp-endpoint-auth.md) — /mcp bearer auth, merged
 - [07-versioned-policy-pack-governance.md](docs/specs/07-versioned-policy-pack-governance.md) — proposed policy distribution and trust contract
 - [08-control-plane-composition-and-evidence.md](docs/specs/08-control-plane-composition-and-evidence.md) — proposed composition and evidence contract

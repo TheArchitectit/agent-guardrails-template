@@ -143,6 +143,7 @@ safety guardrail systems.
 | public routes, CORS origins, trusted proxy, exposure profiles, bind address | [specs/12-web-exposure-boundary.md](docs/specs/12-web-exposure-boundary.md) |
 | webhook SSRF, DNS rebinding, pinned resolution, redirects, safe egress | [specs/13-webhook-ssrf-hardening.md](docs/specs/13-webhook-ssrf-hardening.md) |
 | optional OAP checker, host context, guardrail evidence, no effect authority | [specs/14-optional-oap-guardrail-checker/spec.md](docs/specs/14-optional-oap-guardrail-checker/spec.md) |
+| cross-product auth, key ID, detached signature, trust roots, replay, both sides | [specs/15-secure-cross-product-method/spec.md](docs/specs/15-secure-cross-product-method/spec.md) |
 
 ## Reboot
 

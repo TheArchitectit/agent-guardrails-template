@@ -259,6 +259,9 @@ achieved phase and must not use the final-system claim before this global gate.
 - Treat `14-optional-oap-guardrail-checker` as conditional integration work:
   OAP-native identity/action/effect enforcement and a second real consumer must
   exist before implementation; Guardrails evidence never authorizes a host effect.
+- Implement `15-secure-cross-product-method` before any cross-product exchange:
+  explicit credential-to-principal registry, per-instance signing keys,
+  out-of-band trust roots, replay/revocation bounds, and no evidence-as-authority.
 - Do Phase 1 before adding further MCP tools; otherwise schema drift grows.
 - Do Phase 2 per capability before claiming protection; do not wait for every
   library to be wired before fixing a specific high-value path.
