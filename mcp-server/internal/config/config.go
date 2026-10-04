@@ -78,6 +78,15 @@ type Config struct {
 	MCPAPIKey string `env:"MCP_API_KEY,required"`
 	IDEAPIKey string `env:"IDE_API_KEY,required"`
 
+	// Credential-to-principal registry (Spec 15 / gr-xp-01).
+	// Records are supplied out of band as an inline JSON list and/or a JSON
+	// file; the registry stores only a keyed one-way verifier of each secret,
+	// never the secret itself. When no records are configured the legacy
+	// MCP_API_KEY/IDE_API_KEY surface is retained unchanged.
+	CredentialRegistryJSON string `env:"CREDENTIAL_REGISTRY"`
+	CredentialRegistryFile string `env:"CREDENTIAL_REGISTRY_FILE"`
+	CredentialVerifierKey  string `env:"CREDENTIAL_VERIFIER_KEY"`
+
 	// JWT Configuration
 	JWTSecret        string        `env:"JWT_SECRET,required"`
 	JWTIssuer        string        `env:"JWT_ISSUER" envDefault:"guardrail-mcp"`
@@ -146,6 +155,14 @@ func (c *Config) Validate() error {
 	}
 	if err := ValidateAPIKey(c.IDEAPIKey, "IDE_API_KEY"); err != nil {
 		return err
+	}
+
+	// Validate the credential registry: a configured registry requires the
+	// out-of-band verifier key, so verifier digests are keyed one-way values.
+	if c.CredentialRegistryJSON != "" || c.CredentialRegistryFile != "" {
+		if len(c.CredentialVerifierKey) < 16 {
+			return fmt.Errorf("CREDENTIAL_VERIFIER_KEY must be at least 16 characters when a credential registry is configured")
+		}
 	}
 
 	// Validate timeouts
@@ -405,5 +422,7 @@ func (c *Config) Masked() *Config {
 	masked.MCPAPIKey = "***"
 	masked.IDEAPIKey = "***"
 	masked.JWTSecret = "***"
+	masked.CredentialVerifierKey = "***"
+	masked.CredentialRegistryJSON = "***"
 	return &masked
 }

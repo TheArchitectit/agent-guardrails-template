@@ -9,12 +9,14 @@ import (
 	"strings"
 
 	"github.com/labstack/echo/v4"
+	"github.com/thearchitectit/guardrail-mcp/internal/auth"
 	"github.com/thearchitectit/guardrail-mcp/internal/cache"
 	"github.com/thearchitectit/guardrail-mcp/internal/config"
 )
 
 // APIKeyAuth creates middleware for API key authentication
 func APIKeyAuth(cfg *config.Config) echo.MiddlewareFunc {
+	registry := buildCredentialRegistry(cfg)
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			// Allow OPTIONS requests (CORS preflight) without authentication
@@ -93,26 +95,51 @@ func APIKeyAuth(cfg *config.Config) echo.MiddlewareFunc {
 			// unauthenticated resource exhaustion via document ingestion.
 
 			// Extract API key from header
-			auth := c.Request().Header.Get("Authorization")
-			if auth == "" {
+			authorizationHeader := c.Request().Header.Get("Authorization")
+			if authorizationHeader == "" {
 				return echo.NewHTTPError(http.StatusUnauthorized, "Missing authorization header")
 			}
 
 			// Parse Bearer token
-			parts := strings.SplitN(auth, " ", 2)
+			parts := strings.SplitN(authorizationHeader, " ", 2)
 			if len(parts) != 2 || strings.ToLower(parts[0]) != "bearer" {
 				return echo.NewHTTPError(http.StatusUnauthorized, "Invalid authorization format, expected 'Bearer <api_key>'")
 			}
 
 			apiKey := parts[1]
 
-			// Determine which key type is being used
-			var keyType string
+			// Resolve the caller principal from the explicit credential
+			// registry (Spec 15 / gr-xp-01). This is the only source of
+			// identity: the truncated log hash is never used as a principal,
+			// credential, or tenant.
+			if principal, ok := registry.Resolve(apiKey); ok {
+				c.Set("api_key_type", "registered")
+				c.Set("principal_id", principal.ID)
+				c.Set("credential_id", principal.CredentialID)
+				c.Set("credential_scopes", principal.Scopes)
+				// hashAPIKey remains only a non-authoritative log/rate-limit
+				// correlation value; it is never used as identity.
+				c.Set("api_key_hash", hashAPIKey(apiKey))
+
+				slog.Debug("API request authenticated",
+					"principal_id", principal.ID,
+					"credential_id", principal.CredentialID,
+					"path", path,
+				)
+				return next(c)
+			}
+
+			// Fall back to the two legacy keys, which keep their current
+			// limited surface. When a registry is configured an unregistered
+			// legacy credential is confined to the enumerated legacy-safe
+			// surface and denied privileged/mutating actions.
+			legacyClass := ""
 			if subtle.ConstantTimeCompare([]byte(apiKey), []byte(cfg.MCPAPIKey)) == 1 {
-				keyType = "mcp"
+				legacyClass = "mcp"
 			} else if subtle.ConstantTimeCompare([]byte(apiKey), []byte(cfg.IDEAPIKey)) == 1 {
-				keyType = "ide"
-			} else {
+				legacyClass = "ide"
+			}
+			if legacyClass == "" {
 				slog.Warn("Invalid API key attempt",
 					"ip", c.RealIP(),
 					"path", path,
@@ -120,24 +147,60 @@ func APIKeyAuth(cfg *config.Config) echo.MiddlewareFunc {
 				return echo.NewHTTPError(http.StatusUnauthorized, "Invalid API key")
 			}
 
-			// Check endpoint restrictions
-			if strings.HasPrefix(path, "/ide") && keyType != "ide" && keyType != "mcp" {
-				return echo.NewHTTPError(http.StatusForbidden, "IDE API key required for this endpoint")
+			if registry.Enabled() && !isLegacySafe(method, requestPath) {
+				slog.Warn("Unregistered credential denied privileged action",
+					"credential_class", "legacy_"+legacyClass,
+					"method", method,
+					"path", path,
+					"ip", c.RealIP(),
+				)
+				return echo.NewHTTPError(http.StatusForbidden, "unregistered credential not permitted for this action")
 			}
 
-			// Store key type in context for later use
-			c.Set("api_key_type", keyType)
+			c.Set("api_key_type", legacyClass)
 			c.Set("api_key_hash", hashAPIKey(apiKey))
 
 			slog.Debug("API request authenticated",
-				"key_type", keyType,
-				"key_hash", hashAPIKey(apiKey),
+				"key_type", legacyClass,
 				"path", path,
 			)
 
 			return next(c)
 		}
 	}
+}
+
+// isLegacySafe reports whether a request is on the explicitly enumerated
+// legacy-safe surface the two legacy keys may still drive once a credential
+// registry is configured. Read-only requests and the endpoints the legacy keys
+// were designed for stay permitted; every other mutating/privileged action
+// requires a credential registered with a principal.
+func isLegacySafe(method, path string) bool {
+	switch method {
+	case http.MethodGet, http.MethodHead, http.MethodOptions:
+		return true
+	}
+	switch path {
+	case "/api/ingest", "/api/ingest/sync", "/api/updates/check":
+		return true
+	}
+	return strings.HasPrefix(path, "/ide/")
+}
+
+// buildCredentialRegistry loads the credential-to-principal registry from
+// configuration. An absent registry is normal and preserves the legacy two-key
+// behaviour. A registry that is configured but unloadable is logged and treated
+// as absent rather than failing open on a privileged surface.
+func buildCredentialRegistry(cfg *config.Config) *auth.Registry {
+	if cfg == nil {
+		return nil
+	}
+	registry, err := auth.LoadFromSources(cfg.CredentialRegistryJSON, cfg.CredentialRegistryFile, cfg.CredentialVerifierKey)
+	if err != nil {
+		slog.Error("Failed to load credential registry; legacy key behaviour retained", "error", err)
+		return nil
+	}
+	return registry
 }
 
 // RateLimitMiddleware creates middleware for rate limiting
@@ -241,7 +304,9 @@ func RateLimitMiddleware(limiter *cache.DistributedRateLimiter, cfg *config.Conf
 	}
 }
 
-// hashAPIKey creates a hash of the API key for logging
+// hashAPIKey creates a hash of the API key for logging and rate-limit
+// bucketing. It is a non-authoritative correlation value: identity is resolved
+// from the credential registry, never from this truncated digest.
 func hashAPIKey(key string) string {
 	// Use stack-allocated array for hashing
 	var h [32]byte

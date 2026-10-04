@@ -16,6 +16,7 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 	"github.com/thearchitectit/guardrail-mcp/internal/audit"
+	"github.com/thearchitectit/guardrail-mcp/internal/auth"
 	"github.com/thearchitectit/guardrail-mcp/internal/budget"
 	"github.com/thearchitectit/guardrail-mcp/internal/cache"
 	"github.com/thearchitectit/guardrail-mcp/internal/config"
@@ -359,8 +360,17 @@ func (s *MCPServer) Serve(addr string) error {
 		server.WithEndpointPath("/mcp"),
 		server.WithStateLess(true),
 	)
+	// Load the credential-to-principal registry (Spec 15 / gr-xp-01) so a
+	// registered credential resolves to an explicit principal. The legacy MCP
+	// key keeps its current surface; a misconfigured registry is logged and
+	// treated as absent rather than silently failing open.
+	registry, err := auth.LoadFromSources(s.config.CredentialRegistryJSON, s.config.CredentialRegistryFile, s.config.CredentialVerifierKey)
+	if err != nil {
+		slog.Error("Failed to load credential registry; legacy key behaviour retained", "error", err)
+		registry = nil
+	}
 	mux := http.NewServeMux()
-	mux.Handle("/mcp", requireBearer(s.config.MCPAPIKey, s.httpServer))
+	mux.Handle("/mcp", requireBearerWithRegistry(s.config.MCPAPIKey, registry, s.httpServer))
 	s.rawServer = &http.Server{Addr: addr, Handler: mux, ReadHeaderTimeout: 10 * time.Second}
 	return s.rawServer.ListenAndServe()
 }
@@ -368,10 +378,35 @@ func (s *MCPServer) Serve(addr string) error {
 // requireBearer rejects requests lacking the configured MCP API key.
 // An empty configured key fails closed (everything is rejected).
 func requireBearer(key string, next http.Handler) http.Handler {
+	return requireBearerWithRegistry(key, nil, next)
+}
+
+// requireBearerWithRegistry authenticates the MCP endpoint. A credential that
+// resolves in the registry is accepted for its registered principal; otherwise
+// the legacy configured key is accepted unchanged. Identity is never taken from
+// the presented secret or a log hash.
+func requireBearerWithRegistry(key string, registry *auth.Registry, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		parts := strings.SplitN(r.Header.Get("Authorization"), " ", 2)
-		if key == "" || len(parts) != 2 || !strings.EqualFold(parts[0], "bearer") ||
-			subtle.ConstantTimeCompare([]byte(parts[1]), []byte(key)) != 1 {
+		token := ""
+		if len(parts) == 2 && strings.EqualFold(parts[0], "bearer") {
+			token = parts[1]
+		}
+		// Fail closed when no key is configured or no credential is presented.
+		if key == "" || token == "" {
+			w.Header().Set("WWW-Authenticate", "Bearer")
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			return
+		}
+		// A credential registered with a principal is accepted; otherwise the
+		// legacy configured key keeps its current surface.
+		if registry.Enabled() {
+			if _, ok := registry.Resolve(token); ok {
+				next.ServeHTTP(w, r)
+				return
+			}
+		}
+		if subtle.ConstantTimeCompare([]byte(token), []byte(key)) != 1 {
 			w.Header().Set("WWW-Authenticate", "Bearer")
 			http.Error(w, "unauthorized", http.StatusUnauthorized)
 			return

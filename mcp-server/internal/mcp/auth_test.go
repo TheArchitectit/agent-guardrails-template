@@ -1,11 +1,14 @@
 package mcp
 
 import (
+	"encoding/json"
 	"github.com/mark3labs/mcp-go/server"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/thearchitectit/guardrail-mcp/internal/auth"
 )
 
 func TestRequireBearer(t *testing.T) {
@@ -35,6 +38,52 @@ func TestRequireBearer(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestRequireBearerWithRegistry(t *testing.T) {
+	const verifierKey = "mcp-test-verifier-key-0123456789"
+
+	raw, err := json.Marshal([]auth.Record{{
+		CredentialID: "cred-1",
+		PrincipalID:  "principal-alpha",
+		Verifier:     auth.Digest(verifierKey, "registered-secret"),
+	}})
+	if err != nil {
+		t.Fatalf("marshal records: %v", err)
+	}
+	registry, err := auth.LoadFromSources(string(raw), "", verifierKey)
+	if err != nil {
+		t.Fatalf("LoadFromSources: %v", err)
+	}
+
+	cases := []struct {
+		name, key, header string
+		want              int
+	}{
+		{"registered credential accepted", "secret-key", "Bearer registered-secret", 200},
+		{"legacy key keeps its surface", "secret-key", "Bearer secret-key", 200},
+		{"unknown credential denied", "secret-key", "Bearer nope", 401},
+		{"missing header denied", "secret-key", "", 401},
+		{"empty configured key fails closed", "", "Bearer registered-secret", 401},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			req := httptest.NewRequest("POST", "/mcp", nil)
+			if c.header != "" {
+				req.Header.Set("Authorization", c.header)
+			}
+			rec := httptest.NewRecorder()
+			requireBearerWithRegistry(c.key, registry, okHandler()).ServeHTTP(rec, req)
+			if rec.Code != c.want {
+				t.Fatalf("got %d want %d", rec.Code, c.want)
+			}
+		})
+	}
+}
+
+func okHandler() http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(200) })
 }
 
 func TestMCPEndpointBehindBearer(t *testing.T) {
