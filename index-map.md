@@ -144,6 +144,7 @@ safety guardrail systems.
 | webhook SSRF, DNS rebinding, pinned resolution, redirects, safe egress | [specs/13-webhook-ssrf-hardening.md](docs/specs/13-webhook-ssrf-hardening.md) |
 | optional OAP checker, host context, guardrail evidence, no effect authority | [specs/14-optional-oap-guardrail-checker/spec.md](docs/specs/14-optional-oap-guardrail-checker/spec.md) |
 | cross-product auth, key ID, detached signature, trust roots, replay, both sides | [specs/15-secure-cross-product-method/spec.md](docs/specs/15-secure-cross-product-method/spec.md) |
+| remediation, auth audit, legacy fallback, scope enforcement, config secrets, secret scan, release gates | [specs/16-authentication-authorization-and-evidence-remediation.md](docs/specs/16-authentication-authorization-and-evidence-remediation.md) |
 
 ## Reboot
 

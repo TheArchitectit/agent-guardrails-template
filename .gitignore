@@ -41,6 +41,9 @@ htmlcov/
 .teams/integration-test-json.json
 mcp-server/internal/mcp/.teams/
 
+# Sensitive operator checkout if accidentally nested here
+**/infra-info/
+
 # Secrets (NEVER commit these)
 *.pem
 *.key
