@@ -230,6 +230,15 @@ GitLab/Jenkins files are copy templates, not active GitHub workflows; they
 contain stale assumptions such as root `requirements.txt` and Go 1.21 versus
 the server module's Go 1.25.5.
 
+All checked-in workflows currently target `ubuntu-latest`; none targets a
+UCS03/fleet runner label. The private `infra-info` runbook identifies this
+repository as public and recommends hosted runners for public repos unless
+there is a specific reason to consume fleet capacity. It does not identify
+this repo as a configured fleet target. A live runner-registration query was
+blocked by GitHub API rate limiting, so a registered-but-unused runner cannot
+be ruled out here. Do not switch workflows to UCS03 without an explicit owner
+decision and runner-registration verification.
+
 CI green means those particular jobs passed. It does not prove unwired
 subsystems enforce anything, the full client ecosystem interoperates, a
 production deployment is secure, or rollback works. The custom migration
