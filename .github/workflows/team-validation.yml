@@ -1,10 +1,11 @@
 name: Team Validation
 
 on:
-  push:
-    branches: [main, master]
+  # Pull requests, including forks, stay on GitHub-hosted runners so
+  # untrusted contribution code never runs inside the private UCS03 network.
   pull_request:
     branches: [main, master]
+  # Manual runs on arbitrary refs also stay on the hosted runner.
   workflow_dispatch:
 
 jobs:

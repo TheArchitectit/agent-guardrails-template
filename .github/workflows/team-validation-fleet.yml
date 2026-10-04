@@ -1,0 +1,58 @@
+name: Trusted Main Validation (UCS03 Podman)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: guardrails-ucs03-main
+  cancel-in-progress: false
+
+jobs:
+  validate-trusted-main:
+    name: Trusted main validation
+    if: github.ref == 'refs/heads/main'
+    runs-on: [self-hosted, Linux, X64, guardrails-ucs03]
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Stage the example project
+        run: cp .teams/fixtures/full-project.json .teams/example.json
+
+      - name: Validate team sizes and status
+        run: |
+          python3 scripts/team_manager.py --project example validate-size
+          python3 scripts/team_manager.py --project example status
+
+      - name: Run Python tests
+        run: python3 -m pytest scripts/ -v
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25.5'
+          cache-dependency-path: |
+            mcp-server/go.sum
+            cmd/team-cli/go.sum
+
+      - name: Run Go tests with race detection
+        working-directory: mcp-server
+        run: go test ./... -v -race
+
+      - name: Build MCP server
+        working-directory: mcp-server
+        run: go build ./...
+
+      - name: Build team CLI
+        working-directory: cmd/team-cli
+        run: make build
