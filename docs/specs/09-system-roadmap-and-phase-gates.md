@@ -82,8 +82,10 @@ each phase because implementation may change.
 before adding capability surface.
 
 **Scope:**
-- Choose and implement an authorization model for destructive/admin actions
-  (including `force_agent_state`, team mutations, config updates, and deletes).
+- Implement the combined scoped-key and named-role model in
+  [`11-authorization-scopes-and-roles.md`](11-authorization-scopes-and-roles.md)
+  for destructive/admin actions (including `force_agent_state`, team
+  mutations, config updates, and deletes).
 - Close remaining API auth bypasses, narrow CORS to explicit origins, remove
   obsolete security headers, and use a non-truncated keyed digest for API-key
   identifiers where identifiers are needed.
@@ -111,6 +113,10 @@ silently substitute a confirmation flag for authorization.
 ### Phase 1 — MCP contract correctness
 
 **Purpose:** Make all exposed tools callable exactly as documented.
+
+**Protocol parity contract:** use [`10-mcp-protocol-and-fastmcp-parity.md`](10-mcp-protocol-and-fastmcp-parity.md)
+for schema conformance, live transport tests, optional protocol surfaces, and
+client compatibility. FastMCP is reference material, not a framework mandate.
 
 **Scope:**
 - Reconcile each registered tool's InputSchema, handler extraction,
