@@ -26,8 +26,9 @@ jobs:
         id: regression_check
         run: |
           echo "::group::Regression Check Output"
-          python scripts/regression_check.py --all --json > regression_report.json || true
-          python scripts/regression_check.py --all || true
+          # Spec 19 R19-02: nonzero exits must fail the step, never be swallowed.
+          python scripts/regression_check.py --all --json > regression_report.json
+          python scripts/regression_check.py --all
           echo "::endgroup::"
 
       - name: Analyze PR for Bug Fix Commits
@@ -202,7 +203,7 @@ jobs:
         run: |
           # Check if any critical patterns were matched
           if [ -f "regression_report.json" ]; then
-            CRITICAL_COUNT=$(cat regression_report.json | jq '[.issues[].violations[] | select(.severity == "critical")] | length' || echo "0")
+            CRITICAL_COUNT=$(cat regression_report.json | jq '[.issues[].violations[] | select(.severity == "critical")] | length')
 
             if [ "$CRITICAL_COUNT" -gt 0 ]; then
               echo "::error::$CRITICAL_COUNT critical regression pattern(s) detected!"
@@ -211,14 +212,16 @@ jobs:
             fi
           fi
 
-          # Fail if bug fix without regression test
+          # Fail if bug fix (fix:/bugfix:/hotfix:) without regression test.
+          # Spec 19 R19-02: a warning cannot represent a missing security
+          # assertion — bug-fix commits require a new regression test.
           BUG_FIX_COUNT=${{ steps.check_bug_fixes.outputs.bug_fix_count || 0 }}
           NEW_TESTS=${{ steps.check_regression_tests.outputs.new_regression_tests || 0 }}
 
           if [ "$BUG_FIX_COUNT" -gt 0 ] && [ "$NEW_TESTS" -eq 0 ]; then
-            echo "::warning::Bug fix commits require regression tests."
-            # Uncomment to make this a hard fail:
-            # exit 1
+            echo "::error::Bug fix commits detected but no new regression tests found in tests/regression/."
+            echo "Add a regression test for the fix, or (PRs only) justify an exemption in the PR description and split the fix into a separate PR."
+            exit 1
           fi
 
           exit 0

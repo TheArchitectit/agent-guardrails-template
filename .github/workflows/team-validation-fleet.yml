@@ -47,12 +47,21 @@ jobs:
           cache-dependency-path: |
             mcp-server/go.sum
             cmd/team-cli/go.sum
+            examples/go/go.sum
 
       - name: Run Go tests with race detection
         working-directory: mcp-server
         env:
           CGO_ENABLED: "1"
         run: go test ./... -v -race
+
+      - name: Run Go tests (cmd/team-cli)
+        working-directory: cmd/team-cli
+        run: go test ./... -v -count=1
+
+      - name: Run Go tests (examples/go)
+        working-directory: examples/go
+        run: go test ./... -v -count=1
 
       - name: Build MCP server
         working-directory: mcp-server
@@ -61,3 +70,28 @@ jobs:
       - name: Build team CLI
         working-directory: cmd/team-cli
         run: make build
+
+      - name: Build Go examples (examples/go)
+        working-directory: examples/go
+        run: go build ./...
+
+      # Spec 19 R19-12: nonzero test floor per Go module; zero tests or
+      # missing discovery fails instead of passing silently.
+      - name: Verify per-module test floor
+        run: |
+          set -euo pipefail
+          INVENTORY=".guardrails/test-floor.json"
+          mapfile -t ENTRIES < <(jq -c '.modules[]' "$INVENTORY")
+          for entry in "${ENTRIES[@]}"; do
+            path=$(jq -r '.path' <<< "$entry")
+            min=$(jq -r '.min_tests' <<< "$entry")
+            listing=$(cd "$path" && go test -list '^Test' ./...)
+            # grep exits 1 on zero matches; that yields count=0, which the
+            # floor comparison below then fails (deliberately fail-closed).
+            count=$(printf '%s\n' "$listing" | grep -c '^Test' || true)
+            echo "$path: discovered $count tests (floor: $min)"
+            if [ "$count" -lt "$min" ]; then
+              echo "::error::Module $path discovered $count tests, below the declared floor of $min"
+              exit 1
+            fi
+          done

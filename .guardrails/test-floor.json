@@ -1,0 +1,26 @@
+{
+  "description": "Nonzero test floor per Go module (Spec 19 R19-12, R19-10). CI discovers test functions via 'go test -list' and fails when a module reports fewer than min_tests. Floors sit just below the current discovery count so legitimate refactors do not break CI, while deleting a module's tests or a broken module discovery is a hard failure.",
+  "modules": [
+    {
+      "module": "mcp-server",
+      "path": "mcp-server",
+      "test_command": "go test ./... -race -count=1",
+      "build_command": "go build ./...",
+      "min_tests": 250
+    },
+    {
+      "module": "cmd/team-cli",
+      "path": "cmd/team-cli",
+      "test_command": "go test ./... -count=1",
+      "build_command": "make build",
+      "min_tests": 8
+    },
+    {
+      "module": "examples/go",
+      "path": "examples/go",
+      "test_command": "go test ./... -count=1",
+      "build_command": "go build ./...",
+      "min_tests": 10
+    }
+  ]
+}

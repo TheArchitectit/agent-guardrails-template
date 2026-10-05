@@ -79,16 +79,57 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: '1.25'
+          cache-dependency-path: |
+            mcp-server/go.sum
+            cmd/team-cli/go.sum
+            examples/go/go.sum
 
-      - name: Run Go tests
+      - name: Run Go tests (mcp-server)
         run: |
           cd mcp-server
           go test ./... -v -race
 
-      - name: Build Go handlers
+      - name: Run Go tests (cmd/team-cli)
+        run: |
+          cd cmd/team-cli
+          go test ./... -v -count=1
+
+      - name: Run Go tests (examples/go)
+        run: |
+          cd examples/go
+          go test ./... -v -count=1
+
+      - name: Build Go handlers (mcp-server)
         run: |
           cd mcp-server
           go build ./...
+
+      - name: Build Go examples (examples/go)
+        run: |
+          cd examples/go
+          go build ./...
+
+      # Spec 19 R19-12: every Go module needs a discovered count at or above
+      # its declared positive floor in .guardrails/test-floor.json. Zero tests
+      # or missing discovery is a failure, never an implicit green default.
+      - name: Verify per-module test floor
+        run: |
+          set -euo pipefail
+          INVENTORY=".guardrails/test-floor.json"
+          mapfile -t ENTRIES < <(jq -c '.modules[]' "$INVENTORY")
+          for entry in "${ENTRIES[@]}"; do
+            path=$(jq -r '.path' <<< "$entry")
+            min=$(jq -r '.min_tests' <<< "$entry")
+            listing=$(cd "$path" && go test -list '^Test' ./...)
+            # grep exits 1 on zero matches; that yields count=0, which the
+            # floor comparison below then fails (deliberately fail-closed).
+            count=$(printf '%s\n' "$listing" | grep -c '^Test' || true)
+            echo "$path: discovered $count tests (floor: $min)"
+            if [ "$count" -lt "$min" ]; then
+              echo "::error::Module $path discovered $count tests, below the declared floor of $min"
+              exit 1
+            fi
+          done
 
   build-cli:
     runs-on: ubuntu-latest
