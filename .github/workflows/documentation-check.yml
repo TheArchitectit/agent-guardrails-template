@@ -110,47 +110,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Check markdown links
-        run: |
-          echo "Checking for broken internal links..."
-          echo ""
-
-          BROKEN_LINKS=""
-
-          # Find all markdown links
-          for file in $(find . -name "*.md" -type f | grep -v node_modules); do
-            # Extract relative .md links
-            links=$(grep -oE '\[.*\]\([^)]+\.md[^)]*\)' "$file" 2>/dev/null | grep -oE '\([^)]+\)' | tr -d '()' || true)
-
-            for link in $links; do
-              # Remove anchor (#...) from link
-              link_path=$(echo "$link" | cut -d'#' -f1)
-
-              # Skip external links
-              if [[ "$link_path" == http* ]]; then
-                continue
-              fi
-
-              # Resolve relative path
-              dir=$(dirname "$file")
-              full_path="$dir/$link_path"
-
-              # Normalize path
-              full_path=$(realpath -m "$full_path" 2>/dev/null || echo "$full_path")
-
-              if [ ! -f "$full_path" ]; then
-                BROKEN_LINKS="$BROKEN_LINKS$file: broken link to $link_path"$'\n'
-              fi
-            done
-          done
-
-          if [ -n "$BROKEN_LINKS" ]; then
-            echo "=========================================="
-            echo "BROKEN LINKS FOUND:"
-            echo "$BROKEN_LINKS"
-            exit 1
-          else
-            echo "All internal links are valid."
-          fi
+        run: bash scripts/check-doc-links.sh .
 
   check-trailing-whitespace:
     name: Check Formatting

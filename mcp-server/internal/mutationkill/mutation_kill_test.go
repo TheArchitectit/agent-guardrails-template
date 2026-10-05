@@ -74,6 +74,46 @@ var mutationCases = []mutationCase{
 		pkg:       "./internal/auth",
 		testRegex: "^TestLoadFromSourcesConfiguredInvalidFailsClosed$",
 	},
+	{
+		name: "auth-bypass-always-permits",
+		file: "internal/auth/authz.go",
+		old: `func Decide(c Caller, a ActionRequest) Decision {
+	// Authenticated: caller must carry a principal and credential ID.
+	if c.PrincipalID == "" || c.CredentialID == "" {
+		return Decision{Allow: false, Reason: "missing authenticated principal", Code: ReasonUnauthenticated}
+	}`,
+		new: `func Decide(c Caller, a ActionRequest) Decision {
+	return Decision{Allow: true, Reason: ReasonAllowed, Code: ReasonAllowed}
+	// Authenticated: caller must carry a principal and credential ID.
+	if c.PrincipalID == "" || c.CredentialID == "" {
+		return Decision{Allow: false, Reason: "missing authenticated principal", Code: ReasonUnauthenticated}
+	}`,
+		pkg:       "./internal/auth",
+		testRegex: "^TestDecideScopeRoleResourceIntersection$",
+	},
+	{
+		name: "mcp-authz-tools-call-always-authorizes",
+		file: "internal/mcp/server.go",
+		old: `func (s *MCPServer) authorizeToolCall(ctx context.Context, name string, args map[string]interface{}) *mcp.CallToolResult {
+	caller, ok := callerFromContext(ctx)`,
+		new: `func (s *MCPServer) authorizeToolCall(ctx context.Context, name string, args map[string]interface{}) *mcp.CallToolResult {
+	_, _ = ctx, args
+	return nil
+}
+
+func (s *MCPServer) authorizeToolCallDisabled(ctx context.Context, name string, args map[string]interface{}) *mcp.CallToolResult {
+	caller, ok := callerFromContext(ctx)`,
+		pkg:       "./internal/mcp",
+		testRegex: "^TestStreamableHTTPToolsCallAuthorizesAndDenies$",
+	},
+	{
+		name: "secret-fixture-leaks-into-output",
+		file: "internal/mcp/resource_registration.go",
+		old:  `configJSON, err := json.MarshalIndent(s.config.PublicView(), "", "  ")`,
+		new:  `configJSON, err := json.MarshalIndent(s.config, "", "  ")`,
+		pkg:       "./internal/mcp",
+		testRegex: "^TestSecretLeakRedactionAcrossRealPaths$",
+	},
 }
 
 // findModuleRoot walks up from the test working directory to the directory
@@ -209,4 +249,66 @@ func firstLines(s string, n int) string {
 		return s
 	}
 	return strings.Join(lines[:n], "\n") + fmt.Sprintf("\n... (%d more lines)", len(lines)-n)
+}
+
+// TestDocsGateCatchesBrokenInternalLink is the docs-gate half of R19-04
+// (R19-11). The control is the real checked-in link checker
+// (scripts/check-doc-links.sh), invoked here exactly as CI invokes it. A clean
+// tree must pass; injecting a broken internal Markdown link must flip the same
+// checker to FAIL.
+//
+// The script is fed on stdin with the scratch tree as the working directory so
+// the check is portable across the Linux CI runner and a Windows host (WSL
+// bash does not translate Windows-style path arguments).
+func TestDocsGateCatchesBrokenInternalLink(t *testing.T) {
+	if testing.Short() {
+		t.Skip("docs-gate mutation harness spawns a shell; skipped under -short")
+	}
+	bash, err := exec.LookPath("bash")
+	if err != nil {
+		t.Skipf("bash not on PATH; docs-gate checker cannot be exercised here: %v", err)
+	}
+	scriptPath := filepath.Join(filepath.Dir(findModuleRoot(t)), "scripts", "check-doc-links.sh")
+	script, err := os.ReadFile(scriptPath)
+	if err != nil {
+		t.Fatalf("read docs-gate script %s: %v", scriptPath, err)
+	}
+
+	scratch := t.TempDir()
+	writeDoc := func(name, body string) {
+		if err := os.WriteFile(filepath.Join(scratch, name), []byte(body), 0o644); err != nil {
+			t.Fatalf("write %s: %v", name, err)
+		}
+	}
+	writeDoc("a.md", "[good](./b.md)\n[external](https://example.com/x.md)\n")
+	writeDoc("b.md", "target\n")
+
+	// Baseline: a clean tree must pass, otherwise the kill result is vacuous.
+	if out, err := runDocsGate(bash, scratch, script); err != nil {
+		t.Fatalf("baseline docs gate must pass on a clean tree, got %v:\n%s", err, out)
+	}
+
+	// Inject the broken internal link (the bypass).
+	writeDoc("a.md", "[broken](./missing.md)\n")
+
+	out, err := runDocsGate(bash, scratch, script)
+	if err == nil {
+		t.Fatalf("docs gate PASSED against a broken internal link; mutation %q was not killed.\n%s",
+			"broken-internal-doc-link", out)
+	}
+	t.Logf("docs-gate mutation killed: broken link flipped PASS->FAIL\n%s", firstLines(out, 8))
+}
+
+// runDocsGate runs the docs-gate link checker with dir as its working directory,
+// passing the script body on stdin. A non-nil error means the gate reported a
+// finding (or failed to run).
+func runDocsGate(bash, dir string, script []byte) (string, error) {
+	cmd := exec.Command(bash, "-s")
+	cmd.Dir = dir
+	cmd.Stdin = bytes.NewReader(script)
+	var buf bytes.Buffer
+	cmd.Stdout = &buf
+	cmd.Stderr = &buf
+	err := cmd.Run()
+	return buf.String(), err
 }

@@ -263,8 +263,12 @@ jobs:
   # R19-04: mutation-kill control. Copies the module to a scratch directory,
   # confirms the real negative suite PASSES, injects a deterministic bypass
   # (webhook SSRF guard always permits; registry fail-closed swallows the load
-  # error), and requires the SAME suite to FAIL — proving the control detects
-  # the bypass. The scratch copy means the protected tree is never left mutated.
+  # error; auth check always permits; MCP tools/call always authorizes; secret
+  # fixture leaks into output), and requires the SAME suite to FAIL — proving the
+  # control detects the bypass. The scratch copy means the protected tree is
+  # never left mutated. The docs-gate control runs the real link checker
+  # (scripts/check-doc-links.sh) against a scratch tree and requires a broken
+  # internal Markdown link to flip it PASS->FAIL.
   security-matrix-mutation-kill:
     runs-on: ubuntu-latest
     steps:
@@ -279,4 +283,4 @@ jobs:
       - name: Mutation-kill control row
         run: |
           cd mcp-server
-          go test ./internal/mutationkill -run 'TestNegativeSuitesKillInjectedBypass' -count=1 -v
+          go test ./internal/mutationkill -count=1 -v

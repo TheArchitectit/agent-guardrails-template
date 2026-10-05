@@ -96,15 +96,60 @@ CI runs on the supported `ubuntu-latest` runner):
   `cd mcp-server && go test ./internal/mutationkill -run 'TestNegativeSuitesKillInjectedBypass' -count=1` → ok.
   Limitation (honest scope): this is a textual-mutation harness over copies, not
   a Go-mutation framework (e.g. go-mutesting); it proves the named suites detect
-  the two injected bypasses, not a mutation-score across the codebase. The
-  remaining R19-04 named bypasses (auth bypass, MCP authorization bypass,
-  wildcard production CORS acceptance, secret fixture, broken documentation
-  link) are **NOT_RUN**.
+  the injected bypasses, not a mutation-score across the codebase. At the time of
+  this reconciliation two bypasses were covered; the remaining R19-04 named
+  bypasses were still **NOT_RUN** (see part 3).
 
 Rows that still have no implemented suite (deploy/readiness/migration,
 static-assets/CORS/proxy, runner trust, provenance, path filters, release
-contract, release evidence bundle, full-history Gitleaks secret scan) remain
-**NOT_RUN** and are not faked as CI jobs.
+contract, release evidence bundle) remain **NOT_RUN** and are not faked as CI
+jobs. The full-history Gitleaks secret scan now has a script (see part 3).
+
+---
+
+## Reconciliation 2026-10-05 (part 3) — remaining mutation kills and full-history Gitleaks
+
+The `security-matrix-mutation-kill` row (R19-04) now exercises **six** injected
+bypasses, each proven to flip a real negative suite PASS→FAIL (scratch copy, so
+the protected tree is never left mutated). Command:
+`cd mcp-server && go test ./internal/mutationkill -count=1` → ok.
+
+- `webhook-ssrf-guard-always-permits` → kills `TestValidateWebhookURL`. **EXERCISED**.
+- `registry-failclosed-swallows-load-error` → kills `TestLoadFromSourcesConfiguredInvalidFailsClosed`. **EXERCISED**.
+- `auth-bypass-always-permits` → `auth.Decide` returns allow unconditionally;
+  kills `TestDecideScopeRoleResourceIntersection`. **EXERCISED**.
+- `mcp-authz-tools-call-always-authorizes` → `authorizeToolCall` returns nil
+  unconditionally; kills `TestStreamableHTTPToolsCallAuthorizesAndDenies` over the
+  real StreamableHTTP path. **EXERCISED**.
+- `secret-fixture-leaks-into-output` → `readConfigResourceContents` marshals the
+  raw config instead of `PublicView()`; kills `TestSecretLeakRedactionAcrossRealPaths`.
+  **EXERCISED**.
+- `broken-internal-doc-link` → the docs-gate link checker
+  (`scripts/check-doc-links.sh`, the same script CI now runs) flips PASS→FAIL when
+  a broken relative `.md` link is injected into a scratch tree. **EXERCISED**.
+- `wildcard-production-CORS-acceptance` — **NOT_RUN**: no negative suite exists to
+  catch it. `internal/web/server.go` substitutes localhost origins when the CORS
+  allow-list is `*` and `ProductionMode` is set, but no test drives the CORS
+  middleware or asserts a rejected foreign `Origin`; there is no `internal/web`
+  CORS/origin test at all, so a mutation here would be caught by nothing.
+
+The `check-broken-links` job in `.github/workflows/documentation-check.yml` was
+rewired to call `scripts/check-doc-links.sh` so the CI control and the harness
+control are the same artifact (no drift). The 500-line job remains inline.
+
+**Full-history Gitleaks (R19-06).** `scripts/gitleaks-history.sh` runs Gitleaks
+over every commit (`gitleaks git --log-opts=--all`, exit 127 with a NOT_RUN
+message when Gitleaks is absent — never a silent pass). Run locally on this
+branch with Gitleaks 8.30.1: **EXERCISED, NOT GREEN — 1149 commits scanned, 16
+leaks reported (exit 1)**. Findings are dominated by intentional test-canary and
+placeholder values (e.g. `secret_leak_redaction_test.go`, `auth_test.go`,
+`resource_config_secrecy_test.go`), plus historical docs/examples entries
+(`docs/MCP_TOOLS_REFERENCE.md`, `STATUS.md`, `cpofopencode`,
+`docs/standards/PROJECT_CONTEXT_TEMPLATE.md`). Because the scan is **not green
+locally**, it is deliberately **not wired as a CI required-check row**: doing so
+would make the gate fail on day one. Wiring requires a reviewed baseline or a
+`.gitleaksignore` classifying each historical finding first. This is the real
+captured result, not fabricated.
 
 ---
 
@@ -144,13 +189,13 @@ This sprint is complete only when all of the following hold:
 - [ ] External required-check policy requires every applicable matrix row on PRs (including forks on hosted runners), pushes to protected `main`, and release-candidate tags/dispatches bound to an immutable SHA (R19-01). Missing/renamed/stale-SHA/`NOT_RUN`/unexplained `SKIP` blocks merge and release. — **NOT_RUN**.
 - [ ] Required commands preserve nonzero exit; collection never masks failures (R19-02). — **NOT_RUN**.
 - [ ] Web + MCP negative controls run real middleware/StreamableHTTP paths with positive controls and zero-side-effect assertions (R19-03). — **WIRED** + **EXERCISED** (rows `security-matrix-web-failclosed`, `security-matrix-mcp-fullpath-authz`); mutation-kill half of R19-04 now PARTIAL (see row `security-matrix-mutation-kill`).
-- [ ] Mutation-kill fixtures prove each named bypass changes PASS→FAIL and are restored before publishing PASS (R19-04): auth bypass, MCP authz bypass, registry fallback, SSRF bypass, wildcard prod CORS, secret fixture, broken doc link. — **PARTIAL**: registry-fallback and SSRF bypass EXERCISED (row `security-matrix-mutation-kill`); auth bypass, MCP authz bypass, wildcard prod CORS, secret fixture, broken doc link **NOT_RUN**.
+- [ ] Mutation-kill fixtures prove each named bypass changes PASS→FAIL and are restored before publishing PASS (R19-04): auth bypass, MCP authz bypass, registry fallback, SSRF bypass, wildcard prod CORS, secret fixture, broken doc link. — **PARTIAL**: six bypasses EXERCISED (registry fallback, SSRF, auth, MCP authz, secret fixture, broken doc link — row `security-matrix-mutation-kill`); wildcard prod CORS **NOT_RUN** (no negative suite drives CORS origin acceptance).
 - [ ] Configured registry fail-closed matrix row (R19-05); no nil-registry legacy restoration. — **WIRED** + **EXERCISED** (row `security-matrix-registry-failclosed`).
-- [ ] Secret leakage / resource boundary rows fail on real findings (R19-06); full-history Gitleaks separate from source regex checks. — **PARTIAL**: redaction/no-leak half WIRED + EXERCISED (row `security-matrix-secret-redaction`); full-history Gitleaks and source-regex scans **NOT_RUN**.
+- [ ] Secret leakage / resource boundary rows fail on real findings (R19-06); full-history Gitleaks separate from source regex checks. — **PARTIAL**: redaction/no-leak half WIRED + EXERCISED (row `security-matrix-secret-redaction`); full-history Gitleaks WIRED as `scripts/gitleaks-history.sh` + EXERCISED locally (real result: 16 findings over 1149 commits, exit 1) but **not green**, so not wired as a CI row without a reviewed baseline; source-regex scans **NOT_RUN**.
 - [ ] Webhook SSRF deterministic resolver/dialer fixtures; policy-denied destination is failed outcome (R19-07). — **WIRED** + **EXERCISED** (row `security-matrix-webhook-ssrf`); configuration-time guard only, no dialer-level/DNS-rebinding defense (documented limitation).
 - [ ] Deployment/readiness/migration rows (R19-08); static assets/CORS/proxy trust (R19-09). — **NOT_RUN**.
 - [ ] Complete package and test coverage: every Go module (`mcp-server`, `cmd/team-cli`, `examples/go`) + Python tests; counts recorded (R19-10). — **WIRED** (coverage / test-floor).
-- [ ] Docs gate: internal Markdown links + hard 500-line max on PR and protected push/release (R19-11). — **WIRED** (trigger incomplete; does not fire on every protected push/release).
+- [ ] Docs gate: internal Markdown links + hard 500-line max on PR and protected push/release (R19-11). — **WIRED** (link check now `scripts/check-doc-links.sh`, shared by CI and the mutation harness; 500-line job still inline; trigger incomplete — does not fire on every protected push/release).
 - [ ] Nonzero test floor with checked-in inventory and explicit SKIP/NOT_RUN classification (R19-12). — **WIRED**.
 - [ ] Runner trust and repo isolation: forks/hosted; UCS03 self-hosted only for trusted `main`, isolated, cleaned (R19-13). — **NOT_RUN**.
 - [ ] Path-filter safeguards: security/secret/registry/deploy/package/test-floor rows on every protected push and release candidate (R19-14). — **NOT_RUN**.
@@ -367,5 +412,5 @@ go test ./... -run 'TestProvenance|TestPinned|TestWorkflow' -count=1
 ---
 
 **Created:** 2026-10-04
-**Version:** 1.3
-**Status:** PARTIALLY IMPLEMENTED (reconciled 2026-10-04 against commit 1c838f4; 2026-10-05 CI rows added for web-failclosed/mcp-fullpath/registry; 2026-10-05 part 2 added secret-redaction, webhook-SSRF, and mutation-kill rows)
+**Version:** 1.4
+**Status:** PARTIALLY IMPLEMENTED (reconciled 2026-10-04 against commit 1c838f4; 2026-10-05 CI rows added for web-failclosed/mcp-fullpath/registry; 2026-10-05 part 2 added secret-redaction, webhook-SSRF, and mutation-kill rows; 2026-10-05 part 3 extended mutation-kill to six bypasses, scripted the docs-gate link check, and scripted full-history Gitleaks — real result 16 findings, not yet green, so not a CI row)
