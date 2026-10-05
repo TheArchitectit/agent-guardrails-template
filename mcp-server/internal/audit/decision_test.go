@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/thearchitectit/guardrail-mcp/internal/database"
@@ -16,14 +17,24 @@ func (failStore) Insert(ctx context.Context, event *database.AuditEvent) error {
 	return errors.New("db down")
 }
 
-// okStore records the last inserted event.
+// okStore records the last inserted event. Insert is called from the logger's
+// async worker goroutine, so access is synchronized.
 type okStore struct {
+	mu   sync.Mutex
 	last *database.AuditEvent
 }
 
 func (s *okStore) Insert(ctx context.Context, event *database.AuditEvent) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	s.last = event
 	return nil
+}
+
+func (s *okStore) Last() *database.AuditEvent {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.last
 }
 
 // TestLogDecisionRequiredFailsClosed covers Spec 11 section 4.4 / R16-08:
@@ -74,26 +85,26 @@ func TestLogDecisionRequiredSucceedsWithStore(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LogDecision: %v", err)
 	}
-	if store.last == nil {
+	if store.Last() == nil {
 		t.Fatal("expected durable insert")
 	}
-	if store.last.Actor != "principal-alpha" {
-		t.Fatalf("actor=%q want principal-alpha (never a key hash)", store.last.Actor)
+	if store.Last().Actor != "principal-alpha" {
+		t.Fatalf("actor=%q want principal-alpha (never a key hash)", store.Last().Actor)
 	}
-	if store.last.Action != "DELETE /api/projects/p1" {
-		t.Fatalf("action=%q", store.last.Action)
+	if store.Last().Action != "DELETE /api/projects/p1" {
+		t.Fatalf("action=%q", store.Last().Action)
 	}
-	if store.last.Status != DecisionAllow {
-		t.Fatalf("status=%q want allow", store.last.Status)
+	if store.Last().Status != DecisionAllow {
+		t.Fatalf("status=%q want allow", store.Last().Status)
 	}
-	if store.last.Details["credential_id"] != "cred-opaque-1" {
-		t.Fatalf("credential_id=%v", store.last.Details["credential_id"])
+	if store.Last().Details["credential_id"] != "cred-opaque-1" {
+		t.Fatalf("credential_id=%v", store.Last().Details["credential_id"])
 	}
-	if store.last.Details["policy_version"] != "authz-1" {
-		t.Fatalf("policy_version=%v", store.last.Details["policy_version"])
+	if store.Last().Details["policy_version"] != "authz-1" {
+		t.Fatalf("policy_version=%v", store.Last().Details["policy_version"])
 	}
-	if store.last.Details["reason"] != "allowed" {
-		t.Fatalf("reason=%v", store.last.Details["reason"])
+	if store.Last().Details["reason"] != "allowed" {
+		t.Fatalf("reason=%v", store.Last().Details["reason"])
 	}
 }
 
@@ -131,10 +142,10 @@ func TestLogDecisionDenyRecorded(t *testing.T) {
 		PolicyVersion: "authz-1",
 		Kind:          "admin",
 	}, true)
-	if store.last == nil {
+	if store.Last() == nil {
 		t.Fatal("expected durable insert for required deny")
 	}
-	if store.last.Status != DecisionDeny {
-		t.Fatalf("status=%q want deny", store.last.Status)
+	if store.Last().Status != DecisionDeny {
+		t.Fatalf("status=%q want deny", store.Last().Status)
 	}
 }
