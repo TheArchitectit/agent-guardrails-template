@@ -1,2 +1,5 @@
 # Policy-pack hashes in LOCK.json are computed over raw bytes; CRLF checkout breaks them.
 policy-packs/**/*.json text eol=lf
+
+# Gitleaks fingerprints are matched line-by-line; keep the ignore list LF-only.
+.gitleaksignore text eol=lf

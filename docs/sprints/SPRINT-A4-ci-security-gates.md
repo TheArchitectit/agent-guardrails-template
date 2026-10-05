@@ -151,6 +151,30 @@ would make the gate fail on day one. Wiring requires a reviewed baseline or a
 `.gitleaksignore` classifying each historical finding first. This is the real
 captured result, not fabricated.
 
+**Reconciliation 2026-10-03 (part 4) — reviewed Gitleaks baseline.** Each of the
+16 findings was reviewed individually and a reviewed `.gitleaksignore` added at
+the repo root (one `<commit>:<file>:<rule>:<line>` fingerprint per entry, each
+with a one-line rationale). **11 findings are intentional false positives** and
+are now allowlisted: the test canaries in
+`mcp-server/internal/mcp/secret_leak_redaction_test.go` (`CANARY_SECRET_LEAK_…`),
+`resource_config_secrecy_test.go` (`SECRET_MARKER_…`),
+`streamable_http_revocation_test.go` (`revocation-propagation-verifier-key-…`),
+`registry_lifecycle_test.go` (`rotated-verifier-key-…`),
+`auth_test.go` (`mcp-test-verifier-key-…`), plus documentation/example
+placeholders in `docs/MCP_TOOLS_REFERENCE.md` (`sk_live_abc123xyz789secretkey`),
+`docs/standards/PROJECT_CONTEXT_TEMPLATE.md` (`sk-1234567890`), and
+`examples/regression-prevention/prevention-rules-examples.json`
+(`SuperSecret123!` / `sk-abc123xyz789`).
+
+**5 findings were classified as REAL credentials and left un-ignored**: the four
+`cpofopencode` hits at commit `0c962de` (an exported MCP/LLM gateway config with
+a live-looking `mcp_…` API key and a 64-hex `ah-…` API key aimed at internal
+Tailscale endpoints) and the `STATUS.md` hit at commit `b651730` (a 60-char
+deployment API key). These are not canary/placeholder-shaped and were not
+allowlisted, so the scan correctly **still exits 1** (5 leaks) — the gate stays
+**NOT_RUN** and is not wired as a required check until the credentials are
+rotated and purged from history.
+
 ---
 
 ## Problem Statement
@@ -191,7 +215,7 @@ This sprint is complete only when all of the following hold:
 - [ ] Web + MCP negative controls run real middleware/StreamableHTTP paths with positive controls and zero-side-effect assertions (R19-03). — **WIRED** + **EXERCISED** (rows `security-matrix-web-failclosed`, `security-matrix-mcp-fullpath-authz`); mutation-kill half of R19-04 now PARTIAL (see row `security-matrix-mutation-kill`).
 - [ ] Mutation-kill fixtures prove each named bypass changes PASS→FAIL and are restored before publishing PASS (R19-04): auth bypass, MCP authz bypass, registry fallback, SSRF bypass, wildcard prod CORS, secret fixture, broken doc link. — **PARTIAL**: six bypasses EXERCISED (registry fallback, SSRF, auth, MCP authz, secret fixture, broken doc link — row `security-matrix-mutation-kill`); wildcard prod CORS **NOT_RUN** (no negative suite drives CORS origin acceptance).
 - [ ] Configured registry fail-closed matrix row (R19-05); no nil-registry legacy restoration. — **WIRED** + **EXERCISED** (row `security-matrix-registry-failclosed`).
-- [ ] Secret leakage / resource boundary rows fail on real findings (R19-06); full-history Gitleaks separate from source regex checks. — **PARTIAL**: redaction/no-leak half WIRED + EXERCISED (row `security-matrix-secret-redaction`); full-history Gitleaks WIRED as `scripts/gitleaks-history.sh` + EXERCISED locally (real result: 16 findings over 1149 commits, exit 1) but **not green**, so not wired as a CI row without a reviewed baseline; source-regex scans **NOT_RUN**.
+- [ ] Secret leakage / resource boundary rows fail on real findings (R19-06); full-history Gitleaks separate from source regex checks. — **NOT_RUN** (full-history Gitleaks): redaction/no-leak half WIRED + EXERCISED (row `security-matrix-secret-redaction`); full-history Gitleaks WIRED as `scripts/gitleaks-history.sh` + EXERCISED locally over 1149 commits and a reviewed `.gitleaksignore` baseline added (11/16 findings classified as intentional test canaries / documentation placeholders and allowlisted). The remaining **5 findings look like REAL credentials** (`cpofopencode` ×4, `STATUS.md` ×1) and were **deliberately left un-ignored**, so the scan still exits 1 and is **not wired as a blocking CI row**. Blocking wiring is blocked on rotating/purging those credentials; source-regex scans **NOT_RUN**.
 - [ ] Webhook SSRF deterministic resolver/dialer fixtures; policy-denied destination is failed outcome (R19-07). — **WIRED** + **EXERCISED** (row `security-matrix-webhook-ssrf`); configuration-time guard only, no dialer-level/DNS-rebinding defense (documented limitation).
 - [ ] Deployment/readiness/migration rows (R19-08); static assets/CORS/proxy trust (R19-09). — **NOT_RUN**.
 - [ ] Complete package and test coverage: every Go module (`mcp-server`, `cmd/team-cli`, `examples/go`) + Python tests; counts recorded (R19-10). — **WIRED** (coverage / test-floor).

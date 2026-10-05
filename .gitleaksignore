@@ -1,0 +1,32 @@
+# Reviewed gitleaks baseline for scripts/gitleaks-history.sh (full-history scan).
+# Format: <commit>:<file>:<rule>:<line> (the gitleaks "fingerprint").
+# Every entry below is an INDEPENDENTLY REVIEWED false positive: an intentional
+# test canary or a documentation/example placeholder. Real credentials are
+# deliberately NOT listed here so the scan stays red for them.
+# Reviewed: 2026-10-03.
+
+# --- Intentional test canaries (fake secrets planted to prove redaction) ---
+# test canary SECRET_MARKER_DB_PASSWORD_7c2e (fake secret-marker fixture)
+9d8defed1e001c2899e2a1f6ff10e36f0c2dc353:mcp-server/internal/mcp/resource_config_secrecy_test.go:generic-api-key:15
+# test canary SECRET_MARKER_IDE_API_KEY_4b8d (fake secret-marker fixture)
+9d8defed1e001c2899e2a1f6ff10e36f0c2dc353:mcp-server/internal/mcp/resource_config_secrecy_test.go:generic-api-key:17
+# test canary CANARY_SECRET_LEAK_b7f3a9c1d2e4 (fake canary constant)
+1cf4baa1ad349458427f8cef41c95aa1aa70fec7:mcp-server/internal/mcp/secret_leak_redaction_test.go:generic-api-key:21
+# test placeholder "revocation-propagation-verifier-key-0123456789" (fixture key)
+aa20b2166f70a1e44aabe908496ce57921d0e4d4:mcp-server/internal/mcp/streamable_http_revocation_test.go:generic-api-key:38
+# test placeholder "rotated-verifier-key-9876543210" (rotation fixture)
+624ee5e1849d925747ac614bb59189ff8a1ff0a4:mcp-server/internal/auth/registry_lifecycle_test.go:generic-api-key:103
+# test placeholder "mcp-test-verifier-key-0123456789" (bearer-auth fixture)
+178d07600cc0788e66fdc2bd60d091a69bfb2e2a:mcp-server/internal/mcp/auth_test.go:generic-api-key:44
+
+# --- Documentation / example placeholders (historical; already removed from tree) ---
+# doc example "const apiKey = 'sk_live_abc123xyz789secretkey';" in MCP tools reference
+a126d6878b1ac5da2d46f558217cfe808b913cad:docs/MCP_TOOLS_REFERENCE.md:stripe-access-token:216
+# same doc example on the follow-up commit before removal
+c8c063b252d2f9e80438e8419ae3b001bc74c1e9:docs/MCP_TOOLS_REFERENCE.md:stripe-access-token:216
+# doc example "const API_KEY = 'sk-1234567890';  // NO" in the project-context template
+79812fbf78df60f2f65593a50c35c84b6d100a33:docs/standards/PROJECT_CONTEXT_TEMPLATE.md:generic-api-key:230
+# same template example on the next revision before it moved
+244117a7d7b5db18a0040d2497d98b02cbca1230:docs/standards/PROJECT_CONTEXT_TEMPLATE.md:generic-api-key:230
+# example credentials "SuperSecret123!" / "sk-abc123xyz789" in the regression-rule examples
+f4dd7838a98b467b1fd47be2b75f3a2259d55836:examples/regression-prevention/prevention-rules-examples.json:generic-api-key:121
