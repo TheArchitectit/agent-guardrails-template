@@ -5,6 +5,7 @@ import (
 	"context"
 	"log/slog"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/thearchitectit/guardrail-mcp/internal/auth"
@@ -16,10 +17,30 @@ import (
 // must never appear in log output (S-A0 / R16-05).
 const fakeArgSecret = "FAKE_ARG_SECRET_MARKER_9f3a2b"
 
+// syncBuffer is a concurrency-safe log sink. The audit logger writes to the
+// global slog default from a background goroutine, so a plain bytes.Buffer
+// races with the test's read.
+type syncBuffer struct {
+	mu  sync.Mutex
+	buf bytes.Buffer
+}
+
+func (b *syncBuffer) Write(p []byte) (int, error) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.buf.Write(p)
+}
+
+func (b *syncBuffer) String() string {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.buf.String()
+}
+
 func captureLogs(t *testing.T, fn func()) string {
 	t.Helper()
-	var buf bytes.Buffer
-	logger := slog.New(slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: slog.LevelDebug}))
+	buf := &syncBuffer{}
+	logger := slog.New(slog.NewTextHandler(buf, &slog.HandlerOptions{Level: slog.LevelDebug}))
 	prev := slog.Default()
 	slog.SetDefault(logger)
 	defer slog.SetDefault(prev)
