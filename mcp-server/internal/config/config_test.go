@@ -269,32 +269,36 @@ func TestHotReloadableFields(t *testing.T) {
 
 func TestConfig_Masked(t *testing.T) {
 	cfg := &Config{
-		DBPassword:    "secret-db-password",
-		RedisPassword: "secret-redis-password",
-		MCPAPIKey:     "secret-mcp-key",
-		IDEAPIKey:     "secret-ide-key",
-		JWTSecret:     "secret-jwt-secret",
-		DBHost:        "localhost",
-		DBPort:        5432,
+		DBPassword:                "secret-db-password",
+		RedisPassword:             "secret-redis-password",
+		MCPAPIKey:                 "secret-mcp-key",
+		IDEAPIKey:                 "secret-ide-key",
+		JWTSecret:                 "secret-jwt-secret",
+		CredentialRegistryJSON:    "secret-registry-json",
+		CredentialRegistryFile:    "/run/secrets/registry.json",
+		CredentialVerifierKey:     "secret-verifier-key",
+		CredentialVerifierKeyFile: "/run/secrets/verifier.key",
+		DBHost:                    "localhost",
+		DBPort:                    5432,
 	}
 
 	masked := cfg.Masked()
 
 	// Sensitive fields should be masked
-	if masked.DBPassword != "***" {
-		t.Errorf("Masked DBPassword = %q, want ***", masked.DBPassword)
-	}
-	if masked.RedisPassword != "***" {
-		t.Errorf("Masked RedisPassword = %q, want ***", masked.RedisPassword)
-	}
-	if masked.MCPAPIKey != "***" {
-		t.Errorf("Masked MCPAPIKey = %q, want ***", masked.MCPAPIKey)
-	}
-	if masked.IDEAPIKey != "***" {
-		t.Errorf("Masked IDEAPIKey = %q, want ***", masked.IDEAPIKey)
-	}
-	if masked.JWTSecret != "***" {
-		t.Errorf("Masked JWTSecret = %q, want ***", masked.JWTSecret)
+	for name, got := range map[string]string{
+		"DBPassword":                masked.DBPassword,
+		"RedisPassword":             masked.RedisPassword,
+		"MCPAPIKey":                 masked.MCPAPIKey,
+		"IDEAPIKey":                 masked.IDEAPIKey,
+		"JWTSecret":                 masked.JWTSecret,
+		"CredentialRegistryJSON":    masked.CredentialRegistryJSON,
+		"CredentialRegistryFile":    masked.CredentialRegistryFile,
+		"CredentialVerifierKey":     masked.CredentialVerifierKey,
+		"CredentialVerifierKeyFile": masked.CredentialVerifierKeyFile,
+	} {
+		if got != "***" {
+			t.Errorf("Masked %s = %q, want ***", name, got)
+		}
 	}
 
 	// Non-sensitive fields should remain unchanged
@@ -303,6 +307,45 @@ func TestConfig_Masked(t *testing.T) {
 	}
 	if masked.DBPort != 5432 {
 		t.Errorf("Masked DBPort = %d, want 5432", masked.DBPort)
+	}
+}
+
+// TestValidateCredentialRegistryVerifierSource covers the load-boundary rule
+// that a configured registry needs verifier material from one of its two
+// approved sources.
+func TestValidateCredentialRegistryVerifierSource(t *testing.T) {
+	base := func() *Config {
+		return &Config{CredentialRegistryJSON: `[{"credential_id":"c"}]`}
+	}
+
+	// Registry configured, no verifier material at all -> reject.
+	if err := base().validateCredentialRegistry(); err == nil {
+		t.Fatal("registry without verifier material must be rejected")
+	}
+
+	// Inline verifier key -> accepted.
+	inline := base()
+	inline.CredentialVerifierKey = "unit-test-verifier-key-0123456789"
+	if err := inline.validateCredentialRegistry(); err != nil {
+		t.Fatalf("inline verifier key must be accepted: %v", err)
+	}
+
+	// Verifier-key file as the alternative source -> accepted.
+	fromFile := base()
+	fromFile.CredentialVerifierKeyFile = "/run/secrets/verifier.key"
+	if err := fromFile.validateCredentialRegistry(); err != nil {
+		t.Fatalf("verifier-key file must be accepted: %v", err)
+	}
+
+	// Registry file alone also counts as configured.
+	regFile := &Config{CredentialRegistryFile: "/run/secrets/registry.json"}
+	if err := regFile.validateCredentialRegistry(); err == nil {
+		t.Fatal("file-configured registry without verifier material must be rejected")
+	}
+
+	// No registry source -> nothing to validate.
+	if err := (&Config{}).validateCredentialRegistry(); err != nil {
+		t.Fatalf("absent registry must not error: %v", err)
 	}
 }
 

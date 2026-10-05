@@ -13,7 +13,7 @@ func recordFor(secret, credentialID, principalID string) Record {
 	return Record{
 		CredentialID: credentialID,
 		PrincipalID:  principalID,
-		Scopes:       []string{"mcp"},
+		Scopes:       []string{ScopeMCPRead},
 		Verifier:     Digest(testVerifierKey, secret),
 	}
 }

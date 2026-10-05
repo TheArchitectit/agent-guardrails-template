@@ -275,7 +275,7 @@ func buildCredentialRegistry(cfg *config.Config) (*auth.Registry, error) {
 	if cfg == nil {
 		return nil, nil
 	}
-	registry, err := auth.LoadFromSources(cfg.CredentialRegistryJSON, cfg.CredentialRegistryFile, cfg.CredentialVerifierKey)
+	registry, err := auth.LoadFromSourcesEx(cfg.CredentialRegistryJSON, cfg.CredentialRegistryFile, cfg.CredentialVerifierKey, cfg.CredentialVerifierKeyFile)
 	if err != nil {
 		slog.Error("Failed to load credential registry; protected traffic will be denied", "error", err)
 		return nil, err

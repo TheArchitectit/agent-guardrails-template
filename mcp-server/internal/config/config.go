@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/caarlos0/env/v11"
@@ -84,8 +85,13 @@ type Config struct {
 	// never the secret itself. When no records are configured the legacy
 	// MCP_API_KEY/IDE_API_KEY surface is retained unchanged.
 	CredentialRegistryJSON string `env:"CREDENTIAL_REGISTRY"`
+	// CredentialRegistryFile is a read-only mounted JSON secret file holding
+	// the record list (Spec 17 R17-06). It is never serialized to callers.
 	CredentialRegistryFile string `env:"CREDENTIAL_REGISTRY_FILE"`
 	CredentialVerifierKey  string `env:"CREDENTIAL_VERIFIER_KEY"`
+	// CredentialVerifierKeyFile is a read-only mounted secret file holding the
+	// verifier key, as an alternative to inline CREDENTIAL_VERIFIER_KEY.
+	CredentialVerifierKeyFile string `env:"CREDENTIAL_VERIFIER_KEY_FILE"`
 
 	// JWT Configuration
 	JWTSecret        string        `env:"JWT_SECRET,required"`
@@ -158,11 +164,10 @@ func (c *Config) Validate() error {
 	}
 
 	// Validate the credential registry: a configured registry requires the
-	// out-of-band verifier key, so verifier digests are keyed one-way values.
-	if c.CredentialRegistryJSON != "" || c.CredentialRegistryFile != "" {
-		if len(c.CredentialVerifierKey) < 16 {
-			return fmt.Errorf("CREDENTIAL_VERIFIER_KEY must be at least 16 characters when a credential registry is configured")
-		}
+	// out-of-band verifier key — supplied inline or as a read-only secret file
+	// — so verifier digests are keyed one-way values.
+	if err := c.validateCredentialRegistry(); err != nil {
+		return err
 	}
 
 	// Validate timeouts
@@ -276,6 +281,33 @@ func (c *Config) Validate() error {
 	}
 
 	return nil
+}
+
+// validateCredentialRegistry enforces the load-boundary rule for a configured
+// credential registry: verifier material must come from exactly one of the two
+// approved sources (inline or a read-only secret file), and any inline key must
+// be long enough to be usable.
+func (c *Config) validateCredentialRegistry() error {
+	if !SourcesConfiguredRegistry(c) {
+		return nil
+	}
+	if strings.TrimSpace(c.CredentialVerifierKey) == "" && strings.TrimSpace(c.CredentialVerifierKeyFile) == "" {
+		return fmt.Errorf("a configured credential registry requires CREDENTIAL_VERIFIER_KEY or CREDENTIAL_VERIFIER_KEY_FILE")
+	}
+	if c.CredentialVerifierKey != "" && len(c.CredentialVerifierKey) < 16 {
+		return fmt.Errorf("CREDENTIAL_VERIFIER_KEY must be at least 16 characters when a credential registry is configured")
+	}
+	return nil
+}
+
+// SourcesConfiguredRegistry reports whether a credential registry source is
+// configured. It mirrors the registry load rule so config validation and
+// runtime loading agree on what counts as "configured".
+func SourcesConfiguredRegistry(c *Config) bool {
+	if c == nil {
+		return false
+	}
+	return strings.TrimSpace(c.CredentialRegistryJSON) != "" || strings.TrimSpace(c.CredentialRegistryFile) != ""
 }
 
 // ValidateJWTSecret ensures the JWT secret meets security requirements
@@ -424,5 +456,7 @@ func (c *Config) Masked() *Config {
 	masked.JWTSecret = "***"
 	masked.CredentialVerifierKey = "***"
 	masked.CredentialRegistryJSON = "***"
+	masked.CredentialRegistryFile = "***"
+	masked.CredentialVerifierKeyFile = "***"
 	return &masked
 }

@@ -533,7 +533,7 @@ func (s *MCPServer) Serve(addr string) error {
 	// Load the credential-to-principal registry (Spec 15 / gr-xp-01). When a
 	// registry is configured but fails to load, fail startup: never fall back
 	// to unrestricted legacy access.
-	registry, err := auth.LoadFromSources(s.config.CredentialRegistryJSON, s.config.CredentialRegistryFile, s.config.CredentialVerifierKey)
+	registry, err := auth.LoadFromSourcesEx(s.config.CredentialRegistryJSON, s.config.CredentialRegistryFile, s.config.CredentialVerifierKey, s.config.CredentialVerifierKeyFile)
 	if err != nil {
 		slog.Error("credential registry configured but failed to load; refusing to start", "error", err)
 		return fmt.Errorf("credential registry configured but failed to load: %w", err)

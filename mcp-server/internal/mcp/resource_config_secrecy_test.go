@@ -20,22 +20,26 @@ var secretMarkers = []string{
 	"SECRET_MARKER_REDIS_PASSWORD_3d9b",
 	"SECRET_MARKER_REGISTRY_JSON_8a2e",
 	"SECRET_MARKER_TLS_KEY_PATH_5c1d",
+	"SECRET_MARKER_REGISTRY_FILE_2b4c",
+	"SECRET_MARKER_VERIFIER_KEY_FILE_7a9e",
 }
 
 func secretConfig() *config.Config {
 	return &config.Config{
-		SchemaVersion:          "1.0",
-		MCPPort:                8080,
-		LogLevel:               "info",
-		DBPassword:             secretMarkers[0],
-		MCPAPIKey:              secretMarkers[1],
-		IDEAPIKey:              secretMarkers[2],
-		JWTSecret:              secretMarkers[3],
-		CredentialVerifierKey:  secretMarkers[4],
-		RedisPassword:          secretMarkers[5],
-		CredentialRegistryJSON: secretMarkers[6],
-		TLSKeyPath:             secretMarkers[7],
-		TLSCertPath:            "/etc/ssl/" + secretMarkers[7],
+		SchemaVersion:             "1.0",
+		MCPPort:                   8080,
+		LogLevel:                  "info",
+		DBPassword:                secretMarkers[0],
+		MCPAPIKey:                 secretMarkers[1],
+		IDEAPIKey:                 secretMarkers[2],
+		JWTSecret:                 secretMarkers[3],
+		CredentialVerifierKey:     secretMarkers[4],
+		RedisPassword:             secretMarkers[5],
+		CredentialRegistryJSON:    secretMarkers[6],
+		TLSKeyPath:                secretMarkers[7],
+		TLSCertPath:               "/etc/ssl/" + secretMarkers[7],
+		CredentialRegistryFile:    "/run/secrets/" + secretMarkers[8],
+		CredentialVerifierKeyFile: "/run/secrets/" + secretMarkers[9],
 	}
 }
 
@@ -68,6 +72,8 @@ func TestGuardrailConfigOmitsSecrets(t *testing.T) {
 		"CredentialVerifierKey", "credential_verifier_key",
 		"RedisPassword", "redis_password",
 		"CredentialRegistryJSON", "credential_registry_json",
+		"CredentialRegistryFile", "credential_registry_file",
+		"CredentialVerifierKeyFile", "credential_verifier_key_file",
 		"TLSKeyPath", "tls_key_path",
 		"TLSCertPath", "tls_cert_path",
 	} {
