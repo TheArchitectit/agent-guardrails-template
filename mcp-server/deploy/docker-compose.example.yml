@@ -121,6 +121,14 @@ services:
       - HEALTH_CHECK_TIMEOUT=${HEALTH_CHECK_TIMEOUT:-3s}
       # Production Mode
       - PRODUCTION_MODE=${PRODUCTION_MODE:-false}
+      # Deployment profile (Spec 17): local profile on the isolated Compose
+      # bridge; host publishes stay loopback-only. The attestation records
+      # that the wildcard in-container bind is on that verified isolated
+      # network. Nonlocal profiles require their own explicit configuration.
+      - DEPLOYMENT_PROFILE=${DEPLOYMENT_PROFILE:-local}
+      - DEPLOYMENT_BIND_ATTESTATION=${DEPLOYMENT_BIND_ATTESTATION:-isolated-local-bridge:host-loopback-publish}
+      - MCP_BIND_HOST=0.0.0.0
+      - WEB_BIND_HOST=0.0.0.0
       # Circuit Breaker Configuration
       - CIRCUIT_BREAKER_ENABLED=${CIRCUIT_BREAKER_ENABLED:-true}
       - CIRCUIT_BREAKER_FAILURE_THRESHOLD=${CIRCUIT_BREAKER_FAILURE_THRESHOLD:-5}

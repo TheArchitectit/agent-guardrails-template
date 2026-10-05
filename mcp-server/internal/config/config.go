@@ -20,6 +20,7 @@ type Config struct {
 
 	// Server Configuration
 	MCPPort        int           `env:"MCP_PORT" envDefault:"8080"`
+	MCPBindHost    string        `env:"MCP_BIND_HOST" envDefault:"127.0.0.1"`
 	LogLevel       string        `env:"LOG_LEVEL" envDefault:"info"`
 	RequestTimeout time.Duration `env:"REQUEST_TIMEOUT" envDefault:"30s"`
 
@@ -27,8 +28,9 @@ type Config struct {
 	ShutdownTimeout time.Duration `env:"SHUTDOWN_TIMEOUT" envDefault:"30s"`
 
 	// Web UI Configuration
-	WebPort    int  `env:"WEB_PORT" envDefault:"8081"`
-	WebEnabled bool `env:"WEB_ENABLED" envDefault:"true"`
+	WebPort     int    `env:"WEB_PORT" envDefault:"8081"`
+	WebBindHost string `env:"WEB_BIND_HOST" envDefault:"127.0.0.1"`
+	WebEnabled  bool   `env:"WEB_ENABLED" envDefault:"true"`
 
 	// CORS Configuration
 	CORSAllowedOrigins []string `env:"CORS_ALLOWED_ORIGINS" envDefault:"*"`
@@ -128,6 +130,21 @@ type Config struct {
 	CircuitBreakerTimeout          time.Duration `env:"CIRCUIT_BREAKER_TIMEOUT" envDefault:"30s"`
 	CircuitBreakerMaxRequests      int           `env:"CIRCUIT_BREAKER_MAX_REQUESTS" envDefault:"3"`
 	CircuitBreakerInterval         time.Duration `env:"CIRCUIT_BREAKER_INTERVAL" envDefault:"10s"`
+
+	// Deployment Profile (Spec 17 §2 / R17-01). Selects the effective
+	// exposure profile: local (default, loopback-only), tailnet, or public.
+	// The profile is validated against the actual listener bind addresses at
+	// startup; a mismatch fails startup instead of downgrading silently.
+	DeploymentProfile string `env:"DEPLOYMENT_PROFILE" envDefault:"local"`
+	// DeploymentBindAttestation is the operator attestation that a wildcard
+	// listen address sits on a verified isolated local backend network with
+	// host-loopback-only publishing (local Compose). Required for local +
+	// wildcard binds; ignored otherwise.
+	DeploymentBindAttestation string `env:"DEPLOYMENT_BIND_ATTESTATION"`
+	// TrustedProxies are the proxy peers allowed to supply forwarded
+	// identity/scheme headers. Required (non-empty) for the public profile,
+	// which may only listen behind a controlled TLS-terminating proxy.
+	TrustedProxies []string `env:"TRUSTED_PROXIES" envSeparator:","`
 
 	// Production Mode Indicator
 	ProductionMode bool `env:"PRODUCTION_MODE" envDefault:"false"`
@@ -248,6 +265,20 @@ func (c *Config) Validate() error {
 	validSSLModes := map[string]bool{"disable": true, "require": true, "prefer": true, "verify-ca": true, "verify-full": true}
 	if !validSSLModes[c.DBSSLMode] {
 		return fmt.Errorf("DB_SSLMODE must be one of: disable, require, prefer, verify-ca, verify-full, got %s", c.DBSSLMode)
+	}
+
+	// Validate the deployment profile and bind the listener addresses to it
+	// (Spec 17 R17-01/R17-02). A profile/bind mismatch fails startup.
+	if _, err := NormalizeDeploymentProfile(c.DeploymentProfile); err != nil {
+		return err
+	}
+	if err := c.ValidateDeploymentBinding(c.MCPBindAddr()); err != nil {
+		return err
+	}
+	if c.WebEnabled {
+		if err := c.ValidateDeploymentBinding(c.WebBindAddr()); err != nil {
+			return err
+		}
 	}
 
 	// Validate audit settings

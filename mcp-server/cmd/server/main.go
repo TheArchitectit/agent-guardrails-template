@@ -79,6 +79,15 @@ func main() {
 		"config_schema", cfg.SchemaVersion,
 	)
 
+	// Effective deployment profile (Spec 17 R17-01): named, explicit, and
+	// validated against the listener binds below.
+	profile, err := config.NormalizeDeploymentProfile(cfg.DeploymentProfile)
+	if err != nil {
+		slog.Error("Invalid deployment profile", "error", err)
+		os.Exit(1)
+	}
+	slog.Info("Deployment profile selected", "profile", profile)
+
 	// Start pprof server if enabled (for debugging)
 	if cfg.PProfEnabled {
 		go startPProfServer(cfg.PProfPort)
@@ -94,6 +103,18 @@ func main() {
 		os.Exit(1)
 	}
 	defer db.Close()
+
+	// Schema compatibility gate (Spec 18 R18-05/R18-07): refuse to start,
+	// before opening any listener, when the database is below the schema
+	// version this binary requires. The migration job owns schema changes;
+	// startup never applies them.
+	schemaCtx, schemaCancel := context.WithTimeout(context.Background(), cfg.DBConnectTimeout)
+	if err := database.CheckSchemaCompatibility(schemaCtx, database.NewSQLSchemaLedger(db.DB), database.MinRequiredSchemaVersion); err != nil {
+		schemaCancel()
+		slog.Error("Startup aborted: database schema is not compatible with this binary; run the versioned migration job before starting the server", "error", err)
+		os.Exit(1)
+	}
+	schemaCancel()
 
 	// Start database metrics collector
 	dbMetricsCollector := database.NewMetricsCollector(db, 15*time.Second)
@@ -155,11 +176,23 @@ func main() {
 		slog.Info("Vision HTTP API mounted", "prefix", "/v1/vision")
 	}
 
+	// Deployment profile binding gate (Spec 17 R17-01/R17-02): re-validate
+	// the actual bind addresses against the selected profile immediately
+	// before starting listeners; a mismatch exits nonzero with no app socket.
+	if err := cfg.ValidateDeploymentBinding(cfg.WebBindAddr()); err != nil {
+		slog.Error("Startup aborted: web listener bind is not valid for the deployment profile", "error", err)
+		os.Exit(1)
+	}
+	if err := cfg.ValidateDeploymentBinding(cfg.MCPBindAddr()); err != nil {
+		slog.Error("Startup aborted: MCP listener bind is not valid for the deployment profile", "error", err)
+		os.Exit(1)
+	}
+
 	// Start servers
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// Start web server (bind to 0.0.0.0 for containerized deployment)
+	// Start web server
 	go func() {
 		defer func() {
 			if r := recover(); r != nil {
@@ -167,7 +200,7 @@ func main() {
 				cancel()
 			}
 		}()
-		addr := fmt.Sprintf("0.0.0.0:%d", cfg.WebPort)
+		addr := cfg.WebBindAddr()
 		slog.Info("Starting web server", "addr", addr)
 		if err := webServer.Start(addr); err != nil && err != http.ErrServerClosed {
 			slog.Error("Web server error", "error", err)
@@ -175,7 +208,7 @@ func main() {
 		}
 	}()
 
-	// Start MCP server (bind to 0.0.0.0 for containerized deployment)
+	// Start MCP server
 	go func() {
 		defer func() {
 			if r := recover(); r != nil {
@@ -183,7 +216,7 @@ func main() {
 				cancel()
 			}
 		}()
-		addr := fmt.Sprintf("0.0.0.0:%d", cfg.MCPPort)
+		addr := cfg.MCPBindAddr()
 		slog.Info("Starting MCP server", "addr", addr)
 		if err := mcpSrv.Start(addr); err != nil && err != http.ErrServerClosed {
 			slog.Error("MCP server error", "error", err)
