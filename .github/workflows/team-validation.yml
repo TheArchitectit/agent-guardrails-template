@@ -217,3 +217,66 @@ jobs:
         run: |
           cd mcp-server
           go test ./internal/auth -run 'TestRegistry|TestRevocation|TestPermitsRestrictedOnly|TestSecretFile' -count=1 -v
+
+  # R19-06: secret-leak / redaction row. Drives real paths (guardrail://config
+  # resource read, an authorized tool call that persists a real audit decision,
+  # and a denied error response) with a canary secret planted in every
+  # secret-bearing config field and in tool arguments, and asserts the canary
+  # never appears in logs, audit records, error responses, or serialized output.
+  security-matrix-secret-redaction:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache-dependency-path: mcp-server/go.sum
+
+      - name: Secret-leak / redaction row
+        run: |
+          cd mcp-server
+          go test ./internal/mcp -run 'TestSecretLeakRedactionAcrossRealPaths|TestArgumentPrivacy|TestGuardrailConfigOmitsSecrets|TestConfigPublicViewOmitsSecrets|TestSafeResourceIDRejectsSecrets' -count=1 -v
+
+  # R19-07: webhook SSRF row. The dispatcher POSTs to the stored URL, so the
+  # configuration-time URL guard must reject loopback, link-local (including
+  # cloud metadata 169.254.169.254 and IPv4-mapped forms), private, and
+  # unique-local destinations, and non-http(s) schemes, while accepting public
+  # https. A policy-denied destination is the failed outcome.
+  security-matrix-webhook-ssrf:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache-dependency-path: mcp-server/go.sum
+
+      - name: Webhook URL SSRF guard row
+        run: |
+          cd mcp-server
+          go test ./internal/mcp -run 'TestValidateWebhookURL' -count=1 -v
+
+  # R19-04: mutation-kill control. Copies the module to a scratch directory,
+  # confirms the real negative suite PASSES, injects a deterministic bypass
+  # (webhook SSRF guard always permits; registry fail-closed swallows the load
+  # error), and requires the SAME suite to FAIL — proving the control detects
+  # the bypass. The scratch copy means the protected tree is never left mutated.
+  security-matrix-mutation-kill:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache-dependency-path: mcp-server/go.sum
+
+      - name: Mutation-kill control row
+        run: |
+          cd mcp-server
+          go test ./internal/mutationkill -run 'TestNegativeSuitesKillInjectedBypass' -count=1 -v
