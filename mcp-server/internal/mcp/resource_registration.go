@@ -24,14 +24,9 @@ func (s *MCPServer) setupResources() {
 			uri:  "guardrail://config",
 			name: "Guardrail Configuration",
 			handler: func(ctx context.Context, req mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
-				configJSON, _ := json.MarshalIndent(s.config, "", "  ")
-				return []mcp.ResourceContents{
-					mcp.TextResourceContents{
-						URI:      req.Params.URI,
-						MIMEType: "application/json",
-						Text:     string(configJSON),
-					},
-				}, nil
+				// Non-secret projection only (R16-04): never serialize the
+				// whole config struct.
+				return s.readConfigResourceContents(req.Params.URI), nil
 			},
 		},
 		{
@@ -117,6 +112,28 @@ func (s *MCPServer) adaptResource(
 			return nil, err
 		}
 		return result.Contents, nil
+	}
+}
+
+// readConfigResourceContents returns the reviewed non-secret configuration
+// projection for guardrail://config (R16-04).
+func (s *MCPServer) readConfigResourceContents(uri string) []mcp.ResourceContents {
+	configJSON, err := json.MarshalIndent(s.config.PublicView(), "", "  ")
+	if err != nil {
+		return []mcp.ResourceContents{
+			mcp.TextResourceContents{
+				URI:      uri,
+				MIMEType: "application/json",
+				Text:     "{}",
+			},
+		}
+	}
+	return []mcp.ResourceContents{
+		mcp.TextResourceContents{
+			URI:      uri,
+			MIMEType: "application/json",
+			Text:     string(configJSON),
+		},
 	}
 }
 

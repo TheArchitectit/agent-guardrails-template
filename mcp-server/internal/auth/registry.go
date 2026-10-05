@@ -22,6 +22,11 @@ import (
 // verifierLen is the hex length of a SHA-256 HMAC digest.
 const verifierLen = sha256.Size * 2
 
+// minVerifierKeyLen is the minimum usable length of the registry verifier key.
+// Shorter material is rejected at load so an unusable key can never silently
+// produce a registry that fails open.
+const minVerifierKeyLen = 16
+
 // Record is a stored credential record. It identifies the credential and the
 // principal it maps to. It never contains the presented secret: only a keyed
 // one-way verifier digest of it.
@@ -60,15 +65,20 @@ func Digest(verifierKey, secret string) string {
 }
 
 // New builds a registry from the given verifier key and records. It rejects
-// records that lack a credential ID, principal ID, or a well-formed verifier.
+// records that lack a credential ID, principal ID, or a well-formed verifier,
+// duplicate credential IDs or verifiers, and unusable verifier-key material.
 func New(verifierKey string, records []Record) (*Registry, error) {
 	if len(records) == 0 {
 		return nil, nil
 	}
-	if verifierKey == "" {
+	if strings.TrimSpace(verifierKey) == "" {
 		return nil, fmt.Errorf("credential registry requires a non-empty verifier key")
 	}
-	seen := make(map[string]bool, len(records))
+	if len(verifierKey) < minVerifierKeyLen {
+		return nil, fmt.Errorf("credential registry verifier key must be at least %d characters", minVerifierKeyLen)
+	}
+	seenVerifier := make(map[string]bool, len(records))
+	seenCredential := make(map[string]bool, len(records))
 	for i, r := range records {
 		if r.CredentialID == "" {
 			return nil, fmt.Errorf("credential registry record %d: missing credential_id", i)
@@ -76,6 +86,10 @@ func New(verifierKey string, records []Record) (*Registry, error) {
 		if r.PrincipalID == "" {
 			return nil, fmt.Errorf("credential registry record %d: missing principal_id", i)
 		}
+		if seenCredential[r.CredentialID] {
+			return nil, fmt.Errorf("credential registry record %d: duplicate credential_id", i)
+		}
+		seenCredential[r.CredentialID] = true
 		if len(r.Verifier) != verifierLen {
 			return nil, fmt.Errorf("credential registry record %d: verifier must be %d hex chars", i, verifierLen)
 		}
@@ -85,10 +99,10 @@ func New(verifierKey string, records []Record) (*Registry, error) {
 		if r.Verifier != strings.ToLower(r.Verifier) {
 			return nil, fmt.Errorf("credential registry record %d: verifier must be lowercase hex", i)
 		}
-		if seen[r.Verifier] {
+		if seenVerifier[r.Verifier] {
 			return nil, fmt.Errorf("credential registry record %d: duplicate verifier", i)
 		}
-		seen[r.Verifier] = true
+		seenVerifier[r.Verifier] = true
 	}
 	return &Registry{records: records, verifierKey: []byte(verifierKey)}, nil
 }
@@ -135,10 +149,20 @@ func (r *Registry) Resolve(secret string) (Principal, bool) {
 	}, true
 }
 
+// SourcesConfigured reports whether any registry source is set. When true the
+// registry is mandatory: a load failure must fail closed, never fall back to
+// the legacy unrestricted surface.
+func SourcesConfigured(inlineJSON, filePath string) bool {
+	return strings.TrimSpace(inlineJSON) != "" || strings.TrimSpace(filePath) != ""
+}
+
 // LoadFromSources builds a registry from the configured out-of-band sources: an
-// inline JSON record list and/or a JSON file path. When neither source yields
-// records it returns (nil, nil), meaning "no registry configured".
+// inline JSON record list and/or a JSON file path. When no source is configured
+// it returns (nil, nil), meaning "no registry configured" (legacy migration
+// mode). When a source IS configured, malformed/unreadable/empty input or an
+// unusable verifier key is an error so callers can fail closed.
 func LoadFromSources(inlineJSON, filePath, verifierKey string) (*Registry, error) {
+	configured := SourcesConfigured(inlineJSON, filePath)
 	var records []Record
 
 	if strings.TrimSpace(inlineJSON) != "" {
@@ -159,6 +183,10 @@ func LoadFromSources(inlineJSON, filePath, verifierKey string) (*Registry, error
 			return nil, fmt.Errorf("credential registry file is invalid JSON: %w", err)
 		}
 		records = append(records, fromFile...)
+	}
+
+	if configured && len(records) == 0 {
+		return nil, fmt.Errorf("credential registry is configured but contains no records")
 	}
 
 	return New(verifierKey, records)

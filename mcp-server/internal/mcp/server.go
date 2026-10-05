@@ -158,9 +158,71 @@ func (s *MCPServer) setupHandlers() {
 	s.setupResources()
 }
 
-func (s *MCPServer) handleToolCall(ctx context.Context, name string, args map[string]interface{}) (*mcp.CallToolResult, error) {
-	slog.Info("Tool call received", "name", name, "args", args)
+// Context keys for approved audit fields propagated from the auth layer.
+type ctxKey string
 
+const (
+	ctxKeyRequestID    ctxKey = "request_id"
+	ctxKeyPrincipalID  ctxKey = "principal_id"
+	ctxKeyCredentialID ctxKey = "credential_id"
+)
+
+// safeResourceIDKeys are the only argument keys whose values may appear in
+// logs as a resource identifier, and only when they look like opaque IDs.
+var safeResourceIDKeys = []string{"project_id", "session_id", "document_id", "rule_id", "resource_id", "review_id", "budget_id", "webhook_id"}
+
+// safeResourceID extracts an opaque identifier from allowlisted argument keys.
+// It never returns free-form argument values, so a secret planted in any other
+// (or nested) argument cannot reach the log via this field.
+func safeResourceID(args map[string]interface{}) string {
+	for _, key := range safeResourceIDKeys {
+		v, ok := args[key].(string)
+		if !ok || v == "" || len(v) > 128 {
+			continue
+		}
+		for _, r := range v {
+			if !(r == '-' || r == '_' || r == '.' || r == ':' ||
+				(r >= '0' && r <= '9') || (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z')) {
+				return ""
+			}
+		}
+		return v
+	}
+	return ""
+}
+
+func (s *MCPServer) handleToolCall(ctx context.Context, name string, args map[string]interface{}) (*mcp.CallToolResult, error) {
+	// Record only the approved audit fields (R16-05). Raw tool arguments are
+	// never logged: they routinely carry credentials and other secrets.
+	requestID, _ := ctx.Value(ctxKeyRequestID).(string)
+	principalID, _ := ctx.Value(ctxKeyPrincipalID).(string)
+	credentialID, _ := ctx.Value(ctxKeyCredentialID).(string)
+
+	result, err := s.dispatchToolCall(ctx, name, args)
+
+	outcome := "success"
+	if err != nil {
+		outcome = "error"
+	} else if result != nil && result.IsError {
+		outcome = "rejected"
+	}
+
+	slog.Info("tool_call",
+		"operation", name,
+		"request_id", requestID,
+		"principal_id", principalID,
+		"credential_id", credentialID,
+		"resource", safeResourceID(args),
+		"reason", "tool_dispatch",
+		"outcome", outcome,
+		"policy_version", config.SchemaVersion,
+	)
+	return result, err
+}
+
+// dispatchToolCall routes a tool invocation to its handler. Split from
+// handleToolCall so the approved-field logging wraps every outcome path.
+func (s *MCPServer) dispatchToolCall(ctx context.Context, name string, args map[string]interface{}) (*mcp.CallToolResult, error) {
 	switch name {
 	case "guardrail_init_session":
 		return s.handleInitSession(ctx, args)
@@ -360,17 +422,16 @@ func (s *MCPServer) Serve(addr string) error {
 		server.WithEndpointPath("/mcp"),
 		server.WithStateLess(true),
 	)
-	// Load the credential-to-principal registry (Spec 15 / gr-xp-01) so a
-	// registered credential resolves to an explicit principal. The legacy MCP
-	// key keeps its current surface; a misconfigured registry is logged and
-	// treated as absent rather than silently failing open.
+	// Load the credential-to-principal registry (Spec 15 / gr-xp-01). When a
+	// registry is configured but fails to load, fail startup: never fall back
+	// to unrestricted legacy access.
 	registry, err := auth.LoadFromSources(s.config.CredentialRegistryJSON, s.config.CredentialRegistryFile, s.config.CredentialVerifierKey)
 	if err != nil {
-		slog.Error("Failed to load credential registry; legacy key behaviour retained", "error", err)
-		registry = nil
+		slog.Error("credential registry configured but failed to load; refusing to start", "error", err)
+		return fmt.Errorf("credential registry configured but failed to load: %w", err)
 	}
 	mux := http.NewServeMux()
-	mux.Handle("/mcp", requireBearerWithRegistry(s.config.MCPAPIKey, registry, s.httpServer))
+	mux.Handle("/mcp", requireBearerWithRegistry(s.config.MCPAPIKey, registry, nil, s.httpServer))
 	s.rawServer = &http.Server{Addr: addr, Handler: mux, ReadHeaderTimeout: 10 * time.Second}
 	return s.rawServer.ListenAndServe()
 }
@@ -378,40 +439,62 @@ func (s *MCPServer) Serve(addr string) error {
 // requireBearer rejects requests lacking the configured MCP API key.
 // An empty configured key fails closed (everything is rejected).
 func requireBearer(key string, next http.Handler) http.Handler {
-	return requireBearerWithRegistry(key, nil, next)
+	return requireBearerWithRegistry(key, nil, nil, next)
 }
 
 // requireBearerWithRegistry authenticates the MCP endpoint. A credential that
 // resolves in the registry is accepted for its registered principal; otherwise
-// the legacy configured key is accepted unchanged. Identity is never taken from
-// the presented secret or a log hash.
-func requireBearerWithRegistry(key string, registry *auth.Registry, next http.Handler) http.Handler {
+// the legacy configured key is accepted unchanged — but only when that key is
+// present, so registry-only cutover does not reinstate legacy access. When
+// regErr is non-nil (a registry was configured but failed to load) every
+// request is denied. Identity is never taken from the presented secret or a
+// log hash.
+func requireBearerWithRegistry(key string, registry *auth.Registry, regErr error, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Configured-but-broken registry: deny ALL traffic. No legacy fallback.
+		if regErr != nil {
+			w.Header().Set("WWW-Authenticate", "Bearer")
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			return
+		}
 		parts := strings.SplitN(r.Header.Get("Authorization"), " ", 2)
 		token := ""
 		if len(parts) == 2 && strings.EqualFold(parts[0], "bearer") {
 			token = parts[1]
 		}
-		// Fail closed when no key is configured or no credential is presented.
-		if key == "" || token == "" {
+		// Fail closed when no credential is presented.
+		if token == "" {
 			w.Header().Set("WWW-Authenticate", "Bearer")
 			http.Error(w, "unauthorized", http.StatusUnauthorized)
 			return
 		}
-		// A credential registered with a principal is accepted; otherwise the
-		// legacy configured key keeps its current surface.
+		// A credential registered with a principal is accepted even when the
+		// legacy key is absent (registry-only cutover).
 		if registry.Enabled() {
-			if _, ok := registry.Resolve(token); ok {
-				next.ServeHTTP(w, r)
+			principal, ok := registry.Resolve(token)
+			if ok {
+				ctx := r.Context()
+				ctx = context.WithValue(ctx, ctxKeyPrincipalID, principal.ID)
+				ctx = context.WithValue(ctx, ctxKeyCredentialID, principal.CredentialID)
+				if reqID := r.Header.Get("X-Request-ID"); reqID != "" {
+					ctx = context.WithValue(ctx, ctxKeyRequestID, reqID)
+				}
+				next.ServeHTTP(w, r.WithContext(ctx))
 				return
 			}
 		}
-		if subtle.ConstantTimeCompare([]byte(token), []byte(key)) != 1 {
+		// The legacy configured key authenticates only when present. An absent
+		// legacy key authenticates nobody.
+		if key == "" || subtle.ConstantTimeCompare([]byte(token), []byte(key)) != 1 {
 			w.Header().Set("WWW-Authenticate", "Bearer")
 			http.Error(w, "unauthorized", http.StatusUnauthorized)
 			return
 		}
-		next.ServeHTTP(w, r)
+		ctx := r.Context()
+		if reqID := r.Header.Get("X-Request-ID"); reqID != "" {
+			ctx = context.WithValue(ctx, ctxKeyRequestID, reqID)
+		}
+		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
 

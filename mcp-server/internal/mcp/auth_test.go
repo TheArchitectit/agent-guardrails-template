@@ -2,6 +2,7 @@ package mcp
 
 import (
 	"encoding/json"
+	"errors"
 	"github.com/mark3labs/mcp-go/server"
 	"net/http"
 	"net/http/httptest"
@@ -10,6 +11,9 @@ import (
 
 	"github.com/thearchitectit/guardrail-mcp/internal/auth"
 )
+
+// errRegistryBroken is a stand-in for "configured registry failed to load".
+var errRegistryBroken = errors.New("credential registry configured but failed to load")
 
 func TestRequireBearer(t *testing.T) {
 	ok := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(200) })
@@ -64,7 +68,11 @@ func TestRequireBearerWithRegistry(t *testing.T) {
 		{"legacy key keeps its surface", "secret-key", "Bearer secret-key", 200},
 		{"unknown credential denied", "secret-key", "Bearer nope", 401},
 		{"missing header denied", "secret-key", "", 401},
-		{"empty configured key fails closed", "", "Bearer registered-secret", 401},
+		// Registry-only cutover: an absent legacy key does not block registered
+		// callers, and it authenticates nobody else.
+		{"registered credential works without legacy key", "", "Bearer registered-secret", 200},
+		{"absent legacy key authenticates nobody", "", "Bearer secret-key", 401},
+		{"absent legacy key, unknown credential denied", "", "Bearer nope", 401},
 	}
 
 	for _, c := range cases {
@@ -74,9 +82,37 @@ func TestRequireBearerWithRegistry(t *testing.T) {
 				req.Header.Set("Authorization", c.header)
 			}
 			rec := httptest.NewRecorder()
-			requireBearerWithRegistry(c.key, registry, okHandler()).ServeHTTP(rec, req)
+			requireBearerWithRegistry(c.key, registry, nil, okHandler()).ServeHTTP(rec, req)
 			if rec.Code != c.want {
 				t.Fatalf("got %d want %d", rec.Code, c.want)
+			}
+		})
+	}
+}
+
+// TestRequireBearerWithBrokenRegistryDeniesAll covers fail-closed behaviour:
+// a registry that is configured but failed to load denies every caller,
+// including the legacy key — there is no unrestricted fallback.
+func TestRequireBearerWithBrokenRegistryDeniesAll(t *testing.T) {
+	regErr := errRegistryBroken
+	cases := []struct {
+		name, key, header string
+	}{
+		{"legacy key denied", "secret-key", "Bearer secret-key"},
+		{"any token denied", "secret-key", "Bearer anything"},
+		{"empty key denied", "", "Bearer anything"},
+		{"missing header denied", "secret-key", ""},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			req := httptest.NewRequest("POST", "/mcp", nil)
+			if c.header != "" {
+				req.Header.Set("Authorization", c.header)
+			}
+			rec := httptest.NewRecorder()
+			requireBearerWithRegistry(c.key, nil, regErr, okHandler()).ServeHTTP(rec, req)
+			if rec.Code != http.StatusUnauthorized {
+				t.Fatalf("got %d want 401", rec.Code)
 			}
 		})
 	}

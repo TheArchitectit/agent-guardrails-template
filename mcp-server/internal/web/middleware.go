@@ -16,7 +16,7 @@ import (
 
 // APIKeyAuth creates middleware for API key authentication
 func APIKeyAuth(cfg *config.Config) echo.MiddlewareFunc {
-	registry := buildCredentialRegistry(cfg)
+	registry, regErr := buildCredentialRegistry(cfg)
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			// Allow OPTIONS requests (CORS preflight) without authentication
@@ -93,6 +93,18 @@ func APIKeyAuth(cfg *config.Config) echo.MiddlewareFunc {
 			// POST endpoints /api/ingest, /api/ingest/sync, /api/updates/check
 			// now require authentication — removed public access to prevent
 			// unauthenticated resource exhaustion via document ingestion.
+
+			// A registry that is configured but failed to load is a hard
+			// fail-closed condition: deny ALL protected traffic. Never fall
+			// back to unrestricted legacy access on a broken registry.
+			if regErr != nil {
+				slog.Error("credential registry configured but failed to load; denying all protected traffic",
+					"error", regErr,
+					"path", path,
+					"ip", c.RealIP(),
+				)
+				return echo.NewHTTPError(http.StatusServiceUnavailable, "credential registry unavailable")
+			}
 
 			// Extract API key from header
 			authorizationHeader := c.Request().Header.Get("Authorization")
@@ -189,18 +201,18 @@ func isLegacySafe(method, path string) bool {
 
 // buildCredentialRegistry loads the credential-to-principal registry from
 // configuration. An absent registry is normal and preserves the legacy two-key
-// behaviour. A registry that is configured but unloadable is logged and treated
-// as absent rather than failing open on a privileged surface.
-func buildCredentialRegistry(cfg *config.Config) *auth.Registry {
+// behaviour. A registry that is configured but unloadable returns an error so
+// callers can fail closed — it is never treated as absent.
+func buildCredentialRegistry(cfg *config.Config) (*auth.Registry, error) {
 	if cfg == nil {
-		return nil
+		return nil, nil
 	}
 	registry, err := auth.LoadFromSources(cfg.CredentialRegistryJSON, cfg.CredentialRegistryFile, cfg.CredentialVerifierKey)
 	if err != nil {
-		slog.Error("Failed to load credential registry; legacy key behaviour retained", "error", err)
-		return nil
+		slog.Error("Failed to load credential registry; protected traffic will be denied", "error", err)
+		return nil, err
 	}
-	return registry
+	return registry, nil
 }
 
 // RateLimitMiddleware creates middleware for rate limiting

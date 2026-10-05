@@ -55,6 +55,9 @@ func runAuth(cfg *config.Config, method, path, credential string) (int, string) 
 	}
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
+	// Echo's c.Path() is the route pattern; set it so middleware path checks
+	// behave as they do under real routing.
+	c.SetPath(path)
 
 	code := rec.Code
 	if err := handler(c); err != nil {
