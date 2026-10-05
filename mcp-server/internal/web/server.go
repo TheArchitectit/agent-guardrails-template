@@ -111,7 +111,7 @@ func (s *Server) setupMiddleware() {
 	}))
 
 	// API Key Authentication (required for all routes except health/metrics)
-	s.echo.Use(APIKeyAuth(s.cfg))
+	s.echo.Use(APIKeyAuth(s.cfg, s.auditLogger))
 
 	// Rate Limiting
 	limiter := s.cache.NewDistributedLimiter()

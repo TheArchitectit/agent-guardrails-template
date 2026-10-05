@@ -9,6 +9,7 @@ import (
 
 	"github.com/labstack/echo/v4"
 
+	"github.com/thearchitectit/guardrail-mcp/internal/audit"
 	"github.com/thearchitectit/guardrail-mcp/internal/auth"
 	"github.com/thearchitectit/guardrail-mcp/internal/config"
 )
@@ -16,13 +17,16 @@ import (
 const testVerifierKey = "web-test-verifier-key-0123456789"
 
 // registryConfig builds a config whose credential registry contains a single
-// record for the given secret, mapping it to an explicit principal.
+// record for the given secret, mapping it to an explicit principal with the
+// scopes and role needed for REST mutations (Spec 16 section 4 catalog).
 func registryConfig(t *testing.T, secret, principalID string) *config.Config {
 	t.Helper()
 	records := []auth.Record{{
 		CredentialID: "cred-1",
 		PrincipalID:  principalID,
-		Scopes:       []string{"mcp"},
+		Scopes:       []string{auth.ScopeRESTRead, auth.ScopeRESTWrite, auth.ScopeMCPRead, auth.ScopeMCPMutate},
+		Role:         auth.RoleDeveloper,
+		Resources:    []string{"*"},
 		Verifier:     auth.Digest(testVerifierKey, secret),
 	}}
 	raw, err := json.Marshal(records)
@@ -40,9 +44,14 @@ func registryConfig(t *testing.T, secret, principalID string) *config.Config {
 // runAuth drives the middleware with a bearer credential and returns the status
 // plus the principal the handler observed.
 func runAuth(cfg *config.Config, method, path, credential string) (int, string) {
+	return runAuthInternal(cfg, nil, method, path, credential)
+}
+
+// runAuthInternal is runAuth with an optional audit logger.
+func runAuthInternal(cfg *config.Config, logger *audit.Logger, method, path, credential string) (int, string) {
 	e := echo.New()
 	seenPrincipal := ""
-	handler := APIKeyAuth(cfg)(func(c echo.Context) error {
+	handler := APIKeyAuth(cfg, logger)(func(c echo.Context) error {
 		if p, ok := c.Get("principal_id").(string); ok {
 			seenPrincipal = p
 		}
@@ -83,8 +92,8 @@ func TestAPIKeyAuth_RegisteredCredentialResolvesPrincipal(t *testing.T) {
 
 // TestAPIKeyAuth_UnregisteredCredentialDeniedPrivilegedAction covers the
 // fail-closed requirement: once a registry is configured, an unregistered
-// legacy key is denied privileged/mutating actions while keeping its
-// enumerated legacy-safe surface.
+// legacy key is confined to the approved method/path allowlist (Spec 16
+// section 4) — no safe-method wildcard and no /ide/ prefix wildcard.
 func TestAPIKeyAuth_UnregisteredCredentialDeniedPrivilegedAction(t *testing.T) {
 	cfg := registryConfig(t, "registered-secret", "principal-alpha")
 
@@ -97,8 +106,15 @@ func TestAPIKeyAuth_UnregisteredCredentialDeniedPrivilegedAction(t *testing.T) {
 	}{
 		{"legacy key denied mutating action", http.MethodPost, "/api/rules", "legacy-mcp-key", http.StatusForbidden},
 		{"legacy key denied on delete", http.MethodDelete, "/api/rules", "legacy-ide-key", http.StatusForbidden},
-		{"legacy key allowed read-only", http.MethodGet, "/api/stats", "legacy-mcp-key", http.StatusOK},
-		{"legacy key allowed enumerated ingest", http.MethodPost, "/api/ingest", "legacy-mcp-key", http.StatusOK},
+		{"legacy key allowed named read", http.MethodGet, "/api/stats", "legacy-mcp-key", http.StatusOK},
+		{"legacy key denied unlisted GET", http.MethodGet, "/api/secrets", "legacy-mcp-key", http.StatusForbidden},
+		{"legacy key denied ingest mutation", http.MethodPost, "/api/ingest", "legacy-mcp-key", http.StatusForbidden},
+		{"legacy key denied ingest sync", http.MethodPost, "/api/ingest/sync", "legacy-mcp-key", http.StatusForbidden},
+		{"legacy mcp key allowed updates check", http.MethodPost, "/api/updates/check", "legacy-mcp-key", http.StatusOK},
+		{"legacy ide key allowed named ide validate", http.MethodPost, "/ide/validate/file", "legacy-ide-key", http.StatusOK},
+		{"legacy mcp key denied ide validate", http.MethodPost, "/ide/validate/file", "legacy-mcp-key", http.StatusForbidden},
+		{"legacy key denied unlisted ide action", http.MethodPost, "/ide/validate/other", "legacy-ide-key", http.StatusForbidden},
+		{"legacy key denied HEAD on unlisted path", http.MethodHead, "/api/admin", "legacy-mcp-key", http.StatusForbidden},
 		{"registered credential allowed mutating action", http.MethodPost, "/api/rules", "registered-secret", http.StatusOK},
 		{"unknown credential denied", http.MethodPost, "/api/rules", "nobody", http.StatusUnauthorized},
 	}
@@ -134,7 +150,7 @@ func TestAPIKeyAuth_SecretNeverInErrorOrResponse(t *testing.T) {
 	cfg := registryConfig(t, "registered-secret", "principal-alpha")
 
 	e := echo.New()
-	handler := APIKeyAuth(cfg)(func(c echo.Context) error { return c.NoContent(http.StatusOK) })
+	handler := APIKeyAuth(cfg, nil)(func(c echo.Context) error { return c.NoContent(http.StatusOK) })
 	req := httptest.NewRequest(http.MethodPost, "/api/rules", nil)
 	req.Header.Set("Authorization", "Bearer "+secret)
 	rec := httptest.NewRecorder()

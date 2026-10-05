@@ -129,6 +129,9 @@ func TestRegistryConfiguredValidStillAuthenticates(t *testing.T) {
 	records := []auth.Record{{
 		CredentialID: "cred-1",
 		PrincipalID:  "principal-alpha",
+		Scopes:       []string{auth.ScopeRESTRead, auth.ScopeRESTWrite},
+		Role:         auth.RoleDeveloper,
+		Resources:    []string{"*"},
 		Verifier:     auth.Digest(testVerifierKey, "registered-secret"),
 	}}
 	raw, _ := json.Marshal(records)

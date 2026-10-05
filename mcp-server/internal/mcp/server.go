@@ -165,7 +165,15 @@ const (
 	ctxKeyRequestID    ctxKey = "request_id"
 	ctxKeyPrincipalID  ctxKey = "principal_id"
 	ctxKeyCredentialID ctxKey = "credential_id"
+	ctxKeyCaller       ctxKey = "authz_caller"
 )
+
+// callerFromContext returns the server-controlled principal resolved at the
+// auth boundary. Identity is never taken from tool arguments.
+func callerFromContext(ctx context.Context) (auth.Caller, bool) {
+	c, ok := ctx.Value(ctxKeyCaller).(auth.Caller)
+	return c, ok
+}
 
 // safeResourceIDKeys are the only argument keys whose values may appear in
 // logs as a resource identifier, and only when they look like opaque IDs.
@@ -198,6 +206,22 @@ func (s *MCPServer) handleToolCall(ctx context.Context, name string, args map[st
 	principalID, _ := ctx.Value(ctxKeyPrincipalID).(string)
 	credentialID, _ := ctx.Value(ctxKeyCredentialID).(string)
 
+	// Spec 11 section 4.4 intersection before every effect. Missing/unknown
+	// inputs deny with a stable non-leaking permission error.
+	if denied := s.authorizeToolCall(ctx, name, args); denied != nil {
+		slog.Info("tool_call",
+			"operation", name,
+			"request_id", requestID,
+			"principal_id", principalID,
+			"credential_id", credentialID,
+			"resource", auth.SafeResourceID(args),
+			"reason", "permission_denied",
+			"outcome", "denied",
+			"policy_version", auth.PolicyVersion,
+		)
+		return denied, nil
+	}
+
 	result, err := s.dispatchToolCall(ctx, name, args)
 
 	outcome := "success"
@@ -212,12 +236,96 @@ func (s *MCPServer) handleToolCall(ctx context.Context, name string, args map[st
 		"request_id", requestID,
 		"principal_id", principalID,
 		"credential_id", credentialID,
-		"resource", safeResourceID(args),
+		"resource", auth.SafeResourceID(args),
 		"reason", "tool_dispatch",
 		"outcome", outcome,
-		"policy_version", config.SchemaVersion,
+		"policy_version", auth.PolicyVersion,
 	)
 	return result, err
+}
+
+// authorizeToolCall applies the scope × role × resource intersection before a
+// tool effect runs. It returns a stable permission-denied tool result on deny,
+// or nil when the call may proceed. Security-sensitive mutations fail closed
+// if their required durable audit record cannot be written.
+func (s *MCPServer) authorizeToolCall(ctx context.Context, name string, args map[string]interface{}) *mcp.CallToolResult {
+	caller, ok := callerFromContext(ctx)
+	if !ok || caller.PrincipalID == "" {
+		// No server-controlled principal: deny. Never fall back to
+		// argument-sourced identity.
+		return permissionDeniedResult()
+	}
+
+	var action auth.ActionRequest
+	if caller.LegacyClass != "" {
+		// Legacy MCP key: named read/validate tools only (Spec 16 section 4).
+		la, ok := auth.LegacyMCPCallAllowed(caller.LegacyClass, name)
+		if !ok {
+			s.mcpAuditDecision(ctx, caller, auth.ActionRequest{Name: name, Kind: "unknown"},
+				auth.Decision{Allow: false, Code: auth.ReasonLegacyNotAllowed, Reason: "legacy tool not on approved table"}, false)
+			return permissionDeniedResult()
+		}
+		action = la
+		action.Resource = auth.SafeResourceID(args)
+	} else {
+		action = auth.ClassifyMCPTool(name, args)
+	}
+
+	decision := auth.Decide(caller, action)
+	if !decision.Allow {
+		s.mcpAuditDecision(ctx, caller, action, decision, false)
+		return permissionDeniedResult()
+	}
+
+	// Security-sensitive mutations require a durable audit record first.
+	required := auth.IsSensitiveMCPTool(name) || action.Kind == auth.ActionAdmin
+	if err := s.mcpAuditDecision(ctx, caller, action, decision, required); err != nil {
+		slog.Error("required audit failed; denying security-sensitive tool call",
+			"error", err,
+			"principal_id", caller.PrincipalID,
+			"tool", name,
+		)
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: "authorization audit unavailable"}},
+			IsError: true,
+		}
+	}
+	return nil
+}
+
+// permissionDeniedResult is the stable non-leaking MCP permission error shape.
+// It never reveals whether a protected resource exists.
+func permissionDeniedResult() *mcp.CallToolResult {
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{mcp.TextContent{Type: "text", Text: auth.FormatDenyError()}},
+		IsError: true,
+	}
+}
+
+// mcpAuditDecision records a structured allow/deny decision. Principal and
+// opaque credential IDs only — never raw keys or hashAPIKey-as-identity.
+func (s *MCPServer) mcpAuditDecision(ctx context.Context, caller auth.Caller, action auth.ActionRequest, d auth.Decision, required bool) error {
+	if s.audit == nil {
+		if required {
+			return fmt.Errorf("audit logger not configured")
+		}
+		return nil
+	}
+	decision := auth.DecisionAllow
+	if !d.Allow {
+		decision = auth.DecisionDeny
+	}
+	return s.audit.LogDecision(ctx, audit.DecisionRecord{
+		PrincipalID:   caller.PrincipalID,
+		CredentialID:  caller.CredentialID,
+		Action:        action.Name,
+		Resource:      action.Resource,
+		Decision:      decision,
+		Reason:        d.Code,
+		PolicyVersion: auth.PolicyVersion,
+		Kind:          string(action.Kind),
+		Surface:       "mcp",
+	}, required)
 }
 
 // dispatchToolCall routes a tool invocation to its handler. Split from
@@ -473,9 +581,11 @@ func requireBearerWithRegistry(key string, registry *auth.Registry, regErr error
 		if registry.Enabled() {
 			principal, ok := registry.Resolve(token)
 			if ok {
+				caller := principal.Caller()
 				ctx := r.Context()
-				ctx = context.WithValue(ctx, ctxKeyPrincipalID, principal.ID)
-				ctx = context.WithValue(ctx, ctxKeyCredentialID, principal.CredentialID)
+				ctx = context.WithValue(ctx, ctxKeyPrincipalID, caller.PrincipalID)
+				ctx = context.WithValue(ctx, ctxKeyCredentialID, caller.CredentialID)
+				ctx = context.WithValue(ctx, ctxKeyCaller, caller)
 				if reqID := r.Header.Get("X-Request-ID"); reqID != "" {
 					ctx = context.WithValue(ctx, ctxKeyRequestID, reqID)
 				}
@@ -484,13 +594,27 @@ func requireBearerWithRegistry(key string, registry *auth.Registry, regErr error
 			}
 		}
 		// The legacy configured key authenticates only when present. An absent
-		// legacy key authenticates nobody.
-		if key == "" || subtle.ConstantTimeCompare([]byte(token), []byte(key)) != 1 {
+		// legacy key authenticates nobody. Legacy principals are constrained
+		// to named read/validate MCP tools (Spec 16 section 4).
+		legacyClass := ""
+		if key != "" && subtle.ConstantTimeCompare([]byte(token), []byte(key)) == 1 {
+			legacyClass = "mcp"
+		}
+		if legacyClass == "" {
+			w.Header().Set("WWW-Authenticate", "Bearer")
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			return
+		}
+		caller, ok := auth.LegacyPrincipal(legacyClass)
+		if !ok {
 			w.Header().Set("WWW-Authenticate", "Bearer")
 			http.Error(w, "unauthorized", http.StatusUnauthorized)
 			return
 		}
 		ctx := r.Context()
+		ctx = context.WithValue(ctx, ctxKeyPrincipalID, caller.PrincipalID)
+		ctx = context.WithValue(ctx, ctxKeyCredentialID, caller.CredentialID)
+		ctx = context.WithValue(ctx, ctxKeyCaller, caller)
 		if reqID := r.Header.Get("X-Request-ID"); reqID != "" {
 			ctx = context.WithValue(ctx, ctxKeyRequestID, reqID)
 		}

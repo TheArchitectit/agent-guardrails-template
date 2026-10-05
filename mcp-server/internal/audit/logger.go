@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"sync"
 	"time"
@@ -39,6 +40,9 @@ const (
 	EventAccessDenied   EventType = "access_denied"
 	EventSessionCreated EventType = "session_created"
 	EventSessionExpired EventType = "session_expired"
+	// EventAuthzDecision is a structured allow/deny authorization decision
+	// (Spec 11 §4.4 / R16-08). It never contains raw credential material.
+	EventAuthzDecision EventType = "authz_decision"
 )
 
 // Severity represents event severity
@@ -289,4 +293,125 @@ func hashToken(token string) string {
 		return "****"
 	}
 	return token[:4] + "****" + token[len(token)-4:]
+}
+
+// Decision outcome values recorded in audit.
+const (
+	DecisionAllow = "allow"
+	DecisionDeny  = "deny"
+)
+
+// DecisionRecord is the structured authorization decision payload
+// (Spec 11 §4.4 / R16-08). It carries opaque identifiers only — never the
+// raw credential or a truncated log hash used as identity.
+type DecisionRecord struct {
+	PrincipalID  string
+	CredentialID string
+	Action       string
+	Resource     string
+	// Decision is "allow" or "deny".
+	Decision string
+	// Reason is a stable non-leaking reason code.
+	Reason string
+	// PolicyVersion identifies the authorization policy revision.
+	PolicyVersion string
+	// Kind is the action class (read/validate/mutate/admin).
+	Kind string
+	// Surface is the transport (rest/mcp/ide).
+	Surface string
+}
+
+// LogDecision records an authorization decision. When required is true the
+// event must be durably persisted before a security-sensitive mutation may
+// proceed: a persistence failure returns an error and the caller MUST fail
+// closed (do not perform the effect, do not "audit later").
+//
+// Durability boundary: durable persistence is the configured AuditStore. When
+// no store is configured the event is emitted to slog only; that path is not
+// durable and callers that require durable audit must configure a store.
+func (l *Logger) LogDecision(ctx context.Context, rec DecisionRecord, required bool) error {
+	if rec.Decision == "" {
+		rec.Decision = "deny"
+	}
+	if rec.Reason == "" {
+		rec.Reason = "unspecified"
+	}
+	if rec.PolicyVersion == "" {
+		rec.PolicyVersion = "unspecified"
+	}
+
+	status := rec.Decision
+	severity := SevInfo
+	if rec.Decision != "allow" {
+		severity = SevWarning
+	}
+	if required {
+		severity = SevCritical
+	}
+
+	event := Event{
+		Type:     EventAuthzDecision,
+		Severity: severity,
+		// Actor is the server-controlled principal ID, never a key hash.
+		Actor:    rec.PrincipalID,
+		Action:   rec.Action,
+		Resource: rec.Resource,
+		Status:   status,
+		Details: map[string]interface{}{
+			// Opaque credential ID only — never the secret or hashAPIKey.
+			"credential_id":  rec.CredentialID,
+			"decision":       rec.Decision,
+			"reason":         rec.Reason,
+			"policy_version": rec.PolicyVersion,
+			"kind":           rec.Kind,
+			"surface":        rec.Surface,
+			"required_audit": required,
+		},
+	}
+
+	// Security-sensitive / required decisions: persist synchronously and
+	// report failure so the caller can fail closed. Do not enqueue a second
+	// async insert of the same record.
+	if required && l.auditStore != nil {
+		event.ID = uuid.New().String()
+		event.Timestamp = time.Now().UTC()
+		if reqID := ctx.Value("request_id"); reqID != nil {
+			if s, ok := reqID.(string); ok {
+				event.RequestID = s
+			}
+		}
+		dbEvent := &database.AuditEvent{
+			ID:        uuid.MustParse(event.ID),
+			EventID:   event.ID,
+			Timestamp: event.Timestamp,
+			EventType: string(event.Type),
+			Severity:  string(event.Severity),
+			Actor:     event.Actor,
+			Action:    event.Action,
+			Resource:  event.Resource,
+			Status:    event.Status,
+			Details:   event.Details,
+			RequestID: event.RequestID,
+			CreatedAt: event.Timestamp,
+		}
+		ctxDB, cancel := context.WithTimeout(ctx, 5*time.Second)
+		err := l.auditStore.Insert(ctxDB, dbEvent)
+		cancel()
+		if err != nil {
+			slog.Error("required audit persistence failed; failing closed",
+				"error", err,
+				"principal_id", rec.PrincipalID,
+				"action", rec.Action,
+			)
+			return fmt.Errorf("required audit persistence failed: %w", err)
+		}
+		// Emit the slog twin without re-inserting.
+		slog.Info("AUDIT", "event_id", event.ID, "type", event.Type,
+			"principal_id", rec.PrincipalID, "action", rec.Action,
+			"decision", rec.Decision, "reason", rec.Reason)
+		return nil
+	}
+
+	l.Log(ctx, event)
+	return nil
 }

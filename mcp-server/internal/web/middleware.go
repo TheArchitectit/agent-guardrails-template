@@ -9,42 +9,43 @@ import (
 	"strings"
 
 	"github.com/labstack/echo/v4"
+	"github.com/thearchitectit/guardrail-mcp/internal/audit"
 	"github.com/thearchitectit/guardrail-mcp/internal/auth"
 	"github.com/thearchitectit/guardrail-mcp/internal/cache"
 	"github.com/thearchitectit/guardrail-mcp/internal/config"
 )
 
-// APIKeyAuth creates middleware for API key authentication
-func APIKeyAuth(cfg *config.Config) echo.MiddlewareFunc {
+// APIKeyAuth creates middleware for API key authentication and authorization.
+// After a credential resolves to a server-controlled principal, the Spec 11
+// section 4.4 intersection (authenticated AND scope_allows AND role_allows AND
+// resource_allows) is applied before the request reaches its handler.
+// Identity/role/tenant are never taken from request content.
+func APIKeyAuth(cfg *config.Config, auditLogger *audit.Logger) echo.MiddlewareFunc {
 	registry, regErr := buildCredentialRegistry(cfg)
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
-			// Allow OPTIONS requests (CORS preflight) without authentication
-			// This must be checked first, before any path checks
+			// Allow OPTIONS requests (CORS preflight) without authentication.
+			// Preflight is not authorization for the corresponding effect.
 			if c.Request().Method == http.MethodOptions {
 				return next(c)
 			}
 
-			// Use the actual request URL path, not the route pattern
-			// This is critical because c.Path() returns route pattern which may be /*
+			// Use the actual request URL path, not the route pattern.
 			requestPath := c.Request().URL.Path
 
-			// Skip health checks, metrics, API docs, and Web UI routes
+			// Skip health checks, metrics, API docs, and Web UI routes.
 			path := c.Path()
 			if path == "/health/live" || path == "/health/ready" || path == "/metrics" {
 				return next(c)
 			}
-			// Skip API documentation routes
 			if path == "/docs" || path == "/openapi.yaml" {
 				return next(c)
 			}
 
-			// Skip Web UI routes - these are publicly accessible
-			// Check both route pattern and actual request path
+			// Skip Web UI routes - these are publicly accessible.
 			if path == "/" || path == "/index.html" || path == "/web/*" || strings.HasPrefix(path, "/static/") {
 				return next(c)
 			}
-			// Also check actual request path for web UI files
 			if requestPath == "/" || requestPath == "/index.html" ||
 				strings.HasPrefix(requestPath, "/static/") ||
 				strings.HasPrefix(requestPath, "/web/") ||
@@ -54,11 +55,8 @@ func APIKeyAuth(cfg *config.Config) echo.MiddlewareFunc {
 				requestPath == "/web" {
 				return next(c)
 			}
-			// Static assets are public, but only when genuinely fetched as
-			// assets. Both guards are load-bearing: without the method check
-			// and the /api/ exclusion, any request whose path merely *ends*
-			// in ".js" — such as POST /api/ingest/x.js — would skip
-			// authentication entirely.
+			// Static assets are public only when genuinely fetched as assets
+			// (method check + /api/ exclusion are load-bearing).
 			if m := c.Request().Method; (m == http.MethodGet || m == http.MethodHead) && !strings.HasPrefix(requestPath, "/api/") {
 				if strings.HasSuffix(requestPath, ".js") ||
 					strings.HasSuffix(requestPath, ".css") ||
@@ -74,8 +72,7 @@ func APIKeyAuth(cfg *config.Config) echo.MiddlewareFunc {
 				}
 			}
 
-			// Skip read-only API endpoints for public browsing (GET and OPTIONS requests)
-			// OPTIONS is needed for CORS preflight requests
+			// Public read-only browsing (GET and OPTIONS).
 			method := c.Request().Method
 			if (method == "GET" || method == "OPTIONS") && (path == "/api/documents" || path == "/api/documents/search" ||
 				strings.HasPrefix(path, "/api/documents/") ||
@@ -90,10 +87,6 @@ func APIKeyAuth(cfg *config.Config) echo.MiddlewareFunc {
 				return next(c)
 			}
 
-			// POST endpoints /api/ingest, /api/ingest/sync, /api/updates/check
-			// now require authentication — removed public access to prevent
-			// unauthenticated resource exhaustion via document ingestion.
-
 			// A registry that is configured but failed to load is a hard
 			// fail-closed condition: deny ALL protected traffic. Never fall
 			// back to unrestricted legacy access on a broken registry.
@@ -106,13 +99,11 @@ func APIKeyAuth(cfg *config.Config) echo.MiddlewareFunc {
 				return echo.NewHTTPError(http.StatusServiceUnavailable, "credential registry unavailable")
 			}
 
-			// Extract API key from header
 			authorizationHeader := c.Request().Header.Get("Authorization")
 			if authorizationHeader == "" {
 				return echo.NewHTTPError(http.StatusUnauthorized, "Missing authorization header")
 			}
 
-			// Parse Bearer token
 			parts := strings.SplitN(authorizationHeader, " ", 2)
 			if len(parts) != 2 || strings.ToLower(parts[0]) != "bearer" {
 				return echo.NewHTTPError(http.StatusUnauthorized, "Invalid authorization format, expected 'Bearer <api_key>'")
@@ -121,60 +112,124 @@ func APIKeyAuth(cfg *config.Config) echo.MiddlewareFunc {
 			apiKey := parts[1]
 
 			// Resolve the caller principal from the explicit credential
-			// registry (Spec 15 / gr-xp-01). This is the only source of
-			// identity: the truncated log hash is never used as a principal,
-			// credential, or tenant.
+			// registry. Identity never comes from the truncated log hash.
+			var caller auth.Caller
+			var action auth.ActionRequest
+			isLegacy := false
+
 			if principal, ok := registry.Resolve(apiKey); ok {
+				caller = principal.Caller()
 				c.Set("api_key_type", "registered")
-				c.Set("principal_id", principal.ID)
-				c.Set("credential_id", principal.CredentialID)
-				c.Set("credential_scopes", principal.Scopes)
-				// hashAPIKey remains only a non-authoritative log/rate-limit
-				// correlation value; it is never used as identity.
+				c.Set("principal_id", caller.PrincipalID)
+				c.Set("credential_id", caller.CredentialID)
+				c.Set("credential_scopes", caller.Scopes)
+				c.Set("principal_role", caller.Role)
+				c.Set("principal_resources", caller.Resources)
+				c.Set("caller", caller)
+				// hashAPIKey is a non-authoritative log/rate-limit correlation
+				// value only; it is never used as identity.
 				c.Set("api_key_hash", hashAPIKey(apiKey))
+				action = auth.ClassifyREST(method, requestPath)
+			} else {
+				// Legacy keys. When a registry is configured an unregistered
+				// legacy credential is confined to the explicit method/path
+				// allowlist (Spec 16 section 4) and the same privilege model.
+				legacyClass := ""
+				if subtle.ConstantTimeCompare([]byte(apiKey), []byte(cfg.MCPAPIKey)) == 1 {
+					legacyClass = "mcp"
+				} else if subtle.ConstantTimeCompare([]byte(apiKey), []byte(cfg.IDEAPIKey)) == 1 {
+					legacyClass = "ide"
+				}
+				if legacyClass == "" {
+					slog.Warn("Invalid API key attempt",
+						"ip", c.RealIP(),
+						"path", path,
+					)
+					return echo.NewHTTPError(http.StatusUnauthorized, "Invalid API key")
+				}
 
-				slog.Debug("API request authenticated",
-					"principal_id", principal.ID,
-					"credential_id", principal.CredentialID,
-					"path", path,
-				)
-				return next(c)
+				legacyCaller, ok := auth.LegacyPrincipal(legacyClass)
+				if !ok {
+					return echo.NewHTTPError(http.StatusUnauthorized, "Invalid API key")
+				}
+				caller = legacyCaller
+				isLegacy = true
+
+				if registry.Enabled() {
+					// Explicit method/path allowlist. No safe-method wildcard
+					// and no /ide/ prefix wildcard.
+					la, ok := auth.LegacyRESTAction(legacyClass, method, requestPath)
+					if !ok {
+						slog.Warn("Legacy credential denied: not on approved method/path table",
+							"credential_class", "legacy_"+legacyClass,
+							"method", method,
+							"path", path,
+							"ip", c.RealIP(),
+						)
+						restAuditDecision(c, auditLogger, caller, auth.ActionRequest{
+							Name: method + " " + requestPath, Kind: "unknown",
+						}, auth.Decision{Allow: false, Code: auth.ReasonLegacyNotAllowed, Reason: "legacy method/path not on approved table"}, false)
+						return echo.NewHTTPError(http.StatusForbidden, "unregistered credential not permitted for this action")
+					}
+					action = la
+				} else {
+					// Migration mode (no registry configured): legacy keys keep
+					// their historical surface. Containment applies once a
+					// registry is enabled.
+					action = auth.ClassifyREST(method, requestPath)
+				}
+
+				c.Set("api_key_type", legacyClass)
+				c.Set("principal_id", caller.PrincipalID)
+				c.Set("credential_id", caller.CredentialID)
+				c.Set("principal_role", caller.Role)
+				c.Set("caller", caller)
+				c.Set("api_key_hash", hashAPIKey(apiKey))
 			}
 
-			// Fall back to the two legacy keys, which keep their current
-			// limited surface. When a registry is configured an unregistered
-			// legacy credential is confined to the enumerated legacy-safe
-			// surface and denied privileged/mutating actions.
-			legacyClass := ""
-			if subtle.ConstantTimeCompare([]byte(apiKey), []byte(cfg.MCPAPIKey)) == 1 {
-				legacyClass = "mcp"
-			} else if subtle.ConstantTimeCompare([]byte(apiKey), []byte(cfg.IDEAPIKey)) == 1 {
-				legacyClass = "ide"
-			}
-			if legacyClass == "" {
-				slog.Warn("Invalid API key attempt",
-					"ip", c.RealIP(),
-					"path", path,
-				)
-				return echo.NewHTTPError(http.StatusUnauthorized, "Invalid API key")
+			// Spec 11 section 4.4 intersection. Missing/unknown inputs deny.
+			// Registered credentials and legacy keys under a configured
+			// registry both pass through this gate. Migration mode (no
+			// registry) preserves the legacy surface without the intersection.
+			enforce := !isLegacy || registry.Enabled()
+			if enforce {
+				decision := auth.Decide(caller, action)
+				if !decision.Allow {
+					slog.Warn("Authorization denied",
+						"principal_id", caller.PrincipalID,
+						"credential_id", caller.CredentialID,
+						"action", action.Name,
+						"kind", string(action.Kind),
+						"resource", action.Resource,
+						"reason", decision.Code,
+						"path", path,
+					)
+					restAuditDecision(c, auditLogger, caller, action, decision, false)
+					return echo.NewHTTPError(auth.HTTPStatusForDecision(decision), "permission denied")
+				}
+
+				// Security-sensitive mutations require a durable audit record
+				// before the effect. Fail closed if it cannot be written.
+				required := action.Kind == auth.ActionAdmin
+				if err := restAuditDecision(c, auditLogger, caller, action, decision, required); err != nil {
+					slog.Error("required audit failed; denying security-sensitive mutation",
+						"error", err,
+						"principal_id", caller.PrincipalID,
+						"action", action.Name,
+					)
+					return echo.NewHTTPError(http.StatusServiceUnavailable, "authorization audit unavailable")
+				}
+			} else {
+				_ = restAuditDecision(c, auditLogger, caller, action,
+					auth.Decision{Allow: true, Code: auth.ReasonAllowed, Reason: "legacy migration mode"}, false)
 			}
 
-			if registry.Enabled() && !isLegacySafe(method, requestPath) {
-				slog.Warn("Unregistered credential denied privileged action",
-					"credential_class", "legacy_"+legacyClass,
-					"method", method,
-					"path", path,
-					"ip", c.RealIP(),
-				)
-				return echo.NewHTTPError(http.StatusForbidden, "unregistered credential not permitted for this action")
-			}
-
-			c.Set("api_key_type", legacyClass)
-			c.Set("api_key_hash", hashAPIKey(apiKey))
-
-			slog.Debug("API request authenticated",
-				"key_type", legacyClass,
+			slog.Debug("API request authorized",
+				"principal_id", caller.PrincipalID,
+				"credential_id", caller.CredentialID,
 				"path", path,
+				"action", action.Name,
+				"kind", string(action.Kind),
 			)
 
 			return next(c)
@@ -182,27 +237,40 @@ func APIKeyAuth(cfg *config.Config) echo.MiddlewareFunc {
 	}
 }
 
-// isLegacySafe reports whether a request is on the explicitly enumerated
-// legacy-safe surface the two legacy keys may still drive once a credential
-// registry is configured. Read-only requests and the endpoints the legacy keys
-// were designed for stay permitted; every other mutating/privileged action
-// requires a credential registered with a principal.
-func isLegacySafe(method, path string) bool {
-	switch method {
-	case http.MethodGet, http.MethodHead, http.MethodOptions:
-		return true
+// restAuditDecision writes a structured allow/deny decision record. It never
+// logs raw keys and never uses hashAPIKey as identity.
+func restAuditDecision(c echo.Context, logger *audit.Logger, caller auth.Caller, action auth.ActionRequest, d auth.Decision, required bool) error {
+	if logger == nil {
+		if required {
+			return errAuditUnavailable
+		}
+		return nil
 	}
-	switch path {
-	case "/api/ingest", "/api/ingest/sync", "/api/updates/check":
-		return true
+	decision := auth.DecisionAllow
+	if !d.Allow {
+		decision = auth.DecisionDeny
 	}
-	return strings.HasPrefix(path, "/ide/")
+	return logger.LogDecision(c.Request().Context(), audit.DecisionRecord{
+		PrincipalID:   caller.PrincipalID,
+		CredentialID:  caller.CredentialID,
+		Action:        action.Name,
+		Resource:      action.Resource,
+		Decision:      decision,
+		Reason:        d.Code,
+		PolicyVersion: auth.PolicyVersion,
+		Kind:          string(action.Kind),
+		Surface:       "rest",
+	}, required)
 }
+
+// errAuditUnavailable is returned when a required durable audit record cannot
+// be produced.
+var errAuditUnavailable = echo.NewHTTPError(http.StatusServiceUnavailable, "authorization audit unavailable")
 
 // buildCredentialRegistry loads the credential-to-principal registry from
 // configuration. An absent registry is normal and preserves the legacy two-key
 // behaviour. A registry that is configured but unloadable returns an error so
-// callers can fail closed — it is never treated as absent.
+// callers can fail closed; it is never treated as absent.
 func buildCredentialRegistry(cfg *config.Config) (*auth.Registry, error) {
 	if cfg == nil {
 		return nil, nil
@@ -219,10 +287,8 @@ func buildCredentialRegistry(cfg *config.Config) (*auth.Registry, error) {
 func RateLimitMiddleware(limiter *cache.DistributedRateLimiter, cfg *config.Config) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
-			// Use the actual request URL path
 			requestPath := c.Request().URL.Path
 
-			// Skip health checks, API docs, and Web UI routes
 			path := c.Path()
 			if path == "/health/live" || path == "/health/ready" || path == "/metrics" {
 				return next(c)
@@ -231,11 +297,9 @@ func RateLimitMiddleware(limiter *cache.DistributedRateLimiter, cfg *config.Conf
 				return next(c)
 			}
 
-			// Skip Web UI routes - these are publicly accessible
 			if path == "/" || path == "/index.html" || path == "/web/*" || strings.HasPrefix(path, "/static/") {
 				return next(c)
 			}
-			// Also check actual request path for web UI files
 			if requestPath == "/" || requestPath == "/index.html" ||
 				strings.HasPrefix(requestPath, "/static/") ||
 				strings.HasPrefix(requestPath, "/web/") ||
@@ -245,9 +309,6 @@ func RateLimitMiddleware(limiter *cache.DistributedRateLimiter, cfg *config.Conf
 				requestPath == "/web" {
 				return next(c)
 			}
-			// Static assets are public, but only when genuinely fetched as
-			// assets. Same load-bearing guards as APIKeyAuth: a request whose
-			// path merely ends in ".js" must not escape rate limiting.
 			if m := c.Request().Method; (m == http.MethodGet || m == http.MethodHead) && !strings.HasPrefix(requestPath, "/api/") {
 				if strings.HasSuffix(requestPath, ".js") ||
 					strings.HasSuffix(requestPath, ".css") ||
@@ -263,8 +324,6 @@ func RateLimitMiddleware(limiter *cache.DistributedRateLimiter, cfg *config.Conf
 				}
 			}
 
-			// Skip read-only API endpoints for public browsing (GET and OPTIONS requests)
-			// OPTIONS is needed for CORS preflight requests
 			method := c.Request().Method
 			if (method == "GET" || method == "OPTIONS") && (path == "/api/documents" || path == "/api/documents/search" ||
 				strings.HasPrefix(path, "/api/documents/") ||
@@ -279,12 +338,6 @@ func RateLimitMiddleware(limiter *cache.DistributedRateLimiter, cfg *config.Conf
 				return next(c)
 			}
 
-			// Write endpoints are deliberately NOT skipped here. /api/ingest
-			// and /api/updates/check are the most expensive handlers in the
-			// server; exempting them let any caller issue them without limit,
-			// which is the resource-exhaustion vector closed in APIKeyAuth.
-
-			// Determine rate limit based on endpoint and key type
 			var limit int
 			keyType := c.Get("api_key_type")
 
@@ -294,13 +347,11 @@ func RateLimitMiddleware(limiter *cache.DistributedRateLimiter, cfg *config.Conf
 				limit = cfg.RateLimitMCP
 			}
 
-			// Use API key hash as rate limit key
 			keyHash, ok := c.Get("api_key_hash").(string)
 			if !ok {
 				keyHash = c.RealIP()
 			}
 
-			// Check rate limit
 			if !limiter.Allow(c.Request().Context(), keyHash, limit) {
 				slog.Warn("Rate limit exceeded",
 					"key_type", keyType,
@@ -320,7 +371,6 @@ func RateLimitMiddleware(limiter *cache.DistributedRateLimiter, cfg *config.Conf
 // bucketing. It is a non-authoritative correlation value: identity is resolved
 // from the credential registry, never from this truncated digest.
 func hashAPIKey(key string) string {
-	// Use stack-allocated array for hashing
 	var h [32]byte
 	h = sha256.Sum256([]byte(key))
 	return hex.EncodeToString(h[:8])

@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/thearchitectit/guardrail-mcp/internal/auth"
 	"github.com/thearchitectit/guardrail-mcp/internal/config"
 	"github.com/thearchitectit/guardrail-mcp/internal/models"
 )
@@ -31,6 +32,22 @@ func privacyServer() *MCPServer {
 		config:   &config.Config{SchemaVersion: "1.0"},
 		sessions: make(map[string]*models.Session),
 	}
+}
+
+// authzTestContext returns a context carrying a server-controlled principal
+// authorized for the tools under test. Identity is never taken from arguments.
+func authzTestContext() context.Context {
+	ctx := context.WithValue(context.Background(), ctxKeyRequestID, "req-123")
+	ctx = context.WithValue(ctx, ctxKeyPrincipalID, "principal-alpha")
+	ctx = context.WithValue(ctx, ctxKeyCredentialID, "cred-1")
+	ctx = context.WithValue(ctx, ctxKeyCaller, auth.Caller{
+		PrincipalID:  "principal-alpha",
+		CredentialID: "cred-1",
+		Scopes:       []string{auth.ScopeMCPRead, auth.ScopeMCPValidate, auth.ScopeMCPMutate},
+		Role:         auth.RoleAdministrator,
+		Resources:    []string{"*"},
+	})
+	return ctx
 }
 
 // TestArgumentPrivacyFakeSecretAbsentFromLogs seeds a fake secret at several
@@ -59,7 +76,7 @@ func TestArgumentPrivacyFakeSecretAbsentFromLogs(t *testing.T) {
 
 	// Success path (guardrail_init_session).
 	out := captureLogs(t, func() {
-		res, err := s.handleToolCall(context.Background(), "guardrail_init_session", nestedArgs)
+		res, err := s.handleToolCall(authzTestContext(), "guardrail_init_session", nestedArgs)
 		if err != nil {
 			t.Fatalf("handleToolCall: %v", err)
 		}
@@ -71,11 +88,14 @@ func TestArgumentPrivacyFakeSecretAbsentFromLogs(t *testing.T) {
 		t.Fatalf("fake secret leaked into success-path logs: %s", out)
 	}
 
-	// Error path (unknown tool).
+	// Error path (unknown tool) — stable permission-denied result, no leak.
 	out = captureLogs(t, func() {
-		_, err := s.handleToolCall(context.Background(), "no_such_tool", nestedArgs)
-		if err == nil {
-			t.Fatal("unknown tool should error")
+		res, err := s.handleToolCall(authzTestContext(), "no_such_tool", nestedArgs)
+		if err != nil {
+			t.Fatalf("handleToolCall: %v", err)
+		}
+		if res == nil || !res.IsError {
+			t.Fatal("unknown tool should yield a stable permission-denied result")
 		}
 	})
 	if strings.Contains(out, fakeArgSecret) {
@@ -84,7 +104,7 @@ func TestArgumentPrivacyFakeSecretAbsentFromLogs(t *testing.T) {
 
 	// Rejected-tool path (error result, no Go error).
 	out = captureLogs(t, func() {
-		res, err := s.handleToolCall(context.Background(), "guardrail_get_context", map[string]interface{}{
+		res, err := s.handleToolCall(authzTestContext(), "guardrail_get_context", map[string]interface{}{
 			"path": fakeArgSecret,
 			"note": fakeArgSecret,
 		})
@@ -104,9 +124,7 @@ func TestArgumentPrivacyFakeSecretAbsentFromLogs(t *testing.T) {
 // the approved audit fields and does not dump raw argument maps.
 func TestArgumentPrivacyLogsApprovedFieldsOnly(t *testing.T) {
 	s := privacyServer()
-	ctx := context.WithValue(context.Background(), ctxKeyRequestID, "req-123")
-	ctx = context.WithValue(ctx, ctxKeyPrincipalID, "principal-alpha")
-	ctx = context.WithValue(ctx, ctxKeyCredentialID, "cred-1")
+	ctx := authzTestContext()
 
 	out := captureLogs(t, func() {
 		_, _ = s.handleToolCall(ctx, "guardrail_init_session", map[string]interface{}{
@@ -123,7 +141,7 @@ func TestArgumentPrivacyLogsApprovedFieldsOnly(t *testing.T) {
 		"credential_id=cred-1",
 		"resource=proj-42",
 		"outcome=success",
-		"policy_version=1.0",
+		"policy_version=authz-1",
 	} {
 		if !strings.Contains(out, want) {
 			t.Fatalf("log missing approved field %q; got: %s", want, out)

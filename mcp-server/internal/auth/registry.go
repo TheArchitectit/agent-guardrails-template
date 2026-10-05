@@ -34,19 +34,39 @@ type Record struct {
 	CredentialID string    `json:"credential_id"`
 	PrincipalID  string    `json:"principal_id"`
 	Scopes       []string  `json:"scopes,omitempty"`
-	IssuedAt     time.Time `json:"issued_at,omitempty"`
-	ExpiresAt    time.Time `json:"expires_at,omitempty"`
-	Revoked      bool      `json:"revoked,omitempty"`
+	// Role is the named role grant for the principal (Spec 16 §4 catalog).
+	// Missing/unknown roles deny at the authorization decision boundary.
+	Role string `json:"role,omitempty"`
+	// Resources lists project/resource IDs the principal may act on.
+	// "*" grants all resources. An empty list grants none.
+	Resources []string  `json:"resources,omitempty"`
+	IssuedAt  time.Time `json:"issued_at,omitempty"`
+	ExpiresAt time.Time `json:"expires_at,omitempty"`
+	Revoked   bool      `json:"revoked,omitempty"`
 	// Verifier is the hex-encoded keyed one-way digest of the credential
 	// secret, produced with Digest and the registry verifier key.
 	Verifier string `json:"verifier"`
 }
 
-// Principal is the resolved identity of a caller.
+// Principal is the resolved identity of a caller. Identity comes only from
+// the credential record — never from tool arguments or request content.
 type Principal struct {
 	ID           string
 	CredentialID string
 	Scopes       []string
+	Role         string
+	Resources    []string
+}
+
+// Caller converts a resolved principal into an authorization Caller.
+func (p Principal) Caller() Caller {
+	return Caller{
+		PrincipalID:  p.ID,
+		CredentialID: p.CredentialID,
+		Scopes:       p.Scopes,
+		Role:         p.Role,
+		Resources:    p.Resources,
+	}
 }
 
 // Registry resolves a presented secret to a principal.
@@ -146,6 +166,8 @@ func (r *Registry) Resolve(secret string) (Principal, bool) {
 		ID:           matched.PrincipalID,
 		CredentialID: matched.CredentialID,
 		Scopes:       matched.Scopes,
+		Role:         matched.Role,
+		Resources:    matched.Resources,
 	}, true
 }
 

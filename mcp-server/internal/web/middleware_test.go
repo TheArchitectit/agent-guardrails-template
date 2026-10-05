@@ -34,7 +34,7 @@ func TestAPIKeyAuth_StaticExtensionDoesNotBypassAuth(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			e := echo.New()
-			handler := APIKeyAuth(cfg)(func(c echo.Context) error {
+			handler := APIKeyAuth(cfg, nil)(func(c echo.Context) error {
 				return c.NoContent(http.StatusOK)
 			})
 
@@ -62,7 +62,7 @@ func TestAPIKeyAuth_ValidKeyStillAuthenticates(t *testing.T) {
 	cfg := &config.Config{MCPAPIKey: "secret-key", IDEAPIKey: "ide-key"}
 
 	e := echo.New()
-	handler := APIKeyAuth(cfg)(func(c echo.Context) error {
+	handler := APIKeyAuth(cfg, nil)(func(c echo.Context) error {
 		return c.NoContent(http.StatusOK)
 	})
 
