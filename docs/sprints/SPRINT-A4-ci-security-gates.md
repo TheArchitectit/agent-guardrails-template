@@ -161,10 +161,10 @@ are now allowlisted: the test canaries in
 `streamable_http_revocation_test.go` (`revocation-propagation-verifier-key-…`),
 `registry_lifecycle_test.go` (`rotated-verifier-key-…`),
 `auth_test.go` (`mcp-test-verifier-key-…`), plus documentation/example
-placeholders in `docs/MCP_TOOLS_REFERENCE.md` (`sk_live_abc123xyz789secretkey`),
-`docs/standards/PROJECT_CONTEXT_TEMPLATE.md` (`sk-1234567890`), and
-`examples/regression-prevention/prevention-rules-examples.json`
-(`SuperSecret123!` / `sk-abc123xyz789`).
+placeholders in `docs/MCP_TOOLS_REFERENCE.md` (a Stripe-style example key),
+`docs/standards/PROJECT_CONTEXT_TEMPLATE.md` (an illustrative `sk-…` key), and
+`examples/regression-prevention/prevention-rules-examples.json` (illustrative
+`bad`-example credentials).
 
 **5 findings were classified as REAL credentials and left un-ignored**: the four
 `cpofopencode` hits at commit `0c962de` (an exported MCP/LLM gateway config with
