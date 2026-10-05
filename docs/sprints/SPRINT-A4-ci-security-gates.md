@@ -4,7 +4,7 @@
 **Source Spec:** 19 — Phase 0 Same-Commit CI Security Gates (R19-01 through R19-16)
 **Priority:** P1 (Blocking)
 **Estimated Effort:** ~2–3 days
-**Status:** PARTIALLY IMPLEMENTED (no item ACCEPTED) — see Reconciliation 2026-10-04
+**Status:** PARTIALLY IMPLEMENTED (no item ACCEPTED) — see Reconciliation 2026-10-04 and 2026-10-05
 **Depends On:** SPRINT-A0, SPRINT-A1, SPRINT-A2, SPRINT-A3
 **Blocks:** Phase 0 release / branch-protection enablement
 
@@ -25,6 +25,34 @@ the CI runner / required-check run was not available to verify against.
 - Runner trust / isolation — **NOT_RUN**.
 - Provenance (full-SHA actions / digest images) — **NOT_RUN**.
 - Release evidence bundle — **NOT_RUN**.
+
+---
+
+## Reconciliation 2026-10-05 — CI security-matrix rows WIRED/EXERCISED
+
+Three matrix rows are now WIRED as stable required-check jobs in
+`.github/workflows/team-validation.yml` and EXERCISED locally (Windows subset;
+CI runs on the supported `ubuntu-latest` runner):
+
+- `security-matrix-web-failclosed` — web fail-closed middleware (configured-invalid
+  registry denies all protected traffic) + registered/legacy REST authorization
+  (R19-03 / R19-05). **WIRED** + **EXERCISED**, command:
+  `cd mcp-server && go test ./internal/web -run 'TestRegistryConfiguredInvalidDeniesAllProtectedTraffic|TestAPIKeyAuth' -count=1` → ok.
+- `security-matrix-mcp-fullpath-authz` — MCP full-path authorization over the real
+  StreamableHTTP endpoint (allow AND deny + zero-side-effect), including the live
+  revocation-propagation bound test `TestLiveRevocationPropagationBound`, which
+  authorizes a credential on both the real web and MCP httptest paths, revokes it,
+  and asserts both paths deny within `auth.RevocationPropagationBound` (R19-03).
+  **WIRED** + **EXERCISED**, command:
+  `cd mcp-server && go test ./internal/mcp -run 'TestStreamableHTTP|TestLiveRevocationPropagationBound' -count=1` → ok.
+- `security-matrix-registry-failclosed` — registry fail-closed and lifecycle rows
+  (R19-05). **WIRED** + **EXERCISED**, command:
+  `cd mcp-server && go test ./internal/auth -run 'TestRegistry|TestRevocation|TestPermitsRestrictedOnly|TestSecretFile' -count=1` → ok.
+
+The workflow now also triggers on `push` to `main`/`master` (previously only
+`pull_request` + `workflow_dispatch`). Rows with no implemented suite (mutation-kill,
+SSRF, secrets, deploy/assets, runner trust, provenance, release bundle) remain
+**NOT_RUN** and are deliberately not faked as CI jobs.
 
 ---
 
@@ -63,9 +91,9 @@ This sprint is complete only when all of the following hold:
 
 - [ ] External required-check policy requires every applicable matrix row on PRs (including forks on hosted runners), pushes to protected `main`, and release-candidate tags/dispatches bound to an immutable SHA (R19-01). Missing/renamed/stale-SHA/`NOT_RUN`/unexplained `SKIP` blocks merge and release. — **NOT_RUN**.
 - [ ] Required commands preserve nonzero exit; collection never masks failures (R19-02). — **NOT_RUN**.
-- [ ] Web + MCP negative controls run real middleware/StreamableHTTP paths with positive controls and zero-side-effect assertions (R19-03). — **NOT_RUN** (negative-control rows).
+- [ ] Web + MCP negative controls run real middleware/StreamableHTTP paths with positive controls and zero-side-effect assertions (R19-03). — **WIRED** + **EXERCISED** (rows `security-matrix-web-failclosed`, `security-matrix-mcp-fullpath-authz`); mutation-kill half of R19-04 still **NOT_RUN**.
 - [ ] Mutation-kill fixtures prove each named bypass changes PASS→FAIL and are restored before publishing PASS (R19-04): auth bypass, MCP authz bypass, registry fallback, SSRF bypass, wildcard prod CORS, secret fixture, broken doc link. — **NOT_RUN**.
-- [ ] Configured registry fail-closed matrix row (R19-05); no nil-registry legacy restoration. — **NOT_RUN** (registry row).
+- [ ] Configured registry fail-closed matrix row (R19-05); no nil-registry legacy restoration. — **WIRED** + **EXERCISED** (row `security-matrix-registry-failclosed`).
 - [ ] Secret leakage / resource boundary rows fail on real findings (R19-06); full-history Gitleaks separate from source regex checks. — **NOT_RUN** (secrets row).
 - [ ] Webhook SSRF deterministic resolver/dialer fixtures; policy-denied destination is failed outcome (R19-07). — **NOT_RUN** (SSRF row).
 - [ ] Deployment/readiness/migration rows (R19-08); static assets/CORS/proxy trust (R19-09). — **NOT_RUN**.
@@ -287,5 +315,5 @@ go test ./... -run 'TestProvenance|TestPinned|TestWorkflow' -count=1
 ---
 
 **Created:** 2026-10-04
-**Version:** 1.1
-**Status:** PARTIALLY IMPLEMENTED (reconciled 2026-10-04 against commit 1c838f4)
+**Version:** 1.2
+**Status:** PARTIALLY IMPLEMENTED (reconciled 2026-10-04 against commit 1c838f4; 2026-10-05 CI rows added)

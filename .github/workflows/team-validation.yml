@@ -1,6 +1,10 @@
 name: Team Validation
 
 on:
+  # Protected-branch pushes run the same security rows so a merge cannot land
+  # without the negative-control matrix passing on a supported runner.
+  push:
+    branches: [main, master]
   # Pull requests, including forks, stay on GitHub-hosted runners so
   # untrusted contribution code never runs inside the private UCS03 network.
   pull_request:
@@ -151,3 +155,65 @@ jobs:
         with:
           name: team-cli
           path: cmd/team-cli/team
+
+  # ---------------------------------------------------------------------------
+  # Spec 19 Phase 0 security matrix (SPRINT-A4). One job per row gives a stable,
+  # required-check name. Rows are added ONLY for suites that exist and pass;
+  # every row drives the real middleware/endpoint, not a helper call. Suites not
+  # yet implemented stay documented as NOT_RUN in
+  # docs/sprints/SPRINT-A4-ci-security-gates.md rather than being faked here.
+  # ---------------------------------------------------------------------------
+
+  # R19-03 / R19-05: web middleware fail-closed on a configured-invalid
+  # registry, plus registered/legacy authorization on the real REST surface.
+  security-matrix-web-failclosed:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache-dependency-path: mcp-server/go.sum
+
+      - name: Web fail-closed middleware + REST authorization row
+        run: |
+          cd mcp-server
+          go test ./internal/web -run 'TestRegistryConfiguredInvalidDeniesAllProtectedTraffic|TestAPIKeyAuth' -count=1 -v
+
+  # R19-03: MCP negative controls over the real StreamableHTTP endpoint
+  # (allow AND deny + zero side effect) and the live revocation-propagation
+  # bound driven through both the web and MCP httptest paths.
+  security-matrix-mcp-fullpath-authz:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache-dependency-path: mcp-server/go.sum
+
+      - name: MCP full-path authz + live revocation bound row
+        run: |
+          cd mcp-server
+          go test ./internal/mcp -run 'TestStreamableHTTP|TestLiveRevocationPropagationBound' -count=1 -v
+
+  # R19-05: credential registry fail-closed and lifecycle rows.
+  security-matrix-registry-failclosed:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache-dependency-path: mcp-server/go.sum
+
+      - name: Registry fail-closed + lifecycle row
+        run: |
+          cd mcp-server
+          go test ./internal/auth -run 'TestRegistry|TestRevocation|TestPermitsRestrictedOnly|TestSecretFile' -count=1 -v
