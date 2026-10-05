@@ -4,9 +4,24 @@
 **Source Spec:** 16 — Gate 3 (R16-09) + Spec 17 secret source / least privilege (R17-06 through R17-08)
 **Priority:** P1 (Blocking)
 **Estimated Effort:** ~2–3 days
-**Status:** PENDING (proposed, not started)
+**Status:** PARTIALLY IMPLEMENTED (no item ACCEPTED) — see Reconciliation 2026-10-04
 **Depends On:** SPRINT-A0 (registry fail-closed, config secrecy), SPRINT-A1 (principal authorization)
 **Blocks:** SPRINT-A3 (deployment readiness assumes secret sources), SPRINT-A4 (CI secret gates)
+
+---
+
+## Reconciliation 2026-10-04 — verified against source at commit 1c838f4
+
+Status vocabulary: **WIRED** (code exists, no exact live test), **EXERCISED**
+(exact test ran, cited), **NOT_EXERCISED** (live dependency skipped), **NOT_RUN**
+(tool/runner unavailable). No item below is ACCEPTED.
+
+- Revocation propagation bound — **WIRED** (in-process only): `internal/auth/registry_lifecycle_test.go:26`; no cross-process/multi-instance denial proven.
+- Atomic reload — **EXERCISED (unit)**: `internal/auth/registry_lifecycle_test.go:64`.
+- Secret-file source + ACL — **EXERCISED (unit)**: `registry_lifecycle_test.go:215`, `registry_lifecycle_test.go:266`.
+- Webhook HMAC at rest — **NOT_EXERCISED**.
+- No credentials via argv / healthcheck flags — **NOT_EXERCISED**.
+- Verifier key ≥256-bit generation — **WIRED**.
 
 ---
 
@@ -44,15 +59,15 @@ Before starting this sprint:
 
 This sprint is complete only when all of the following hold:
 
-- [ ] Approved key generation, issuance, distinct principal assignment, expiry, overlap/rotation, revocation, atomic reload or immutable deployment replacement, verifier-key rotation, and operator audit are defined **and** implemented/protected (no lifecycle API claimed until it exists).
-- [ ] Measured maximum revocation propagation delay is set and published; revoked keys deny new web and MCP calls within the approved bound (target from Spec 16/17: ≤60s tested denial).
-- [ ] A failed reload or bad replacement never enlarges access or restores privileged legacy behavior.
-- [ ] File/secret-provider configuration path exists (do not pretend env-only fields already support it).
-- [ ] Production secret source is managed store or runtime read-only mounted secret files (POSIX `0600` / private parent; restrictive Windows ACL equivalent).
-- [ ] Webhook HMAC: encrypted-at-rest storage or managed secret reference; read/list APIs restricted; rotation without exposing the secret.
-- [ ] No credentials via argv, shell-expanded commands, healthcheck flags, or URLs (Redis `redis-cli -a` probe replaced).
-- [ ] Nested tool arguments, DSNs, auth headers, registry JSON, webhook signature keys, `FALLBACK_API_KEY`, `OPENAI_API_KEY`, and secret file contents redacted from errors, logs, audit, traces, metrics, crash reports, health output, and MCP/REST resources.
-- [ ] Opaque credential IDs used for attribution; secret file paths not disclosed to ordinary callers.
+- [ ] Approved key generation, issuance, distinct principal assignment, expiry, overlap/rotation, revocation, atomic reload or immutable deployment replacement, verifier-key rotation, and operator audit are defined **and** implemented/protected (no lifecycle API claimed until it exists). — partial: reload/rotation/revocation helpers exist and are unit-tested; **NOT_EXERCISED** end-to-end.
+- [ ] Measured maximum revocation propagation delay is set and published; revoked keys deny new web and MCP calls within the approved bound (target from Spec 16/17: ≤60s tested denial). — **WIRED**, in-process only (`registry_lifecycle_test.go:26`); cross-process denial **NOT_EXERCISED**.
+- [ ] A failed reload or bad replacement never enlarges access or restores privileged legacy behavior. — **EXERCISED (unit)** (`registry_lifecycle_test.go:64`).
+- [ ] File/secret-provider configuration path exists (do not pretend env-only fields already support it). — **EXERCISED (unit)** (`registry_lifecycle_test.go:215`).
+- [ ] Production secret source is managed store or runtime read-only mounted secret files (POSIX `0600` / private parent; restrictive Windows ACL equivalent). — **EXERCISED (unit)** for the POSIX ACL path (`registry_lifecycle_test.go:266`); Windows ACL equivalent **NOT_EXERCISED**.
+- [ ] Webhook HMAC: encrypted-at-rest storage or managed secret reference; read/list APIs restricted; rotation without exposing the secret. — **NOT_EXERCISED**.
+- [ ] No credentials via argv, shell-expanded commands, healthcheck flags, or URLs (Redis `redis-cli -a` probe replaced). — **NOT_EXERCISED**.
+- [ ] Nested tool arguments, DSNs, auth headers, registry JSON, webhook signature keys, `FALLBACK_API_KEY`, `OPENAI_API_KEY`, and secret file contents redacted from errors, logs, audit, traces, metrics, crash reports, health output, and MCP/REST resources. — **WIRED** (argument/resource helpers, S-A0).
+- [ ] Opaque credential IDs used for attribution; secret file paths not disclosed to ordinary callers. — **WIRED**.
 
 ---
 
@@ -232,5 +247,5 @@ go vet ./...
 ---
 
 **Created:** 2026-10-04
-**Version:** 1.0
-**Status:** PENDING
+**Version:** 1.1
+**Status:** PARTIALLY IMPLEMENTED (reconciled 2026-10-04 against commit 1c838f4)

@@ -4,9 +4,23 @@
 **Source Spec:** 16 — Gate 2 (R16-06, R16-07, R16-08)
 **Priority:** P0 (Critical)
 **Estimated Effort:** ~3–5 days
-**Status:** PENDING (proposed, not started)
+**Status:** PARTIALLY IMPLEMENTED (no item ACCEPTED) — see Reconciliation 2026-10-04
 **Depends On:** SPRINT-A0 (registry fail-closed and config secrecy)
 **Blocks:** SPRINT-A2
+
+---
+
+## Reconciliation 2026-10-04 — verified against source at commit 1c838f4
+
+Status vocabulary: **WIRED** (code exists, no exact live test), **EXERCISED**
+(exact test ran, cited), **NOT_EXERCISED** (live dependency skipped), **NOT_RUN**
+(tool/runner unavailable). No item below is ACCEPTED.
+
+- R16-06 (scope × role × resource intersection) on web middleware — **EXERCISED**: `internal/web/middleware_authz_test.go:55` (`TestAuthzScopeRoleResourceMatrix`).
+- R16-06 on MCP full path — **WIRED / NOT_EXERCISED**: exercised only through helpers, not the StreamableHTTP endpoint.
+- R16-07 legacy containment — **EXERCISED**: `internal/web/middleware_registry_test.go:97-130`.
+- R16-08 decision-audit fail-closed — **EXERCISED**: `internal/web/middleware_authz_test.go:145` (`TestAuthzAdminMutationFailsClosedWithoutAudit`).
+- `hashAPIKey` is never used as identity — **WIRED**.
 
 ---
 
@@ -42,18 +56,18 @@ Before starting this sprint:
 
 This sprint is complete only when all of the following hold:
 
-- [ ] A credential resolves to server-controlled principal ID, credential ID, reviewed scopes, role grants, resource/project membership, and status.
-- [ ] Identity/role/tenant is never accepted from tool arguments or content.
-- [ ] `authenticated AND scope_allows AND role_allows AND resource_allows` runs before every effect, including conditional handlers.
-- [ ] Confirmation flags remain intent checks after authorization only.
-- [ ] Missing/unknown role, resource, scope, or operation denies: HTTP 401 unauthenticated, 403 authenticated-forbidden, stable non-leaking MCP permission error.
-- [ ] Scope/role mismatch and cross-project cases deny without side effects (even with `confirmed=true`).
-- [ ] Arbitrary safe-method and `/ide/` prefix access is replaced by the approved method/path/action table.
-- [ ] Legacy MCP key calls use the same privilege model; unattributable/unconstrainable legacy principals deny privileged and mutating actions.
-- [ ] Public preflight never authorizes its corresponding effect; path normalization and suffix tricks deny.
-- [ ] Decision/effect audit records principal + opaque credential ID, action, safe resource/project ID, outcome, reason code, and policy version for both transports (including project create/update/delete and denials).
-- [ ] Truncated `hashAPIKey` is never used as identity.
-- [ ] Security-sensitive mutations fail closed if required durable audit cannot be recorded.
+- [ ] A credential resolves to server-controlled principal ID, credential ID, reviewed scopes, role grants, resource/project membership, and status. — **EXERCISED** on web (`middleware_authz_test.go:55`); MCP via helper only (**WIRED**).
+- [ ] Identity/role/tenant is never accepted from tool arguments or content. — **WIRED**.
+- [ ] `authenticated AND scope_allows AND role_allows AND resource_allows` runs before every effect, including conditional handlers. — **EXERCISED** on web (`middleware_authz_test.go:55`); MCP full path **WIRED/NOT_EXERCISED**.
+- [ ] Confirmation flags remain intent checks after authorization only. — **NOT_EXERCISED** (no audited verdict).
+- [ ] Missing/unknown role, resource, scope, or operation denies: HTTP 401 unauthenticated, 403 authenticated-forbidden, stable non-leaking MCP permission error. — **EXERCISED** on web (`middleware_authz_test.go:55`); MCP error shape via helper only.
+- [ ] Scope/role mismatch and cross-project cases deny without side effects (even with `confirmed=true`). — **EXERCISED** on web (`middleware_authz_test.go:55`, cross-project row).
+- [ ] Arbitrary safe-method and `/ide/` prefix access is replaced by the approved method/path/action table. — **EXERCISED** (`middleware_registry_test.go:97-130`).
+- [ ] Legacy MCP key calls use the same privilege model; unattributable/unconstrainable legacy principals deny privileged and mutating actions. — **EXERCISED** (`middleware_registry_test.go:97-130`).
+- [ ] Public preflight never authorizes its corresponding effect; path normalization and suffix tricks deny. — **NOT_EXERCISED** (no audited verdict).
+- [ ] Decision/effect audit records principal + opaque credential ID, action, safe resource/project ID, outcome, reason code, and policy version for both transports (including project create/update/delete and denials). — web **EXERCISED** (`middleware_authz_test.go:145`); MCP **NOT_EXERCISED**.
+- [ ] Truncated `hashAPIKey` is never used as identity. — **WIRED**.
+- [ ] Security-sensitive mutations fail closed if required durable audit cannot be recorded. — **EXERCISED** (`middleware_authz_test.go:145`).
 
 ---
 
@@ -227,5 +241,5 @@ go test ./internal/... -count=1
 ---
 
 **Created:** 2026-10-04
-**Version:** 1.0
-**Status:** PENDING
+**Version:** 1.1
+**Status:** PARTIALLY IMPLEMENTED (reconciled 2026-10-04 against commit 1c838f4)

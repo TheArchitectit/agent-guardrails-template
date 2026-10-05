@@ -4,9 +4,27 @@
 **Source Spec:** 19 — Phase 0 Same-Commit CI Security Gates (R19-01 through R19-16)
 **Priority:** P1 (Blocking)
 **Estimated Effort:** ~2–3 days
-**Status:** PENDING (proposed, not started)
+**Status:** PARTIALLY IMPLEMENTED (no item ACCEPTED) — see Reconciliation 2026-10-04
 **Depends On:** SPRINT-A0, SPRINT-A1, SPRINT-A2, SPRINT-A3
 **Blocks:** Phase 0 release / branch-protection enablement
+
+---
+
+## Reconciliation 2026-10-04 — verified against source at commit 1c838f4
+
+Status vocabulary: **WIRED** (code exists, no exact live test), **EXERCISED**
+(exact test ran, cited), **NOT_EXERCISED** (live dependency skipped), **NOT_RUN**
+(tool/runner unavailable). No item below is ACCEPTED. `NOT_RUN` rows here mean
+the CI runner / required-check run was not available to verify against.
+
+- Same-commit required matrix — **NOT_RUN**.
+- Negative-control + mutation-kill rows — **NOT_RUN**.
+- Registry / secrets / SSRF / deploy / assets matrix rows — **NOT_RUN**.
+- Package coverage + nonzero test floor — **WIRED**.
+- Docs gate (500-line max / internal links) — **WIRED** (trigger incomplete: does not cover every protected push/release path).
+- Runner trust / isolation — **NOT_RUN**.
+- Provenance (full-SHA actions / digest images) — **NOT_RUN**.
+- Release evidence bundle — **NOT_RUN**.
 
 ---
 
@@ -43,22 +61,22 @@ Before starting this sprint:
 
 This sprint is complete only when all of the following hold:
 
-- [ ] External required-check policy requires every applicable matrix row on PRs (including forks on hosted runners), pushes to protected `main`, and release-candidate tags/dispatches bound to an immutable SHA (R19-01). Missing/renamed/stale-SHA/`NOT_RUN`/unexplained `SKIP` blocks merge and release.
-- [ ] Required commands preserve nonzero exit; collection never masks failures (R19-02).
-- [ ] Web + MCP negative controls run real middleware/StreamableHTTP paths with positive controls and zero-side-effect assertions (R19-03).
-- [ ] Mutation-kill fixtures prove each named bypass changes PASS→FAIL and are restored before publishing PASS (R19-04): auth bypass, MCP authz bypass, registry fallback, SSRF bypass, wildcard prod CORS, secret fixture, broken doc link.
-- [ ] Configured registry fail-closed matrix row (R19-05); no nil-registry legacy restoration.
-- [ ] Secret leakage / resource boundary rows fail on real findings (R19-06); full-history Gitleaks separate from source regex checks.
-- [ ] Webhook SSRF deterministic resolver/dialer fixtures; policy-denied destination is failed outcome (R19-07).
-- [ ] Deployment/readiness/migration rows (R19-08); static assets/CORS/proxy trust (R19-09).
-- [ ] Complete package and test coverage: every Go module (`mcp-server`, `cmd/team-cli`, `examples/go`) + Python tests; counts recorded (R19-10).
-- [ ] Docs gate: internal Markdown links + hard 500-line max on PR and protected push/release (R19-11).
-- [ ] Nonzero test floor with checked-in inventory and explicit SKIP/NOT_RUN classification (R19-12).
-- [ ] Runner trust and repo isolation: forks/hosted; UCS03 self-hosted only for trusted `main`, isolated, cleaned (R19-13).
-- [ ] Path-filter safeguards: security/secret/registry/deploy/package/test-floor rows on every protected push and release candidate (R19-14).
-- [ ] Immutable workflow/image provenance: full commit SHA actions, image digests, identity recorded (R19-15).
-- [ ] Release contract fails on any FAIL/NOT_RUN/real secret/side effect/missing row/etc. (R19-16); staged rollout executed per spec.
-- [ ] Acceptance evidence bundle recorded (Spec 19 §5) at the exact commit SHA.
+- [ ] External required-check policy requires every applicable matrix row on PRs (including forks on hosted runners), pushes to protected `main`, and release-candidate tags/dispatches bound to an immutable SHA (R19-01). Missing/renamed/stale-SHA/`NOT_RUN`/unexplained `SKIP` blocks merge and release. — **NOT_RUN**.
+- [ ] Required commands preserve nonzero exit; collection never masks failures (R19-02). — **NOT_RUN**.
+- [ ] Web + MCP negative controls run real middleware/StreamableHTTP paths with positive controls and zero-side-effect assertions (R19-03). — **NOT_RUN** (negative-control rows).
+- [ ] Mutation-kill fixtures prove each named bypass changes PASS→FAIL and are restored before publishing PASS (R19-04): auth bypass, MCP authz bypass, registry fallback, SSRF bypass, wildcard prod CORS, secret fixture, broken doc link. — **NOT_RUN**.
+- [ ] Configured registry fail-closed matrix row (R19-05); no nil-registry legacy restoration. — **NOT_RUN** (registry row).
+- [ ] Secret leakage / resource boundary rows fail on real findings (R19-06); full-history Gitleaks separate from source regex checks. — **NOT_RUN** (secrets row).
+- [ ] Webhook SSRF deterministic resolver/dialer fixtures; policy-denied destination is failed outcome (R19-07). — **NOT_RUN** (SSRF row).
+- [ ] Deployment/readiness/migration rows (R19-08); static assets/CORS/proxy trust (R19-09). — **NOT_RUN**.
+- [ ] Complete package and test coverage: every Go module (`mcp-server`, `cmd/team-cli`, `examples/go`) + Python tests; counts recorded (R19-10). — **WIRED** (coverage / test-floor).
+- [ ] Docs gate: internal Markdown links + hard 500-line max on PR and protected push/release (R19-11). — **WIRED** (trigger incomplete; does not fire on every protected push/release).
+- [ ] Nonzero test floor with checked-in inventory and explicit SKIP/NOT_RUN classification (R19-12). — **WIRED**.
+- [ ] Runner trust and repo isolation: forks/hosted; UCS03 self-hosted only for trusted `main`, isolated, cleaned (R19-13). — **NOT_RUN**.
+- [ ] Path-filter safeguards: security/secret/registry/deploy/package/test-floor rows on every protected push and release candidate (R19-14). — **NOT_RUN**.
+- [ ] Immutable workflow/image provenance: full commit SHA actions, image digests, identity recorded (R19-15). — **NOT_RUN**.
+- [ ] Release contract fails on any FAIL/NOT_RUN/real secret/side effect/missing row/etc. (R19-16); staged rollout executed per spec. — **NOT_RUN**.
+- [ ] Acceptance evidence bundle recorded (Spec 19 §5) at the exact commit SHA. — **NOT_RUN** (release evidence bundle).
 
 ---
 
@@ -269,5 +287,5 @@ go test ./... -run 'TestProvenance|TestPinned|TestWorkflow' -count=1
 ---
 
 **Created:** 2026-10-04
-**Version:** 1.0
-**Status:** PENDING
+**Version:** 1.1
+**Status:** PARTIALLY IMPLEMENTED (reconciled 2026-10-04 against commit 1c838f4)

@@ -4,9 +4,24 @@
 **Source Spec:** 16 — Gate 0–1 (R16-03, R16-04, R16-05)
 **Priority:** P0 (Critical)
 **Estimated Effort:** ~2–3 days
-**Status:** PENDING (proposed, not started)
+**Status:** PARTIALLY IMPLEMENTED (no item ACCEPTED) — see Reconciliation 2026-10-04
 **Depends On:** — (first Phase 0 remediation sprint)
 **Blocks:** SPRINT-A1, SPRINT-A2, SPRINT-A3
+
+---
+
+## Reconciliation 2026-10-04 — verified against source at commit 1c838f4
+
+Status vocabulary: **WIRED** (code exists, no exact live test), **EXERCISED**
+(exact test ran, cited), **NOT_EXERCISED** (live dependency skipped), **NOT_RUN**
+(tool/runner unavailable). No item below is ACCEPTED.
+
+- Registry fail-closed on web middleware — **EXERCISED**: `internal/web/middleware_failclosed_test.go:19` (`TestRegistryConfiguredInvalidDeniesAllProtectedTraffic`).
+- Registry fail-closed on MCP full path — **WIRED / NOT_EXERCISED**: `internal/mcp/auth_test.go:96-119` exercises the `requireBearerWithRegistry` helper only, not the StreamableHTTP endpoint.
+- MCP resource secrecy (`guardrail://config`) — **WIRED**: helper `readConfigResourceContents` (`resource_registration.go:120`), exercised at `resource_config_secrecy_test.go:48`.
+- Argument privacy — **WIRED**: helper `handleToolCall` (`server.go:202`), exercised at `argument_privacy_test.go:56`.
+- Real StreamableHTTP `tools/call` end-to-end — **NOT_EXERCISED**.
+- Gitleaks full-history scan — **NOT_RUN**.
 
 ---
 
@@ -41,15 +56,15 @@ Before starting this sprint:
 
 This sprint is complete only when all of the following hold:
 
-- [ ] Configured malformed/unreadable/empty/invalid registry fails readiness or denies protected traffic on **both** web and MCP; no silent legacy fallback.
-- [ ] Unknown scopes, duplicate credential IDs/verifiers, invalid records, and unusable verifier-key material are rejected at load.
-- [ ] Unregistered credentials cannot inherit authority from registered ones.
-- [ ] Registry-only cutover path does not reinstate legacy access when the legacy MCP key is empty/absent.
-- [ ] `guardrail://config` (or replacement) returns only a reviewed non-secret projection, or is removed; unauthorized reads deny stably.
-- [ ] No DB password, API key, JWT secret, verifier key, or raw credential appears in resource output, errors, diagnostics, or audit.
-- [ ] Full MCP argument-map logging is removed; only approved fields are recorded.
-- [ ] Nested fake-secret argument markers are absent from logs, responses, metrics, and exported evidence.
-- [ ] Positive and negative tests exist and pass for R16-03–05 on real web middleware and StreamableHTTP MCP paths (not registry unit tests alone).
+- [ ] Configured malformed/unreadable/empty/invalid registry fails readiness or denies protected traffic on **both** web and MCP; no silent legacy fallback. — web: **EXERCISED** (`middleware_failclosed_test.go:19`); MCP full path: **WIRED/NOT_EXERCISED** (`auth_test.go:96-119`, helper only).
+- [ ] Unknown scopes, duplicate credential IDs/verifiers, invalid records, and unusable verifier-key material are rejected at load. — **NOT_EXERCISED** (no audited verdict; load-time unit checks exist but were not in the 2026-10-04 verdict set).
+- [ ] Unregistered credentials cannot inherit authority from registered ones. — **WIRED** (helper `requireBearerWithRegistry`, `auth_test.go:47`).
+- [ ] Registry-only cutover path does not reinstate legacy access when the legacy MCP key is empty/absent. — **WIRED** (helper only).
+- [ ] `guardrail://config` (or replacement) returns only a reviewed non-secret projection, or is removed; unauthorized reads deny stably. — **WIRED** (helper `readConfigResourceContents`).
+- [ ] No DB password, API key, JWT secret, verifier key, or raw credential appears in resource output, errors, diagnostics, or audit. — **WIRED** (resource + argument helpers).
+- [ ] Full MCP argument-map logging is removed; only approved fields are recorded. — **WIRED** (helper `handleToolCall`).
+- [ ] Nested fake-secret argument markers are absent from logs, responses, metrics, and exported evidence. — **WIRED** (helper-level capture only).
+- [ ] Positive and negative tests exist and pass for R16-03–05 on real web middleware and StreamableHTTP MCP paths (not registry unit tests alone). — **NOT_EXERCISED** for the StreamableHTTP MCP path; web middleware is **EXERCISED**.
 
 ---
 
@@ -213,5 +228,5 @@ go vet ./...
 ---
 
 **Created:** 2026-10-04
-**Version:** 1.0
-**Status:** PENDING
+**Version:** 1.1
+**Status:** PARTIALLY IMPLEMENTED (reconciled 2026-10-04 against commit 1c838f4)

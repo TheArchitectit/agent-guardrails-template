@@ -4,9 +4,25 @@
 **Source Spec:** 17 — profiles/TLS (R17-01 through R17-05) + Spec 18 — migration/startup/readiness (R18-01 through R18-13)
 **Priority:** P1 (Blocking)
 **Estimated Effort:** ~3–4 days
-**Status:** PENDING (proposed, not started)
+**Status:** PARTIALLY IMPLEMENTED (no item ACCEPTED) — see Reconciliation 2026-10-04
 **Depends On:** SPRINT-A0, SPRINT-A1, SPRINT-A2
 **Blocks:** SPRINT-A4 (CI deploy-readiness and migration gates)
+
+---
+
+## Reconciliation 2026-10-04 — verified against source at commit 1c838f4
+
+Status vocabulary: **WIRED** (code exists, no exact live test), **EXERCISED**
+(exact test ran, cited), **NOT_EXERCISED** (live dependency skipped), **NOT_RUN**
+(tool/runner unavailable). No item below is ACCEPTED.
+
+- Profile / exposure validation — **EXERCISED (unit)**: `internal/config/profile_test.go`.
+- Public TLS 1.3+ termination — **NOT_EXERCISED**.
+- DB / Redis transit security — **WIRED**.
+- Nonlocal profile rejects default credentials — **WIRED**.
+- Migration job — **NOT_EXERCISED** (fake ledger only; no real PostgreSQL).
+- Readiness endpoints — **WIRED**.
+- `docker compose config` — **NOT_RUN**.
 
 ---
 
@@ -43,16 +59,16 @@ Before starting this sprint:
 
 This sprint is complete only when all of the following hold:
 
-- [ ] Named profile selected at startup (default `local`); app bind, host publishes, proxy upstream, and reachability validated as a deployment unit (R17-01).
-- [ ] Startup fails closed (nonzero exit, no app socket) on insecure external exposure, `public` without TLS termination + direct-backend denial, `tailnet` without verified private ingress + encrypted authenticated transport (R17-02).
-- [ ] `PRODUCTION_MODE`, `TLS_ENABLED=true`, or cert paths alone never satisfy the exposure gate; no silent downgrade to `local` (R17-02).
-- [ ] Public TLS 1.3+ termination, certificate/hostname/trust validation, trusted-proxy header stance (R17-03).
-- [ ] DB/Redis: plaintext only on verified isolated local bridge/loopback for `local`; outside that boundary require `verify-full` / verified Redis TLS, no skip-verify (R17-04).
-- [ ] Nonlocal profiles reject unset/empty/placeholder/default/reused/test credentials (R17-05); local generates distinct non-placeholder credentials.
-- [ ] Migration job owns schema (R18-01): ordered manifest (R18-02), atomic idempotency + checksum (R18-03), advisory lock (R18-04), version truth (R18-05), deliberate down migrations only (R18-06).
-- [ ] Ordered startup (R18-07); liveness local/process-only vs readiness gating traffic (R18-08); required/optional dependency classification (R18-09).
-- [ ] Invalid registry → readiness fail or protected deny without legacy broadening (R18-10); policy honesty (R18-11); shutdown/outage fail-closed (R18-12); bounded evidence without secrets (R18-13).
-- [ ] Current `run_migrations.go` DSN-argument interface is replaced or not used as a production credential entrypoint.
+- [ ] Named profile selected at startup (default `local`); app bind, host publishes, proxy upstream, and reachability validated as a deployment unit (R17-01). — **EXERCISED (unit)**: `internal/config/profile_test.go`.
+- [ ] Startup fails closed (nonzero exit, no app socket) on insecure external exposure, `public` without TLS termination + direct-backend denial, `tailnet` without verified private ingress + encrypted authenticated transport (R17-02). — **WIRED** (no real-listener negative exercised).
+- [ ] `PRODUCTION_MODE`, `TLS_ENABLED=true`, or cert paths alone never satisfy the exposure gate; no silent downgrade to `local` (R17-02). — **WIRED**.
+- [ ] Public TLS 1.3+ termination, certificate/hostname/trust validation, trusted-proxy header stance (R17-03). — **NOT_EXERCISED**.
+- [ ] DB/Redis: plaintext only on verified isolated local bridge/loopback for `local`; outside that boundary require `verify-full` / verified Redis TLS, no skip-verify (R17-04). — **WIRED**.
+- [ ] Nonlocal profiles reject unset/empty/placeholder/default/reused/test credentials (R17-05); local generates distinct non-placeholder credentials. — **WIRED**.
+- [ ] Migration job owns schema (R18-01): ordered manifest (R18-02), atomic idempotency + checksum (R18-03), advisory lock (R18-04), version truth (R18-05), deliberate down migrations only (R18-06). — **NOT_EXERCISED** (fake ledger only; no real PostgreSQL).
+- [ ] Ordered startup (R18-07); liveness local/process-only vs readiness gating traffic (R18-08); required/optional dependency classification (R18-09). — **WIRED** (readiness endpoints).
+- [ ] Invalid registry → readiness fail or protected deny without legacy broadening (R18-10); policy honesty (R18-11); shutdown/outage fail-closed (R18-12); bounded evidence without secrets (R18-13). — **WIRED**.
+- [ ] Current `run_migrations.go` DSN-argument interface is replaced or not used as a production credential entrypoint. — **NOT_EXERCISED** (no audited verdict).
 
 ---
 
@@ -261,5 +277,5 @@ docker compose config
 ---
 
 **Created:** 2026-10-04
-**Version:** 1.0
-**Status:** PENDING
+**Version:** 1.1
+**Status:** PARTIALLY IMPLEMENTED (reconciled 2026-10-04 against commit 1c838f4)
