@@ -59,6 +59,13 @@ Flat listing of documentation in this repo. For keyword lookup, see
 - [17-deployment-tls-and-secret-boundary.md](docs/specs/17-deployment-tls-and-secret-boundary.md) — proposed deployment and secret-source gates
 - [18-migration-startup-and-readiness.md](docs/specs/18-migration-startup-and-readiness.md) — proposed migration and readiness contract
 - [19-phase0-ci-security-gates.md](docs/specs/19-phase0-ci-security-gates.md) — proposed blocking CI matrix
+
+### sprints/
+- [SPRINT-A0-registry-fail-closed-and-config-secrecy.md](docs/sprints/SPRINT-A0-registry-fail-closed-and-config-secrecy.md) — P0: registry integrity, config secrecy, argument privacy
+- [SPRINT-A1-principal-authorization.md](docs/sprints/SPRINT-A1-principal-authorization.md) — P0: scope/role/resource intersection, legacy containment
+- [SPRINT-A2-credential-lifecycle.md](docs/sprints/SPRINT-A2-credential-lifecycle.md) — P1: credential operations, secret source, least privilege
+- [SPRINT-A3-deployment-readiness.md](docs/sprints/SPRINT-A3-deployment-readiness.md) — P1: deployment profiles, TLS, migration readiness
+- [SPRINT-A4-ci-security-gates.md](docs/sprints/SPRINT-A4-ci-security-gates.md) — P1: blocking CI matrix, mutation-kill, provenance
 - [guardrail-gaps-2026/STATUS.md](docs/specs/guardrail-gaps-2026/STATUS.md) — spec vs shipped code, requirement by requirement
 - [guardrail-gaps-2026/index.md](docs/specs/guardrail-gaps-2026/index.md)
 

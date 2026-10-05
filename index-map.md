@@ -148,6 +148,11 @@ safety guardrail systems.
 | deployment TLS, profiles, secret sources, provider credentials | [specs/17-deployment-tls-and-secret-boundary.md](docs/specs/17-deployment-tls-and-secret-boundary.md) |
 | migrations, startup, readiness, liveness, dependency state | [specs/18-migration-startup-and-readiness.md](docs/specs/18-migration-startup-and-readiness.md) |
 | blocking CI, same commit, UCS03, negative controls, test floors | [specs/19-phase0-ci-security-gates.md](docs/specs/19-phase0-ci-security-gates.md) |
+| sprint A0, registry fail-closed, config secrecy, argument privacy | [sprints/SPRINT-A0-registry-fail-closed-and-config-secrecy.md](docs/sprints/SPRINT-A0-registry-fail-closed-and-config-secrecy.md) |
+| sprint A1, principal authorization, scope/role/resource intersection | [sprints/SPRINT-A1-principal-authorization.md](docs/sprints/SPRINT-A1-principal-authorization.md) |
+| sprint A2, credential lifecycle, secret source, least privilege | [sprints/SPRINT-A2-credential-lifecycle.md](docs/sprints/SPRINT-A2-credential-lifecycle.md) |
+| sprint A3, deployment TLS, migration readiness | [sprints/SPRINT-A3-deployment-readiness.md](docs/sprints/SPRINT-A3-deployment-readiness.md) |
+| sprint A4, CI security gates, mutation-kill, provenance | [sprints/SPRINT-A4-ci-security-gates.md](docs/sprints/SPRINT-A4-ci-security-gates.md) |
 | remediation, auth audit, legacy fallback, scope enforcement, config secrets, secret scan, release gates | [specs/16-authentication-authorization-and-evidence-remediation.md](docs/specs/16-authentication-authorization-and-evidence-remediation.md) |
 
 ## Reboot
