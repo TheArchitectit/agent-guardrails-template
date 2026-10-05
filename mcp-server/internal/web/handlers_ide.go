@@ -64,8 +64,7 @@ func (s *Server) validateFile(c echo.Context) error {
 	violations := validateContentAgainstRules(req.FilePath, req.Content, req.Language, rules)
 
 	// Audit log
-	keyHash := getAPIKeyHash(c)
-	s.auditLogger.LogValidation(ctx, keyHash, "validate_file", len(violations) == 0, len(violations))
+	s.auditLogger.LogValidation(ctx, callerFromContext(c), "validate_file", len(violations) == 0, len(violations))
 
 	return c.JSON(http.StatusOK, map[string]interface{}{
 		"valid":         len(violations) == 0,
@@ -127,8 +126,7 @@ func (s *Server) validateSelection(c echo.Context) error {
 	}
 
 	// Audit log
-	keyHash := getAPIKeyHash(c)
-	s.auditLogger.LogValidation(ctx, keyHash, "validate_selection", len(violations) == 0, len(violations))
+	s.auditLogger.LogValidation(ctx, callerFromContext(c), "validate_selection", len(violations) == 0, len(violations))
 
 	return c.JSON(http.StatusOK, map[string]interface{}{
 		"valid":         len(violations) == 0,
@@ -218,8 +216,7 @@ func (s *Server) getQuickReference(c echo.Context) error {
 	}
 
 	// Audit log
-	keyHash := getAPIKeyHash(c)
-	s.auditLogger.LogDocChange(ctx, keyHash, doc.Slug, "quick-reference-access")
+	s.auditLogger.LogDocChange(ctx, callerFromContext(c), doc.Slug, "quick-reference-access")
 
 	return c.JSON(http.StatusOK, map[string]interface{}{
 		"reference": doc.Content,
@@ -299,8 +296,7 @@ func (s *Server) policyCheck(c echo.Context) error {
 	elapsedMs := int(duration.Milliseconds())
 
 	// Audit log
-	keyHash := getAPIKeyHash(c)
-	s.auditLogger.LogValidation(ctx, keyHash, "policy_check", len(violations) == 0, len(violations))
+	s.auditLogger.LogValidation(ctx, callerFromContext(c), "policy_check", len(violations) == 0, len(violations))
 
 	return c.JSON(http.StatusOK, models.PolicyCheckResponse{
 		Passed:     len(violations) == 0,
@@ -369,15 +365,6 @@ func truncateMatch(match string) string {
 		return match[:50] + "..."
 	}
 	return match
-}
-
-// getAPIKeyHash safely extracts the API key hash from the context
-func getAPIKeyHash(c echo.Context) string {
-	keyHash, ok := c.Get("api_key_hash").(string)
-	if !ok || keyHash == "" {
-		return "unknown"
-	}
-	return keyHash
 }
 
 // isValidSlug validates a project slug to prevent path traversal attacks

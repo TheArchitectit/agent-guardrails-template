@@ -94,8 +94,7 @@ func (s *Server) updateDocument(c echo.Context) error {
 	}
 
 	// Audit log
-	keyHash := getAPIKeyHash(c)
-	s.auditLogger.LogDocChange(c.Request().Context(), keyHash, doc.Slug, "update")
+	s.auditLogger.LogDocChange(c.Request().Context(), callerFromContext(c), doc.Slug, "update")
 
 	return c.JSON(http.StatusOK, doc)
 }

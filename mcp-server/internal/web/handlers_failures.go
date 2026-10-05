@@ -65,6 +65,7 @@ func (s *Server) createFailure(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
 
+	s.auditLogger.LogConfigChange(c.Request().Context(), callerFromContext(c), failure.ID.String(), "failure_create")
 	return c.JSON(http.StatusCreated, failure)
 }
 
@@ -85,5 +86,6 @@ func (s *Server) updateFailure(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
 
+	s.auditLogger.LogConfigChange(c.Request().Context(), callerFromContext(c), failure.ID.String(), "failure_update")
 	return c.JSON(http.StatusOK, failure)
 }

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/thearchitectit/guardrail-mcp/internal/auth"
 	"github.com/thearchitectit/guardrail-mcp/internal/database"
 )
 
@@ -229,8 +230,8 @@ func (l *Logger) LogAuth(ctx context.Context, success bool, actor, reason string
 	})
 }
 
-// LogValidation logs validation events
-func (l *Logger) LogValidation(ctx context.Context, actor, tool string, allowed bool, violations int) {
+// LogValidation logs validation events with the server-resolved caller.
+func (l *Logger) LogValidation(ctx context.Context, caller auth.Caller, tool string, allowed bool, violations int) {
 	status := "allowed"
 	if !allowed {
 		status = "denied"
@@ -239,37 +240,60 @@ func (l *Logger) LogValidation(ctx context.Context, actor, tool string, allowed 
 	l.Log(ctx, Event{
 		Type:     EventValidation,
 		Severity: SevInfo,
-		Actor:    actor,
+		Actor:    caller.PrincipalID,
 		Action:   "validate",
 		Resource: tool,
 		Status:   status,
 		Details: map[string]interface{}{
-			"violations": violations,
+			"credential_id": caller.CredentialID,
+			"violations":    violations,
 		},
 	})
 }
 
-// LogRuleChange logs rule modification events
-func (l *Logger) LogRuleChange(ctx context.Context, actor, ruleID, action string) {
+// LogRuleChange logs rule modification events with the server-resolved caller.
+func (l *Logger) LogRuleChange(ctx context.Context, caller auth.Caller, ruleID, action string) {
 	l.Log(ctx, Event{
 		Type:     EventRuleChange,
-		Severity: SevCritical, // Rule changes are security-critical
-		Actor:    actor,
-		Action:   action, // create, update, delete, toggle
+		Severity: SevCritical,
+		Actor:    caller.PrincipalID,
+		Action:   action,
 		Resource: ruleID,
 		Status:   "success",
+		Details: map[string]interface{}{
+			"credential_id": caller.CredentialID,
+		},
 	})
 }
 
-// LogDocChange logs document modification events
-func (l *Logger) LogDocChange(ctx context.Context, actor, docSlug, action string) {
+// LogDocChange logs document modification events with the server-resolved caller.
+func (l *Logger) LogDocChange(ctx context.Context, caller auth.Caller, docSlug, action string) {
 	l.Log(ctx, Event{
 		Type:     EventDocChange,
 		Severity: SevInfo,
-		Actor:    actor,
+		Actor:    caller.PrincipalID,
 		Action:   action,
 		Resource: docSlug,
 		Status:   "success",
+		Details: map[string]interface{}{
+			"credential_id": caller.CredentialID,
+		},
+	})
+}
+
+// LogConfigChange records mutations outside the rule/document stores without
+// deriving identity from the bearer secret or its correlation hash.
+func (l *Logger) LogConfigChange(ctx context.Context, caller auth.Caller, resource, action string) {
+	l.Log(ctx, Event{
+		Type:     EventConfigChange,
+		Severity: SevCritical,
+		Actor:    caller.PrincipalID,
+		Action:   action,
+		Resource: resource,
+		Status:   "success",
+		Details: map[string]interface{}{
+			"credential_id": caller.CredentialID,
+		},
 	})
 }
 

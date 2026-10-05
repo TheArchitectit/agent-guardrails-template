@@ -3,6 +3,9 @@ package web
 import (
 	"sync"
 	"time"
+
+	"github.com/labstack/echo/v4"
+	"github.com/thearchitectit/guardrail-mcp/internal/auth"
 )
 
 // Pagination and validation constants
@@ -27,3 +30,10 @@ var (
 	lastRuleSyncStatus     RuleSyncStatus
 	lastRuleSyncStatusLock sync.RWMutex
 )
+
+func callerFromContext(c echo.Context) auth.Caller {
+	if caller, ok := c.Get("caller").(auth.Caller); ok {
+		return caller
+	}
+	return auth.Caller{}
+}

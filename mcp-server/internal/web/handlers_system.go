@@ -110,8 +110,7 @@ func (s *Server) triggerIngest(c echo.Context) error {
 	}()
 
 	// Audit log
-	keyHash := getAPIKeyHash(c)
-	s.auditLogger.LogDocChange(ctx, keyHash, fmt.Sprintf("ingest:%s", jobID), "ingest")
+	s.auditLogger.LogDocChange(ctx, callerFromContext(c), fmt.Sprintf("ingest:%s", jobID), "ingest")
 
 	return c.JSON(http.StatusAccepted, map[string]interface{}{
 		"job_id":       jobID,
@@ -180,8 +179,7 @@ func (s *Server) uploadFiles(c echo.Context) error {
 	}
 
 	// Audit log
-	keyHash := getAPIKeyHash(c)
-	s.auditLogger.LogDocChange(ctx, keyHash, fmt.Sprintf("upload:%s", jobID), "ingest")
+	s.auditLogger.LogDocChange(ctx, callerFromContext(c), fmt.Sprintf("upload:%s", jobID), "ingest")
 
 	return c.JSON(http.StatusOK, map[string]interface{}{
 		"job_id":    jobID,
@@ -217,8 +215,7 @@ func (s *Server) syncRepo(c echo.Context) error {
 	}()
 
 	// Audit log
-	keyHash := getAPIKeyHash(c)
-	s.auditLogger.LogDocChange(ctx, keyHash, fmt.Sprintf("sync:%s", jobID), "ingest")
+	s.auditLogger.LogDocChange(ctx, callerFromContext(c), fmt.Sprintf("sync:%s", jobID), "ingest")
 
 	return c.JSON(http.StatusAccepted, map[string]interface{}{
 		"job_id":  jobID,
@@ -303,8 +300,7 @@ func (s *Server) deleteOrphan(c echo.Context) error {
 	}
 
 	// Audit log
-	keyHash := getAPIKeyHash(c)
-	s.auditLogger.LogDocChange(ctx, keyHash, doc.Slug, "delete_orphan")
+	s.auditLogger.LogDocChange(ctx, callerFromContext(c), doc.Slug, "delete_orphan")
 
 	return c.NoContent(http.StatusNoContent)
 }
@@ -344,8 +340,7 @@ func (s *Server) checkForUpdates(c echo.Context) error {
 	}
 
 	// Audit log
-	keyHash := getAPIKeyHash(c)
-	s.auditLogger.LogDocChange(ctx, keyHash, "update-check", "check")
+	s.auditLogger.LogDocChange(ctx, callerFromContext(c), "update-check", "check")
 
 	// Return the result
 	response := updates.ToStatusResponse(check)

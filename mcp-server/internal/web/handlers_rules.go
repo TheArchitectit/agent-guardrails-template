@@ -88,8 +88,7 @@ func (s *Server) createRule(c echo.Context) error {
 	}
 
 	// Audit log
-	keyHash := getAPIKeyHash(c)
-	s.auditLogger.LogRuleChange(c.Request().Context(), keyHash, rule.RuleID, "create")
+	s.auditLogger.LogRuleChange(c.Request().Context(), callerFromContext(c), rule.RuleID, "create")
 
 	return c.JSON(http.StatusCreated, rule)
 }
@@ -115,8 +114,7 @@ func (s *Server) updateRule(c echo.Context) error {
 	s.cache.InvalidateOnRuleChange(c.Request().Context(), rule.RuleID)
 
 	// Audit log
-	keyHash := getAPIKeyHash(c)
-	s.auditLogger.LogRuleChange(c.Request().Context(), keyHash, rule.RuleID, "update")
+	s.auditLogger.LogRuleChange(c.Request().Context(), callerFromContext(c), rule.RuleID, "update")
 
 	return c.JSON(http.StatusOK, rule)
 }
@@ -146,8 +144,7 @@ func (s *Server) deleteRule(c echo.Context) error {
 	}
 
 	// Audit log
-	keyHash := getAPIKeyHash(c)
-	s.auditLogger.LogRuleChange(c.Request().Context(), keyHash, rule.RuleID, "delete")
+	s.auditLogger.LogRuleChange(c.Request().Context(), callerFromContext(c), rule.RuleID, "delete")
 
 	return c.NoContent(http.StatusNoContent)
 }
@@ -208,8 +205,7 @@ func (s *Server) patchRule(c echo.Context) error {
 	}
 
 	// Audit log
-	keyHash := getAPIKeyHash(c)
-	s.auditLogger.LogRuleChange(c.Request().Context(), keyHash, rule.RuleID, "patch")
+	s.auditLogger.LogRuleChange(c.Request().Context(), callerFromContext(c), rule.RuleID, "patch")
 
 	return c.JSON(http.StatusOK, rule)
 }

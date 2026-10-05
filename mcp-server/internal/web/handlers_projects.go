@@ -70,6 +70,7 @@ func (s *Server) createProject(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
 
+	s.auditLogger.LogConfigChange(c.Request().Context(), callerFromContext(c), proj.Slug, "project_create")
 	return c.JSON(http.StatusCreated, proj)
 }
 
@@ -92,6 +93,7 @@ func (s *Server) updateProject(c echo.Context) error {
 
 	// Invalidate cache
 	s.cache.InvalidateOnProjectChange(c.Request().Context(), proj.Slug)
+	s.auditLogger.LogConfigChange(c.Request().Context(), callerFromContext(c), proj.Slug, "project_update")
 
 	return c.JSON(http.StatusOK, proj)
 }
@@ -115,6 +117,7 @@ func (s *Server) deleteProject(c echo.Context) error {
 
 	// Invalidate cache
 	s.cache.InvalidateOnProjectChange(c.Request().Context(), proj.Slug)
+	s.auditLogger.LogConfigChange(c.Request().Context(), callerFromContext(c), proj.Slug, "project_delete")
 
 	return c.NoContent(http.StatusNoContent)
 }

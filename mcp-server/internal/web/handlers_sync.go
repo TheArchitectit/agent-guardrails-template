@@ -69,8 +69,7 @@ func (s *Server) syncRules(c echo.Context) error {
 	}()
 
 	// Audit log
-	keyHash := getAPIKeyHash(c)
-	s.auditLogger.LogRuleChange(ctx, keyHash, fmt.Sprintf("sync:%s", jobID), "sync")
+	s.auditLogger.LogRuleChange(ctx, callerFromContext(c), fmt.Sprintf("sync:%s", jobID), "sync")
 
 	return c.JSON(http.StatusAccepted, map[string]interface{}{
 		"job_id":  jobID,
@@ -179,8 +178,7 @@ func (s *Server) triggerRuleSyncFromUpload(c echo.Context) error {
 	lastRuleSyncStatusLock.Unlock()
 
 	// Audit log
-	keyHash := getAPIKeyHash(c)
-	s.auditLogger.LogRuleChange(ctx, keyHash, fmt.Sprintf("upload:%s", jobID), "upload")
+	s.auditLogger.LogRuleChange(ctx, callerFromContext(c), fmt.Sprintf("upload:%s", jobID), "upload")
 
 	return c.JSON(http.StatusOK, map[string]interface{}{
 		"job_id":    jobID,
