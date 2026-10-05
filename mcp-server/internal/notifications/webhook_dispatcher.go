@@ -9,8 +9,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"net"
 	"net/http"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/google/uuid"
@@ -38,13 +40,64 @@ type Dispatcher struct {
 	breakersMu sync.RWMutex
 }
 
+// publicWebhookIP rejects a delivery destination that is not a public address.
+//
+// Configuration-time validation resolves the host once and stores the URL, but
+// delivery re-resolves it: a host whose DNS answer changes between the two
+// (rebinding) would otherwise be dialled unvalidated, and a redirect can carry
+// the request to an address the original validation never saw. Applying this
+// to the ADDRESS THE DIAL USES closes both — a private, loopback, link-local or
+// unspecified answer is refused before any bytes leave the process.
+func publicWebhookIP(ip net.IP) error {
+	if ip == nil {
+		return fmt.Errorf("refusing webhook delivery: no address to dial")
+	}
+	if ip.IsLoopback() || ip.IsPrivate() || ip.IsUnspecified() ||
+		ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() ||
+		ip.IsInterfaceLocalMulticast() {
+		return fmt.Errorf("refusing webhook delivery to non-public address %s", ip)
+	}
+	return nil
+}
+
+// newWebhookClient builds the client both delivery paths share.
+//
+// Dialer.Control runs after name resolution and receives the concrete
+// "ip:port" about to be connected, so it is the one point where a rebinding
+// answer is still observable; CheckRedirect refuses to follow, because a
+// redirect target is never validated at configuration time.
+//
+// The transport takes no proxy function, so a proxy environment variable
+// cannot route a delivery around the dial guard.
+func newWebhookClient() *http.Client {
+	dialer := &net.Dialer{}
+	dialer.Control = func(network, address string, _ syscall.RawConn) error {
+		host, _, err := net.SplitHostPort(address)
+		if err != nil {
+			return fmt.Errorf("refusing webhook delivery: unparseable dial address %q", address)
+		}
+		if ip := net.ParseIP(host); ip != nil {
+			return publicWebhookIP(ip)
+		}
+		return nil
+	}
+	return &http.Client{
+		Timeout: 10 * time.Second,
+		Transport: &http.Transport{
+			DialContext: dialer.DialContext,
+			Proxy:       nil,
+		},
+		CheckRedirect: func(*http.Request, []*http.Request) error {
+			return fmt.Errorf("refusing webhook redirect: a delivery target must not move after validation")
+		},
+	}
+}
+
 // NewDispatcher creates a new webhook dispatcher.
 func NewDispatcher(store WebhookStore) *Dispatcher {
 	return &Dispatcher{
-		store: store,
-		client: &http.Client{
-			Timeout: 10 * time.Second,
-		},
+		store:    store,
+		client:   newWebhookClient(),
 		breakers: make(map[string]*gobreaker.CircuitBreaker),
 	}
 }
