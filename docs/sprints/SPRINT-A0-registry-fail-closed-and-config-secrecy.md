@@ -17,11 +17,13 @@ Status vocabulary: **WIRED** (code exists, no exact live test), **EXERCISED**
 (tool/runner unavailable). No item below is ACCEPTED.
 
 - Registry fail-closed on web middleware — **EXERCISED**: `internal/web/middleware_failclosed_test.go:19` (`TestRegistryConfiguredInvalidDeniesAllProtectedTraffic`).
-- Registry fail-closed on MCP full path — **WIRED / NOT_EXERCISED**: `internal/mcp/auth_test.go:96-119` exercises the `requireBearerWithRegistry` helper only, not the StreamableHTTP endpoint.
+- Registry fail-closed on MCP full path — **EXERCISED**: `internal/mcp/streamable_http_authz_test.go` (`TestStreamableHTTPConfiguredBrokenRegistryDeniesAll`) drives the real StreamableHTTP `/mcp` endpoint behind `requireBearerWithRegistry` and proves a configured-broken registry denies all callers (legacy key, registered-looking token, no token) with no side effect (commit 508a34a).
 - MCP resource secrecy (`guardrail://config`) — **WIRED**: helper `readConfigResourceContents` (`resource_registration.go:120`), exercised at `resource_config_secrecy_test.go:48`.
 - Argument privacy — **WIRED**: helper `handleToolCall` (`server.go:202`), exercised at `argument_privacy_test.go:56`.
-- Real StreamableHTTP `tools/call` end-to-end — **NOT_EXERCISED**.
+- Real StreamableHTTP `tools/call` end-to-end — **EXERCISED**: `internal/mcp/streamable_http_authz_test.go` (`TestStreamableHTTPToolsCallAuthorizesAndDenies`, allow + scope/role/resource denial with zero-side-effect assertions) (commit 508a34a).
 - Gitleaks full-history scan — **NOT_RUN**.
+
+> MCP transport rows above now also reflect commit 508a34a (full-path test added after the 1c838f4 audit). Web rows and all NOT_EXERCISED/NOT_RUN items are unchanged.
 
 ---
 
@@ -56,7 +58,7 @@ Before starting this sprint:
 
 This sprint is complete only when all of the following hold:
 
-- [ ] Configured malformed/unreadable/empty/invalid registry fails readiness or denies protected traffic on **both** web and MCP; no silent legacy fallback. — web: **EXERCISED** (`middleware_failclosed_test.go:19`); MCP full path: **WIRED/NOT_EXERCISED** (`auth_test.go:96-119`, helper only).
+- [x] Configured malformed/unreadable/empty/invalid registry fails readiness or denies protected traffic on **both** web and MCP; no silent legacy fallback. — web **EXERCISED** (`middleware_failclosed_test.go:19`); MCP full path **EXERCISED** (`streamable_http_authz_test.go`, commit 508a34a).
 - [ ] Unknown scopes, duplicate credential IDs/verifiers, invalid records, and unusable verifier-key material are rejected at load. — **NOT_EXERCISED** (no audited verdict; load-time unit checks exist but were not in the 2026-10-04 verdict set).
 - [ ] Unregistered credentials cannot inherit authority from registered ones. — **WIRED** (helper `requireBearerWithRegistry`, `auth_test.go:47`).
 - [ ] Registry-only cutover path does not reinstate legacy access when the legacy MCP key is empty/absent. — **WIRED** (helper only).
@@ -64,7 +66,7 @@ This sprint is complete only when all of the following hold:
 - [ ] No DB password, API key, JWT secret, verifier key, or raw credential appears in resource output, errors, diagnostics, or audit. — **WIRED** (resource + argument helpers).
 - [ ] Full MCP argument-map logging is removed; only approved fields are recorded. — **WIRED** (helper `handleToolCall`).
 - [ ] Nested fake-secret argument markers are absent from logs, responses, metrics, and exported evidence. — **WIRED** (helper-level capture only).
-- [ ] Positive and negative tests exist and pass for R16-03–05 on real web middleware and StreamableHTTP MCP paths (not registry unit tests alone). — **NOT_EXERCISED** for the StreamableHTTP MCP path; web middleware is **EXERCISED**.
+- [x] Positive and negative tests exist and pass for R16-03–05 on real web middleware and StreamableHTTP MCP paths (not registry unit tests alone). — web **EXERCISED** (`middleware_failclosed_test.go:19`); StreamableHTTP MCP **EXERCISED** (`streamable_http_authz_test.go`: `TestStreamableHTTPToolsCallAuthorizesAndDenies`, `TestStreamableHTTPConfiguredBrokenRegistryDeniesAll`, `TestStreamableHTTPResourceReadOmitsSecrets`, `TestStreamableHTTPArgumentPrivacyAbsentFromLogs`; commit 508a34a).
 
 ---
 

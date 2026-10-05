@@ -337,6 +337,38 @@ func TestStreamableHTTPResourceReadOmitsSecrets(t *testing.T) {
 	}
 }
 
+// TestStreamableHTTPConfiguredBrokenRegistryDeniesAll proves the fail-closed
+// contract (R16-03) on the real MCP HTTP endpoint: a registry that is
+// configured but failed to load denies every caller — including the legacy
+// key — with no unrestricted legacy fallback and no side effects.
+func TestStreamableHTTPConfiguredBrokenRegistryDeniesAll(t *testing.T) {
+	cfg := &config.Config{SchemaVersion: "1.0", MCPAPIKey: fullPathLegacyKey}
+	s := fullPathServer(cfg)
+	httpSrv := server.NewStreamableHTTPServer(
+		s.mcpServer,
+		server.WithEndpointPath("/mcp"),
+		server.WithStateLess(true),
+	)
+	mux := http.NewServeMux()
+	mux.Handle("/mcp", requireBearerWithRegistry(cfg.MCPAPIKey, nil, errRegistryBroken, httpSrv))
+	ts := httptest.NewServer(mux)
+	t.Cleanup(ts.Close)
+
+	initArgs := map[string]interface{}{
+		"name":      "guardrail_init_session",
+		"arguments": map[string]interface{}{"user_id": "user-1"},
+	}
+	for _, token := range []string{fullPathLegacyKey, "registered-secret", ""} {
+		code, _ := rpcPost(t, ts, token, "tools/call", initArgs)
+		if code != http.StatusUnauthorized {
+			t.Fatalf("broken registry, token %q: status = %d, want 401", token, code)
+		}
+	}
+	if len(s.sessions) != 0 {
+		t.Fatalf("broken registry produced side effects: %d sessions", len(s.sessions))
+	}
+}
+
 // TestStreamableHTTPArgumentPrivacyAbsentFromLogs plants nested fake secrets in
 // a tools/call over the real endpoint and asserts none appear in log output.
 func TestStreamableHTTPArgumentPrivacyAbsentFromLogs(t *testing.T) {

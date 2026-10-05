@@ -17,10 +17,12 @@ Status vocabulary: **WIRED** (code exists, no exact live test), **EXERCISED**
 (tool/runner unavailable). No item below is ACCEPTED.
 
 - R16-06 (scope × role × resource intersection) on web middleware — **EXERCISED**: `internal/web/middleware_authz_test.go:55` (`TestAuthzScopeRoleResourceMatrix`).
-- R16-06 on MCP full path — **WIRED / NOT_EXERCISED**: exercised only through helpers, not the StreamableHTTP endpoint.
+- R16-06 (scope × role × resource intersection) on MCP full path — **EXERCISED**: `mcp-server/internal/mcp/streamable_http_authz_test.go` (`TestStreamableHTTPToolsCallAuthorizesAndDenies`) — authenticated StreamableHTTP `tools/call` allow, plus missing-scope / wrong-role / out-of-grant-resource denial with zero side effects (commit 508a34a).
 - R16-07 legacy containment — **EXERCISED**: `internal/web/middleware_registry_test.go:97-130`.
 - R16-08 decision-audit fail-closed — **EXERCISED**: `internal/web/middleware_authz_test.go:145` (`TestAuthzAdminMutationFailsClosedWithoutAudit`).
 - `hashAPIKey` is never used as identity — **WIRED**.
+
+> The R16-06 MCP intersection row above now also reflects commit 508a34a (full-path test added after the 1c838f4 audit). Web rows and all NOT_EXERCISED/NOT_RUN items are unchanged.
 
 ---
 
@@ -58,7 +60,7 @@ This sprint is complete only when all of the following hold:
 
 - [ ] A credential resolves to server-controlled principal ID, credential ID, reviewed scopes, role grants, resource/project membership, and status. — **EXERCISED** on web (`middleware_authz_test.go:55`); MCP via helper only (**WIRED**).
 - [ ] Identity/role/tenant is never accepted from tool arguments or content. — **WIRED**.
-- [ ] `authenticated AND scope_allows AND role_allows AND resource_allows` runs before every effect, including conditional handlers. — **EXERCISED** on web (`middleware_authz_test.go:55`); MCP full path **WIRED/NOT_EXERCISED**.
+- [ ] `authenticated AND scope_allows AND role_allows AND resource_allows` runs before every effect, including conditional handlers. — **EXERCISED** on web (`middleware_authz_test.go:55`) and on the MCP full path (`streamable_http_authz_test.go`, `TestStreamableHTTPToolsCallAuthorizesAndDenies`; commit 508a34a).
 - [ ] Confirmation flags remain intent checks after authorization only. — **NOT_EXERCISED** (no audited verdict).
 - [ ] Missing/unknown role, resource, scope, or operation denies: HTTP 401 unauthenticated, 403 authenticated-forbidden, stable non-leaking MCP permission error. — **EXERCISED** on web (`middleware_authz_test.go:55`); MCP error shape via helper only.
 - [ ] Scope/role mismatch and cross-project cases deny without side effects (even with `confirmed=true`). — **EXERCISED** on web (`middleware_authz_test.go:55`, cross-project row).
