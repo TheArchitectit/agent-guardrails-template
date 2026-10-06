@@ -115,10 +115,10 @@ curl -X POST http://localhost:8094/mcp \
   -H "Content-Type: application/json" \
   -d '{"jsonrpc":"2.0","method":"tools/call","params":{"name":"guardrail_team_list","arguments":{"project_name":"test-project"}}}'
 
-# Verify team size validation
+# Verify team backend health
 curl -X POST http://localhost:8094/mcp \
   -H "Content-Type: application/json" \
-  -d '{"jsonrpc":"2.0","method":"tools/call","params":{"name":"guardrail_team_size_validate","arguments":{"project_name":"test-project"}}}'
+  -d '{"jsonrpc":"2.0","method":"tools/call","params":{"name":"guardrail_team_health","arguments":{"project_name":"test-project"}}}'
 ```
 
 ### Step 6: Update Client Configurations
