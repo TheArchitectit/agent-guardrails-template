@@ -13,14 +13,15 @@ This is an active engineering repository, not a finished security product. The s
 
 | Area | Current state | Do not infer |
 |---|---|---|
-| MCP and REST | Go service with bearer-protected `/mcp`, REST routes, health endpoints, and web UI | The server does not intercept actions an assistant never submits |
+| MCP and REST | Go service with bearer-protected `/mcp`, REST routes, health endpoints, web UI, and team tools such as `guardrail_team_health` | The server does not intercept actions an assistant never submits |
 | Validation | Rule-based bash, file, and git validation tools are available | Tool availability is not host-level enforcement |
 | Guardrail engines | Content classification tools exist; some engines require optional runtime configuration | Injection, sandbox, provenance, multi-agent, and compliance libraries are not automatically active protection |
-| Authorization | Credential-to-principal registry groundwork exists | Scope/role/resource intersection is not fully enforced yet |
+| Outbound webhooks | Webhook delivery enforces an SSRF policy at delivery time — non-public destinations, redirects, and private/loopback dial attempts are refused (`internal/notifications`, tested) | This covers the webhook dispatch path only; it is not a general egress firewall |
+| Authorization | Credentials resolve to scoped principals; scope × role × resource intersection is enforced and tested on web REST and the MCP full path | Credential lifecycle/rotation and some decision-audit rows are not yet exercised end to end |
 | Integrations | Copilot, IDE, Pi, and other client material exists at mixed maturity | Every client/server pair is not yet contract-tested |
-| CI | Hosted PR checks plus trusted-main validation on the repo-scoped UCS03 Podman runner | Green CI does not prove every runtime guardrail is wired |
+| CI | Hosted PR checks; trusted-main validation on the repo-scoped UCS03 Podman runner; security-matrix jobs (fail-closed registry, MCP full-path authz, secret redaction, webhook SSRF, mutation-kill) on protected-branch pushes; Gitleaks secret validation with a reviewed baseline; pattern-based regression gates | Green CI does not prove every runtime guardrail is wired; the full-history Gitleaks scan still exits 1 on real-looking findings that are deliberately not allowlisted pending rotation |
 
-The tool registry contains a core set plus conditional tools. The registry maximum is not the live startup inventory; configuration and initialization determine what is actually exposed. See the [tool reference](docs/mcp-server/tools-reference.md) and [gap reconciliation](docs/specs/guardrail-gaps-2026/STATUS.md).
+The tool registry contains a core set plus conditional tools. The registry maximum is not the live startup inventory; configuration and initialization determine what is actually exposed. See the [tool reference](docs/mcp-server/tools-reference.md) and [gap reconciliation](docs/specs/guardrail-gaps-2026/STATUS.md). Security-row status (WIRED / EXERCISED / NOT_EXERCISED / NOT_RUN) is reconciled against source per sprint in [docs/sprints/](docs/sprints/).
 
 ## Product family and responsibility boundaries
 
