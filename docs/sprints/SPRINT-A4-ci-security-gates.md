@@ -83,6 +83,14 @@ CI runs on the supported `ubuntu-latest` runner):
   this removes the trivial and stored-internal-address classes but does **not**
   defend against DNS rebinding between configuration and delivery; there is no
   dialer-level re-check.
+
+  Addendum 2026-10-06: commit bc7f523 added delivery-time enforcement —
+  `internal/notifications/webhook_dispatcher.go` now re-validates the resolved
+  destination at dispatch (public-IP check, redirect refusal, controlled
+  dialer), with `webhook_delivery_ssrf_test.go` covering loopback, link-local,
+  private, metadata, and redirect rejection at delivery time. The limitation
+  above predates that commit; `go test ./internal/notifications -count=1`
+  passes locally on Windows.
 - `security-matrix-mutation-kill` — mutation-kill control (R19-04). A hermetic
   harness (`internal/mutationkill`) copies the module to a scratch directory,
   confirms the real negative suite PASSES against protected source, injects a

@@ -23,6 +23,13 @@ Status vocabulary: **WIRED** (code exists, no exact live test), **EXERCISED**
 - Real StreamableHTTP `tools/call` end-to-end — **EXERCISED**: `internal/mcp/streamable_http_authz_test.go` (`TestStreamableHTTPToolsCallAuthorizesAndDenies`, allow + scope/role/resource denial with zero-side-effect assertions) (commit 508a34a).
 - Gitleaks full-history scan — **NOT_RUN**.
 
+> Gitleaks addendum 2026-10-06: the full-history scan has since been scripted
+> and run (see SPRINT-A4 reconciliation 2026-10-05 part 3/part 4): 16 findings
+> reviewed, 11 intentional false positives allowlisted in `.gitleaksignore`,
+> 5 real-looking findings deliberately left un-ignored so the scan stays red
+> until rotation/purge. The NOT_RUN row above reflects the 2026-10-04 snapshot
+> at commit 1c838f4 only.
+
 > MCP transport rows above now also reflect commit 508a34a (full-path test added after the 1c838f4 audit). Web rows and all NOT_EXERCISED/NOT_RUN items are unchanged.
 
 ---
