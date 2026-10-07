@@ -1,0 +1,19 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://belea2x3v0fjh"
+
+[deps]
+
+files=["res://agent-guardrails-template/test_export.team.translation", "res://agent-guardrails-template/test_export.role.translation", "res://agent-guardrails-template/test_export.assigned.translation", "res://agent-guardrails-template/test_export.status.translation"]
+
+source_file="res://agent-guardrails-template/test_export.csv"
+dest_files=["res://agent-guardrails-template/test_export.team.translation", "res://agent-guardrails-template/test_export.role.translation", "res://agent-guardrails-template/test_export.assigned.translation", "res://agent-guardrails-template/test_export.status.translation"]
+
+[params]
+
+compress=1
+delimiter=0
+unescape_keys=false
+unescape_translations=true

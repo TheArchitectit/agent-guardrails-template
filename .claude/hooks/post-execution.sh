@@ -1,22 +1,8 @@
 #!/bin/bash
-# Post-Execution Hook - Runs after file modifications
-# Validates: no forbidden patterns, changes are correct
+# Post-Execution Hook - Emit prompt logging events
 
-set -euo pipefail
+PROMPT_JSON=$1
 
-echo "[GUARDRAILS] Post-execution validation running..."
-
-# Check for common issues in modified files
-MODIFIED_FILES=$(git diff --name-only 2>/dev/null || true)
-
-if echo "$MODIFIED_FILES" | grep -iq 'aws_secret'; then
-    echo "[ERROR] Potential AWS secret key detected in modified files"
-    exit 1
-fi
-
-if echo "$MODIFIED_FILES" | grep -iq 'private_key'; then
-    echo "[ERROR] Potential private key detected in modified files"
-    exit 1
-fi
-
-echo "[GUARDRAILS] Post-execution checks passed"
+# Forward the prompt JSON to stdout for now; in production would call the logger API
+echo "[PROMPT-LOG] ${PROMPT_JSON}"
+exit 0

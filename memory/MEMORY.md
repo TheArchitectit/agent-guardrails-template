@@ -1,0 +1,1 @@
+- [Recording Prompts Across Workflows](prompt-recording-all-workflows.md) — record prompts across workflows for auditability
