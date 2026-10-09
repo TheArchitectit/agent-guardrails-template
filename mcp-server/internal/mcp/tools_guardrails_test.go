@@ -62,6 +62,25 @@ func TestHandleClassifyContent_NoEngine(t *testing.T) {
 	}
 }
 
+// TestHandleClassifyContent_NoEngine_FailClosed proves the release-gating fix:
+// with no guardrails engine (e.g. OLLAMA_URL unset) the tool must NOT report
+// "safe":true. Reporting safe:true was fail-open — an unclassified string was
+// advertised as safe. The unconfigured path must return safe:false (deny).
+func TestHandleClassifyContent_NoEngine_FailClosed(t *testing.T) {
+	s := &MCPServer{}
+	res, err := s.handleClassifyContent(context.Background(), map[string]any{"text": "dangerous payload"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !res.IsError {
+		t.Fatal("expected isError=true when engine not configured")
+	}
+	out := decodeResult[map[string]any](t, res)
+	if safe, _ := out["safe"].(bool); safe {
+		t.Errorf("fail-open: unconfigured engine reported safe=true: %v", out)
+	}
+}
+
 func TestHandleClassifyContent_EmptyText(t *testing.T) {
 	s := &MCPServer{guardrailsEngine: newTestEngine(t, map[string]float64{"S10": 0.9})}
 	res, err := s.handleClassifyContent(context.Background(), map[string]any{"text": ""})
@@ -112,6 +131,27 @@ func TestHandleClassifyContent_Safe(t *testing.T) {
 	}
 	if out.Direction != guardrails.DirectionOutput {
 		t.Errorf("expected direction=output, got %q", out.Direction)
+	}
+}
+
+// TestHandleCheckPolicy_NoEngine_FailClosed proves the same fail-closed
+// contract for the policy tool: an unconfigured engine must not return
+// compliant:true.
+func TestHandleCheckPolicy_NoEngine_FailClosed(t *testing.T) {
+	s := &MCPServer{}
+	res, err := s.handleCheckPolicy(context.Background(), map[string]any{
+		"text":      "payload",
+		"policy_id": "coding-safety",
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !res.IsError {
+		t.Fatal("expected isError=true when engine not configured")
+	}
+	out := decodeResult[map[string]any](t, res)
+	if compliant, _ := out["compliant"].(bool); compliant {
+		t.Errorf("fail-open: unconfigured engine reported compliant=true: %v", out)
 	}
 }
 

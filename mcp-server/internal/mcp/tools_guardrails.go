@@ -65,8 +65,14 @@ func (s *MCPServer) handleClassifyContent(ctx context.Context, args map[string]a
 		return errorResult(`{"safe":true,"error":"text is required"}`), nil
 	}
 
+	// Fail closed (P5/D-18: fail-closed is not configurable). An unconfigured
+	// engine means content filtering is unavailable — the same class of
+	// condition the ContentFilter fail-closed policy handles for an unavailable
+	// backend. Emitting `"safe":true` here told every caller the content was
+	// safe when nothing had classified it, so a deployment that forgot
+	// OLLAMA_URL silently lost its content filter. Report not-safe instead.
 	if s.guardrailsEngine == nil {
-		return errorResult(`{"safe":true,"error":"guardrails engine not configured"}`), nil
+		return errorResult(`{"safe":false,"error":"guardrails engine not configured"}`), nil
 	}
 
 	direction := guardrails.DirectionInput
@@ -76,7 +82,9 @@ func (s *MCPServer) handleClassifyContent(ctx context.Context, args map[string]a
 
 	result, err := s.guardrailsEngine.ClassifyContent(ctx, text, direction)
 	if err != nil {
-		return errorResult(`{"safe":true,"error":"classification failed"}`), nil
+		// Fail closed: a classification error means the content was NOT
+		// classified. Do not report it as safe.
+		return errorResult(`{"safe":false,"error":"classification failed"}`), nil
 	}
 
 	return jsonToolResult(result, result.IsBlocked())
