@@ -46,10 +46,18 @@ type ComplianceSection struct {
 	Score        float64                `json:"score"`
 }
 
+// UnimplementedMethodology is the Methodology value stamped on every report
+// produced by this package. It is a warning label: the scores below restate the
+// declared compliance_status strings in compliance_requirements.json; they are
+// NOT a measurement of the running system. A consumer must not present a report
+// carrying this value as audit evidence. See AUDIT-2026-10-09 §2 (gap 06).
+const UnimplementedMethodology = "unimplemented"
+
 // ComplianceReport is the final output of a compliance audit.
 type ComplianceReport struct {
 	Framework       string               `json:"framework"`
 	GeneratedAt     time.Time            `json:"generated_at"`
+	Methodology     string               `json:"methodology"`
 	OverallScore    float64              `json:"overall_score"`
 	Sections        []ComplianceSection  `json:"sections"`
 	CriticalGaps    []string             `json:"critical_gaps"`
@@ -89,8 +97,14 @@ func (m *ComplianceMapper) CheckRequirement(framework, reqID string) (bool, []Ev
 
 	// In a real implementation, this would check if the features in req.GuardrailFeatures
 	// are actually enabled and active in the current system.
+	//
+	// UNIMPLEMENTED: no such check exists. The boolean below restates the
+	// declared compliance_status string in the requirement DB; it does not
+	// inspect the running system. The returned Evidence is deliberately marked
+	// Verified=false with a sourcing label, so no downstream score can present
+	// it as proof of an active control.
 	if req.ComplianceStatus == "full" {
-		return true, []Evidence{{RequirementID: reqID, Source: "system_config", Value: "Feature active", Timestamp: time.Now().UTC(), Verified: true}}, nil
+		return true, []Evidence{{RequirementID: reqID, Source: "requirement_db (declared, unverified)", Value: "UNIMPLEMENTED: declared compliance_status=full; no runtime control check", Timestamp: time.Now().UTC(), Verified: false}}, nil
 	}
 
 	return false, nil, req.Gaps
@@ -119,6 +133,7 @@ func (r *ComplianceReporter) GenerateReport(ctx context.Context, framework strin
 	report := &ComplianceReport{
 		Framework:   framework,
 		GeneratedAt: time.Now().UTC(),
+		Methodology: UnimplementedMethodology,
 		Sections:    []ComplianceSection{},
 	}
 
@@ -201,27 +216,39 @@ func NewEvidenceCollector(logger *slog.Logger) *EvidenceCollector {
 }
 
 // CollectEvidence runs queries against the audit logs to gather proof.
+//
+// UNIMPLEMENTED: this method does not execute any query. It returns one
+// placeholder Evidence per query so callers that expect the shape keep
+// working, but each item is Verified=false and its Value is labelled
+// UNIMPLEMENTED. Completeness is the fraction of queries that produced verified
+// evidence, which is 0 here — it is never 1.0 on a non-empty query set.
 func (c *EvidenceCollector) CollectEvidence(ctx context.Context, framework, reqID string, queries []string) ([]Evidence, float64) {
+	_ = ctx
+	_ = framework
 	var evidence []Evidence
 
 	for _, q := range queries {
-		c.logger.Debug("collecting evidence", "query", q)
-		// Simulation: logic to execute query against PostgreSQL would go here.
+		c.logger.Debug("collecting evidence (unimplemented)", "query", q)
 		evidence = append(evidence, Evidence{
 			RequirementID: reqID,
-			Source:        "audit_log",
-			Value:         fmt.Sprintf("Query result for [%s]: 12 events found", q),
+			Source:        "audit_log (unimplemented)",
+			Value:         fmt.Sprintf("UNIMPLEMENTED: query not executed: %s", q),
 			Timestamp:     time.Now().UTC(),
-			Verified:      true,
+			Verified:      false,
 		})
 	}
 
-	completeness := 1.0
-	if len(queries) == 0 {
-		completeness = 0.0
+	// Completeness counts verified evidence; nothing is verified here.
+	verified := 0
+	for _, e := range evidence {
+		if e.Verified {
+			verified++
+		}
 	}
-
-	return evidence, completeness
+	if len(evidence) == 0 {
+		return evidence, 0.0
+	}
+	return evidence, float64(verified) / float64(len(evidence))
 }
 
 // CalculateComplianceScore implements the logic from Spec 06.

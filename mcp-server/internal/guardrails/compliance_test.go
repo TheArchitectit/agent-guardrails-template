@@ -62,6 +62,12 @@ func TestComplianceReporter_GenerateReport(t *testing.T) {
 		t.Errorf("invalid overall score: %.2f", report.OverallScore)
 	}
 
+	// Honesty guard: the score restates the declared DB, so the report must
+	// carry the unimplemented methodology label.
+	if report.Methodology != UnimplementedMethodology {
+		t.Errorf("report methodology = %q, want %q", report.Methodology, UnimplementedMethodology)
+	}
+
 	if len(report.Sections) == 0 {
 		t.Error("report should have at least one section")
 	}
@@ -146,8 +152,16 @@ func TestEvidenceCollector_CollectEvidence(t *testing.T) {
 		t.Errorf("expected %d evidence items, got %d", len(queries), len(evidence))
 	}
 
-	if completeness != 1.0 {
-		t.Errorf("expected completeness 1.0, got %.2f", completeness)
+	// Honesty guard: evidence collection is UNIMPLEMENTED. No item may claim
+	// to be verified, and completeness must not report 1.0 on a non-empty
+	// query set (the previous behaviour fabricated a verified result).
+	for _, e := range evidence {
+		if e.Verified {
+			t.Errorf("evidence must not be reported verified while unimplemented: %+v", e)
+		}
+	}
+	if completeness != 0.0 {
+		t.Errorf("expected completeness 0.0 (unimplemented, nothing verified), got %.2f", completeness)
 	}
 
 	t.Run("EmptyQueries", func(t *testing.T) {
