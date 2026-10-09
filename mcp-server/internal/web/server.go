@@ -327,7 +327,10 @@ func securityHeadersMiddleware() echo.MiddlewareFunc {
 			c.Response().Header().Set("Content-Security-Policy", csp)
 			c.Response().Header().Set("X-Content-Type-Options", "nosniff")
 			c.Response().Header().Set("X-Frame-Options", "DENY")
-			c.Response().Header().Set("X-XSS-Protection", "1; mode=block")
+			// X-XSS-Protection is intentionally NOT set. The legacy XSS auditor
+			// it controls is removed in every current browser, and the header
+			// is on MDN's deprecated list. Its CSP role (`block`) is superseded
+			// by the Content-Security-Policy above. Spec 12-3.6 / audit gap 6.
 			c.Response().Header().Set("Referrer-Policy", "strict-origin-when-cross-origin")
 			c.Response().Header().Set("Permissions-Policy", "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()")
 

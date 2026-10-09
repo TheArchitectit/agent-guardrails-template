@@ -56,6 +56,36 @@ func TestAPIKeyAuth_StaticExtensionDoesNotBypassAuth(t *testing.T) {
 	}
 }
 
+// TestSecurityHeaders_NoXSSProtection covers the spec 12-3.6 / audit gap 6
+// hardening: the deprecated X-XSS-Protection header must not be emitted, and
+// the headers that do the real work must still be present.
+func TestSecurityHeaders_NoXSSProtection(t *testing.T) {
+	e := echo.New()
+	handler := securityHeadersMiddleware()(func(c echo.Context) error {
+		return c.NoContent(http.StatusOK)
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	if err := handler(c); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if got := rec.Header().Get("X-XSS-Protection"); got != "" {
+		t.Errorf("X-XSS-Protection must not be set, got %q", got)
+	}
+	if got := rec.Header().Get("Content-Security-Policy"); got == "" {
+		t.Error("Content-Security-Policy must be set")
+	}
+	if got := rec.Header().Get("X-Content-Type-Options"); got != "nosniff" {
+		t.Errorf("X-Content-Type-Options = %q, want nosniff", got)
+	}
+	if got := rec.Header().Get("X-Frame-Options"); got != "DENY" {
+		t.Errorf("X-Frame-Options = %q, want DENY", got)
+	}
+}
+
 // TestAPIKeyAuth_ValidKeyStillAuthenticates guards the happy path so the
 // hardening above cannot be satisfied by rejecting everything.
 func TestAPIKeyAuth_ValidKeyStillAuthenticates(t *testing.T) {

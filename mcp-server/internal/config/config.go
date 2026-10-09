@@ -293,6 +293,19 @@ func (c *Config) Validate() error {
 	if len(c.CORSAllowedOrigins) == 0 {
 		return fmt.Errorf("CORS_ALLOWED_ORIGINS must not be empty")
 	}
+	// Production must not accept a wildcard CORS origin. `*` permits any
+	// origin to read credentialed responses; in production that is a
+	// configuration error, not a default. The web layer already falls back
+	// to restrictive localhost origins when CORS is unset or `*`, but a
+	// production operator who explicitly sets `*` must be told, not silently
+	// narrowed. Spec 12-4.1 / audit release gap 6.
+	if c.ProductionMode {
+		for _, origin := range c.CORSAllowedOrigins {
+			if origin == "*" {
+				return fmt.Errorf("CORS_ALLOWED_ORIGINS must not contain wildcard '*' in production; list explicit origins")
+			}
+		}
+	}
 
 	// Validate circuit breaker settings
 	if c.CircuitBreakerFailureThreshold < 1 {

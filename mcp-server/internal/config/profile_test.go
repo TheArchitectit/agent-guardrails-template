@@ -154,6 +154,39 @@ func validMinimalConfig() *Config {
 	}
 }
 
+// TestValidate_ProductionRejectsWildcardCORS covers the release-gating
+// hardening for spec 12-4.1 / audit gap 6: a production deployment must not
+// accept a wildcard CORS origin.
+func TestValidate_ProductionRejectsWildcardCORS(t *testing.T) {
+	cfg := validMinimalConfig()
+	cfg.ProductionMode = true
+	cfg.CORSAllowedOrigins = []string{"*"}
+	err := cfg.Validate()
+	if err == nil || !strings.Contains(err.Error(), "wildcard") {
+		t.Errorf("production + wildcard CORS must fail validation, got %v", err)
+	}
+
+	// Regression: an explicit origin list passes in production.
+	cfg.CORSAllowedOrigins = []string{"https://guardrails.example.com"}
+	if err := cfg.Validate(); err != nil {
+		t.Errorf("production + explicit CORS origin must pass, got %v", err)
+	}
+
+	// Regression: wildcard still allowed outside production.
+	cfg.ProductionMode = false
+	cfg.CORSAllowedOrigins = []string{"*"}
+	if err := cfg.Validate(); err != nil {
+		t.Errorf("non-production wildcard CORS must pass, got %v", err)
+	}
+
+	// Wildcard alongside an explicit origin is still a wildcard.
+	cfg.ProductionMode = true
+	cfg.CORSAllowedOrigins = []string{"https://guardrails.example.com", "*"}
+	if err := cfg.Validate(); err == nil {
+		t.Error("production with '*' among origins must fail validation")
+	}
+}
+
 // TestBindHostExtraction covers listener address parsing used by the
 // profile binding checks.
 func TestBindHostExtraction(t *testing.T) {
