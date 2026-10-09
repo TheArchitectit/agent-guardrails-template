@@ -72,6 +72,30 @@ path.**
 `Engine.Evaluate`, the only caller of the pipeline, is called exclusively
 from tests.
 
+**Wiring finding (2026-10-09, unresolved — needs a product decision, not a
+mechanical wire).** Confirmed by grep over non-test `.go`: `Engine.Evaluate`
+(`engine.go:159`) has **zero non-test callers**; the other `.Evaluate`
+references are unrelated (`PolicyEngine`, `Registry`, and the
+`bash`/`git`/`fileedit` slice evaluators). `NewEngine` is constructed only in
+`cmd/server/main.go:152`, and the engine reaches the MCP server only via
+`SetGuardrailsEngine` (`main.go:158`); the two shipped tools then call only
+`ClassifyContent`/`CheckPolicy`. Why this cannot be wired mechanically:
+1. **Cross-package integration.** `internal/mcp` never imports
+   `internal/domain`; `Engine.Evaluate` also *executes commands* via the
+   `SandboxManager` when `input.Command != ""` (real exec), so routing a
+   request through it crosses the layering boundary and starts process
+   execution from the MCP path.
+2. **Fallback semantics.** Only bytes reach the MCP package, so the correct
+   `EvalInput.Source` (Provenance trust decision, gap 05) cannot be chosen
+   here; and with no `Command` the sandbox layer is skipped, so wiring
+   `Evaluate` for a text-only tool would not run sandbox checks anyway.
+3. **Product decision.** Whether `guardrail_classify_content` should become a
+   *full* pipeline evaluation (injection + provenance + sandbox) or stay a
+   content-only classifier is a contract change for an operator.
+
+Until that decision the honest status is unchanged: **code complete, not
+wired to the request path.**
+
 ### 02 — Semantic content filtering
 
 The best-executed spec, and the only one whose tools shipped.
@@ -171,6 +195,19 @@ the features are actually enabled"* (`compliance.go:90-92`). `CollectEvidence`
 hardcodes its result and returns `completeness = 1.0` for any non-empty
 query (`compliance.go:213`). A score from this code restates the database; it
 does not measure the system.
+
+**Simulation made explicit 2026-10-09** (branch `forge/spec-program-wave0`, no
+push) — still UNIMPLEMENTED, not fixed by inventing numbers:
+- `ComplianceReport.Methodology` is stamped `UnimplementedMethodology =
+  "unimplemented"` on every report from `GenerateReport`.
+- Declared-`full` evidence from `CheckRequirement` is `Verified:false`,
+  `Source: "requirement_db (declared, unverified)"`.
+- `CollectEvidence` executes no query; placeholders are `Verified:false` and
+  `completeness = verified/total = 0.0` for a non-empty query set.
+Exact tests green in that commit: `TestEvidenceCollector_CollectEvidence`,
+`TestComplianceReporter_GenerateReport`. `CalculateComplianceScore`'s
+arithmetic is unchanged (correct *given* real evidence). This row stays
+WIRED/UNIMPLEMENTED — it is not EXERCISED or ACCEPTED.
 
 ## Untestable acceptance criteria
 
