@@ -15,6 +15,9 @@ Design specifications and change proposals for the guardrails MCP server.
 | [17-deployment-tls-and-secret-boundary.md](17-deployment-tls-and-secret-boundary.md) | Proposed deployment profiles, TLS, secret sources and rotation |
 | [18-migration-startup-and-readiness.md](18-migration-startup-and-readiness.md) | Proposed migration ownership, startup ordering, readiness and outage behavior |
 | [19-phase0-ci-security-gates.md](19-phase0-ci-security-gates.md) | Proposed same-commit blocking CI matrix, UCS03 isolation and negative controls |
+| [20-mcp-parity-with-fastmcp.md](20-mcp-parity-with-fastmcp.md) | FastMCP parity closure: consolidates spec 10's required items into one closable unit (NEW 2026-10-10) |
+| [21-tool-schema-handler-conformance-gate.md](21-tool-schema-handler-conformance-gate.md) | Blocking CI gate comparing advertised tool schemas to handler argument reads (NEW 2026-10-10) |
+| [22-mcp-client-transport-compatibility-matrix.md](22-mcp-client-transport-compatibility-matrix.md) | Versioned client/transport compatibility matrix backed by live tests (NEW 2026-10-10) |
 | [AUTH-01-mcp-endpoint-auth.md](AUTH-01-mcp-endpoint-auth.md) | Bearer authentication on `/mcp` — implemented and merged |
 | [guardrail-gaps-2026/index.md](guardrail-gaps-2026/index.md) | Six gap-analysis specs vs 2026 AI safety systems |
 | [07-versioned-policy-pack-governance.md](07-versioned-policy-pack-governance.md) | Proposed immutable policy-pack resolution, overlays, trust boundaries, and lock records |
