@@ -70,3 +70,6 @@ vision_data/
 
 # Playwright MCP browser artifacts (transient logs + page snapshots)
 .playwright-mcp/
+
+# host-specific service configs (hardware paths, ports — keep local, never push)
+mcp-server/config/llama-server.env
