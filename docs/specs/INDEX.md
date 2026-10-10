@@ -18,6 +18,7 @@ Design specifications and change proposals for the guardrails MCP server.
 | [20-mcp-parity-with-fastmcp.md](20-mcp-parity-with-fastmcp.md) | FastMCP parity closure: consolidates spec 10's required items into one closable unit (NEW 2026-10-10) |
 | [21-tool-schema-handler-conformance-gate.md](21-tool-schema-handler-conformance-gate.md) | Blocking CI gate comparing advertised tool schemas to handler argument reads (NEW 2026-10-10) |
 | [22-mcp-client-transport-compatibility-matrix.md](22-mcp-client-transport-compatibility-matrix.md) | Versioned client/transport compatibility matrix backed by live tests (NEW 2026-10-10) |
+| [23-live-tool-resource-listing-sequence.md](23-live-tool-resource-listing-sequence.md) | Live tools/list + resources/list sequence over the production transport (NEW 2026-10-10, spin-out from spec 20 R20.3) |
 | [AUTH-01-mcp-endpoint-auth.md](AUTH-01-mcp-endpoint-auth.md) | Bearer authentication on `/mcp` — implemented and merged |
 | [guardrail-gaps-2026/index.md](guardrail-gaps-2026/index.md) | Six gap-analysis specs vs 2026 AI safety systems |
 | [07-versioned-policy-pack-governance.md](07-versioned-policy-pack-governance.md) | Proposed immutable policy-pack resolution, overlays, trust boundaries, and lock records |

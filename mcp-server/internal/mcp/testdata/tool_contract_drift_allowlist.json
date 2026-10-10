@@ -1,0 +1,29 @@
+{
+  "reason": "Spec 21 R21.3 tracked-drift allowlist. Each entry is pre-existing schema/handler drift measured by TestToolSchemaHandlerConformance on 2026-10-10 against commit forge/spec-program-wave0. These are NOT waivers of the requirement: they are the defect inventory the gate now pins. Two families: (1) undeclared_reads — the handler reads an argument the published InputSchema omits, most commonly session_token/session_id threaded through the halt/attempt/file-read family and the extended guardrail tools; (2) declared_unused — the schema advertises a property the handler never reads (e.g. files on validate_commit, remote on validate_push, bug_id on verify_fixes_intact, target_string on validate_exact_replacement, advisor_name/role on team_assign, advisor_name/query on advisor_query, teams on team_init, context on classify_content). Both families are documented in docs/mcp-server/tools-reference.md (\"The published schemas are not trustworthy\"). Remediation (declare session_token and the real parameter names; drop dead properties) is tracked by spec 21. The gate fails on any drift not in this file and on any stale entry, so the list can only shrink.",
+  "entries": {
+    "guardrail_acknowledge_halt": {"undeclared_reads": ["resolution", "session_token"], "declared_unused": []},
+    "guardrail_advisor_query": {"undeclared_reads": [], "declared_unused": ["advisor_name", "query"]},
+    "guardrail_check_halt_conditions": {"undeclared_reads": ["context", "session_token", "task_id"], "declared_unused": ["status"]},
+    "guardrail_check_test_prod_separation": {"undeclared_reads": ["environment"], "declared_unused": []},
+    "guardrail_check_uncertainty": {"undeclared_reads": ["context_data", "current_task", "self_assessment", "session_token"], "declared_unused": ["current_plan", "uncertainty_reason"]},
+    "guardrail_classify_content": {"undeclared_reads": [], "declared_unused": ["context"]},
+    "guardrail_detect_feature_creep": {"undeclared_reads": ["change_description", "file_path", "git_diff", "is_new_file", "session_token"], "declared_unused": ["current_changes", "task_id"]},
+    "guardrail_install_skills": {"undeclared_reads": [], "declared_unused": ["dry_run", "list_platforms", "list_skills", "mode", "path", "platforms", "skill", "target_path"]},
+    "guardrail_prevent_regression": {"undeclared_reads": ["code_content", "file_paths"], "declared_unused": ["changes", "file_path"]},
+    "guardrail_record_attempt": {"undeclared_reads": ["error_category", "error_message", "session_token", "task_id"], "declared_unused": ["error_msg", "success", "tool_name"]},
+    "guardrail_record_file_read": {"undeclared_reads": ["session_token"], "declared_unused": []},
+    "guardrail_record_halt": {"undeclared_reads": ["context", "description", "halt_type", "session_token", "severity"], "declared_unused": ["reason"]},
+    "guardrail_reset_attempts": {"undeclared_reads": ["session_token"], "declared_unused": []},
+    "guardrail_team_assign": {"undeclared_reads": ["person", "role_name", "team_id"], "declared_unused": ["advisor_name", "role"]},
+    "guardrail_team_init": {"undeclared_reads": [], "declared_unused": ["teams"]},
+    "guardrail_team_list": {"undeclared_reads": ["phase"], "declared_unused": []},
+    "guardrail_validate_commit": {"undeclared_reads": [], "declared_unused": ["files"]},
+    "guardrail_validate_exact_replacement": {"undeclared_reads": ["modified_content", "original_content", "replacement_type", "session_token"], "declared_unused": ["target_string"]},
+    "guardrail_validate_file_edit": {"undeclared_reads": ["session_id", "session_token"], "declared_unused": []},
+    "guardrail_validate_production_first": {"undeclared_reads": ["code_type", "file_path", "session_token"], "declared_unused": ["path"]},
+    "guardrail_validate_push": {"undeclared_reads": ["has_unpushed_commits", "is_force"], "declared_unused": ["remote"]},
+    "guardrail_validate_three_strikes": {"undeclared_reads": ["session_token"], "declared_unused": []},
+    "guardrail_verify_file_read": {"undeclared_reads": ["session_token"], "declared_unused": []},
+    "guardrail_verify_fixes_intact": {"undeclared_reads": ["modified_content", "original_content", "session_token"], "declared_unused": ["bug_id"]}
+  }
+}
