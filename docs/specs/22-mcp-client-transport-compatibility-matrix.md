@@ -121,7 +121,7 @@ Candidate clients enumerated from the repository on 2026-10-10:
 
 | Candidate | Source of truth in repo | Documented transport | Server transport | Status |
 |---|---|---|---|---|
-| Pi extension MCP bridge | `pi-extension/mcp-bridge/mcp-client.ts` | **fixed 2026-10-10** — `StreamableHTTPClientTransport` at `/mcp/stream` (was `SSEClientTransport` at `${url}/mcp/v1/sse`, spec 24) | stateless Streamable HTTP `POST /mcp/stream` | **Endpoint mismatch fixed; live-run test pending** — transport now matches the server; a live bridge run against OMCP has not been recorded, so it is not yet a supported row (R22.3) |
+| Pi extension MCP bridge | `pi-extension/mcp-bridge/mcp-client.ts` | **fixed 2026-10-10** — `StreamableHTTPClientTransport` at `/mcp/stream` (was `SSEClientTransport` at `${url}/mcp/v1/sse`, spec 24) | stateless Streamable HTTP `POST /mcp/stream` | **BLOCKED (live run 2026-10-10)** — bridge cannot resolve its SDK import (`import("@modelcontextprotocol/sdk")` package-root target ships no `dist/esm/index.js`), so `tryConnect` returns `false` and no request reaches the server. Transport is correct (spec 24) and server/endpoint proven good by a same-run control client; defect spun into **spec 27**. Not a supported row (R22.3). Evidence: `22-evidence-pi-bridge-2026-10-10.md` |
 | VS Code extension | `ide/vscode-extension/src/utils/client.ts` (`serverUrl` default `http://localhost:8095`) | plain HTTP REST to the web service, not MCP JSON-RPC | web REST (separate auth path) | **Not an MCP client** — does not initialize/speak MCP; cannot be a compat-matrix row |
 | JetBrains plugin | `ide/jetbrains-plugin/src/main/kotlin/com/guardrail/plugin/GuardrailService.kt` (`serverUrl` default `http://localhost:8095`) | OkHttp REST to the web service | web REST | **Not an MCP client** |
 | Vim / Neovim plugins | `ide/vim-plugin`, `ide/neovim-plugin` | thin wrappers over the same REST server | web REST | **Not MCP clients** |
@@ -160,3 +160,19 @@ stateless Streamable HTTP); no vendored generic client SDK (a server need not
 reproduce FastMCP's client library). These are copied from spec 10 §3/§4.3 and
 the `platform-current-state.md` baseline, and should be re-confirmed when a
 row is added.
+
+## 6. Pi-bridge row — live run 2026-10-10 (BLOCKED)
+
+A live run of the real bridge module against a running OMCP on 2026-10-10
+reached `connect` and stopped: `MCPClient.tryConnect(<url>)` returns `false`
+and no request reaches the server. Cause: `mcp-client.ts` imports
+`@modelcontextprotocol/sdk` from its **package root**, but the published package
+ships no root `dist/esm/index.js`, so the optional-dependency import throws and
+the bare `catch {}` leaves the SDK `null`. The same run's control client (SDK
+subpath entrypoints) passed `initialize` → `tools/list` → success call →
+rejected call over `POST /mcp/stream`, proving the row's server/transport legs
+are good and isolating the failure to the bridge import.
+
+Verdict: **BLOCKED**, row stays pending/unsupported (R22.3). Spun into
+**spec 27**. Full raw output: `22-evidence-pi-bridge-2026-10-10.md`.
+
