@@ -28,6 +28,44 @@ results against the real transport, parity is unproven.
 prove end-to-end: initialize → authenticate → discover a tool → invoke →
 parse success and error results.
 
+### R22.1 required row — recorded 2026-10-10 (owner decision: OFFICIAL MCP
+Inspector)
+
+The owner decided 2026-10-10 that the **required** client/transport row is the
+**official MCP Inspector** (`@modelcontextprotocol/inspector`) against the OMCP
+server's **Streamable HTTP** transport. The row was driven live on this machine
+(ucs03) on 2026-10-10; evidence doc:
+`radicalopenmcpplatform docs/qa/mcp-inspector-compat-2026-10-10.md` (OMCP
+commit `837e917d1845d54f187c06af2c844392f88409d9`).
+
+| Field | Value |
+|---|---|
+| Client | **Official MCP Inspector** (`@modelcontextprotocol/inspector`; tested v2.10.1 and v1.0.2) |
+| Transport | **Streamable HTTP** — `POST /mcp/stream` (MCP `2025-03-26`) |
+| Auth header | none required on loopback (local run: `127.0.0.1:8081`); `RADICAL_API_KEY` / `Authorization: Bearer <key>` is required for non-loopback binds |
+| Schema revision | OMCP HEAD at run time: `faad1328b3ebf06da0ab25717caba0a5e90097ca` |
+| Evidence | OMCP `docs/qa/mcp-inspector-compat-2026-10-10.md`; raw Inspector step outputs recorded there |
+| Raw step results | `initialize` **FAIL**, `tools/list` **FAIL**, `tools/call` success **FAIL**, `tools/call` error **FAIL** |
+| Verdict | **FAILED — NOT SUPPORTED.** Must not be published as supported (R22.3). |
+
+**Exact failing step:** `initialize`. The official Inspector requests MCP
+protocol revision `2025-11-25`; OMCP speaks `2025-06-18`, `2025-03-26`,
+`2024-11-05` (`crates/mcp/src/state.rs:271`) and refuses anything else
+(`state.rs:286-315`). Both the v2 line and the deprecated v1 line request
+`2025-11-25`, and the Inspector CLI exposes no flag to pin the protocol
+revision (`--protocol-era legacy|auto|modern` all still request
+`2025-11-25`/pinned `2026-07-28`). Because the handshake is refused, no later
+method is ever reached. Raw Inspector output:
+
+```
+{"error":{"code":"error","message":"Unsupported MCP protocol version: 2025-11-25. This server speaks: 2025-06-18, 2025-03-26, 2024-11-05"}}
+```
+
+Control: a raw `curl` `initialize` with `protocolVersion: "2025-03-26"` against
+the same endpoint succeeds, so the server and the Streamable HTTP endpoint are
+healthy — the gap is the negotiated protocol revision. The mismatch is spun out
+as **spec 25** (OMCP-side); see `25-omcp-protocol-revision-gap.md`.
+
 **R22.2** Each row SHALL record endpoint path, transport version, auth header,
 and schema revision.
 
@@ -49,11 +87,18 @@ in OMCP).
    or pending with a date.
 3. The unsupported-surface list is complete and rationaled.
 
-## 4. Open decision (owner)
+## 4. Open decision (owner) — RESOLVED 2026-10-10
 
 The target client for the required row — e.g. the reference-project "Phase A:
 Inspector Bridge" vs an official vendor client — is **not yet recorded**. This
 must be an owner call before R22.1 closes.
+
+**Resolved 2026-10-10:** the required row is the **official MCP Inspector**
+(`@modelcontextprotocol/inspector`). The "Phase A: Inspector Bridge" candidate is
+dropped as the required row. The row is recorded under R22.1 above, but it is
+**FAILED — not supported**: the live run blocks at `initialize` on a protocol
+revision the server refuses. R22.1 therefore does **not** close on this run; the
+blocking mismatch is spin-out spec 24.
 
 ## 5. Closure status — 2026-10-10
 
