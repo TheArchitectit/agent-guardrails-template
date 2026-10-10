@@ -1,7 +1,7 @@
 # Guardrail Gaps 2026 — Spec vs Shipped Code
 
-**Status: reconciliation, 2026-10-03.** This page supersedes the
-`Status: Draft` labels on the six specs.
+**Status: reconciliation, 2026-10-03; wave-0 release-gating fixes reconciled
+2026-10-09.** This page supersedes the `Status: Draft` labels on the six specs.
 
 The six specs in this directory are **proposals written before the reboot**,
 not descriptions of the system. Since then a Go rewrite implemented much of
@@ -47,7 +47,7 @@ tools_guardrails.go:112  s.guardrailsEngine.CheckPolicy(...)
 So the injection pipeline, the sandbox manager, the provenance tracker, the
 multi-agent safety chains and the compliance mapper are all constructed at
 startup and then never called. Worse, the engine itself only exists when
-`OLLAMA_URL` is set (`cmd/server/main.go:130`); otherwise both content tools
+`OLLAMA_URL` is set (`cmd/server/main.go:151`); otherwise both content tools
 return `"guardrails engine not configured"`.
 
 Honest status wording for these: **code complete, not wired to the request
@@ -105,7 +105,7 @@ The best-executed spec, and the only one whose tools shipped.
 | `guardrail_classify_content` | **Implemented** |
 | `guardrail_check_policy` | **Implemented** |
 | S1–S15 taxonomy and actions | Implemented |
-| Llama Guard backend | Implemented and registered (`main.go:136`) |
+| Llama Guard backend | Implemented and registered (`main.go:157`, when `OLLAMA_URL` set) |
 | 60s result cache | Implemented |
 | `fail_policy: block` | Implemented (synthetic block result, not an error) |
 | NeMo backend | Not implemented |
@@ -208,6 +208,45 @@ Exact tests green in that commit: `TestEvidenceCollector_CollectEvidence`,
 `TestComplianceReporter_GenerateReport`. `CalculateComplianceScore`'s
 arithmetic is unchanged (correct *given* real evidence). This row stays
 WIRED/UNIMPLEMENTED — it is not EXERCISED or ACCEPTED.
+
+## Release-gating fixes on this branch (2026-10-09)
+
+Four release-gating gaps were addressed on `forge/spec-program-wave0`. Each is
+recorded here with its real status and the fixing commit; none is flipped to
+EXERCISED/ACCEPTED without a same-commit green run (per the AUDIT-2026-10-09
+status vocabulary).
+
+| Gap | Status | Fixing commit | Present in tree (verified by reading code) |
+|-----|--------|---------------|--------------------------------------------|
+| 02 content filter failed open when `OLLAMA_URL` unset | **FIXED** | `7f2237b` | `tools_guardrails.go:74-75` returns `safe:false` on unconfigured engine; `:87` returns `safe:false` on classification error; `handleCheckPolicy` fails closed at `:106-107` and `:117` |
+| 12-3.3.1 wildcard CORS accepted in production | **FIXED** | `d90cf52` | `config.go:302-306` rejects `*` when `ProductionMode`; reached at startup via `config.Load()`→`Validate()` (`main.go:65`, `config.go:161`) |
+| 12-3.6 `X-XSS-Protection` header emitted | **FIXED** | `d90cf52` | `web/server.go:330` no longer emits it (CSP + `nosniff` + `DENY` retained, `:327-329`) |
+| 06 compliance scoring restates the DB as a measurement | **UNIMPLEMENTED** (labelled, not fixed) | `beb8c02` | `compliance.go:54,104-107,136,225-250`; see gap 06 above |
+| 01/03/04/05 libraries unreachable from the request path | **OPEN** (documented) | `f85aa67` | see gap 01 wiring finding above |
+
+Exact tests re-run green on 2026-10-10 against this tree (HEAD `f85aa67`):
+`TestHandleClassifyContent_NoEngine_FailClosed`,
+`TestHandleCheckPolicy_NoEngine_FailClosed`,
+`TestValidate_ProductionRejectsWildcardCORS`,
+`TestSecurityHeaders_NoXSSProtection`,
+`TestEvidenceCollector_CollectEvidence`,
+`TestComplianceReporter_GenerateReport`.
+
+**Still open and release-gating — do not describe these as fixed:**
+- Full-history Gitleaks is RED: 5 real findings, not rotated, history not purged
+  (`16-R16-02` / `19-R19-06`). Not weakened, not skipped.
+- `/metrics` remains public (`web/server.go:145`; `middleware.go:38,293`) — needs
+  the operator (Roger); binding it to auth changes the scrape contract.
+- Guardrail capabilities unwired from the request path (`01/03/04/05/06`; `09-P2`).
+- Specs `07`/`08`/`15` and the optional OAP checker (`14`) remain ABSENT /
+  proposal-only.
+
+**Requirement ledger totals** (recounted 2026-10-10 from the AUDIT-2026-10-09
+requirement tables; one status per requirement row): ABSENT 101 · WIRED 75 ·
+EXERCISED 59 · NOT_RUN 26 · ACCEPTED 0 · **total 261 requirement rows**.
+The AUDIT's earlier `100/78/52/27 = 257` figure is not reproducible from those
+tables and is superseded; see
+[AUDIT-2026-10-09.md §5](AUDIT-2026-10-09.md) for the per-section breakdown.
 
 ## Untestable acceptance criteria
 
