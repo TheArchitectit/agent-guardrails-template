@@ -1,6 +1,8 @@
 # OpenSpec 27: Pi-bridge SDK Root Import Cannot Resolve (`@modelcontextprotocol/sdk`)
 
-**Status:** Proposed — opened 2026-10-10 (spin-out from the spec 22 Pi-bridge
+**Status:** Resolved — 2026-10-10. Fix applied (option 1: import the SDK's
+real subpath entrypoints) and live-verified; the spec 22 Pi-bridge row is now
+**SUPPORTED (live)**. Opened 2026-10-10 (spin-out from the spec 22 Pi-bridge
 live run).
 
 **Priority:** High — the Pi bridge is permanently unavailable as shipped; the
@@ -85,7 +87,7 @@ entrypoints and construct its transports when the SDK is installed.
 3. **Drop the bridge.** Not warranted — the transport is correct (spec 24) and
    the server side is proven (this run's control client).
 
-Recommended: **option 1.**
+Recommended: **option 1.** — **adopted 2026-10-10.**
 
 ## 4. Acceptance criteria
 
@@ -97,7 +99,52 @@ Recommended: **option 1.**
    "not connected".
 4. The spec 22 Pi-bridge row can then be re-driven to a verdict.
 
-## 5. Evidence trail
+## 5. Resolution (2026-10-10)
+
+Implemented option 1 in `pi-extension/mcp-bridge/mcp-client.ts`:
+
+- The top-level loader now imports the SDK's real subpath entrypoints —
+  `@modelcontextprotocol/sdk/client/index.js` (`Client`),
+  `.../client/streamableHttp.js` (`StreamableHTTPClientTransport`), and
+  `.../client/stdio.js` (`StdioClientTransport`) — and never the package root
+  (R27.1).
+- The catch now distinguishes an **absent optional dependency**
+  (`ERR_MODULE_NOT_FOUND` with `Cannot find package '@modelcontextprotocol/sdk'`)
+  from an unexpected failure to load a subpath that should exist. Only the
+  former degrades quietly; the latter is recorded and reported via
+  `getMcpSdkLoadError()` (R27.2).
+- `pi-extension/mcp-bridge/mcp-client.test.ts` asserts the bridge does not
+  import the package root, does import the three subpaths, resolves the SDK on
+  this install (no load error), and maps a bare URL to `/mcp/stream` (R27.3).
+- No gate was weakened and the spec 24 Streamable HTTP `/mcp/stream` transport
+  is preserved (R27.4).
+
+**Live verification (R27 acceptance).** Real bridge module driven against a
+freshly started OMCP (`MCP_TRANSPORT=http`, `MCP_LISTEN_ADDR=127.0.0.1:8081`,
+`RADICAL_ROOT_DIR=/tmp/rmp-w4`) via `pi-extension/live-bridge-run.ts`:
+
+```
+=== connect (tryConnect) ===
+tryConnect: true
+isConnected: true
+getTools: ["git_diff","git_status","list_files","read_file"]
+
+=== tools/call success: read_file {path: Cargo.toml} ===
+{ "content": [ { "type": "text", "text": "{\"content\":\"[workspace]…", "path": "/tmp/rmp-w4/Cargo.toml" } ] }
+
+=== tools/call rejected: read_file {} (missing required path) ===
+{ "error": "MCP call failed: MCP error -32602: Invalid arguments" }
+
+STEP RESULTS: success=true rejected=true
+```
+
+Acceptance 1–4 all pass: `tryConnect` returns `true` and discovers tools over
+`POST /mcp/stream`; the full sequence (initialize → tools/list → success →
+rejected) parses; a failed subpath load is now reported rather than silently
+mapped to "not connected"; and the spec 22 Pi-bridge row is re-driven to
+**SUPPORTED (live)**.
+
+## 6. Evidence trail
 
 - Source: `pi-extension/mcp-bridge/mcp-client.ts` (`let MCP_SDK` /
   `await import("@modelcontextprotocol/sdk")`; `connectHttp`,

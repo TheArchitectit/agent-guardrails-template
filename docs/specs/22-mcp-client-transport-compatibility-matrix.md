@@ -121,7 +121,7 @@ Candidate clients enumerated from the repository on 2026-10-10:
 
 | Candidate | Source of truth in repo | Documented transport | Server transport | Status |
 |---|---|---|---|---|
-| Pi extension MCP bridge | `pi-extension/mcp-bridge/mcp-client.ts` | **fixed 2026-10-10** — `StreamableHTTPClientTransport` at `/mcp/stream` (was `SSEClientTransport` at `${url}/mcp/v1/sse`, spec 24) | stateless Streamable HTTP `POST /mcp/stream` | **BLOCKED (live run 2026-10-10)** — bridge cannot resolve its SDK import (`import("@modelcontextprotocol/sdk")` package-root target ships no `dist/esm/index.js`), so `tryConnect` returns `false` and no request reaches the server. Transport is correct (spec 24) and server/endpoint proven good by a same-run control client; defect spun into **spec 27**. Not a supported row (R22.3). Evidence: `22-evidence-pi-bridge-2026-10-10.md` |
+| Pi extension MCP bridge | `pi-extension/mcp-bridge/mcp-client.ts` | **fixed 2026-10-10** — `StreamableHTTPClientTransport` at `/mcp/stream` (was `SSEClientTransport` at `${url}/mcp/v1/sse`, spec 24); SDK loaded via real subpath entrypoints (`client/index.js`, `client/streamableHttp.js`, `client/stdio.js`), not the package root (spec 27) | stateless Streamable HTTP `POST /mcp/stream` | **SUPPORTED (live)** — re-driven 2026-10-10 after the spec 27 fix: the real bridge module `tryConnect` → `true`, discovered 4 tools, `tools/call` success parsed, `tools/call` rejected parsed (structured `-32602`). Earlier same-day live run was **BLOCKED** by the SDK root-import defect (spec 27, now resolved). Raw output: §6 below + `22-evidence-pi-bridge-2026-10-10.md` |
 | VS Code extension | `ide/vscode-extension/src/utils/client.ts` (`serverUrl` default `http://localhost:8095`) | plain HTTP REST to the web service, not MCP JSON-RPC | web REST (separate auth path) | **Not an MCP client** — does not initialize/speak MCP; cannot be a compat-matrix row |
 | JetBrains plugin | `ide/jetbrains-plugin/src/main/kotlin/com/guardrail/plugin/GuardrailService.kt` (`serverUrl` default `http://localhost:8095`) | OkHttp REST to the web service | web REST | **Not an MCP client** |
 | Vim / Neovim plugins | `ide/vim-plugin`, `ide/neovim-plugin` | thin wrappers over the same REST server | web REST | **Not MCP clients** |
@@ -161,18 +161,54 @@ reproduce FastMCP's client library). These are copied from spec 10 §3/§4.3 and
 the `platform-current-state.md` baseline, and should be re-confirmed when a
 row is added.
 
-## 6. Pi-bridge row — live run 2026-10-10 (BLOCKED)
+## 6. Pi-bridge row — live run 2026-10-10 (SUPPORTED after spec 27 fix)
 
-A live run of the real bridge module against a running OMCP on 2026-10-10
-reached `connect` and stopped: `MCPClient.tryConnect(<url>)` returns `false`
-and no request reaches the server. Cause: `mcp-client.ts` imports
-`@modelcontextprotocol/sdk` from its **package root**, but the published package
-ships no root `dist/esm/index.js`, so the optional-dependency import throws and
-the bare `catch {}` leaves the SDK `null`. The same run's control client (SDK
-subpath entrypoints) passed `initialize` → `tools/list` → success call →
-rejected call over `POST /mcp/stream`, proving the row's server/transport legs
-are good and isolating the failure to the bridge import.
+**First run (BLOCKED).** A live run of the real bridge module against a running
+OMCP on 2026-10-10 reached `connect` and stopped: `MCPClient.tryConnect(<url>)`
+returned `false` and no request reached the server. Cause: `mcp-client.ts`
+imported `@modelcontextprotocol/sdk` from its **package root**, but the
+published package ships no root `dist/esm/index.js`, so the optional-dependency
+import threw and the bare `catch {}` left the SDK `null`. The same run's control
+client (SDK subpath entrypoints) passed `initialize` → `tools/list` → success
+call → rejected call over `POST /mcp/stream`, proving the row's server/transport
+legs were good and isolating the failure to the bridge import. Spun into
+**spec 27**.
 
-Verdict: **BLOCKED**, row stays pending/unsupported (R22.3). Spun into
-**spec 27**. Full raw output: `22-evidence-pi-bridge-2026-10-10.md`.
+**Re-run (SUPPORTED).** Spec 27 fixed the bridge to import the SDK's real
+subpath entrypoints (`client/index.js`, `client/streamableHttp.js`,
+`client/stdio.js`) and to report — not swallow — an unexpected subpath
+resolution error. The real bridge module was then re-driven live
+(2026-10-10, ucs03) against a freshly started OMCP (`MCP_TRANSPORT=http`,
+`MCP_LISTEN_ADDR=127.0.0.1:8081`, `RADICAL_ROOT_DIR=/tmp/rmp-w4`) via
+`pi-extension/live-bridge-run.ts`. Raw output:
+
+```
+=== connect (tryConnect) ===
+endpoint: http://127.0.0.1:8081
+tryConnect: true
+isConnected: true
+getTools: ["git_diff","git_status","list_files","read_file"]
+
+=== tools/call success: read_file {path: Cargo.toml} ===
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "{\"content\":\"[workspace]\\nmembers = [\n...\"…\",\"path\":\"/tmp/rmp-w4/Cargo.toml\"}"
+    }
+  ]
+}
+
+=== tools/call rejected: read_file {} (missing required path) ===
+{
+  "error": "MCP call failed: MCP error -32602: Invalid arguments"
+}
+
+STEP RESULTS: success=true rejected=true
+```
+
+Every step ran through the actual bridge code (`MCPClient.tryConnect` →
+`connectHttp` → `resolveMcpEndpoint` → `StreamableHTTPClientTransport` →
+`Client.connect`/`listTools`/`callTool`). Verdict: **SUPPORTED (live)**, R22.3
+satisfied. Full raw output: `22-evidence-pi-bridge-2026-10-10.md`.
 

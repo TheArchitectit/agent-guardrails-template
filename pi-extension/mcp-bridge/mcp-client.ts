@@ -1,9 +1,51 @@
-let MCP_SDK: typeof import("@modelcontextprotocol/sdk") | null = null;
+// The MCP SDK is an OPTIONAL dependency. It MUST be loaded via the subpath
+// entrypoints the published package actually ships. The package root
+// (`@modelcontextprotocol/sdk`) resolves to `./dist/esm/index.js`, which no
+// published version ships, so a root import always throws ERR_MODULE_NOT_FOUND
+// and silently disables the bridge (spec 27).
+type MCPClientCtor = typeof import("@modelcontextprotocol/sdk/client/index.js")["Client"];
+type MCPStreamableHttpTransportCtor =
+  typeof import("@modelcontextprotocol/sdk/client/streamableHttp.js")["StreamableHTTPClientTransport"];
+type MCPStdioTransportCtor =
+  typeof import("@modelcontextprotocol/sdk/client/stdio.js")["StdioClientTransport"];
+
+let Client: MCPClientCtor | null = null;
+let StreamableHTTPClientTransport: MCPStreamableHttpTransportCtor | null = null;
+let StdioClientTransport: MCPStdioTransportCtor | null = null;
+let SDK_LOAD_ERROR: string | null = null;
+
 try {
-  MCP_SDK = await import("@modelcontextprotocol/sdk");
-} catch {
-  // @modelcontextprotocol/sdk is an optional dependency
-  // MCP bridge is permanently unavailable when not installed
+  ({ Client } = await import("@modelcontextprotocol/sdk/client/index.js"));
+  ({ StreamableHTTPClientTransport } = await import(
+    "@modelcontextprotocol/sdk/client/streamableHttp.js"
+  ));
+  ({ StdioClientTransport } = await import("@modelcontextprotocol/sdk/client/stdio.js"));
+} catch (err) {
+  const code = (err as { code?: string })?.code;
+  const message = String((err as Error)?.message ?? err).split("\n")[0];
+  // Only a genuinely ABSENT optional dependency degrades the bridge quietly.
+  // A failed resolution of a subpath that SHOULD exist inside an installed
+  // package is a real defect (spec 27, R27.2): report it, never swallow it.
+  const packageAbsent =
+    code === "ERR_MODULE_NOT_FOUND" &&
+    message.includes("Cannot find package '@modelcontextprotocol/sdk'");
+  Client = null;
+  StreamableHTTPClientTransport = null;
+  StdioClientTransport = null;
+  if (!packageAbsent) {
+    SDK_LOAD_ERROR = `MCP SDK present but not loadable: ${code ?? "ERROR"} — ${message}`;
+    console.error(`[pi-guardrails] ${SDK_LOAD_ERROR}`);
+  }
+}
+
+/** True when the SDK's client entrypoints loaded and the bridge can operate. */
+function sdkAvailable(): boolean {
+  return Client !== null && StreamableHTTPClientTransport !== null && StdioClientTransport !== null;
+}
+
+/** Diagnosable cause when the SDK is installed but failed to load (spec 27 R27.2). */
+export function getMcpSdkLoadError(): string | null {
+  return SDK_LOAD_ERROR;
 }
 
 /**
@@ -34,7 +76,7 @@ export function resolveMcpEndpoint(url: string): URL {
 }
 
 export class MCPClient {
-  private client: InstanceType<typeof MCP_SDK!["Client"]> | null = null;
+  private client: InstanceType<MCPClientCtor> | null = null;
   private transport: unknown = null;
   private connected = false;
   private tools: string[] = [];
@@ -43,7 +85,7 @@ export class MCPClient {
   private endpoint: string | null = null;
 
   async tryConnect(endpoint: string): Promise<boolean> {
-    if (!MCP_SDK) return false;
+    if (!sdkAvailable()) return false;
 
     this.endpoint = endpoint;
 
@@ -65,9 +107,9 @@ export class MCPClient {
   }
 
   private async connectHttp(url: string): Promise<boolean> {
-    if (!MCP_SDK) return false;
+    if (!sdkAvailable()) return false;
 
-    const { StreamableHTTPClientTransport } = await MCP_SDK;
+    const Transport = StreamableHTTPClientTransport!;
     const endpoint = resolveMcpEndpoint(url);
 
     const headers: Record<string, string> = {};
@@ -76,7 +118,7 @@ export class MCPClient {
       headers["Authorization"] = `Bearer ${apiKey}`;
     }
 
-    this.transport = new StreamableHTTPClientTransport(endpoint, {
+    this.transport = new Transport(endpoint, {
       requestInit: { headers },
     });
 
@@ -84,11 +126,11 @@ export class MCPClient {
   }
 
   private async connectStdio(command: string): Promise<boolean> {
-    if (!MCP_SDK) return false;
+    if (!sdkAvailable()) return false;
 
-    const { StdioClientTransport } = await MCP_SDK;
+    const Transport = StdioClientTransport!;
     const parts = command.split(" ");
-    this.transport = new StdioClientTransport({
+    this.transport = new Transport({
       command: parts[0],
       args: parts.slice(1),
       stderr: "pipe",
@@ -98,10 +140,9 @@ export class MCPClient {
   }
 
   private async performConnection(): Promise<boolean> {
-    if (!MCP_SDK || !this.transport) return false;
+    if (!sdkAvailable() || !this.transport) return false;
 
-    const { Client } = await MCP_SDK;
-    this.client = new Client({ name: "pi-guardrails", version: "0.1.0" });
+    this.client = new Client!({ name: "pi-guardrails", version: "0.1.0" });
 
     await this.client.connect(this.transport as any);
     this.connected = true;
