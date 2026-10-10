@@ -1,9 +1,10 @@
 # OpenSpec: MCP Client / Transport Compatibility Matrix
 
 **Status:** Proposed — opened 2026-10-10 (spin-out from spec 20 / spec 10
-§4.2.3, §5.4); closure block added 2026-10-10. NOT implemented: no supported
-client has a passing end-to-end compatibility test yet, and the required-row
-owner decision is still open.
+§4.2.3, §5.4); closure block added 2026-10-10; **required row PASSES
+2026-10-10** (R22.1 SUPPORTED — see §R22.1 and `22-evidence-2026-10-10.md`).
+The remaining candidate rows are product choices and stay pending/unsupported;
+the required row is closed.
 
 **Priority:** High for the one required row (an official supported client); the
 remaining rows are product choices.
@@ -29,42 +30,51 @@ prove end-to-end: initialize → authenticate → discover a tool → invoke →
 parse success and error results.
 
 ### R22.1 required row — recorded 2026-10-10 (owner decision: OFFICIAL MCP
-Inspector)
+Inspector); **PASSES 2026-10-10**
 
 The owner decided 2026-10-10 that the **required** client/transport row is the
 **official MCP Inspector** (`@modelcontextprotocol/inspector`) against the OMCP
-server's **Streamable HTTP** transport. The row was driven live on this machine
-(ucs03) on 2026-10-10; evidence doc:
-`radicalopenmcpplatform docs/qa/mcp-inspector-compat-2026-10-10.md` (OMCP
-commit `837e917d1845d54f187c06af2c844392f88409d9`).
+server's **Streamable HTTP** transport. The first live run (same day) **failed**
+at `initialize` because the Inspector requested MCP revision `2025-11-25` and
+OMCP refused it (spun out as spec 25). OMCP has since accepted `2025-11-25`, and
+the row was re-driven live on ucs03 on 2026-10-10; it now passes every step.
+Evidence: `22-evidence-2026-10-10.md` (raw Inspector step outputs).
 
 | Field | Value |
 |---|---|
-| Client | **Official MCP Inspector** (`@modelcontextprotocol/inspector`; tested v2.10.1 and v1.0.2) |
-| Transport | **Streamable HTTP** — `POST /mcp/stream` (MCP `2025-03-26`) |
-| Auth header | none required on loopback (local run: `127.0.0.1:8081`); `RADICAL_API_KEY` / `Authorization: Bearer <key>` is required for non-loopback binds |
-| Schema revision | OMCP HEAD at run time: `faad1328b3ebf06da0ab25717caba0a5e90097ca` |
-| Evidence | OMCP `docs/qa/mcp-inspector-compat-2026-10-10.md`; raw Inspector step outputs recorded there |
-| Raw step results | `initialize` **FAIL**, `tools/list` **FAIL**, `tools/call` success **FAIL**, `tools/call` error **FAIL** |
-| Verdict | **FAILED — NOT SUPPORTED.** Must not be published as supported (R22.3). |
+| Client | **Official MCP Inspector** (`@modelcontextprotocol/inspector`) v2.10.1 (`@modelcontextprotocol/core` 2.2.0) |
+| Transport | **Streamable HTTP** — `POST /mcp/stream`; MCP revision **`2025-11-25`** negotiated |
+| Auth header | none required on loopback (run: `127.0.0.1:8081`); `RADICAL_API_KEY` / `Authorization: Bearer <key>` is required for non-loopback binds |
+| Schema revision | OMCP HEAD at run time: `0a084de844254380789d1d6bf57f73bb8ba33191` |
+| Evidence | GR `docs/specs/22-evidence-2026-10-10.md`; raw Inspector step outputs recorded there |
+| Raw step results | `initialize` **PASS**, `tools/list` **PASS**, `tools/call` success **PASS**, `tools/call` rejected **PASS** (structured error) |
+| Verdict | **SUPPORTED.** |
 
-**Exact failing step:** `initialize`. The official Inspector requests MCP
-protocol revision `2025-11-25`; OMCP speaks `2025-06-18`, `2025-03-26`,
-`2024-11-05` (`crates/mcp/src/state.rs:271`) and refuses anything else
-(`state.rs:286-315`). Both the v2 line and the deprecated v1 line request
-`2025-11-25`, and the Inspector CLI exposes no flag to pin the protocol
-revision (`--protocol-era legacy|auto|modern` all still request
-`2025-11-25`/pinned `2026-07-28`). Because the handshake is refused, no later
-method is ever reached. Raw Inspector output:
+Raw `initialize` result (verbatim excerpt):
 
+```json
+{
+  "serverInfo": { "name": "radical-mcp", "version": "0.1.0" },
+  "protocolVersion": "2025-11-25",
+  "capabilities": {
+    "prompts": { "listChanged": false },
+    "resources": { "subscribe": false, "listChanged": false },
+    "tools": { "listChanged": false }
+  }
+}
 ```
-{"error":{"code":"error","message":"Unsupported MCP protocol version: 2025-11-25. This server speaks: 2025-06-18, 2025-03-26, 2024-11-05"}}
+
+Raw rejected-call result (verbatim):
+
+```json
+{"error":{"code":"error","message":"Invalid arguments"}}
 ```
 
-Control: a raw `curl` `initialize` with `protocolVersion: "2025-03-26"` against
-the same endpoint succeeds, so the server and the Streamable HTTP endpoint are
-healthy — the gap is the negotiated protocol revision. The mismatch is spun out
-as **spec 25** (OMCP-side); see `25-omcp-protocol-revision-gap.md`.
+Revision resolution: OMCP now lists `2025-11-25` first in
+`SUPPORTED_PROTOCOL_VERSIONS` (`crates/mcp/src/state.rs`), so the Inspector's
+requested revision is negotiated rather than refused. See
+`25-omcp-protocol-revision-gap.md` (option 1 adopted) and
+`22-evidence-2026-10-10.md`.
 
 **R22.2** Each row SHALL record endpoint path, transport version, auth header,
 and schema revision.
@@ -95,26 +105,27 @@ must be an owner call before R22.1 closes.
 
 **Resolved 2026-10-10:** the required row is the **official MCP Inspector**
 (`@modelcontextprotocol/inspector`). The "Phase A: Inspector Bridge" candidate is
-dropped as the required row. The row is recorded under R22.1 above, but it is
-**FAILED — not supported**: the live run blocks at `initialize` on a protocol
-revision the server refuses. R22.1 therefore does **not** close on this run; the
-blocking mismatch is spin-out spec 24.
+dropped as the required row. The row is recorded under R22.1 above and
+**PASSES** as of 2026-10-10: the negotiated revision is `2025-11-25`, the
+revision OMCP now accepts. R22.1 **closes** on this run; the previously blocking
+mismatch was spin-out **spec 25**, now resolved (option 1 adopted).
 
 ## 5. Closure status — 2026-10-10
 
-No row is marked supported. Every candidate below is **pending** or
-**unsupported**, because a row may not be listed as supported without a
-same-commit passing test (R22.3) and none exists yet.
+The **required row is SUPPORTED** (official MCP Inspector, see §R22.1 and
+`22-evidence-2026-10-10.md`). The remaining candidate rows below are product
+choices and stay **pending** or **unsupported**, because a row may not be listed
+as supported without a same-commit passing test (R22.3).
 
 Candidate clients enumerated from the repository on 2026-10-10:
 
 | Candidate | Source of truth in repo | Documented transport | Server transport | Status |
 |---|---|---|---|---|
-| Pi extension MCP bridge | `pi-extension/mcp-bridge/mcp-client.ts` | `SSEClientTransport` at `${url}/mcp/v1/sse` (line 43: `new URL(url.endsWith("/sse") ? url : `${url}/mcp/v1/sse`)`) | stateless Streamable HTTP `POST /mcp` | **Unsupported mismatch** — no SSE endpoint exists (`docs/platform-current-state.md` §6); compatibility cannot be inferred from tool-name overlap |
+| Pi extension MCP bridge | `pi-extension/mcp-bridge/mcp-client.ts` | **fixed 2026-10-10** — `StreamableHTTPClientTransport` at `/mcp/stream` (was `SSEClientTransport` at `${url}/mcp/v1/sse`, spec 24) | stateless Streamable HTTP `POST /mcp/stream` | **Endpoint mismatch fixed; live-run test pending** — transport now matches the server; a live bridge run against OMCP has not been recorded, so it is not yet a supported row (R22.3) |
 | VS Code extension | `ide/vscode-extension/src/utils/client.ts` (`serverUrl` default `http://localhost:8095`) | plain HTTP REST to the web service, not MCP JSON-RPC | web REST (separate auth path) | **Not an MCP client** — does not initialize/speak MCP; cannot be a compat-matrix row |
 | JetBrains plugin | `ide/jetbrains-plugin/src/main/kotlin/com/guardrail/plugin/GuardrailService.kt` (`serverUrl` default `http://localhost:8095`) | OkHttp REST to the web service | web REST | **Not an MCP client** |
 | Vim / Neovim plugins | `ide/vim-plugin`, `ide/neovim-plugin` | thin wrappers over the same REST server | web REST | **Not MCP clients** |
-| MCP Inspector (official, `@modelcontextprotocol/inspector`) | external, not vendored | Streamable HTTP `/mcp` | stateless Streamable HTTP `/mcp` | **Pending test** — the strongest candidate for the required row; speaks the same Streamable HTTP transport the server exposes |
+| MCP Inspector (official, `@modelcontextprotocol/inspector`) | external, not vendored | Streamable HTTP `/mcp/stream` | stateless Streamable HTTP `/mcp/stream` | **SUPPORTED (required row)** — passed end-to-end 2026-10-10; see §R22.1 and `22-evidence-2026-10-10.md` |
 | pi-extension "Phase A: Inspector Bridge" | referenced in spec 22 §4 only; no source in this repo | — | — | **Pending owner decision** |
 
 What a compatibility test would need (recorded so the row is testable, not
@@ -132,16 +143,13 @@ asserted):
    the client's request shape, or a scripted Node/Python client run captured
    with its output).
 
-Blocking gaps already visible: the Pi bridge's SSE path does not exist on this
-server, so the Pi bridge cannot be the required row as-is. The earlier missing
-live `tools/list` sequence test has since been added (spec 23,
+The earlier missing live `tools/list` sequence test has since been added (spec 23,
 `TestStreamableHTTPListingSequence`), so discovery over the wire is now proven
-for the Streamable HTTP transport a candidate row would use.
+for the Streamable HTTP transport the required row uses. The Pi bridge SSE path
+mismatch is resolved in code by spec 24 (Streamable HTTP `/mcp/stream`).
 
-**Open owner decision (unchanged and required before R22.1 closes):** which
-client is the *required* supported row — the official MCP Inspector, or the
-reference-project "Phase A: Inspector Bridge", or a vendor client. Until that
-is recorded, no row may be published as supported.
+**Owner decision — closed 2026-10-10:** the required supported row is the
+official MCP Inspector, and it passes (§R22.1).
 
 Intentionally-unsupported surfaces (R22.4), with rationale: MCP **prompts**
 (no prompt registration in the inspected package; no product requirement);

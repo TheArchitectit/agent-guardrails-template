@@ -6,6 +6,33 @@ try {
   // MCP bridge is permanently unavailable when not installed
 }
 
+/**
+ * The MCP Streamable HTTP endpoint served by radical-mcp-server.
+ *
+ * The server's router (`crates/server/src/router.rs`) mounts the primary
+ * transport at `POST /mcp/stream`; there is no `/mcp/v1/...` prefix and the
+ * legacy SSE routes are `/mcp/sse` + `/mcp/messages`. See spec 24.
+ */
+export const MCP_STREAM_PATH = "/mcp/stream";
+
+/**
+ * Resolve a caller-supplied MCP endpoint to the server's real transport route.
+ *
+ * - A bare base URL (or one ending in `/mcp`) resolves to `MCP_STREAM_PATH`.
+ * - A legacy SSE path (e.g. `/mcp/v1/sse`, `/sse`) resolves to
+ *   `MCP_STREAM_PATH`, because the server does not serve `/mcp/v1/sse`.
+ * - Any other explicit path is preserved, so a caller can target a route the
+ *   server does serve (e.g. an already-correct `/mcp/stream`).
+ */
+export function resolveMcpEndpoint(url: string): URL {
+  const parsed = new URL(url);
+  const path = parsed.pathname.replace(/\/+$/, "");
+  if (path === "" || path === "/" || path === "/mcp" || path.endsWith("/sse")) {
+    parsed.pathname = MCP_STREAM_PATH;
+  }
+  return parsed;
+}
+
 export class MCPClient {
   private client: InstanceType<typeof MCP_SDK!["Client"]> | null = null;
   private transport: unknown = null;
@@ -22,10 +49,11 @@ export class MCPClient {
 
     try {
       // Determine transport type from endpoint
-      // If endpoint looks like a URL (http/https), use SSE transport
+      // If endpoint looks like a URL (http/https), use the server's
+      // Streamable HTTP transport (POST /mcp/stream).
       // If it's a file path or command, use stdio transport
       if (endpoint.startsWith("http://") || endpoint.startsWith("https://")) {
-        return await this.connectSSE(endpoint);
+        return await this.connectHttp(endpoint);
       } else {
         return await this.connectStdio(endpoint);
       }
@@ -36,11 +64,11 @@ export class MCPClient {
     }
   }
 
-  private async connectSSE(url: string): Promise<boolean> {
+  private async connectHttp(url: string): Promise<boolean> {
     if (!MCP_SDK) return false;
 
-    const { SSEClientTransport } = await MCP_SDK;
-    const sseUrl = new URL(url.endsWith("/sse") ? url : `${url}/mcp/v1/sse`);
+    const { StreamableHTTPClientTransport } = await MCP_SDK;
+    const endpoint = resolveMcpEndpoint(url);
 
     const headers: Record<string, string> = {};
     const apiKey = process.env.PI_GUARDRAILS_MCP_API_KEY;
@@ -48,8 +76,7 @@ export class MCPClient {
       headers["Authorization"] = `Bearer ${apiKey}`;
     }
 
-    this.transport = new SSEClientTransport(sseUrl, {
-      eventSourceInit: { headers },
+    this.transport = new StreamableHTTPClientTransport(endpoint, {
       requestInit: { headers },
     });
 

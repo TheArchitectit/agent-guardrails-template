@@ -1,6 +1,9 @@
 # OpenSpec 24: Pi-Bridge SSE Transport Mismatch
 
-**Status:** Proposed — opened 2026-10-10 (spin-out from spec 22 closure run).
+**Status:** Proposed — opened 2026-10-10 (spin-out from spec 22 closure run);
+**bridge fixed 2026-10-10** (option 1 implemented — Streamable HTTP). The code
+change and a focused test are in this commit; a live bridge run against OMCP has
+not been recorded, so the compat-matrix row stays pending (R24.4).
 
 **Priority:** High — a real client in this repo cannot connect to the server as
 written, and the incompatibility was previously only inferable from tool-name
@@ -88,9 +91,49 @@ URL returning 404 — those are historical, not live clients).
    against the real endpoint.
 3. No gate is weakened to make the test pass.
 
+## 6. Resolution — implemented 2026-10-10 (option 1)
+
+The Pi bridge now uses the SDK's **Streamable HTTP** client transport against the
+server's real route, as recommended in §3 option 1.
+
+Changed: `pi-extension/mcp-bridge/mcp-client.ts`
+
+- Added `MCP_STREAM_PATH = "/mcp/stream"` and an exported
+  `resolveMcpEndpoint(url)`.
+- The HTTP branch of `tryConnect` now calls `connectHttp` (was `connectSSE`),
+  which builds `new StreamableHTTPClientTransport(endpoint, { requestInit: {
+  headers } })` (was `new SSEClientTransport(...)`).
+- `resolveMcpEndpoint` maps a bare base URL, `/`, `/mcp`, and any legacy SSE
+  path (`.../sse`, including the old `${url}/mcp/v1/sse`) to `/mcp/stream`; an
+  already-correct explicit path (e.g. `/mcp/stream`) is preserved.
+- The public API surface is unchanged: `tryConnect`, `callTool`, `isConnected`,
+  `getTools`, `close` are all intact; only the private HTTP connect method and
+  the endpoint the bridge targets changed.
+
+Evidence (all live, this commit):
+
+- `mcp-server` Go tests for the transport: `cd mcp-server && go test
+  ./internal/mcp/ -count=1` → `ok github.com/thearchitectit/guardrail-mcp/internal/mcp 0.204s`.
+- `pi-extension` full suite: `npx vitest run` → **22 files, 193 tests passed**,
+  including the new `mcp-bridge/mcp-client.test.ts`.
+- Focused test `mcp-bridge/mcp-client.test.ts` (new): asserts the endpoint
+  resolver targets `/mcp/stream` for a bare URL and for legacy SSE paths (never
+  `/mcp/v1/sse`), preserves an explicit `/mcp/stream`, and preserves
+  host/port; plus a source-contract check that the bridge uses
+  `StreamableHTTPClientTransport` and contains no `SSEClientTransport`.
+
+What is **not** claimed: a live bridge run (pi agent → bridge → OMCP) was not
+performed. R24.3's "same-commit test proves the bridge connects to the real
+server endpoint" is satisfied at the contract level (transport/route) by the
+focused test plus the transport's own live Go tests; a full end-to-end bridge
+run remains open and the compat-matrix row stays **pending** (R24.4).
+
 ## 5. Evidence trail
 
-- Source line: `pi-extension/mcp-bridge/mcp-client.ts:43`, `:51`.
+- Source line (pre-fix): `pi-extension/mcp-bridge/mcp-client.ts:43`, `:51`.
+- Post-fix source: `pi-extension/mcp-bridge/mcp-client.ts` (`resolveMcpEndpoint`,
+  `connectHttp`).
+- Test: `pi-extension/mcp-bridge/mcp-client.test.ts`.
 - Server routes: `crates/server/src/router.rs:79-85` (OMCP).
 - Existing warning: `mcp-server/README.md:408`.
 - Related: spec 22 §5 (Pi bridge marked unsupported mismatch).

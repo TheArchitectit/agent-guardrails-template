@@ -1,7 +1,8 @@
 # OpenSpec 25: Official MCP Inspector ⇄ OMCP Protocol-Revision Gap
 
 **Status:** Proposed — opened 2026-10-10 (spin-out from the spec 22 required-row
-live run).
+live run); **resolved 2026-10-10** — OMCP adopted option 1 and now accepts
+revision `2025-11-25`, so the Inspector handshakes. See §3.
 
 **Priority:** High — blocks the single required compatibility row (spec 22
 R22.1).
@@ -77,6 +78,16 @@ compatible revision (or OMCP adds it).
 
 Recommended: option 3 now (row stays FAILED/unsupported), with option 1 as the
 tracked remediation.
+
+### Resolved 2026-10-10 — option 1 adopted
+
+OMCP added `2025-11-25` (first in `SUPPORTED_PROTOCOL_VERSIONS`,
+`crates/mcp/src/state.rs`) at OMCP commit
+`0a084de844254380789d1d6bf57f73bb8ba33191`. The re-driven Inspector run then
+passed **every** step — `initialize` negotiated `2025-11-25`, `tools/list`
+discovered four tools, `tools/call` succeeded, and a bad-args `tools/call`
+returned a structured `{"error":{"code":"error","message":"Invalid arguments"}}`.
+Evidence: `22-evidence-2026-10-10.md`; spec 22 R22.1 now reads **SUPPORTED**.
 
 ## 4. Acceptance criteria
 

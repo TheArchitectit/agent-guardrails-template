@@ -17,10 +17,12 @@ Design specifications and change proposals for the guardrails MCP server.
 | [19-phase0-ci-security-gates.md](19-phase0-ci-security-gates.md) | Proposed same-commit blocking CI matrix, UCS03 isolation and negative controls |
 | [20-mcp-parity-with-fastmcp.md](20-mcp-parity-with-fastmcp.md) | FastMCP parity closure: consolidates spec 10's required items into one closable unit (NEW 2026-10-10) |
 | [21-tool-schema-handler-conformance-gate.md](21-tool-schema-handler-conformance-gate.md) | Blocking CI gate comparing advertised tool schemas to handler argument reads (NEW 2026-10-10) |
-| [22-mcp-client-transport-compatibility-matrix.md](22-mcp-client-transport-compatibility-matrix.md) | Versioned client/transport compatibility matrix backed by live tests (NEW 2026-10-10) |
+| [22-mcp-client-transport-compatibility-matrix.md](22-mcp-client-transport-compatibility-matrix.md) | Versioned client/transport compatibility matrix backed by live tests; **required row (official MCP Inspector) SUPPORTED 2026-10-10** (NEW 2026-10-10) |
+| [22-evidence-2026-10-10.md](22-evidence-2026-10-10.md) | Raw official MCP Inspector step outputs for the spec 22 required row (initialize/tools-list/call/call-rejected all PASS, revision 2025-11-25) (NEW 2026-10-10) |
 | [23-live-tool-resource-listing-sequence.md](23-live-tool-resource-listing-sequence.md) | Live tools/list + resources/list sequence over the production transport (NEW 2026-10-10, spin-out from spec 20 R20.3) |
-| [24-pi-bridge-sse-transport-mismatch.md](24-pi-bridge-sse-transport-mismatch.md) | Pi-bridge targets SSE `/mcp/v1/sse` the OMCP server does not serve; fix options (NEW 2026-10-10) |
-| [25-omcp-protocol-revision-gap.md](25-omcp-protocol-revision-gap.md) | Official MCP Inspector offers MCP revision 2025-11-25, OMCP refuses it; blocks spec 22 required row (NEW 2026-10-10) |
+| [24-pi-bridge-sse-transport-mismatch.md](24-pi-bridge-sse-transport-mismatch.md) | Pi-bridge targeted SSE `/mcp/v1/sse` the OMCP server does not serve; **fixed 2026-10-10** — switched to Streamable HTTP `/mcp/stream` + focused test (NEW 2026-10-10) |
+| [25-omcp-protocol-revision-gap.md](25-omcp-protocol-revision-gap.md) | Official MCP Inspector offers MCP revision 2025-11-25, OMCP refuses it; blocks spec 22 required row (RESOLVED 2026-10-10 — OMCP adopts 2025-11-25) |
+| [26-omcp-listener-self-terminates-after-grace.md](26-omcp-listener-self-terminates-after-grace.md) | OMCP HTTP serve loop self-terminates after `shutdown::GRACE` (10s) with no signal — `tokio::time::timeout` wraps the whole serve future (NEW 2026-10-10, spin-out from spec 22 run) |
 | [AUTH-01-mcp-endpoint-auth.md](AUTH-01-mcp-endpoint-auth.md) | Bearer authentication on `/mcp` — implemented and merged |
 | [guardrail-gaps-2026/index.md](guardrail-gaps-2026/index.md) | Six gap-analysis specs vs 2026 AI safety systems |
 | [07-versioned-policy-pack-governance.md](07-versioned-policy-pack-governance.md) | Proposed immutable policy-pack resolution, overlays, trust boundaries, and lock records |
