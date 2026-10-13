@@ -248,6 +248,12 @@ The AUDIT's earlier `100/78/52/27 = 257` figure is not reproducible from those
 tables and is superseded; see
 [AUDIT-2026-10-09.md §5](AUDIT-2026-10-09.md) for the per-section breakdown.
 
+**B7 sync re-verification (2026-10-13, `main` `9fac99b1`):** zero non-test Go
+changes since the recount base `f85aa67` — the only deltas are spec-21/22/23
+test scaffolding (conformance gate, listing sequence, allowlist test) and
+pi-extension TypeScript, both outside this Go requirement ledger's scope.
+Totals unchanged: 101/75/59/26/0 = 261.
+
 ## Untestable acceptance criteria
 
 Several specs specify acceptance criteria with no oracle in this repository:
