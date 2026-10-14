@@ -1,9 +1,13 @@
 # OpenSpec 24: Pi-Bridge SSE Transport Mismatch
 
-**Status:** Proposed — opened 2026-10-10 (spin-out from spec 22 closure run);
-**bridge fixed 2026-10-10** (option 1 implemented — Streamable HTTP). The code
-change and a focused test are in this commit; a live bridge run against OMCP has
-not been recorded, so the compat-matrix row stays pending (R24.4).
+**Status:** CLOSED — 2026-10-14. Opened 2026-10-10 (spin-out from spec 22
+closure run); **bridge fixed 2026-10-10** (option 1 implemented — Streamable
+HTTP), fix live-verified 2026-10-10 and **re-driven live at the 2026-10-14
+tips** (GR `main@ddc1e18f` bridge source, OMCP `master@eec3d15` server:
+`tryConnect: true`, 4 tools discovered, `tools/call` success parsed, rejected
+call parsed as structured `-32602`, `STEP RESULTS: success=true rejected=true`).
+R24.4's conditional is moot: the compat-matrix Pi-bridge row is **SUPPORTED
+(live)**, not pending.
 
 **Priority:** High — a real client in this repo cannot connect to the server as
 written, and the incompatibility was previously only inferable from tool-name
@@ -123,10 +127,15 @@ Evidence (all live, this commit):
   `StreamableHTTPClientTransport` and contains no `SSEClientTransport`.
 
 What is **not** claimed: a live bridge run (pi agent → bridge → OMCP) was not
-performed. R24.3's "same-commit test proves the bridge connects to the real
-server endpoint" is satisfied at the contract level (transport/route) by the
-focused test plus the transport's own live Go tests; a full end-to-end bridge
-run remains open and the compat-matrix row stays **pending** (R24.4).
+performed at fix time. R24.3's "same-commit test proves the bridge connects to
+the real server endpoint" is satisfied at the contract level (transport/route)
+by the focused test plus the transport's own live Go tests. **Closed
+2026-10-14:** a full end-to-end live bridge run was recorded — first on
+2026-10-10 (`22-evidence-pi-bridge-2026-10-10.md`) and re-driven 2026-10-14
+against a freshly started OMCP `master@eec3d15` (`MCP_TRANSPORT=http`,
+`MCP_LISTEN_ADDR=127.0.0.1:8094`): connect → 4 tools → success call → rejected
+call (structured `-32602`) → clean close, `STEP RESULTS: success=true
+rejected=true`. R24.4 is moot — the compat-matrix row is **SUPPORTED (live)**.
 
 ## 5. Evidence trail
 

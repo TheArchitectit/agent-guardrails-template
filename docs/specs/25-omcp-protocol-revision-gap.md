@@ -1,8 +1,11 @@
 # OpenSpec 25: Official MCP Inspector ⇄ OMCP Protocol-Revision Gap
 
-**Status:** Proposed — opened 2026-10-10 (spin-out from the spec 22 required-row
-live run); **resolved 2026-10-10** — OMCP adopted option 1 and now accepts
-revision `2025-11-25`, so the Inspector handshakes. See §3.
+**Status:** CLOSED — 2026-10-10 (option 1 adopted; OMCP accepts revision
+`2025-11-25`), re-verified at the 2026-10-14 tips: `2025-11-25` remains first
+in `SUPPORTED_PROTOCOL_VERSIONS` (`crates/mcp/src/state.rs`) on
+`master@eec3d15`, and OMCP `master` is same-commit green (ci +
+security-regression SUCCESS 2026-10-14 04:20Z). Opened 2026-10-10 (spin-out
+from the spec 22 required-row live run). See §3.
 
 **Priority:** High — blocks the single required compatibility row (spec 22
 R22.1).

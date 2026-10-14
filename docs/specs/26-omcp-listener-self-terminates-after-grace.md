@@ -1,7 +1,11 @@
 # OpenSpec 26: OMCP HTTP Listener Self-Terminates After `shutdown::GRACE`
 
-**Status:** Proposed — opened 2026-10-10 (spin-out from the spec 22 required-row
-live run).
+**Status:** CLOSED — 2026-10-14. Opened 2026-10-10 (spin-out from the spec 22 required-row
+live run). **Option 1 was implemented the same day** in OMCP commit
+`ca1db65` ("fix(server): arm GRACE only after shutdown signal, not at
+serve-start (spec 26)", 2026-10-10) — an ancestor of `master@eec3d15` — with the
+regression test `the_listener_stays_up_past_grace_when_no_signal_arrives`;
+the GR spec doc had not recorded the closure until now.
 
 **Priority:** Medium — does not affect any compatibility verdict, but caps every
 HTTP server instance at ~10 s and is a real defect in the serve loop.
@@ -71,12 +75,24 @@ server with no signal keeps serving past `GRACE`.
 
 Recommended: **option 1.**
 
-## 4. Acceptance criteria
+## 4. Acceptance criteria — VERIFIED 2026-10-14
 
-1. A server started without a signal serves past `GRACE` (e.g. a request at
-   `> 2 × GRACE` succeeds).
-2. After a real SIGTERM/SIGINT, in-flight calls are still bounded by `GRACE`.
-3. No gate is weakened; `serve_until_within`'s test-only parameter keeps working.
+1. **MET (unit + live).** The regression test
+   `the_listener_stays_up_past_grace_when_no_signal_arrives` (in
+   `shutdown.test.rs`) passes at `master@eec3d15` (7/7 shutdown tests ok), and a
+   live run on ucs03 (2026-10-14, `radical-mcp-server` debug build of the tip,
+   `MCP_LISTEN_ADDR=127.0.0.1:8093`) answered `initialize` at t≈4 s and
+   `tools/list` at t≈41 s and t≈50 s — serving ~5× past `GRACE = 10 s` with no
+   signal (server log: requests logged, no shutdown line until SIGTERM).
+2. **MET.** A real SIGTERM during the same live session drained cleanly:
+   `shutdown signal received; finishing in-flight calls` → the in-flight
+   `tools/call` completed → `stopped 0 plugin(s)` → `shutdown complete`.
+   The unit tests `a_signal_stops_the_server_within_grace` and
+   `a_call_that_outlives_the_deadline_does_not_hang_the_process` cover the
+   bound paths.
+3. **MET.** No gate touched; `serve_until_within`'s test-only parameter kept
+   working (`the_deadline_is_a_constant_rather_than_configuration` and the
+   signal test both pass, using the short stand-in duration).
 
 ## 5. Evidence trail
 
@@ -86,4 +102,8 @@ Recommended: **option 1.**
 - Observed 2026-10-10 during the spec 22 required-row run; see
   `22-evidence-2026-10-10.md` (OMCP HEAD
   `0a084de844254380789d1d6bf57f73bb8ba33191`).
+- **Fix + closure evidence 2026-10-14:** OMCP `ca1db65` (ancestor of
+  `master@eec3d15`, same-commit green ci + security-regression 04:20Z);
+  `cargo test -p radical-mcp-server shutdown` at the tip → 7 passed / 0 failed;
+  live serve-past-GRACE + SIGTERM drain as recorded in §4.
 - Related: spec 17 R17.8 (graceful shutdown), spec 22 R22.1.
