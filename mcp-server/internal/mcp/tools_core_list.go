@@ -62,6 +62,14 @@ func coreTools() []mcp.Tool {
 						"type":        "string",
 						"description": "Replacement text",
 					},
+					"session_token": map[string]any{
+						"type":        "string",
+						"description": "Active session token (optional; confirms the file was read before editing)",
+					},
+					"session_id": map[string]any{
+						"type":        "string",
+						"description": "Alternate session identifier (optional; used when session_token is absent)",
+					},
 				},
 				Required: []string{"file_path", "old_string", "new_string"},
 			},
@@ -177,6 +185,10 @@ func coreTools() []mcp.Tool {
 						"type":        "string",
 						"description": "Path to the file being checked",
 					},
+					"environment": map[string]any{
+						"type":        "string",
+						"description": "Environment being checked (test or prod)",
+					},
 				},
 				Required: []string{"file_path"},
 			},
@@ -209,8 +221,12 @@ func coreTools() []mcp.Tool {
 						"type":        "string",
 						"description": "Path to the file that was read",
 					},
+					"session_token": map[string]any{
+						"type":        "string",
+						"description": "Active session token",
+					},
 				},
-				Required: []string{"file_path"},
+				Required: []string{"file_path", "session_token"},
 			},
 		},
 		{
@@ -245,8 +261,12 @@ func coreTools() []mcp.Tool {
 						"type":        "string",
 						"description": "Path to the file to verify",
 					},
+					"session_token": map[string]any{
+						"type":        "string",
+						"description": "Active session token",
+					},
 				},
-				Required: []string{"file_path"},
+				Required: []string{"file_path", "session_token"},
 			},
 		},
 		{
@@ -255,11 +275,16 @@ func coreTools() []mcp.Tool {
 			InputSchema: mcp.ToolInputSchema{
 				Type: "object",
 				Properties: map[string]any{
+					"session_token": map[string]any{
+						"type":        "string",
+						"description": "Active session token",
+					},
 					"task_id": map[string]any{
 						"type":        "string",
 						"description": "Unique identifier for the current task",
 					},
 				},
+				Required: []string{"session_token"},
 			},
 		},
 		{
@@ -288,9 +313,14 @@ func coreTools() []mcp.Tool {
 				Properties: map[string]any{
 					"task_id": map[string]any{
 						"type":        "string",
-						"description": "ID of task to reset",
+						"description": "Unique identifier for the current task",
+					},
+					"session_token": map[string]any{
+						"type":        "string",
+						"description": "Active session token",
 					},
 				},
+				Required: []string{"session_token"},
 			},
 		},
 	}

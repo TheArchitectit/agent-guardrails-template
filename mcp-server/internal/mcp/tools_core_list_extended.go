@@ -45,12 +45,27 @@ func coreToolsExtended() []mcp.Tool {
 			InputSchema: mcp.ToolInputSchema{
 				Type: "object",
 				Properties: map[string]any{
-					"reason": map[string]any{
+					"session_token": map[string]any{
 						"type":        "string",
-						"description": "Reason for the halt",
+						"description": "Active session token",
+					},
+					"halt_type": map[string]any{
+						"type":        "string",
+						"description": "Type of halt being recorded",
+					},
+					"description": map[string]any{
+						"type":        "string",
+						"description": "Description of the halt",
+					},
+					"severity": map[string]any{
+						"type":        "string",
+						"description": "Severity of the halt",
+					},
+					"context": map[string]any{
+						"description": "Additional context about the halt",
 					},
 				},
-				Required: []string{"reason"},
+				Required: []string{"session_token"},
 			},
 		},
 		{
@@ -63,8 +78,16 @@ func coreToolsExtended() []mcp.Tool {
 						"type":        "string",
 						"description": "ID of the halt being acknowledged",
 					},
+					"session_token": map[string]any{
+						"type":        "string",
+						"description": "Active session token",
+					},
+					"resolution": map[string]any{
+						"type":        "string",
+						"description": "Resolution status to set (defaults to pending when omitted)",
+					},
 				},
-				Required: []string{"halt_id"},
+				Required: []string{"halt_id", "session_token"},
 			},
 		},
 		{
@@ -145,7 +168,12 @@ func coreToolsExtended() []mcp.Tool {
 						"type":        "string",
 						"description": "Filter by project name",
 					},
+					"phase": map[string]any{
+						"type":        "string",
+						"description": "Filter by phase",
+					},
 				},
+				Required: []string{"project_name"},
 			},
 		},
 		{
