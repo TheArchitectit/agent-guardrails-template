@@ -107,10 +107,10 @@ func (s *MCPServer) authorizeToolCallDisabled(ctx context.Context, name string, 
 		testRegex: "^TestStreamableHTTPToolsCallAuthorizesAndDenies$",
 	},
 	{
-		name: "secret-fixture-leaks-into-output",
-		file: "internal/mcp/resource_registration.go",
-		old:  `configJSON, err := json.MarshalIndent(s.config.PublicView(), "", "  ")`,
-		new:  `configJSON, err := json.MarshalIndent(s.config, "", "  ")`,
+		name:      "secret-fixture-leaks-into-output",
+		file:      "internal/mcp/resource_registration.go",
+		old:       `configJSON, err := json.MarshalIndent(s.config.PublicView(), "", "  ")`,
+		new:       `configJSON, err := json.MarshalIndent(s.config, "", "  ")`,
 		pkg:       "./internal/mcp",
 		testRegex: "^TestSecretLeakRedactionAcrossRealPaths$",
 	},
@@ -152,15 +152,29 @@ func copyModule(t *testing.T, src, dst string) {
 		if d.IsDir() && d.Name() == ".git" {
 			return fs.SkipDir
 		}
+		// A sibling test package may be writing/cleaning CWD-relative test
+		// artifacts (e.g. internal/mcp tests create .teams/*.json in the source
+		// tree) while this walk runs. WalkDir lists directory entries up front,
+		// so such a file can vanish between readdir and open. Git-tracked files
+		// never vanish mid-walk; skipping a gone transient entry is the correct
+		// read of the tree.
+		if !d.IsDir() && !d.Type().IsRegular() {
+			return nil
+		}
 		target := filepath.Join(dst, rel)
 		if d.IsDir() {
 			return os.MkdirAll(target, 0o755)
 		}
-		if !d.Type().IsRegular() {
-			return nil
-		}
 		in, err := os.Open(path)
 		if err != nil {
+			// A sibling test package may clean CWD-relative test artifacts
+			// (e.g. internal/mcp tests remove .teams/*.json in the source
+			// tree) between WalkDir's readdir and this open. Git-tracked
+			// files never vanish mid-walk, so a gone transient entry is
+			// correctly absent from the copy.
+			if os.IsNotExist(err) {
+				return nil
+			}
 			return err
 		}
 		defer in.Close()
