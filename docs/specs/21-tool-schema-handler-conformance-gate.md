@@ -119,13 +119,17 @@ The injected-drift path is also proven without editing the tree by the pure
 `computeDrift` function under
 `TestToolSchemaHandlerConformance_DetectsInjectedDrift`.
 
-Honest limits. (a) The gate is not yet wired into a workflow step in
-`.github/workflows/team-validation.yml`; it currently runs inside the existing
-`go test ./... -race` job, which is a blocking job, so drift already fails CI —
-but there is no standalone named step/run id yet. (b) Drift count is **not yet
-zero**; it is 24/58 allowlisted (R21 acceptance criterion 2 is met via the
-tracked allowlist; the spec-20 R20.2 "fail on un-allowlisted drift" intent is
-met, but the contract is not yet canonical). (c) The parser attribute family
+Honest limits (updated 2026-10-14, batch 2). (a) The gate is not yet wired
+into a workflow step in `.github/workflows/team-validation.yml`; it currently
+runs inside the existing `go test ./... -race` job, which is a blocking job, so
+drift already fails CI — but there is no standalone named step/run id yet.
+(b) Drift count IS NOW **zero**: 58 registered tools, 0 drifting, 0
+allowlisted — the 24-entry inventory was remediated in two schema-only
+batches (9 tools at `5a44414`, 14 tools + gate helper attribution made
+transitive at `3a64bf0`), the tracked allowlist is intentionally empty, and
+the gate fails closed on any new divergence. (c) The parser attribute family
 is `args`/`a`/`arguments` (the names this package uses); a future handler using
 a different local variable name would need the visitor extended. (d) Engine
-closure is deferred until the drift inventory is remediated to zero.
+closure is no longer deferred: with the drift inventory at zero the allowlist
+mechanism stays only as a future-escape hatch, and every new drift now blocks
+CI by construction.
