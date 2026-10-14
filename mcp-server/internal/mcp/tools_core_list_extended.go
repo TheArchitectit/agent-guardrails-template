@@ -14,16 +14,23 @@ func coreToolsExtended() []mcp.Tool {
 			InputSchema: mcp.ToolInputSchema{
 				Type: "object",
 				Properties: map[string]any{
-					"current_plan": map[string]any{
+					"session_token": map[string]any{
 						"type":        "string",
-						"description": "Description of the current plan",
+						"description": "Active session token",
 					},
-					"uncertainty_reason": map[string]any{
+					"current_task": map[string]any{
 						"type":        "string",
-						"description": "Reason for uncertainty",
+						"description": "Description of the current task",
+					},
+					"self_assessment": map[string]any{
+						"type":        "string",
+						"description": "The agent's own confidence/uncertainty assessment",
+					},
+					"context_data": map[string]any{
+						"description": "Optional structured context used to assess uncertainty",
 					},
 				},
-				Required: []string{"current_plan", "uncertainty_reason"},
+				Required: []string{"session_token", "current_task", "self_assessment"},
 			},
 		},
 		{
@@ -32,11 +39,19 @@ func coreToolsExtended() []mcp.Tool {
 			InputSchema: mcp.ToolInputSchema{
 				Type: "object",
 				Properties: map[string]any{
-					"status": map[string]any{
+					"session_token": map[string]any{
 						"type":        "string",
-						"description": "Current system/task status",
+						"description": "Active session token",
+					},
+					"task_id": map[string]any{
+						"type":        "string",
+						"description": "Unique identifier for the current task (optional)",
+					},
+					"context": map[string]any{
+						"description": "Optional structured context about current state",
 					},
 				},
+				Required: []string{"session_token"},
 			},
 		},
 		{
@@ -96,11 +111,21 @@ func coreToolsExtended() []mcp.Tool {
 			InputSchema: mcp.ToolInputSchema{
 				Type: "object",
 				Properties: map[string]any{
-					"path": map[string]any{
+					"session_token": map[string]any{
+						"type":        "string",
+						"description": "Active session token",
+					},
+					"file_path": map[string]any{
 						"type":        "string",
 						"description": "Path being modified",
 					},
+					"code_type": map[string]any{
+						"type":        "string",
+						"description": "Kind of code being written",
+						"enum":        []string{"production", "test", "infrastructure"},
+					},
 				},
+				Required: []string{"session_token", "file_path", "code_type"},
 			},
 		},
 		{
@@ -109,16 +134,28 @@ func coreToolsExtended() []mcp.Tool {
 			InputSchema: mcp.ToolInputSchema{
 				Type: "object",
 				Properties: map[string]any{
-					"task_id": map[string]any{
+					"session_token": map[string]any{
 						"type":        "string",
-						"description": "Original task identifier",
+						"description": "Active session token",
 					},
-					"current_changes": map[string]any{
+					"file_path": map[string]any{
 						"type":        "string",
-						"description": "Diff or summary of changes so far",
+						"description": "Path of the changed file",
+					},
+					"git_diff": map[string]any{
+						"type":        "string",
+						"description": "The git diff of the changes",
+					},
+					"change_description": map[string]any{
+						"type":        "string",
+						"description": "Description of the intended change (optional)",
+					},
+					"is_new_file": map[string]any{
+						"type":        "boolean",
+						"description": "Whether the change creates a new file",
 					},
 				},
-				Required: []string{"task_id", "current_changes"},
+				Required: []string{"session_token", "file_path", "git_diff"},
 			},
 		},
 		{
@@ -127,16 +164,24 @@ func coreToolsExtended() []mcp.Tool {
 			InputSchema: mcp.ToolInputSchema{
 				Type: "object",
 				Properties: map[string]any{
-					"bug_id": map[string]any{
+					"session_token": map[string]any{
 						"type":        "string",
-						"description": "Known bug ID or description",
+						"description": "Active session token",
 					},
 					"file_path": map[string]any{
 						"type":        "string",
 						"description": "File to check",
 					},
+					"original_content": map[string]any{
+						"type":        "string",
+						"description": "Original file content before the edit",
+					},
+					"modified_content": map[string]any{
+						"type":        "string",
+						"description": "Modified file content after the edit",
+					},
 				},
-				Required: []string{"bug_id", "file_path"},
+				Required: []string{"session_token", "file_path"},
 			},
 		},
 		{
@@ -149,13 +194,8 @@ func coreToolsExtended() []mcp.Tool {
 						"type":        "string",
 						"description": "Name of the project",
 					},
-					"teams": map[string]any{
-						"type":        "array",
-						"items":       map[string]any{"type": "string"},
-						"description": "List of team names to initialize",
-					},
 				},
-				Required: []string{"project_name", "teams"},
+				Required: []string{"project_name"},
 			},
 		},
 		{
@@ -229,16 +269,21 @@ func coreToolsExtended() []mcp.Tool {
 			InputSchema: mcp.ToolInputSchema{
 				Type: "object",
 				Properties: map[string]any{
-					"advisor_name": map[string]any{
+					"advisor_id": map[string]any{
 						"type":        "string",
-						"description": "Name of the specialist advisor",
+						"description": "Identifier of the specialist advisor to consult",
 					},
-					"query": map[string]any{
+					"context": map[string]any{
 						"type":        "string",
-						"description": "Your question or request",
+						"description": "Context for the advice request",
+					},
+					"file_paths": map[string]any{
+						"type":        "array",
+						"items":       map[string]any{"type": "string"},
+						"description": "Files relevant to the advice request",
 					},
 				},
-				Required: []string{"advisor_name", "query"},
+				Required: []string{"advisor_id"},
 			},
 		},
 		{
@@ -251,16 +296,20 @@ func coreToolsExtended() []mcp.Tool {
 						"type":        "string",
 						"description": "Project name",
 					},
-					"advisor_name": map[string]any{
-						"type":        "string",
-						"description": "Advisor to assign",
+					"team_id": map[string]any{
+						"type":        "number",
+						"description": "Team ID to assign within (1-12)",
 					},
-					"role": map[string]any{
+					"role_name": map[string]any{
 						"type":        "string",
-						"description": "Specific project role",
+						"description": "Role to assign",
+					},
+					"person": map[string]any{
+						"type":        "string",
+						"description": "Person to assign to the role",
 					},
 				},
-				Required: []string{"project_name", "advisor_name"},
+				Required: []string{"project_name", "team_id", "role_name", "person"},
 			},
 		},
 		{

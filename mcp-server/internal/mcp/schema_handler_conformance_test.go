@@ -245,11 +245,55 @@ func callsPassingArgs(n ast.Node) []string {
 	return out
 }
 
+// argsCallGraph maps each function/method name to the package-local functions
+// it calls while passing the args map onward. Handler attribution follows
+// these edges transitively (with a visited set): a helper that forwards args
+// to another helper contributes that helper's reads too. Without this, a tool
+// whose reads happen two helper levels deep (e.g. install_skills via
+// buildSetupAgentsArgs) silently looks conformant.
+func argsCallGraph(files map[string]*ast.File) map[string][]string {
+	graph := map[string][]string{}
+	for _, f := range files {
+		for _, d := range f.Decls {
+			fn, ok := d.(*ast.FuncDecl)
+			if !ok || fn.Body == nil {
+				continue
+			}
+			callees := callsPassingArgs(fn.Body)
+			if len(callees) > 0 {
+				graph[fn.Name.Name] = append(graph[fn.Name.Name], callees...)
+			}
+		}
+	}
+	return graph
+}
+
 // handlerReads walks every switch statement, and for each case whose single
 // label is a registered tool name, unions the direct args reads in the case
-// body with the args reads of every helper the case calls with args.
+// body with the args reads of every package-local helper the case (or any
+// helper it calls) passes args to — transitively, so helper chains are
+// attributed in full, not just one level.
 func handlerReads(files map[string]*ast.File, schemas map[string]schemaFacts) map[string]map[string]bool {
 	freads := funcReads(files)
+	graph := argsCallGraph(files)
+	collect := func(seed []string) map[string]bool {
+		set := map[string]bool{}
+		visited := map[string]bool{}
+		queue := append([]string(nil), seed...)
+		for len(queue) > 0 {
+			fn := queue[0]
+			queue = queue[1:]
+			if visited[fn] {
+				continue
+			}
+			visited[fn] = true
+			for k := range freads[fn] {
+				set[k] = true
+			}
+			queue = append(queue, graph[fn]...)
+		}
+		return set
+	}
 	toolReads := map[string]map[string]bool{}
 	add := func(dst map[string]bool, src map[string]bool) {
 		for k := range src {
@@ -280,9 +324,7 @@ func handlerReads(files map[string]*ast.File, schemas map[string]schemaFacts) ma
 				}
 				for _, st := range cc.Body {
 					add(toolReads[tool], argsReadsInNode(st))
-					for _, fn := range callsPassingArgs(st) {
-						add(toolReads[tool], freads[fn])
-					}
+					add(toolReads[tool], collect(callsPassingArgs(st)))
 				}
 			}
 			return true

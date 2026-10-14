@@ -27,10 +27,6 @@ func (s *MCPServer) guardrailsToolList() []mcp.Tool {
 						"description": "Whether the text is entering ('input') or leaving ('output') the agent",
 						"enum":        []string{"input", "output"},
 					},
-					"context": map[string]any{
-						"type":        "string",
-						"description": "Optional context for classification (e.g. source tool or channel)",
-					},
 				},
 				Required: []string{"text"},
 			},

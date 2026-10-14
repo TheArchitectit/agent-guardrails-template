@@ -148,13 +148,8 @@ func coreTools() []mcp.Tool {
 						"type":        "string",
 						"description": "Commit message to validate",
 					},
-					"files": map[string]any{
-						"type":        "array",
-						"items":       map[string]any{"type": "string"},
-						"description": "List of files to be committed",
-					},
 				},
-				Required: []string{"message", "files"},
+				Required: []string{"message"},
 			},
 		},
 		{
@@ -163,16 +158,16 @@ func coreTools() []mcp.Tool {
 			InputSchema: mcp.ToolInputSchema{
 				Type: "object",
 				Properties: map[string]any{
-					"file_path": map[string]any{
-						"type":        "string",
-						"description": "File being modified",
+					"file_paths": map[string]any{
+						"type":        "array",
+						"items":       map[string]any{"type": "string"},
+						"description": "Files being modified",
 					},
-					"changes": map[string]any{
+					"code_content": map[string]any{
 						"type":        "string",
-						"description": "Description or diff of planned changes",
+						"description": "Code content to match against known regression patterns",
 					},
 				},
-				Required: []string{"file_path", "changes"},
 			},
 		},
 		{
@@ -203,9 +198,13 @@ func coreTools() []mcp.Tool {
 						"type":        "string",
 						"description": "Branch to be pushed",
 					},
-					"remote": map[string]any{
-						"type":        "string",
-						"description": "Remote name (e.g., origin)",
+					"is_force": map[string]any{
+						"type":        "boolean",
+						"description": "Whether the push is a force push",
+					},
+					"has_unpushed_commits": map[string]any{
+						"type":        "boolean",
+						"description": "Whether there are unpushed commits",
 					},
 				},
 				Required: []string{"branch"},
@@ -235,20 +234,24 @@ func coreTools() []mcp.Tool {
 			InputSchema: mcp.ToolInputSchema{
 				Type: "object",
 				Properties: map[string]any{
-					"tool_name": map[string]any{
+					"session_token": map[string]any{
 						"type":        "string",
-						"description": "Name of the tool being attempted",
+						"description": "Active session token",
 					},
-					"success": map[string]any{
-						"type":        "boolean",
-						"description": "Whether the attempt was successful",
-					},
-					"error_msg": map[string]any{
+					"task_id": map[string]any{
 						"type":        "string",
-						"description": "Error message if failed",
+						"description": "Unique identifier for the current task",
+					},
+					"error_message": map[string]any{
+						"type":        "string",
+						"description": "Error message if failed (defaults to 'Unknown error')",
+					},
+					"error_category": map[string]any{
+						"type":        "string",
+						"description": "Error category (defaults to 'other')",
 					},
 				},
-				Required: []string{"tool_name", "success"},
+				Required: []string{"session_token"},
 			},
 		},
 		{
@@ -297,12 +300,24 @@ func coreTools() []mcp.Tool {
 						"type":        "string",
 						"description": "File path to check",
 					},
-					"target_string": map[string]any{
+					"session_token": map[string]any{
 						"type":        "string",
-						"description": "The string to find for replacement",
+						"description": "Active session token",
+					},
+					"original_content": map[string]any{
+						"type":        "string",
+						"description": "Original file content before the edit",
+					},
+					"modified_content": map[string]any{
+						"type":        "string",
+						"description": "Modified file content after the edit",
+					},
+					"replacement_type": map[string]any{
+						"type":        "string",
+						"description": "Type of replacement being validated",
 					},
 				},
-				Required: []string{"file_path", "target_string"},
+				Required: []string{"file_path", "session_token"},
 			},
 		},
 		{

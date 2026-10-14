@@ -97,26 +97,32 @@ three slightly different helpers — `jsonToolResult`, `buildToolResult` and
 `errorResult` — with identical observable behaviour, so clients cannot tell
 them apart.
 
-### The published schemas are not trustworthy
+### Published schemas are gate-enforced against handlers (since 2026-10-14)
 
-This is the most important thing to know before integrating a client:
+Historically this section warned that "the published schemas are not
+trustworthy": handlers read parameters the schema did not declare (the
+`session_token` family), schemas declared parameters handlers ignored
+(`files` on `validate_commit`, `remote` on `validate_push`, `bug_id` on
+`verify_fixes_intact`, `target_string` on `validate_exact_replacement`,
+`advisor_name`/`role` on `team_assign`, `teams` on `team_init`,
+`context` on `classify_content`, ...), and required-ness drifted in both
+directions.
 
-- **Handlers frequently read parameters the schema does not declare.** Nearly
-  every tool that needs a session reads `session_token`, which is absent from
-  the published `InputSchema`.
-- **Schemas frequently declare parameters handlers ignore.** Declared-but-dead
-  examples: `files` on `validate_commit`, `remote` on `validate_push`,
-  `bug_id` on `verify_fixes_intact`, `target_string` on
-  `validate_exact_replacement`, `advisor_name`/`role` on `team_assign`,
-  `advisor_name`/`query` on `advisor_query`, `teams` on `team_init`,
-  `context` on `classify_content`.
-- **Required-ness differs between schema and handler** in both directions —
-  `old_string`/`new_string` are schema-required but not enforced, while
-  `authorized_scope`, `session_token`, `role_name` and `code_type` are
-  required in code but not in the schema.
+That drift is remediated. Spec 21's conformance gate
+(`TestToolSchemaHandlerConformance`) enumerates every registered tool from the
+compiled registry, compares each published `InputSchema` to the argument keys
+its handler actually reads (direct reads plus every package-local helper the
+dispatch case passes `args` to, followed transitively), and fails closed on
+any mismatch. As of 2026-10-14 the measured state is **58 tools registered,
+0 drifting, 0 allowlisted** — the tracked-drift allowlist
+(`testdata/tool_contract_drift_allowlist.json`) is intentionally empty, and
+the gate blocks any new schema/handler divergence.
 
-**Treat the handler as the contract.** Where this document and a schema
-disagree, the documented value is what the code actually does.
+Scope note: the gate proves schema-declared properties == handler-read
+properties. It does not verify that schema-required fields are enforced by
+the handler (required-ness enforcement is still best confirmed against the
+handler code).
+
 
 ### Fail-closed vs advisory
 
