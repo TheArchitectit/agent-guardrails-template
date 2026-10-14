@@ -1,6 +1,6 @@
 # OpenSpec: FastMCP Parity Closure (consolidating spec)
 
-**Status:** Proposed — opened 2026-10-10, partially closed 2026-10-10.
+**Status:** Proposed — opened 2026-10-10; required parity items all met 2026-10-14 (R20.1 via spec 21 closure; R20.3–R20.4 previously evidenced; R20.5 spec-22 owner decision remains open).
 Consolidates and takes over the
 closure obligation of `10-mcp-protocol-and-fastmcp-parity.md`. Adds no new
 capability beyond what §4.1–4.4 of spec 10 already requires; it exists so the
@@ -100,7 +100,7 @@ Requirement-by-requirement, with only live-verified evidence:
 
 | Req | State | Evidence |
 |---|---|---|
-| R20.1 canonical contract | **Open** | The gate (spec 21) enumerates 58 registered tools and pins 24 with schema/handler drift in an allowlist. Contract is not yet canonical. |
+| R20.1 canonical contract | **Met (2026-10-14)** | Spec 21 remediation complete: two schema-only batches (`5a444143`, `3a64bf0`) closed drift 24/58 → **0/58** — every registered tool's schema declares exactly what its handler reads; allowlist EMPTY and the gate fails closed on any new drift. Live re-verified 2026-10-14 at `main@b4c2569`: `enumerated 58 registered tools; 0 drifting, 0 allowlisted` (PASS, incl. red-on-drift negative). Same-commit CI 4/4 workflows SUCCESS (`3a64bf0` then `b4c2569`). |
 | R20.2 CI gate on drift | **Met (gate live)** | `TestToolSchemaHandlerConformance` fails on un-allowlisted drift and on stale allowlist entries; demonstrated red-on-drift and green. Runs inside the blocking `go test ./... -race` job. |
 | R20.3 real-transport sequence | **Met** | Real Streamable HTTP is exercised for initialize (`TestMCPEndpointBehindBearer`), `tools/call` allow+deny, `resources/read`, and now the full listing sequence — `tools/list` + `resources/list` + capabilities — by `TestStreamableHTTPListingSequence` (spec 23). |
 | R20.4 auth before dispatch | **Met** | `TestStreamableHTTPToolsCallAuthorizesAndDenies` proves denial has zero side effect; `TestRequireBearer` (7 cases) proves unauth fails before dispatch; valid creds initialize and invoke. |
