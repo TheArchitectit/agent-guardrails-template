@@ -114,3 +114,72 @@ active pipeline, so its variable-tagged `python`/`golang` images are out of the
 gate's manifest scope; a repository that activates it must pin those images too.
 The `.github/workflows/` chain — the one that actually gates releases — is fully
 covered. No gate was weakened.
+
+## 6. Implementation note (2026-10-15) — R17-08 secret-free process (argv half)
+
+R17-08 names one concrete defect: *"replace the Redis `redis-cli -a` probe with
+a health method that does not expose a secret in process arguments or logs."*
+That defect was present in three manifests and is now fixed, with a gate that
+keeps it fixed.
+
+**Defect (live-verified before the fix).** A credential passed on a command line
+is exposed to every process on the host (`/proc/<pid>/cmdline`) and to
+`docker inspect` / `podman inspect`, and it is written to logs on a crash or a
+verbose error path. The tree carried four instances:
+
+- `docker-compose.yml:20` — healthcheck `["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-changeme}", "ping"]`.
+- `mcp-server/deploy/podman-compose.yml:9,35` — server `--requirepass ${REDIS_PASSWORD}` in argv **and** the same `-a` healthcheck.
+- `mcp-server/deploy/docker-compose.example.yml:8,30` — the same two forms.
+
+**Second defect found and fixed in the same pass (live-verified).**
+`docker-compose.yml`'s redis `command:` wrote its config to
+`/usr/local/etc/redis/redis.conf` without creating the directory. `redis:7-alpine`
+ships no such directory, so the shell aborted with `can't create
+/usr/local/etc/redis/redis.conf: nonexistent directory` and **redis never
+served** (reproduced live). The fix adds `mkdir -p`.
+
+**Fix (argv-free path).** The password reaches redis only through a config file
+written from the environment at startup, and the probe authenticates with
+`REDISCLI_AUTH` from the environment:
+
+- server: `sh -c 'mkdir -p /tmp/redis && printf \'requirepass %s\\n…\' "$REDIS_PASSWORD" > /tmp/redis/redis.conf && exec redis-server /tmp/redis/redis.conf'`;
+- healthcheck: `["CMD", "redis-cli", "ping"]` with `REDISCLI_AUTH` in the
+  service `environment:` block.
+
+Live proof on the pinned `redis:7-alpine` digest: `redis-cli ping` under
+`REDISCLI_AUTH` returns `PONG`; without it the same probe returns
+`NOAUTH Authentication required.`; the `-a` form prints redis's own warning
+`Using a password with '-a' or '-u' option on the command line interface may not
+be safe.`; and `docker inspect` renders `[redis-server --requirepass <pw>]` for
+the argv form. The argv-free form was re-verified under the hardened runtime
+(`--user 999:1000 --cap-drop ALL --security-opt no-new-privileges`).
+
+**Gate.** `scripts/check_secret_argv.py` scans the four container manifests on
+every push and PR (step "Secret-free process (Spec 17 R17-08)" in
+`regression-guard.yml`). Two rule families per command sequence:
+
+1. **credential flag with a value** — a token in `{-a, --requirepass,
+   --password, --pass, --auth}` followed by a value (literal or `${VAR}`), or
+   the `--flag=value` form. This is the named `redis-cli -a` /
+   `redis-server --requirepass` defect.
+2. **secret variable expanded in argv** — a probe/healthcheck token expanding
+   `*_PASSWORD` / `*_SECRET` / `*_TOKEN` / `*_KEY` / `REDISCLI_AUTH` / `DB_DSN`
+   / `DATABASE_URL`. Orchestrators inspect and log probe argv, so a secret
+   reference there is the named defect.
+
+Fail-closed (an unreadable or missing manifest is a violation, not a skip) and
+non-vacuous (zero command sequences FAILS). `scripts/test_check_secret_argv.py`
+is the mutation fixture (10 cases): the gate must change PASS → FAIL on the
+inline `-a` form, the `--requirepass` block-scalar form, the `--requirepass=`
+form, a shell-string `-a` probe, and a k8s probe secret; and stay PASS on the
+argv-free config-file form.
+
+**Named limit (documented, not hidden).** Rule 2 is deliberately not applied to
+a container `command:`. A command that *writes a requirepass config file from
+the environment* legitimately contains the variable reference in its shell
+script text while the secret value never enters any program's argv — this is the
+accepted argv-free pattern. Rule 1 still applies to `command:`, so a
+`--requirepass <value>` server flag is caught. The remaining R17-08 scope
+(URL-embedded credentials, shell-expanded command strings outside these
+manifests, and the redaction half) is tracked in `SPRINT-A2-credential-lifecycle`
+and is **not** claimed by this note.

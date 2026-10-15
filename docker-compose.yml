@@ -3,8 +3,17 @@ services:
     image: redis:7-alpine@sha256:858f009f9709ce576febc734aa78b8f6d624b82571f9ddb6bda4377c833b3499
     container_name: guardrail-redis
     restart: unless-stopped
+    # Spec 17 R17-08: no credential in argv. The password reaches redis only
+    # through the config file written from the environment at startup; the
+    # healthcheck authenticates with REDISCLI_AUTH from the environment, so
+    # neither the server nor the probe exposes the secret in process arguments
+    # (docker/podman inspect, /proc/<pid>/cmdline) or in logs.
+    # `mkdir -p` is required: redis:7-alpine ships no /usr/local/etc/redis dir,
+    # so the previous command failed at startup with "can't create ...: nonexistent
+    # directory" and redis never served.
     command: >
       sh -c "
+        mkdir -p /usr/local/etc/redis &&
         echo 'requirepass '$${REDIS_PASSWORD} > /usr/local/etc/redis/redis.conf &&
         echo 'maxmemory 256mb' >> /usr/local/etc/redis/redis.conf &&
         echo 'maxmemory-policy allkeys-lru' >> /usr/local/etc/redis/redis.conf &&
@@ -12,12 +21,13 @@ services:
       "
     environment:
       - REDIS_PASSWORD=${REDIS_PASSWORD:-changeme}
+      - REDISCLI_AUTH=${REDIS_PASSWORD:-changeme}
     volumes:
       - redis_data:/data
     networks:
       - guardrails-net
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-changeme}", "ping"]
+      test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5

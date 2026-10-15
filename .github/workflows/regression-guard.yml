@@ -37,6 +37,14 @@ jobs:
           python scripts/check_image_pins.py --repo .
           python scripts/test_check_image_pins.py
 
+      - name: Secret-free process (Spec 17 R17-08)
+        run: |
+          # A credential in argv (``redis-cli -a`` / ``--requirepass``) is
+          # visible in docker/podman inspect and /proc/<pid>/cmdline and leaks
+          # to logs. Fail-closed, non-vacuous (see the gate).
+          python scripts/check_secret_argv.py --repo .
+          python scripts/test_check_secret_argv.py
+
       - name: Run Regression Check
         id: regression_check
         run: |

@@ -344,3 +344,8 @@ digest) are both enforced. The external required-check configuration, the
 negative-control matrix and the UCS03 isolation attestation remain **proposed**;
 this note does not assert the full Phase 0 matrix is enforced. No gate was
 weakened.
+
+A third fail-closed gate now runs in the same `regression-guard.yml` job —
+`scripts/check_secret_argv.py` (Spec 17 R17-08): a credential in a container
+manifest's argv (`redis-cli -a`, `--requirepass <pw>`) fails the build. It is
+the Phase 0 "no secret in process arguments" control; see Spec 17 §6.

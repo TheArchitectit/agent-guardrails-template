@@ -484,21 +484,26 @@ services:
   redis:
     image: docker.io/library/redis:7-alpine
     restart: unless-stopped
-    # redis:7-alpine has no config dir — pass settings as CLI flags.
-    # Run as the image's redis user so no setuid drop is needed.
-    command:
-      - redis-server
-      - --requirepass
-      - ${REDIS_PASSWORD}
-      - --maxmemory
-      - 256mb
-      - --maxmemory-policy
-      - allkeys-lru
+    # Spec 17 R17-08: no credential in argv. The password reaches redis only
+    # through the config file written from the environment at startup, and the
+    # healthcheck authenticates with REDISCLI_AUTH from the environment —
+    # neither the server nor the probe exposes the secret in process arguments
+    # (docker/podman inspect, /proc/<pid>/cmdline) or in logs.
+    # `mkdir -p` is required: redis:7-alpine ships no /usr/local/etc/redis dir.
+    command: >
+      sh -c "
+        mkdir -p /tmp/redis &&
+        printf 'requirepass %s\nmaxmemory 256mb\nmaxmemory-policy allkeys-lru\n' \"$$REDIS_PASSWORD\" > /tmp/redis/redis.conf &&
+        exec redis-server /tmp/redis/redis.conf
+      "
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - REDISCLI_AUTH=${REDIS_PASSWORD}
     user: "999:1000"
     volumes:
       - redis_data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -767,8 +772,9 @@ podman logs guardrail-redis
 # Verify redis is in same pod (for localhost access)
 podman pod inspect guardrail-pod | grep -A20 containers
 
-# Test redis connection
-podman exec guardrail-redis redis-cli -a "$REDIS_PASSWORD" ping
+# Test redis connection (Spec 17 R17-08: no credential in argv — the
+# password is read from REDISCLI_AUTH in the environment, never from -a)
+podman exec -e REDISCLI_AUTH="$REDIS_PASSWORD" guardrail-redis redis-cli ping
 # Should return: PONG
 ```
 

@@ -86,30 +86,36 @@ func (c *Config) Validate() error {
 
 ---
 
-### 4. Redis Password Exposure in Health Check
-**File:** `/mnt/ollama/git/agent-guardrails-template/mcp-server/deploy/podman-compose.yml:39` | **Risk:** HIGH
+### 4. Redis Password Exposure in Health Check — REMEDIATED (Spec 17 R17-08)
+**File:** `mcp-server/deploy/podman-compose.yml` (formerly the `redis-cli -a` probe) | **Risk:** HIGH → FIXED
 
 ```yaml
+# BEFORE (defect): the password is passed on the command line.
 healthcheck:
   test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
 ```
 
-- Password visible in `docker inspect` output
+- Password visible in `docker inspect` / `podman inspect` output
 - Password appears in container logs if health check fails
-- Process listing may expose command with password
+- Process listing (`/proc/<pid>/cmdline`) exposes the command with the password
 
-**Recommendation:**
-```yaml
-# Use Redis ACL file or environment file instead
-healthcheck:
-  test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
-  # Configure requirepass in redis.conf, not command line
-```
+**Remediation (landed):** the healthcheck now runs `redis-cli ping` with no
+secret flag; `redis-cli` reads the password from the `REDISCLI_AUTH`
+environment variable (set from `REDIS_PASSWORD` in the service `environment:`
+block). The server's `--requirepass` argv flag was likewise removed — the
+password is written to a config file from the environment at startup. The
+credential therefore never appears in any process's argv or in orchestrator
+inspect output. This is enforced by `scripts/check_secret_argv.py` on every
+push and PR (fail-closed, non-vacuous; mutation fixture
+`scripts/test_check_secret_argv.py`).
 
-Or use a health check script:
 ```yaml
+# AFTER (landed): no credential in argv.
 healthcheck:
-  test: ["CMD", "sh", "-c", "redis-cli -a \"$REDIS_PASSWORD\" ping | grep PONG"]
+  test: ["CMD", "redis-cli", "ping"]
+environment:
+  - REDIS_PASSWORD=${REDIS_PASSWORD}
+  - REDISCLI_AUTH=${REDIS_PASSWORD}
 ```
 
 ---
