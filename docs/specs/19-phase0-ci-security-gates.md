@@ -321,3 +321,26 @@ Remaining R19 rows (external required-check configuration, negative-control
 matrix, UCS03 isolation attestation) stay **proposed** — this note closes only
 the action-pinning control, and does not assert that the full Phase 0 matrix is
 enforced. No gate was weakened.
+
+## 7. Implementation note (2026-10-15) — R19-15 image-digest half
+
+R19-15 also requires that release/base **images** use immutable digests. That
+half is now implemented and enforced (see Spec 17 R17-11 §5 for the full
+record): every external image ref in `docker-compose.yml`,
+`mcp-server/deploy/{podman-compose,docker-compose.example}.yml` and
+`mcp-server/deploy/Dockerfile` is pinned by an immutable `@sha256` digest, and
+`image-pins.json` is the reviewed `name:tag` → digest record each manifest must
+agree with.
+
+- `scripts/check_image_pins.py` enforces the rule on every push (fail-closed,
+  non-vacuous, empty-of-third-parties allowlist with a reason per entry).
+- `scripts/test_check_image_pins.py` is the mutation fixture: a tag-only ref, a
+  mismatched digest, and an unreviewed pin must each change PASS → FAIL.
+- Both run in `.github/workflows/regression-guard.yml` on every push and PR (the
+  step "Image-digest pinning (Spec 19 R19-15 / Spec 17 R17-11)").
+
+With this, R19-15's two named controls (workflow actions by full SHA; images by
+digest) are both enforced. The external required-check configuration, the
+negative-control matrix and the UCS03 isolation attestation remain **proposed**;
+this note does not assert the full Phase 0 matrix is enforced. No gate was
+weakened.

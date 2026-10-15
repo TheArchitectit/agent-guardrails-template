@@ -1,0 +1,32 @@
+{
+  "_comment": [
+    "Reviewed image-digest registry (Spec 17 R17-11 / Spec 19 R19-15).",
+    "Each entry maps a canonical 'name:tag' to the immutable digest that was",
+    "resolved and re-verified for that tag. Manifests pin 'name:tag@sha256:<digest>'",
+    "and scripts/check_image_pins.py fails the build if a manifest pin is missing,",
+    "malformed, unreviewed, or disagrees with the digest recorded here.",
+    "Refresh procedure: resolve the tag (docker buildx imagetools inspect",
+    "<name>:<tag>, or the registry manifest API), confirm the digest, update this",
+    "file and every manifest in the same commit, and record the review date."
+  ],
+  "reviewed": "2026-10-15",
+  "owner": "Project maintainer (solo-maintainer)",
+  "images": {
+    "docker.io/library/redis:7-alpine": {
+      "digest": "sha256:858f009f9709ce576febc734aa78b8f6d624b82571f9ddb6bda4377c833b3499",
+      "role": "service (compose cache/rate-limit backend)"
+    },
+    "docker.io/library/postgres:16-alpine": {
+      "digest": "sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea",
+      "role": "service (compose database)"
+    },
+    "docker.io/library/golang:1.25-alpine": {
+      "digest": "sha256:1ae0735f00daffa3aaf1363a5184c0d2dc55c78e3db4ec70241cdac97bf84b59",
+      "role": "build base (Dockerfile builder stage)"
+    },
+    "gcr.io/distroless/static:nonroot": {
+      "digest": "sha256:e2e927ec666bae08560abb3c55d0659eceabb657f56b6782ab500a9fc7f555e3",
+      "role": "runtime base (Dockerfile final stage)"
+    }
+  }
+}

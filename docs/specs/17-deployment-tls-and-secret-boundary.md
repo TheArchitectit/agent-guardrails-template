@@ -83,7 +83,34 @@ non-vacuous, with `scripts/test_check_action_pins.py` as the mutation fixture
 (a mutable tag / missing ref / unpinned container must change PASS → FAIL). The
 gate runs in `.github/workflows/regression-guard.yml`.
 
-The **image-digest half remains OPEN**: `docker-compose.yml` still references
-`redis:7-alpine`, `postgres:16-alpine` and `guardrail-mcp:${VERSION:-latest}`
-by tag, and there is no production image digest record or promotion-time digest
-verification. That is not claimed as met here. No gate was weakened.
+The **image-digest half is now implemented and enforced too** (2026-10-15).
+Every external image ref in the container manifests is pinned by an immutable
+`@sha256` digest, and a reviewed registry records the digest per `name:tag`:
+
+- `docker-compose.yml`, `mcp-server/deploy/podman-compose.yml`,
+  `mcp-server/deploy/docker-compose.example.yml`: `redis:7-alpine` and
+  `postgres:16-alpine` are pinned by digest.
+- `mcp-server/deploy/Dockerfile`: both base images (`golang:1.25-alpine` builder,
+  `gcr.io/distroless/static:nonroot` runtime) are pinned by digest.
+- `image-pins.json` is the reviewed record (canonical `name:tag` → digest, plus a
+  role and a review date). Each digest was resolved live against the registry and
+  re-verified to be that tag's current index digest.
+- `scripts/check_image_pins.py` enforces the rule on every push: fail-closed (an
+  unreadable or missing manifest is a violation, not a skip) and non-vacuous (a
+  scan that finds zero external image refs FAILS). A tag-only ref, a malformed
+  digest, a pin absent from the registry, or a digest that disagrees with the
+  reviewed record is a violation. The first-party image built from this repo's
+  own Dockerfile is allowlisted by name (its digest is recorded at promotion per
+  R17-11); the allowlist carries a reason per entry.
+- `scripts/test_check_image_pins.py` is the mutation fixture: it asserts the gate
+  changes PASS → FAIL on a tag-only ref, a mismatched digest, and an unreviewed
+  pin, and PASS on a digest-pinned, registry-matching ref.
+- The gate + self-test run in `.github/workflows/regression-guard.yml` on every
+  push and PR (the step "Image-digest pinning (Spec 19 R19-15 / Spec 17 R17-11)").
+
+Known limit (documented, not a gate weakening): `ci/gitlab-ci.yml` is a copy-me
+**template** (its own header says "Copy this file to .gitlab-ci.yml"), not an
+active pipeline, so its variable-tagged `python`/`golang` images are out of the
+gate's manifest scope; a repository that activates it must pin those images too.
+The `.github/workflows/` chain — the one that actually gates releases — is fully
+covered. No gate was weakened.

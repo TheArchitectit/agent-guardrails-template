@@ -29,6 +29,14 @@ jobs:
           python scripts/check_action_pins.py --repo .
           python scripts/test_check_action_pins.py
 
+      - name: Image-digest pinning (Spec 19 R19-15 / Spec 17 R17-11)
+        run: |
+          # A floating image tag silently changes what runs in production;
+          # an immutable @sha256 digest does not. The committed image-pins.json
+          # is the reviewed record the manifests must agree with.
+          python scripts/check_image_pins.py --repo .
+          python scripts/test_check_image_pins.py
+
       - name: Run Regression Check
         id: regression_check
         run: |

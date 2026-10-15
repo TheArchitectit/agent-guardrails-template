@@ -1,5 +1,5 @@
 # Build stage
-FROM golang:1.25-alpine AS builder
+FROM golang:1.25-alpine@sha256:1ae0735f00daffa3aaf1363a5184c0d2dc55c78e3db4ec70241cdac97bf84b59 AS builder
 
 WORKDIR /app
 
@@ -30,7 +30,7 @@ RUN CGO_ENABLED=1 GOOS=linux go build \
     -o server ./cmd/server
 
 # Final stage - distroless with ca-certificates for TLS
-FROM gcr.io/distroless/static:nonroot
+FROM gcr.io/distroless/static:nonroot@sha256:e2e927ec666bae08560abb3c55d0659eceabb657f56b6782ab500a9fc7f555e3
 
 # Copy CA certificates from builder for TLS connections
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
