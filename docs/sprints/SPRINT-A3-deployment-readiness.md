@@ -65,10 +65,10 @@ This sprint is complete only when all of the following hold:
 - [ ] Public TLS 1.3+ termination, certificate/hostname/trust validation, trusted-proxy header stance (R17-03). — **NOT_EXERCISED**.
 - [ ] DB/Redis: plaintext only on verified isolated local bridge/loopback for `local`; outside that boundary require `verify-full` / verified Redis TLS, no skip-verify (R17-04). — **WIRED**.
 - [ ] Nonlocal profiles reject unset/empty/placeholder/default/reused/test credentials (R17-05); local generates distinct non-placeholder credentials. — **WIRED**.
-- [ ] Migration job owns schema (R18-01): ordered manifest (R18-02), atomic idempotency + checksum (R18-03), advisory lock (R18-04), version truth (R18-05), deliberate down migrations only (R18-06). — **NOT_EXERCISED** (fake ledger only; no real PostgreSQL).
+- [x] Migration job owns schema (R18-01): ordered manifest (R18-02), atomic idempotency + checksum (R18-03), advisory lock (R18-04), version truth (R18-05), deliberate down migrations only (R18-06). — **EXERCISED 2026-10-15** against disposable local PostgreSQL 16: fresh-DB apply of all 18 versions in order + 6-table effect check, idempotent rerun, `--verify` checksum match, drift refusal, argv refusal. `scripts/run_migrations.go` rewritten; guard `internal/database/migration_manifest_test.go`. See spec 18 §11.
 - [ ] Ordered startup (R18-07); liveness local/process-only vs readiness gating traffic (R18-08); required/optional dependency classification (R18-09). — **WIRED** (readiness endpoints).
 - [ ] Invalid registry → readiness fail or protected deny without legacy broadening (R18-10); policy honesty (R18-11); shutdown/outage fail-closed (R18-12); bounded evidence without secrets (R18-13). — **WIRED**.
-- [ ] Current `run_migrations.go` DSN-argument interface is replaced or not used as a production credential entrypoint. — **NOT_EXERCISED** (no audited verdict).
+- [x] Current `run_migrations.go` DSN-argument interface is replaced or not used as a production credential entrypoint. — **DONE 2026-10-15**: argv DSN is refused (value redacted); the URL is read only from `MIGRATION_DSN_FILE` (0600 file) or `MIGRATION_DATABASE_URL` (spec 18 §11).
 
 ---
 

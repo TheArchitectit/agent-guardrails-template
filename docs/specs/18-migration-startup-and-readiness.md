@@ -1,8 +1,13 @@
 # OpenSpec 18: Migration, startup, and readiness
 
-**Status:** Proposed; **not implemented**. This document defines a future
-startup/deployment contract. It does not claim that the current server applies
-migrations, validates all readiness state, or enforces these gates.
+**Status:** Partially implemented (updated 2026-10-15). The migration-job half
+(R18-01 through R18-06 plus the argv-DSN replacement) is **implemented and
+exercised** against a disposable PostgreSQL 16 — see §11. The remaining
+readiness/lifecycle rows (R18-07 through R18-13) stay **WIRED** (readiness
+endpoints exist; the ordered-startup, dependency-classification and evidence
+contracts are not yet exercised). The server still does not apply migrations at
+startup — migration execution remains a separate one-shot deployment step, by
+design (R18-01).
 
 **Owner default:** The solo maintainer owns the migration manifest, release
 decision, rollback decision, and readiness policy. A second reviewer is
@@ -26,7 +31,13 @@ startup path contains no automatic numbered migration application; migration
 execution is therefore an external deployment step until a reviewed contract is
 implemented.
 
-The current external runner is `mcp-server/scripts/run_migrations.go`. It takes
+> **Superseded 2026-10-15 (see §11).** The paragraph below is the baseline as
+> inspected at spec-writing time. `mcp-server/scripts/run_migrations.go` has
+> since been rewritten as the versioned one-shot job (§11): the DSN-argv
+> interface is gone, and the manifest/checksum/lock/effect guarantees below are
+> now implemented and exercised.
+
+The external runner was `mcp-server/scripts/run_migrations.go`. It took
 a database URL as a command argument (which can expose credentials in process
 listings and conflicts with Spec 17 R17-08), creates `schema_migrations` if
 needed, reads `.up.sql` files,
@@ -323,11 +334,14 @@ PostgreSQL/Redis environment and synthetic credentials only:
 go test ./internal/database ./internal/web ./internal/config ./internal/auth -count=1
 go test ./internal/... -count=1
 go vet ./...
-# Future integration tests (added with the migration job implementation):
-go test ./internal/database -run 'TestMigrationJob|TestReadiness' -count=1
-# The current run_migrations.go accepts a DSN argument and is NOT a safe
-# acceptance entrypoint for any real credential. Replace its interface with a
-# protected secret source before testing the job in deployment.
+# Migration-manifest + ledger regression guards (R18-02/R18-05), implemented
+go test ./internal/database -run 'TestMigrationManifestIntegrity|TestLedgerVersionRoundTrip' -count=1
+# Run the one-shot job itself against a disposable database (R18-01..R18-06):
+#   MIGRATION_DATABASE_URL=<disposable> go run scripts/run_migrations.go
+#   MIGRATION_DATABASE_URL=<disposable> go run scripts/run_migrations.go --verify
+# The job no longer accepts a DSN argument: the URL is read only from
+# MIGRATION_DSN_FILE (0600 file) or MIGRATION_DATABASE_URL (Spec 18 §4.1 /
+# Spec 17 R17-08). argv is refused with the value redacted. See §11.
 ```
 
 The future integration suite MUST add deterministic tests for lock contention,
@@ -347,3 +361,65 @@ forward compatibility and restoration are impossible. If migration state,
 registry validity, policy state, or rollback safety is unknown, stop traffic
 and keep readiness false rather than restore a permissive fallback. No code,
 Compose file, workflow, or migration is changed by this document.
+
+## 11. Implementation note (2026-10-15) — the versioned migration job
+
+`mcp-server/scripts/run_migrations.go` is now the one-shot, versioned migration
+job this spec's §4 describes, and it replaces the DSN-argv runner that the
+SPRINT-A3 exit gate and §10 both flagged as unsafe. The change is code, not
+docs, and it was verified live against a disposable local PostgreSQL 16
+database.
+
+**A real fail-open defect was found and removed.** The previous runner split
+each file into statement chunks with a hand-rolled splitter and then skipped any
+chunk whose trimmed first line began with `--`. Because migration `001` opens
+with `-- Initial schema creation` and the whole file was one chunk (its inner
+`;`s are inside the splitter's unquoted path only when strings are balanced),
+the runner **skipped the entire migration and recorded version `001` as
+applied** — the ledger said applied, the schema had zero tables, and the run
+exited 0. Reproduced live: on a fresh database the old runner logged
+`Applied 001_create_tables.up.sql`, created only `schema_migrations`, then died
+on `002` with `relation "documents" does not exist`. The new job executes each
+migration file as a single `Exec` inside the transaction, so dollar-quoted
+function bodies (`004`, `008`) and leading comments are handled by PostgreSQL,
+not by a splitter, and a migration cannot be recorded while its effects are
+dropped.
+
+**What the job now enforces (mapped to R18):**
+
+| Req | Mechanism |
+|---|---|
+| R18-01 | Separate one-shot job; not invoked by application startup. The server already refuses to serve below `MinRequiredSchemaVersion` (`internal/database/schema_version.go`). |
+| R18-02 | `loadManifest`: `NNN_name.up.sql`, ascending numeric order, duplicate/gap/invalid-name rejection, a paired `.down.sql` required per version, empty manifest = failure. |
+| R18-03 | Each version and its ledger row (`version`, `name`, SHA-256 `checksum`, `applied_at`, `dirty`) commit in one transaction; a rerun is a no-op that re-verifies checksums; a checksum mismatch is a hard failure and is never auto-repaired; the post-apply effect check requires the six known tables to exist. |
+| R18-04 | A bounded (`30s`) PostgreSQL advisory lock (`pg_advisory_lock`) held for the whole run on a dedicated connection; the ledger is re-read after the lock is acquired; contention/timeout is a failure, never a no-op. |
+| R18-05 | The ledger is authoritative and records the exact identifier `ParseMigrationVersion` reads back (pinned by a round-trip test). |
+| R18-06 | `.down.sql` files are never executed by this job; rollback stays an explicit operator action. |
+
+**Credential handling (R18-04 / §4.1 / Spec 17 R17-08).** The database URL is
+read only from `MIGRATION_DSN_FILE` (a `0600` file; group/world-readable is
+refused) or `MIGRATION_DATABASE_URL`. Any other argument is refused with the
+value redacted, so a DSN can no longer reach argv or a log line. This satisfies
+the SPRINT-A3 exit-gate item "`run_migrations.go` DSN-argument interface is
+replaced".
+
+**Live verification (disposable local PostgreSQL 16, synthetic credentials):**
+
+- Fresh DB, run 1: manifest `18 migrations (001..018)`; all eighteen applied in
+  order; `verified 6 required tables exist`; exit 0. Ledger: 18 rows, each with
+  a distinct SHA-256 checksum and `dirty=false`.
+- Run 2 (idempotency): `no pending migrations; ledger already current`; exit 0;
+  no schema or ledger change.
+- `--verify`: `verify OK: manifest valid and recorded checksums match`; exit 0.
+- Checksum drift: appending a comment to an applied file makes `--verify` exit 1
+  naming the recorded and observed checksums; restoring the file returns exit 0.
+- argv refusal: `run_migrations.go <dsn>` exits 1 with the URL redacted.
+- Regression guard: `internal/database/migration_manifest_test.go`
+  (`TestMigrationManifestIntegrity`, `TestLedgerVersionRoundTrip`) pins the
+  manifest contract and the ledger round-trip; the first is red-on-drift
+  (deleting a `.down.sql` fails it).
+
+`go build ./...`, `go vet ./...` and `go test ./internal/database/...` are
+clean at the change. The remaining §5–§7 readiness/lifecycle items (ordered
+startup states, `/health/ready` content, shutdown drain) are unchanged and stay
+as the spec's WIRED rows.
