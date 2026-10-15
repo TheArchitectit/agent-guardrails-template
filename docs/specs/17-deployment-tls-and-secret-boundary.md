@@ -70,3 +70,20 @@ Use synthetic credentials, disposable local services and documentation-only topo
 4. Roll back config/policy to the last known-good **restrictive** profile, still-pinned image and valid rotated secret set; a previous HTTP external bind, placeholder DB/Redis credential, unredacted resource, legacy unrestricted auth or disabled TLS is not a valid rollback. If no safe snapshot exists, stop external/protected traffic and preserve audit records while repairing. Revoke exposed material rather than reusing it.
 
 **Solo-maintainer first decisions:** the maintainer owns the release profile and evidence. Default `local` binds loopback; `tailnet` and `public` use an operator-managed TLS 1.3+ reverse proxy with a private backend, not the currently unwired native TLS flag. First implementation reads secrets from read-only mounted files with restrictive permissions; external KMS is optional later. No production fallback credential; DB `verify-full` and Redis certificate-verified TLS are mandatory outside a proven isolated local bridge. Metrics/docs require auth, pprof stays disabled. The deployment preflight emits a commit-bound record of selected profile, listener/host mappings, proxy upstream, certificate identity/expiry, allowed network paths, DB/Redis TLS modes and synthetic negative probes; an operator-supplied JSON assertion without an actual external reachability/certificate test is NOT evidence. Security exceptions need a named scope, expiry and negative tests before activation. Specific proxy product, real host topology, JWT/webhook key-ID mechanism and CI pin inventory remain implementation details, **not shipped capabilities**.
+
+## 5. Implementation note (2026-10-15) — R17-11 action pinning half
+
+R17-11 requires build/test actions pinned by immutable full commit SHA (and
+production images by digest). The **action half is now implemented and
+enforced**: every third-party action in all six workflows under
+`.github/workflows/` is pinned by a 40-hex commit SHA (resolved and re-verified
+live via the GitHub API; human tag kept in a trailing comment), and
+`scripts/check_action_pins.py` enforces it on every push — fail-closed and
+non-vacuous, with `scripts/test_check_action_pins.py` as the mutation fixture
+(a mutable tag / missing ref / unpinned container must change PASS → FAIL). The
+gate runs in `.github/workflows/regression-guard.yml`.
+
+The **image-digest half remains OPEN**: `docker-compose.yml` still references
+`redis:7-alpine`, `postgres:16-alpine` and `guardrail-mcp:${VERSION:-latest}`
+by tag, and there is no production image digest record or promotion-time digest
+verification. That is not claimed as met here. No gate was weakened.

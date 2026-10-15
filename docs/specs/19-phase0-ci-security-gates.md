@@ -292,3 +292,32 @@ Before declaring Phase 0 complete, the evidence bundle MUST include:
 
 These requirements are proposed review criteria, not evidence that current CI has
 implemented them. No workflow file is changed by this specification.
+
+## 6. Implementation note (2026-10-15) — R19-15 action pinning
+
+R19-15 requires required workflow actions to use reviewed full commit SHA
+references, with a test that validates them and a mutation fixture that changes
+a pin to a tag and fails. That half is now implemented and enforced:
+
+- Every third-party action in all six workflows under `.github/workflows/` is
+  pinned by a 40-hex commit SHA with the human tag in a trailing comment
+  (`actions/checkout` `11d5960a…` v4.4.0, `actions/setup-python` `a26af69b…`
+  v5, `actions/setup-go` `40f1582b…` v5, `actions/github-script` `f28e40c7…`
+  v7, `actions/upload-artifact` `ea165f8d…` v4.6.2, `codecov/codecov-action`
+  `ab904c41…` v3.1.6, `gitleaks/gitleaks-action` `ff98106e…` v2). Each SHA was
+  resolved live via the GitHub API and re-verified to resolve to that commit.
+- `scripts/check_action_pins.py` enforces the rule on every push: fail-closed
+  (an unreadable workflow is a violation, not a skip) and non-vacuous (zero
+  workflows, or zero `uses:` refs, FAILS). Local actions (`./…`) and
+  digest-pinned container actions are allowed; a mutable tag or a bare
+  `owner/repo` is a violation. The allowlist is empty by design.
+- `scripts/test_check_action_pins.py` is the mutation fixture the requirement
+  names: it asserts the gate changes PASS → FAIL on a mutable tag, a missing
+  ref, and an unpinned container, and PASS on a full-SHA pin and a local action.
+- The gate + self-test run in `.github/workflows/regression-guard.yml` on every
+  push and PR (the step "Action pinning (Spec 19 R19-15 / Spec 17 R17-11)").
+
+Remaining R19 rows (external required-check configuration, negative-control
+matrix, UCS03 isolation attestation) stay **proposed** — this note closes only
+the action-pinning control, and does not assert that the full Phase 0 matrix is
+enforced. No gate was weakened.
