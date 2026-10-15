@@ -1,7 +1,8 @@
 # OpenSpec: Web Exposure Boundary — Public Routes, CORS, Trusted Proxies, and Exposure Profiles
 
 **Status:** Proposed. Describes intended behavior; the current code does not yet
-enforce everything below.
+enforce everything below. §3.4 (trusted-proxy and client-IP stance) is
+**IMPLEMENTED** — see the implementation note at the end of this file.
 **Owner:** Project maintainer.
 **Date:** 2026-10-03.
 **Roadmap:** Phase 0, work package 06
@@ -280,6 +281,45 @@ route tests before enabling it.
 
 These are proposed implementation defaults. If a real client cannot migrate,
 stop and revise the profile with tests instead of enabling wildcard access.
+
+## 8. Implementation note — §3.4 trusted-proxy and client-IP stance (2026-10-15)
+
+§3.4 is implemented. The effective client IP is derived from a single explicit
+stance, not from `c.RealIP()`'s unconditional header trust:
+
+- New `internal/clientip` package: `NewStance(entries)` parses `TRUSTED_PROXIES`
+  CIDRs (a bare IP is a single-host entry). An **empty list trusts no proxy**
+  (the safe default); a malformed entry is a **hard error**, not a silent
+  narrowing to "trust nothing" (a silent narrowing can flip the exposure
+  posture without telling the operator).
+- `Stance.ClientIP(r)` returns the socket peer unless the immediate peer is
+  inside a configured CIDR; only then is a forwarded address used
+  (`X-Forwarded-For` left-most, else `X-Real-IP`, else RFC 7239 `Forwarded`
+  `for=`). IPv4-mapped/bracketed/zoned forms are canonicalised.
+- `Server.setupMiddleware` installs `stance.Extractor()` as `echo.IPExtractor`,
+  so `c.RealIP()` — used for the rate-limit key fallback (`middleware.go`) and
+  log attribution (`middleware/logging.go`) — is the stance-derived value.
+  Forwarded headers can no longer be used to evade or poison rate-limit buckets
+  (§3.4.3); `RealIP` remains a non-authoritative value (never an authz input).
+- `forwardedHeaderAnomalyMiddleware` logs a protocol anomaly (§3.4.4) when an
+  untrusted peer asserts a forwarded header — logged, **not rejected**.
+- `Config.Validate` parses the stance so a malformed `TRUSTED_PROXIES` fails
+  startup (fail-closed).
+
+**Evidence:** `internal/clientip/clientip_test.go` (default trust, trusted peer,
+bare-IP entry, malformed-entry fail-closed, IPv6/zone, extractor, anomaly
+probe); `internal/web/middleware_clientip_test.go` (acceptance criterion 7 —
+forged headers share the socket-peer bucket; trusted peer uses the forwarded IP;
+anomaly middleware passes through); `internal/config/trusted_proxies_test.go`
+(empty/valid/malformed). CI row `security-matrix-clientip-trust` runs these
+verbatim. Mutation-kill case `clientip-stance-trusts-every-peer` proves the
+suite flips PASS→FAIL when the stance is neutered.
+
+**Remaining in this spec (not addressed here):** the shared exposure registry
+(§3.1/§3.2), CORS production rejection of an explicit `*` at the wiring layer
+(§3.3.2 — validation already rejects it), preflight-only-for-declared-routes
+(§3.3.4), and the `public`-profile `/metrics` auth decision (§3.2) — the latter
+is an operator contract (scrape client) and stays an owner decision.
 
 ## 7. Non-goals
 

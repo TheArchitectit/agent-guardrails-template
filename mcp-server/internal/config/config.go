@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"github.com/caarlos0/env/v11"
+
+	"github.com/thearchitectit/guardrail-mcp/internal/clientip"
 )
 
 // SchemaVersion tracks the configuration schema version for migrations
@@ -144,6 +146,7 @@ type Config struct {
 	// TrustedProxies are the proxy peers allowed to supply forwarded
 	// identity/scheme headers. Required (non-empty) for the public profile,
 	// which may only listen behind a controlled TLS-terminating proxy.
+	// Empty by default: forwarded headers are ignored (Spec 12 §3.4).
 	TrustedProxies []string `env:"TRUSTED_PROXIES" envSeparator:","`
 
 	// Production Mode Indicator
@@ -279,6 +282,13 @@ func (c *Config) Validate() error {
 		if err := c.ValidateDeploymentBinding(c.WebBindAddr()); err != nil {
 			return err
 		}
+	}
+
+	// Validate the trusted-proxy stance (Spec 12 §3.4). Every entry must be a
+	// valid IP or CIDR: a malformed entry is a configuration error, not a
+	// silent narrowing to "trust nothing".
+	if _, err := clientip.NewStance(c.TrustedProxies); err != nil {
+		return err
 	}
 
 	// Validate audit settings

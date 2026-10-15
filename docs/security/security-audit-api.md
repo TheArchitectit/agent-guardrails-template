@@ -54,7 +54,16 @@ if !ok {
 
 **Severity**: Critical (CVSS 8.2) | **Impact**: Rate limit bypass, potential DoS
 
-**Remediation**:
+**Status: RESOLVED (2026-10-15, Spec 12 §3.4).** `c.RealIP()` no longer trusts
+forwarded headers unconditionally: `internal/clientip` derives the effective
+client IP from an explicit `TRUSTED_PROXIES` stance (empty = trust no proxy, the
+default) and that value is installed as `echo.IPExtractor`, so the rate-limit
+key fallback and log attribution use the socket peer unless the immediate peer
+is a configured proxy. A forged `X-Forwarded-For`/`X-Real-IP`/`Forwarded` no
+longer creates a separate rate-limit bucket. See
+[`../specs/12-web-exposure-boundary.md`](../specs/12-web-exposure-boundary.md) §8.
+
+**Original remediation sketch (superseded by the stance above):**
 ```go
 // Extract IP from trusted source only
 func getClientIP(c echo.Context, trustProxy bool) string {

@@ -132,6 +132,28 @@ func (s *MCPServer) authorizeToolCallDisabled(ctx context.Context, name string, 
 		pkg:       "./internal/mcp",
 		testRegex: "^TestSecretLeakRedactionAcrossRealPaths$",
 	},
+	{
+		name: "clientip-stance-trusts-every-peer",
+		file: "internal/clientip/clientip.go",
+		old: `func (s Stance) Trusts(peer string) bool {
+	ip := parseHost(peer)
+	if ip == nil {
+		return false
+	}
+	for _, n := range s.nets {
+		if n.Contains(ip) {
+			return true
+		}
+	}
+	return false
+}`,
+		new: `func (s Stance) Trusts(peer string) bool {
+	_ = peer
+	return true
+}`,
+		pkg:       "./internal/web",
+		testRegex: "^TestRateLimitKeyIgnoresForgedForwardedHeaders$",
+	},
 }
 
 // findModuleRoot walks up from the test working directory to the directory

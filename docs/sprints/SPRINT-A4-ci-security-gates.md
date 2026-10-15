@@ -141,6 +141,34 @@ the protected tree is never left mutated). Command:
   middleware or asserts a rejected foreign `Origin`; there is no `internal/web`
   CORS/origin test at all, so a mutation here would be caught by nothing.
 
+---
+
+## Reconciliation 2026-10-15 — client-IP trust boundary row (R19-09 proxy half)
+
+Spec 12 §3.4 (trusted-proxy and client-IP stance) is implemented, and the
+matrix now carries a dedicated row:
+
+- `security-matrix-clientip-trust` — client-IP trust boundary. `internal/clientip`
+  derives the effective client IP from an explicit `TRUSTED_PROXIES` stance
+  (empty = trust no proxy, the default; a bare IP is a single-host entry; a
+  malformed entry fails config validation closed). The stance is installed as
+  `echo.IPExtractor`, so the rate-limit key fallback and log attribution use the
+  socket peer unless the immediate peer is a configured proxy. Assertions: with
+  `TRUSTED_PROXIES` unset a forged `X-Forwarded-For`/`X-Real-IP`/`Forwarded` does
+  not change the client IP and two forged headers share the socket-peer bucket
+  (acceptance criterion 7); a peer inside a configured CIDR may supply the
+  client IP; an untrusted peer's forwarded header is logged as a protocol
+  anomaly, not rejected; a malformed `TRUSTED_PROXIES` fails `Config.Validate`.
+  **WIRED** + **EXERCISED**, command:
+  `cd mcp-server && go test ./internal/clientip ./internal/web ./internal/config -run 'TestDefaultTrustsNoProxy|TestTrustedPeerHonoursForwarded|TestBareIPEntryTrusted|TestMalformedEntryFailsClosed|TestRateLimitKeyIgnoresForgedForwardedHeaders|TestTrustedProxyPeerUsesForwardedHeader|TestForwardedHeaderAnomalyMiddlewarePassesThrough|TestValidateTrustedProxiesStance' -count=1` → ok.
+- Mutation-kill case `clientip-stance-trusts-every-peer` (seventh named bypass):
+  `Stance.Trusts` returns true unconditionally; kills
+  `TestRateLimitKeyIgnoresForgedForwardedHeaders`. **EXERCISED**.
+
+The web-exposure spec's shared-registry, CORS-wiring and `public`-profile
+`/metrics` rows remain **NOT_RUN** (the last is an operator scrape-contract
+decision, §3.2/§7).
+
 The `check-broken-links` job in `.github/workflows/documentation-check.yml` was
 rewired to call `scripts/check-doc-links.sh` so the CI control and the harness
 control are the same artifact (no drift). The 500-line job remains inline.
@@ -225,7 +253,7 @@ This sprint is complete only when all of the following hold:
 - [ ] Configured registry fail-closed matrix row (R19-05); no nil-registry legacy restoration. — **WIRED** + **EXERCISED** (row `security-matrix-registry-failclosed`).
 - [ ] Secret leakage / resource boundary rows fail on real findings (R19-06); full-history Gitleaks separate from source regex checks. — **NOT_RUN** (full-history Gitleaks): redaction/no-leak half WIRED + EXERCISED (row `security-matrix-secret-redaction`); full-history Gitleaks WIRED as `scripts/gitleaks-history.sh` + EXERCISED locally over 1149 commits and a reviewed `.gitleaksignore` baseline added (11/16 findings classified as intentional test canaries / documentation placeholders and allowlisted). The remaining **5 findings look like REAL credentials** (`cpofopencode` ×4, `STATUS.md` ×1) and were **deliberately left un-ignored**, so the scan still exits 1 and is **not wired as a blocking CI row**. Blocking wiring is blocked on rotating/purging those credentials; source-regex scans **NOT_RUN**.
 - [ ] Webhook SSRF deterministic resolver/dialer fixtures; policy-denied destination is failed outcome (R19-07). — **WIRED** + **EXERCISED** (row `security-matrix-webhook-ssrf`); configuration-time guard only, no dialer-level/DNS-rebinding defense (documented limitation).
-- [ ] Deployment/readiness/migration rows (R19-08); static assets/CORS/proxy trust (R19-09). — **NOT_RUN**.
+- [ ] Deployment/readiness/migration rows (R19-08); static assets/CORS/proxy trust (R19-09). — **PARTIAL**: readiness/migration half now WIRED + EXERCISED as spec 18 R18-01..R18-06 (`mcp-server/scripts/run_migrations.go` + `internal/database/migration_manifest_test.go`, landed `main@e4bb65d9`); the client-IP/proxy-trust half of R19-09 is WIRED + EXERCISED (row `security-matrix-clientip-trust`, Spec 12 §3.4, landed 2026-10-15); static-asset/CORS registry rows remain **NOT_RUN**.
 - [ ] Complete package and test coverage: every Go module (`mcp-server`, `cmd/team-cli`, `examples/go`) + Python tests; counts recorded (R19-10). — **WIRED** (coverage / test-floor).
 - [ ] Docs gate: internal Markdown links + hard 500-line max on PR and protected push/release (R19-11). — **WIRED** (link check now `scripts/check-doc-links.sh`, shared by CI and the mutation harness; 500-line job still inline; trigger incomplete — does not fire on every protected push/release).
 - [ ] Nonzero test floor with checked-in inventory and explicit SKIP/NOT_RUN classification (R19-12). — **WIRED**.

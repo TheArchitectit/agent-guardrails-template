@@ -194,6 +194,16 @@ must enumerate origins; untrusted forwarded headers must not change audit,
 rate-limit, or authorization identity. These controls align with Spec 12 and
 remain blocking even when the UI is otherwise healthy.
 
+**Status (2026-10-15).** The proxy-trust half is WIRED + EXERCISED: the
+client-IP trust boundary (Spec 12 §3.4, `internal/clientip`) derives the
+effective client IP from an explicit `TRUSTED_PROXIES` stance and installs it as
+`echo.IPExtractor`, so an untrusted forwarded header cannot change the
+rate-limit key or log attribution. Row `security-matrix-clientip-trust`; mutation
+kill `clientip-stance-trusts-every-peer`. The static-suffix half is already
+covered (`TestAPIKeyAuth_StaticExtensionDoesNotBypassAuth`, `/api/ingest/x.js`
+POST → 401). The production-CORS-enumeration and shared static-route-registry
+halves remain **NOT_RUN** (Spec 12 §3.1/§3.3).
+
 ### R19-10 — Complete package and test coverage
 
 The package gate MUST enumerate modules from the repository and execute each Go

@@ -14,6 +14,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/thearchitectit/guardrail-mcp/internal/audit"
 	"github.com/thearchitectit/guardrail-mcp/internal/cache"
+	"github.com/thearchitectit/guardrail-mcp/internal/clientip"
 	"github.com/thearchitectit/guardrail-mcp/internal/config"
 	"github.com/thearchitectit/guardrail-mcp/internal/database"
 	"github.com/thearchitectit/guardrail-mcp/internal/ingest"
@@ -74,6 +75,18 @@ func (s *Server) Echo() *echo.Echo {
 
 // setupMiddleware configures Echo middleware
 func (s *Server) setupMiddleware() {
+	// Client-IP trust boundary (Spec 12 §3.4). Forwarded headers are honoured
+	// only from a configured TRUSTED_PROXIES peer; otherwise the socket peer is
+	// used and a forwarded header is recorded as a protocol anomaly. The
+	// stance is validated at config load, so a parse error here falls back to
+	// the safe default (trust no proxy) and is logged.
+	stance, err := clientip.NewStance(s.cfg.TrustedProxies)
+	if err != nil {
+		slog.Error("invalid TRUSTED_PROXIES; trusting no proxy", "error", err)
+		stance, _ = clientip.NewStance(nil)
+	}
+	s.echo.IPExtractor = stance.Extractor()
+
 	// Request ID generation
 	s.echo.Use(middleware.RequestID())
 
@@ -91,6 +104,10 @@ func (s *Server) setupMiddleware() {
 
 	// Security headers
 	s.echo.Use(securityHeadersMiddleware())
+
+	// Forwarded-header protocol anomaly (Spec 12 §3.4.4): an untrusted peer
+	// that asserts a forwarded header is logged, not rejected.
+	s.echo.Use(forwardedHeaderAnomalyMiddleware(stance))
 
 	// CORS - MUST run before auth middleware to handle OPTIONS preflight requests
 	// CORS preflight (OPTIONS) requests should return 200 before auth check
@@ -304,6 +321,24 @@ func panicRecoveryMiddleware() echo.MiddlewareFunc {
 					c.Error(err)
 				}
 			}()
+			return next(c)
+		}
+	}
+}
+
+// forwardedHeaderAnomalyMiddleware records a protocol anomaly when a request
+// from an untrusted peer asserts a forwarded header (Spec 12 §3.4.4). It does
+// not reject: misconfiguration stays visible without breaking traffic, and the
+// effective client IP is already the socket peer via the IPExtractor.
+func forwardedHeaderAnomalyMiddleware(stance clientip.Stance) echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			if _, untrustedForwarded := stance.ClientIP(c.Request()); untrustedForwarded {
+				slog.Warn("forwarded header from untrusted peer ignored",
+					"peer", c.Request().RemoteAddr,
+					"path", c.Request().URL.Path,
+				)
+			}
 			return next(c)
 		}
 	}
