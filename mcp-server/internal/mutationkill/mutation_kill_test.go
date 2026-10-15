@@ -46,10 +46,16 @@ var mutationCases = []mutationCase{
 		name: "webhook-ssrf-guard-always-permits",
 		file: "internal/mcp/tools_notifications.go",
 		old: `func checkWebhookIP(ip net.IP, host string) error {
-	if ip.IsLoopback() || ip.IsPrivate() || ip.IsUnspecified() ||
-		ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() ||
-		ip.IsInterfaceLocalMulticast() {
+	addr, ok := netip.AddrFromSlice(ip)
+	if !ok {
 		return fmt.Errorf("refusing webhook to non-public address %s for host %q", ip, host)
+	}
+	// The same reviewed range policy the delivery-time dial guard uses: a
+	// configuration-time answer and a delivery-time answer must be classified
+	// identically, or a URL accepted here could be refused there (or worse, the
+	// reverse).
+	if err := notifications.ClassifyWebhookAddr(addr); err != nil {
+		return fmt.Errorf("refusing webhook to non-public address %s for host %q: %v", ip, host, err)
 	}
 	return nil
 }`,
@@ -60,6 +66,18 @@ var mutationCases = []mutationCase{
 }`,
 		pkg:       "./internal/mcp",
 		testRegex: "^TestValidateWebhookURL$",
+	},
+	{
+		name: "webhook-egress-policy-always-permits",
+		file: "internal/notifications/egress_policy.go",
+		old: `	for _, d := range deniedWebhookPrefixes {
+		if d.prefix.Contains(addr) {
+			return deny("refusing webhook delivery to %s (%s)", addr, d.label)
+		}
+	}`,
+		new:       `	_ = deniedWebhookPrefixes`,
+		pkg:       "./internal/notifications",
+		testRegex: "^TestClassifyWebhookAddrDeniesSpecialPurposeAndAllowsPublic$",
 	},
 	{
 		name: "registry-failclosed-swallows-load-error",

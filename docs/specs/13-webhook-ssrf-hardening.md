@@ -1,7 +1,14 @@
 # OpenSpec: Webhook Delivery SSRF Hardening
 
-**Status:** Proposed. Describes intended behavior; current delivery is not
-protected against DNS rebinding or redirect-based SSRF.
+**Status:** **Implemented for the default policy (2026-10-15).** The delivery-time
+egress boundary now exists: both delivery paths share one client whose dial
+resolves the destination, refuses the whole answer set if any member is
+non-public, and dials only a validated literal (rebinding closed); redirects are
+refused; a policy denial is terminal and is never retried. The remaining
+open items are owner deployment decisions, not missing mechanisms: the
+HTTPS-only / port-443 default (§3.1, a behaviour change for existing HTTP
+webhooks) and the internal-destination exception (§3.5, default = none). See
+§9 for the implementation record.
 **Owner:** Project maintainer.
 **Date:** 2026-10-04.
 **Roadmap:** Phase 0, work package 07
@@ -293,3 +300,53 @@ stop and amend §3.5 before allowing it.
 - Webhook receiver authentication or replay-window design.
 - CI phase-gate wiring, specified in
   [Spec 19](19-phase0-ci-security-gates.md) (`T37.2.6`).
+
+## 9. Implementation record (2026-10-15)
+
+**What landed.** A single egress-policy seam,
+`mcp-server/internal/notifications/egress_policy.go`:
+
+- `ClassifyWebhookAddr` classifies a `netip.Addr` against a **data table** of
+  reviewed IANA special-purpose blocks (28 prefixes: loopback, private, CGNAT,
+  link-local, multicast, broadcast/reserved, documentation, benchmarking,
+  6to4, Teredo, NAT64, unique-local, …) plus named cloud-metadata addresses.
+  IPv4-mapped IPv6 is classified by its embedded IPv4 value, so
+  `::ffff:127.0.0.1` is refused exactly like `127.0.0.1`. The classification
+  fails closed: an invalid or zoned address is denied.
+- `safeDialContextWithResolver` resolves the host **once**, refuses the **entire
+  answer set** if any member is disallowed (a mixed public/private answer is the
+  rebinding attack, not a preference), and dials only a validated literal — so
+  there is no second, unvalidated lookup between the check and the socket.
+- `newWebhookClientWithResolver` sets `CheckRedirect` to refuse every 3xx and
+  installs no proxy function, so a proxy environment variable cannot route a
+  delivery around the dial guard. The production `newWebhookClient()` uses the
+  process resolver; both `Dispatcher.doRequest` and `Dispatcher.SendTestEvent`
+  call the same `d.client`, so the two paths cannot diverge.
+- A policy denial carries `ErrWebhookEgressDenied`; the retry loop in `deliver`
+  breaks on it, so a denied destination is never retried as a transient failure.
+- `checkWebhookIP` (configuration time, `internal/mcp/tools_notifications.go`)
+  now delegates to the **same** classifier, so a URL accepted at configuration
+  time is classified identically at delivery time.
+
+**Evidence.** `internal/notifications/egress_policy_test.go` — 8 tests, all
+network-free (acceptance 13): the address matrix (acceptance 5/6), mixed answer
+set (4), rebinding at the dial (2/3), literal prohibited IP (6), resolution
+failure fails closed, both delivery paths deny a blocked destination and record
+no success (8/9), and the denial reason leaks no secret/userinfo (12). The
+existing rebinding/redirect/loopback tests still pass. Red-on-drift proven: with
+the range table neutered, 14 address classes flip to allowed and the mixed-set
+test fails; restored, all green. The `mutationkill` battery gained a
+`webhook-egress-policy-always-permits` case (its pre-existing
+`webhook-ssrf-guard-always-permits` anchor was updated for the delegation).
+
+**Named limits (recorded, not silently accepted).**
+
+1. **HTTPS-only / port-443 (§3.1) is not enforced here.** Configuration-time
+   validation still accepts `http`, and delivery still dials the configured
+   scheme/port. Enforcing HTTPS-only would change behaviour for existing
+   deployments and is a §7 owner decision; the default is recorded but not
+   applied.
+2. **No internal-destination exception (§3.5).** Default = none, matching §7.
+   No escape hatch was added.
+3. **DNS answer-set check is per-dial**, which is the correct seam; a keep-alive
+   connection is reused only after its peer was validated.

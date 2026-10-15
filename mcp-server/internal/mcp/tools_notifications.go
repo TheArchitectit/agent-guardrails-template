@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"net/netip"
 	"net/url"
 	"strings"
 
@@ -60,10 +61,16 @@ func validateWebhookURL(raw string) error {
 }
 
 func checkWebhookIP(ip net.IP, host string) error {
-	if ip.IsLoopback() || ip.IsPrivate() || ip.IsUnspecified() ||
-		ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() ||
-		ip.IsInterfaceLocalMulticast() {
+	addr, ok := netip.AddrFromSlice(ip)
+	if !ok {
 		return fmt.Errorf("refusing webhook to non-public address %s for host %q", ip, host)
+	}
+	// The same reviewed range policy the delivery-time dial guard uses: a
+	// configuration-time answer and a delivery-time answer must be classified
+	// identically, or a URL accepted here could be refused there (or worse, the
+	// reverse).
+	if err := notifications.ClassifyWebhookAddr(addr); err != nil {
+		return fmt.Errorf("refusing webhook to non-public address %s for host %q: %v", ip, host, err)
 	}
 	return nil
 }
