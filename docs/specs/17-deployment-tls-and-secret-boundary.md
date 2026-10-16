@@ -382,3 +382,46 @@ at-rest webhook-HMAC store, or rotation — the secret-source half of R17-06 for
 `internal/mcp/vision_tools.go` and
 `internal/guardrails/content_filter_backends.go`) is also still environment-only.
 Rotation and the redaction half of R17-08 remain open in this spec.
+
+## 11. Implementation note (2026-10-16) — R17-08 redaction half (request log)
+
+R17-08 requires that credential material never reach logs, naming "authorization
+headers" and secret values among the surfaces to redact. The request logger
+(`internal/middleware/logging.go`, mounted on the real echo chain at
+`internal/web/server.go:204`) wrote the **raw** `req.RequestURI` as the `uri`
+attribute. A query string routinely carries exactly the material R17-08 forbids
+— `?api_key=…`, `?token=…`, `?access_token=…`, a signed URL — so every such
+value landed in the log in cleartext. The defect was live: driving the real
+logger with `/api/search?token=<canary>&q=hi` wrote the canary verbatim
+(recorded below).
+
+**Fix.** New `middleware.RedactRequestURI` preserves the path (needed for
+correlation and rate analysis) and replaces the query string with a visible
+`?<redacted>` marker. The whole query is withheld rather than filtered by
+parameter name: a name-based allowlist fails open on the first unlisted
+parameter, and a secret-bearing query cannot be told from an ordinary one by
+inspection. The logger now logs `RedactRequestURI(req.RequestURI)`.
+
+**Evidence.** `internal/middleware/redact_test.go`:
+`TestRedactRequestURI` pins the rule (no query unchanged, empty unchanged, query
+withheld, `api_key=` withheld, bare `?` withheld, path verbatim) and
+`TestRequestLoggerWithholdsQueryString` drives the **real** logger through the
+real echo chain and asserts the log names `/api/search` and contains the marker
+but never the canary — with a positive control that the record was actually
+emitted (non-vacuous). Red-on-drift proven: neutering `RedactRequestURI` to
+return the raw URI flips both tests PASS→FAIL (the log then shows
+`uri="/api/search?token=<canary>&q=hi"`). New CI step "Request-log query
+redaction (Spec 17 R17-08)" in the `security-matrix-secret-redaction` job
+(`team-validation.yml`); new mutation-kill case
+`request-uri-query-redaction-removed` (harness now 21 cases, all killed).
+
+**Named limit (documented, not hidden).** This redacts the query string in the
+request log. A credential embedded in the *path* is not redacted (paths are the
+correlation key, and R17-08 keeps "paths to secret files" out of ordinary-caller
+*responses* rather than log correlation fields). The DB-connect error path was
+probed and is **not** a leak: `pgx v5` masks the password in its own error text
+(`cannot parse …@x/d` renders the credential as `xxxxxx`; connect/dial errors
+name only host and database). The remaining R17-08 scope — argv in manifests
+(done, §6), shell-expanded command strings outside the manifests, and rotation —
+stays tracked under `SPRINT-A2-credential-lifecycle`; this note claims only the
+request-log query half.

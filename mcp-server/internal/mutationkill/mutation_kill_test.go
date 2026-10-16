@@ -394,6 +394,24 @@ func (s *MCPServer) authorizeToolCallDisabled(ctx context.Context, name string, 
 		pkg:       "./internal/config",
 		testRegex: "^TestValidateRequiresASecretSource$",
 	},
+	{
+		// Spec 17 R17-08: credential material must never reach logs. The request
+		// logger wrote the raw RequestURI, so a query-string credential
+		// (?token=…, ?api_key=…) landed in the log in cleartext. A bypass that
+		// makes the redactor a no-op (logging the raw URI again) must be killed
+		// by the request-log redaction suite.
+		name: "request-uri-query-redaction-removed",
+		file: "internal/middleware/redact.go",
+		old: `	if i := strings.IndexByte(rawURI, '?'); i >= 0 {
+		return rawURI[:i] + redactedQuery
+	}
+	return rawURI`,
+		new: `	_ = strings.IndexByte(rawURI, '?')
+	_ = redactedQuery
+	return rawURI`,
+		pkg:       "./internal/middleware",
+		testRegex: "^TestRequestLoggerWithholdsQueryString$",
+	},
 }
 
 // findModuleRoot walks up from the test working directory to the directory

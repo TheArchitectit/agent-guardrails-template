@@ -239,6 +239,14 @@ jobs:
           cd mcp-server
           go test ./internal/mcp -run 'TestSecretLeakRedactionAcrossRealPaths|TestArgumentPrivacy|TestGuardrailConfigOmitsSecrets|TestConfigPublicViewOmitsSecrets|TestSafeResourceIDRejectsSecrets' -count=1 -v
 
+      # Spec 17 R17-08 (redaction half): the request logger must not write a
+      # query-string credential to logs. The raw RequestURI carried it in
+      # cleartext; only the query is now withheld.
+      - name: Request-log query redaction (Spec 17 R17-08)
+        run: |
+          cd mcp-server
+          go test ./internal/middleware -run 'TestRedactRequestURI|TestRequestLoggerWithholdsQueryString' -count=1 -v
+
   # R19-07: webhook SSRF row. The dispatcher POSTs to the stored URL, so the
   # configuration-time URL guard must reject loopback, link-local (including
   # cloud metadata 169.254.169.254 and IPv4-mapped forms), private, and

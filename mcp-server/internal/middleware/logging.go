@@ -71,7 +71,10 @@ func RequestLoggerWithConfig(config RequestLoggerConfig) echo.MiddlewareFunc {
 			attrs := []slog.Attr{
 				slog.String("method", req.Method),
 				slog.String("path", c.Path()),
-				slog.String("uri", req.RequestURI),
+				// R17-08: the raw RequestURI carries the query string, which
+				// routinely holds a credential (?api_key=…, ?token=…). Only the
+				// query is withheld; the path is preserved for correlation.
+				slog.String("uri", RedactRequestURI(req.RequestURI)),
 				slog.Int("status", res.Status),
 				slog.Duration("duration", duration),
 				slog.String("duration_ms", duration.String()),
