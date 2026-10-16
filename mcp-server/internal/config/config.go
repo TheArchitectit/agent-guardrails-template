@@ -48,11 +48,16 @@ type Config struct {
 	HealthCheckTimeout time.Duration `env:"HEALTH_CHECK_TIMEOUT" envDefault:"3s"`
 
 	// Database Configuration
-	DBHost            string        `env:"DB_HOST" envDefault:"localhost"`
-	DBPort            int           `env:"DB_PORT" envDefault:"5432"`
-	DBName            string        `env:"DB_NAME" envDefault:"guardrails"`
-	DBUser            string        `env:"DB_USER,required"`
-	DBPassword        string        `env:"DB_PASSWORD,required"`
+	DBHost string `env:"DB_HOST" envDefault:"localhost"`
+	DBPort int    `env:"DB_PORT" envDefault:"5432"`
+	DBName string `env:"DB_NAME" envDefault:"guardrails"`
+	DBUser string `env:"DB_USER,required"`
+	// DBPassword may come from the environment or, as R17-06 prefers for
+	// production, from a read-only mounted secret file named by DB_PASSWORD_FILE.
+	// The `required` tag is deliberately absent so a file-only deployment can
+	// start; ValidateSecretSources enforces that at least one source exists.
+	DBPassword        string        `env:"DB_PASSWORD"`
+	DBPasswordFile    string        `env:"DB_PASSWORD_FILE"`
 	DBSSLMode         string        `env:"DB_SSLMODE" envDefault:"require"`
 	DBConnectTimeout  time.Duration `env:"DB_CONNECT_TIMEOUT" envDefault:"10s"`
 	DBMaxOpenConns    int           `env:"DB_MAX_OPEN_CONNS" envDefault:"25"`
@@ -64,6 +69,7 @@ type Config struct {
 	RedisHost         string        `env:"REDIS_HOST" envDefault:"localhost"`
 	RedisPort         int           `env:"REDIS_PORT" envDefault:"6379"`
 	RedisPassword     string        `env:"REDIS_PASSWORD"`
+	RedisPasswordFile string        `env:"REDIS_PASSWORD_FILE"`
 	RedisUseTLS       bool          `env:"REDIS_USE_TLS" envDefault:"false"`
 	RedisDB           int           `env:"REDIS_DB" envDefault:"0"`
 	RedisPoolSize     int           `env:"REDIS_POOL_SIZE" envDefault:"10"`
@@ -79,9 +85,13 @@ type Config struct {
 	TLSCAPath     string `env:"TLS_CA_PATH"`
 	TLSMinVersion string `env:"TLS_MIN_VERSION" envDefault:"1.3"`
 
-	// Security Configuration
-	MCPAPIKey string `env:"MCP_API_KEY,required"`
-	IDEAPIKey string `env:"IDE_API_KEY,required"`
+	// Security Configuration. Each legacy key may come from the environment or
+	// from a read-only secret file (MCP_API_KEY_FILE / IDE_API_KEY_FILE); see
+	// secret_sources.go for the R17-06 file-source rule.
+	MCPAPIKey     string `env:"MCP_API_KEY"`
+	MCPAPIKeyFile string `env:"MCP_API_KEY_FILE"`
+	IDEAPIKey     string `env:"IDE_API_KEY"`
+	IDEAPIKeyFile string `env:"IDE_API_KEY_FILE"`
 
 	// Credential-to-principal registry (Spec 15 / gr-xp-01).
 	// Records are supplied out of band as an inline JSON list and/or a JSON
@@ -97,8 +107,10 @@ type Config struct {
 	// verifier key, as an alternative to inline CREDENTIAL_VERIFIER_KEY.
 	CredentialVerifierKeyFile string `env:"CREDENTIAL_VERIFIER_KEY_FILE"`
 
-	// JWT Configuration
-	JWTSecret        string        `env:"JWT_SECRET,required"`
+	// JWT Configuration. The signing secret may come from the environment or
+	// from a read-only secret file (JWT_SECRET_FILE).
+	JWTSecret        string        `env:"JWT_SECRET"`
+	JWTSecretFile    string        `env:"JWT_SECRET_FILE"`
 	JWTIssuer        string        `env:"JWT_ISSUER" envDefault:"guardrail-mcp"`
 	JWTExpiry        time.Duration `env:"JWT_EXPIRY" envDefault:"15m"`
 	JWTRotationHours time.Duration `env:"JWT_ROTATION_HOURS" envDefault:"168h"` // 7 days
@@ -167,6 +179,14 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("failed to parse config: %w", err)
 	}
 
+	// Resolve any read-only secret-file sources before validation (Spec 17
+	// R17-06), so every downstream gate — storage transit, default-credential
+	// rejection, key/JWT strength — sees the resolved value rather than an
+	// empty field that only looked unset.
+	if err := cfg.ResolveSecretSources(); err != nil {
+		return nil, err
+	}
+
 	// Validate configuration
 	if err := cfg.Validate(); err != nil {
 		return nil, err
@@ -177,6 +197,22 @@ func Load() (*Config, error) {
 
 // Validate performs comprehensive configuration validation
 func (c *Config) Validate() error {
+	// Resolve any read-only secret-file sources first (Spec 17 R17-06) so every
+	// gate below — including storage transit and default-credential rejection —
+	// sees the resolved value rather than an empty field that only looked
+	// unset. Load() resolves before calling Validate; this keeps a
+	// directly-constructed Config on the same path.
+	if err := c.ResolveSecretSources(); err != nil {
+		return err
+	}
+
+	// Require a source for every primary secret (Spec 17 R17-06) before the
+	// strength checks below. This replaces the `required` env tags those fields
+	// used to carry, which made a file-only deployment impossible to start.
+	if err := c.ValidateSecretSources(); err != nil {
+		return err
+	}
+
 	// Validate JWT secret
 	if err := ValidateJWTSecret(c.JWTSecret); err != nil {
 		return fmt.Errorf("JWT_SECRET validation failed: %w", err)
@@ -187,6 +223,13 @@ func (c *Config) Validate() error {
 		return err
 	}
 	if err := ValidateAPIKey(c.IDEAPIKey, "IDE_API_KEY"); err != nil {
+		return err
+	}
+
+	// Require a source for every primary secret (Spec 17 R17-06). This replaces
+	// the `required` env tags those fields used to carry, which made a
+	// file-only deployment impossible to start.
+	if err := c.ValidateSecretSources(); err != nil {
 		return err
 	}
 
@@ -563,10 +606,15 @@ func HotReloadableFields() []string {
 func (c *Config) Masked() *Config {
 	masked := *c
 	masked.DBPassword = "***"
+	masked.DBPasswordFile = "***"
 	masked.RedisPassword = "***"
+	masked.RedisPasswordFile = "***"
 	masked.MCPAPIKey = "***"
+	masked.MCPAPIKeyFile = "***"
 	masked.IDEAPIKey = "***"
+	masked.IDEAPIKeyFile = "***"
 	masked.JWTSecret = "***"
+	masked.JWTSecretFile = "***"
 	masked.CredentialVerifierKey = "***"
 	masked.CredentialRegistryJSON = "***"
 	masked.CredentialRegistryFile = "***"

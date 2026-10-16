@@ -312,3 +312,73 @@ proof, and it does not verify uniqueness across environments or privilege
 separation (separate DB/Redis accounts per environment) — those stay operator
 contract items under R17-05/R17-06. The rest of spec 17 (secret-source/rotation/
 redaction halves, metrics/docs binding) remains open.
+
+## 10. Implementation note (2026-10-16) — R17-06 secret-source file path
+
+R17-06 makes a managed secret store or a **runtime read-only mounted secret
+file** the first-choice production source for DB/Redis credentials, the legacy
+MCP/IDE keys and JWT signing material, and requires that file read be restricted
+to the service identity (owner-only mode such as `0600`, private parent
+directory) with group/world access prevented. It also says plainly: "do not
+pretend existing env-only fields already support it."
+
+**The gap was real, not a doc lag.** The tree had exactly two file-based secret
+sources — `CREDENTIAL_REGISTRY_FILE` and `CREDENTIAL_VERIFIER_KEY_FILE` — and
+**no way at all** to supply the five primary secrets from a file. `MCP_API_KEY`,
+`IDE_API_KEY`, `JWT_SECRET` and `DB_PASSWORD` carried `required` env tags, so a
+deployment that mounted its secrets as files could not even start; and
+`REDIS_PASSWORD` had only an environment source. Environment injection was
+therefore the *only* available path for every one of them — exactly the posture
+R17-06 forbids as a production default.
+
+**The rule is now one implementation, not two.** `internal/secretfile` holds the
+single read-only-secret-file decision: the source must be a regular file, must
+carry no group/world bits on POSIX hosts, and any error is fail-closed. The
+credential-registry loader (`internal/auth/secrets.go`) now delegates to it
+instead of carrying its own copy, so the registry path and the new config path
+cannot drift apart.
+
+**Each primary secret accepts an explicit `<NAME>_FILE` alternative:**
+`MCP_API_KEY_FILE`, `IDE_API_KEY_FILE`, `JWT_SECRET_FILE`, `DB_PASSWORD_FILE`,
+`REDIS_PASSWORD_FILE`.
+
+- `Config.ResolveSecretSources` reads each configured file once at load; inline
+  environment material wins when both are supplied (the same precedence the
+  credential-registry loader already used), so an existing environment-only
+  deployment is unaffected.
+- A configured-but-unreadable, non-regular, group/world-accessible or empty file
+  is a **hard error naming R17-06 and the variable**, never a silent fallback.
+  A mounted secret's trailing newline is trimmed.
+- The `required` env tags on those five fields are gone; `ValidateSecretSources`
+  requires *a* source (inline or file) so "unset" still fails startup. This is
+  what makes a file-only deployment possible to start without weakening the
+  requirement that the secret be present.
+- `Validate` resolves the file sources itself, so a directly-constructed
+  `Config` — not only one that went through `Load()` — is on the same path, and
+  the resolved value flows through **every existing gate unchanged**: the R17-04
+  storage-transit coupling and the R17-05 placeholder/default-credential
+  rejection both still fire on a value supplied from a file.
+- `Config.Masked()` masks the six new file paths along with the values, so a
+  config dump cannot disclose where a secret is mounted.
+
+**Evidence.** `internal/secretfile/secretfile_test.go`
+(`TestPermitsRestrictedOnly`, `TestReadAcceptsRestrictedFile`,
+`TestReadRejectsNonRegularAndPermissive`) and
+`internal/config/secret_sources_test.go` (`TestResolveSecretSourcesFromFiles` —
+a file-only deployment resolves all five and then passes `Validate`;
+`TestResolveSecretSourcesInlineWins`; `TestResolveSecretSourcesFailsClosed` —
+absent / empty / non-regular / group-world-readable each stop startup;
+`TestValidateRequiresASecretSource`; and
+`TestSecretFileSourceFeedsTheExistingGates`, which proves a placeholder supplied
+from a *file* is still rejected by R17-05). New CI row
+`security-matrix-secret-sources` in `team-validation.yml` (20 jobs). New
+mutation-kill case `secret-source-requirement-always-satisfied` proves the
+negative suite flips PASS→FAIL when the source requirement is neutered.
+
+**Named limit (documented, not hidden).** This adds the file *source* and its
+access rule; it does not add a managed-store (KMS/Vault) client, an encrypted-
+at-rest webhook-HMAC store, or rotation — the secret-source half of R17-06 for
+`FALLBACK_API_KEY`/`OPENAI_API_KEY` (read directly from the environment by
+`internal/mcp/vision_tools.go` and
+`internal/guardrails/content_filter_backends.go`) is also still environment-only.
+Rotation and the redaction half of R17-08 remain open in this spec.

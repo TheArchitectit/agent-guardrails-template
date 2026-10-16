@@ -367,6 +367,33 @@ func (s *MCPServer) authorizeToolCallDisabled(ctx context.Context, name string, 
 		pkg:       "./internal/config",
 		testRegex: "^TestValidateCouplesDefaultCredentialGateToProfile$",
 	},
+	{
+		// Spec 17 R17-06: a secret may be supplied from a read-only mounted file
+		// instead of the environment, and a missing/permissive/empty file must
+		// stop startup. A bypass that silently accepts an unset secret (so the
+		// process starts with no credential at all) must be killed by the
+		// secret-source negative suite.
+		name: "secret-source-requirement-always-satisfied",
+		file: "internal/config/secret_sources.go",
+		old: `	for _, s := range c.secretSources() {
+		if strings.TrimSpace(*s.value) != "" {
+			continue
+		}
+		if strings.TrimSpace(*s.file) != "" {
+			return fmt.Errorf("%s_FILE %q produced no value (Spec 17 R17-06)", s.name, strings.TrimSpace(*s.file))
+		}`,
+		new: `	for _, s := range c.secretSources() {
+		_ = s
+		continue
+		if strings.TrimSpace(*s.value) != "" {
+			continue
+		}
+		if strings.TrimSpace(*s.file) != "" {
+			return fmt.Errorf("%s_FILE %q produced no value (Spec 17 R17-06)", s.name, strings.TrimSpace(*s.file))
+		}`,
+		pkg:       "./internal/config",
+		testRegex: "^TestValidateRequiresASecretSource$",
+	},
 }
 
 // findModuleRoot walks up from the test working directory to the directory
