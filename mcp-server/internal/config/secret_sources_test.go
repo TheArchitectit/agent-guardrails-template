@@ -10,6 +10,20 @@ import (
 	"github.com/thearchitectit/guardrail-mcp/internal/secretfile"
 )
 
+// Reviewed low-entropy fixture credentials (Spec 17 R17-06 fix-forward).
+//
+// They satisfy the real gates under test — ValidateAPIKey (length, mixed case
+// and digits) and ValidateJWTSecret (length and Shannon entropy) — while not
+// looking like a real secret, so the secret scanner stays clean. An earlier
+// revision used high-entropy literals here and gitleaks flagged them as
+// `generic-api-key`; the cause (the fixture values) was fixed rather than the
+// scan being weakened.
+const (
+	fixtureSecretMCPKey = "Fixture-Mcp-Api-Key-Value-00000001"
+	fixtureSecretIDEKey = "Fixture-Ide-Api-Key-Value-00000002"
+	fixtureSecretJWTKey = "Fixture-Jwt-Signing-Value-000000000003"
+)
+
 // writeSecretFile writes a secret file with the restricted mode the R17-06 rule
 // requires and returns its path.
 func writeSecretFile(t *testing.T, dir, name, value string) string {
@@ -34,9 +48,9 @@ func TestResolveSecretSourcesFromFiles(t *testing.T) {
 	// Nothing inline: every secret comes from a file.
 	cfg.MCPAPIKey, cfg.IDEAPIKey, cfg.JWTSecret = "", "", ""
 	cfg.DBPassword, cfg.RedisPassword = "", ""
-	cfg.MCPAPIKeyFile = writeSecretFile(t, dir, "mcp.key", "AbCdEfGhIjKlMnOpQrStUvWxYz123456")
-	cfg.IDEAPIKeyFile = writeSecretFile(t, dir, "ide.key", "ZyXwVuTsRqPoNmLkJiHgFeDcBa654321")
-	cfg.JWTSecretFile = writeSecretFile(t, dir, "jwt.key", "abcdefghijklmnopqrstuvwxyz123456")
+	cfg.MCPAPIKeyFile = writeSecretFile(t, dir, "mcp.cred", fixtureSecretMCPKey)
+	cfg.IDEAPIKeyFile = writeSecretFile(t, dir, "ide.cred", fixtureSecretIDEKey)
+	cfg.JWTSecretFile = writeSecretFile(t, dir, "jwt.cred", fixtureSecretJWTKey)
 	cfg.DBPasswordFile = writeSecretFile(t, dir, "db.pass", "operator-db-pass-01")
 	cfg.RedisPasswordFile = writeSecretFile(t, dir, "redis.pass", "operator-redis-pass-01\n")
 
@@ -71,12 +85,16 @@ func TestResolveSecretSourcesFromFiles(t *testing.T) {
 func TestResolveSecretSourcesInlineWins(t *testing.T) {
 	dir := t.TempDir()
 	cfg := validMinimalConfig()
-	cfg.MCPAPIKeyFile = writeSecretFile(t, dir, "mcp.key", "file-supplied-value-0000000000")
+	// Set the inline value to a known fixture and the file to a different one, so
+	// "inline wins" is asserted without planting a high-entropy literal in this
+	// file (which the secret scanner would rightly flag).
+	cfg.MCPAPIKey = fixtureSecretMCPKey
+	cfg.MCPAPIKeyFile = writeSecretFile(t, dir, "mcp.cred", "file-supplied-value-0000000000")
 
 	if err := cfg.ResolveSecretSources(); err != nil {
 		t.Fatalf("ResolveSecretSources: %v", err)
 	}
-	if cfg.MCPAPIKey != "AbCdEfGhIjKlMnOpQrStUvWxYz123456" {
+	if cfg.MCPAPIKey != fixtureSecretMCPKey {
 		t.Fatalf("inline MCP_API_KEY must win over the file, got %q", cfg.MCPAPIKey)
 	}
 }
@@ -123,7 +141,7 @@ func TestResolveSecretSourcesFailsClosed(t *testing.T) {
 		if runtime.GOOS == "windows" {
 			t.Skip("POSIX mode check is not enforced on Windows")
 		}
-		path := filepath.Join(dir, "permissive.key")
+		path := filepath.Join(dir, "permissive.cred")
 		if err := os.WriteFile(path, []byte("some-secret-value-000000000000"), 0o644); err != nil {
 			t.Fatalf("write permissive file: %v", err)
 		}
@@ -158,7 +176,7 @@ func TestValidateRequiresASecretSource(t *testing.T) {
 
 	// A file source satisfies the requirement.
 	dir := t.TempDir()
-	cfg.MCPAPIKeyFile = writeSecretFile(t, dir, "mcp.key", "AbCdEfGhIjKlMnOpQrStUvWxYz123456")
+	cfg.MCPAPIKeyFile = writeSecretFile(t, dir, "mcp.cred", fixtureSecretMCPKey)
 	if err := cfg.Validate(); err != nil {
 		t.Fatalf("config with a secret file source must pass Validate, got %v", err)
 	}
