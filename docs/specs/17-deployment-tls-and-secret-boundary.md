@@ -183,3 +183,41 @@ accepted argv-free pattern. Rule 1 still applies to `command:`, so a
 (URL-embedded credentials, shell-expanded command strings outside these
 manifests, and the redaction half) is tracked in `SPRINT-A2-credential-lifecycle`
 and is **not** claimed by this note.
+
+## 7. Implementation note (2026-10-16) — R17-03 HSTS emission half
+
+The **HSTS emission clause** of R17-03 is enforced. R17-03 states "HSTS may be
+emitted only for a verified public HTTPS origin, never as a substitute for
+TLS"; the header is now emitted under exactly that condition and under no other.
+
+- `Config.EmitsHSTS` (`internal/config/headers.go`) is the single decision:
+  `TLS_ENABLED=true` **and** the effective `DEPLOYMENT_PROFILE` is `public`.
+  An unparsable profile is treated as non-public (no header) — the failure mode
+  of an unread posture must not be an emitted security claim. `Config.Validate`
+  rejects such a profile at load, so this is belt-and-braces for a
+  directly-constructed `Config`.
+- `securityHeadersMiddleware` (`internal/web/server.go`) takes the
+  `*config.Config` and evaluates the condition per request; a nil config emits
+  no HSTS.
+- Emitted value: `max-age=31536000; includeSubDomains` — **no** `preload`
+  assertion, which is a commitment the operator has not made. Pinned by
+  `TestHSTSHeaderValueIsBounded`.
+
+**Evidence.** `internal/config/headers_test.go` (`TestEmitsHSTS` covers all
+seven profile×TLS combinations) and `internal/web/middleware_test.go`
+(`TestSecurityHeaders_HSTSOnlyOnVerifiedPublicTLS` drives the real middleware
+for public+TLS, public-without-TLS, local+TLS, tailnet+TLS and nil config).
+CI row `security-matrix-security-headers`; mutation-kill case
+`hsts-emitted-for-non-public-origin` proves the negative suite flips PASS→FAIL
+when the posture check is neutered.
+
+**Named limit (documented, not hidden).** The rest of R17-03 — terminating
+TLS 1.3+ at the public ingress, certificate/trust-chain rotation and validation,
+rejecting TLS 1.2 and plaintext public connections, and the direct-backend
+denial — is an **operator/proxy contract**, not a repo artifact: this binary
+does not terminate public TLS (`TLS_ENABLED` is validated but does not change
+either serving path — see §1). R17-02's fail-closed startup gate for an
+external bind without an approved profile is likewise only partially enforced
+today: `ValidateDeploymentBinding` covers the bind/profile match and the
+`public`-profile `TRUSTED_PROXIES` requirement, but not "proven TLS termination
+and direct-backend denial". Those remain open and are **not** claimed here.

@@ -249,7 +249,7 @@ func (s *MCPServer) sessionCleanup() {
 
 ---
 
-#### L-005: Missing Secure Flag in Security Headers
+#### L-005: Missing Secure Flag in Security Headers — **RESOLVED 2026-10-16**
 
 - **File:** /mnt/ollama/git/agent-guardrails-template/mcp-server/internal/web/server.go
 - **Line:** 246-270
@@ -258,13 +258,14 @@ func (s *MCPServer) sessionCleanup() {
 **Description:**
 The security headers middleware doesn't set the `Strict-Transport-Security` (HSTS) header, which is recommended for HTTPS deployments.
 
-**Recommended Fix:**
-Add HSTS header when TLS is enabled:
-```go
-if s.cfg.TLSEnabled {
-    c.Response().Header().Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
-}
-```
+**Resolution (2026-10-16).** The recommended fix below gated on `TLSEnabled`
+alone; the shipped gate is `Config.EmitsHSTS` (`internal/config/headers.go`) =
+`TLS_ENABLED` **and** effective `DEPLOYMENT_PROFILE=public`, per Spec 12 §3.6 /
+Spec 17 R17-03 ("HSTS may be emitted only for a verified public HTTPS origin,
+never as a substitute for TLS"). Value: `max-age=31536000; includeSubDomains`
+(no `preload`). Evidence: `internal/config/headers_test.go`,
+`internal/web/middleware_test.go`, CI row `security-matrix-security-headers`,
+mutation-kill `hsts-emitted-for-non-public-origin`.
 
 ---
 

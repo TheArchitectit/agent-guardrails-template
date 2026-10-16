@@ -182,8 +182,10 @@ func (s *Server) setupMiddleware() {
 	// Request logging
 	s.echo.Use(loggingMiddleware.RequestLogger())
 
-	// Security headers
-	s.echo.Use(securityHeadersMiddleware())
+	// Security headers (Spec 12 §3.6). The middleware reads the effective
+	// deployment posture, so HSTS is emitted only for a verified public HTTPS
+	// origin.
+	s.echo.Use(securityHeadersMiddleware(s.cfg))
 
 	// Forwarded-header protocol anomaly (Spec 12 §3.4.4): an untrusted peer
 	// that asserts a forwarded header is logged, not rejected.
@@ -443,8 +445,13 @@ func forwardedHeaderAnomalyMiddleware(stance clientip.Stance) echo.MiddlewareFun
 	}
 }
 
-// securityHeadersMiddleware adds security headers
-func securityHeadersMiddleware() echo.MiddlewareFunc {
+// securityHeadersMiddleware adds security headers.
+//
+// Spec 12 §3.6: the deprecated X-XSS-Protection header is never emitted, and
+// HSTS is added **only** when TLS is enabled and the effective deployment
+// profile is `public` (a verified public HTTPS origin). The decision lives in
+// config.EmitsHSTS so the header and the profile contract cannot drift apart.
+func securityHeadersMiddleware(cfg *config.Config) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			// Content Security Policy
@@ -467,6 +474,13 @@ func securityHeadersMiddleware() echo.MiddlewareFunc {
 			// by the Content-Security-Policy above. Spec 12-3.6 / audit gap 6.
 			c.Response().Header().Set("Referrer-Policy", "strict-origin-when-cross-origin")
 			c.Response().Header().Set("Permissions-Policy", "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()")
+
+			// Spec 12 §3.6: HSTS only for a verified public HTTPS origin. The
+			// condition is evaluated per request so a config reload cannot
+			// leave a stale header decision behind.
+			if cfg != nil && cfg.EmitsHSTS() {
+				c.Response().Header().Set("Strict-Transport-Security", config.HSTSHeaderValue)
+			}
 
 			return next(c)
 		}

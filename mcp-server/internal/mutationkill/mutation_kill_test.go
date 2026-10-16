@@ -245,6 +245,25 @@ func (s *MCPServer) authorizeToolCallDisabled(ctx context.Context, name string, 
 		testRegex: "^TestExposureRegistryDeniesByDefault$",
 	},
 	{
+		// Spec 12 §3.6 / Spec 17 R17-03: HSTS is emitted only for a verified
+		// public HTTPS origin. A bypass that emits it unconditionally asserts a
+		// security posture the operator never declared and must be killed by the
+		// HSTS negative suite.
+		name: "hsts-emitted-for-non-public-origin",
+		file: "internal/config/headers.go",
+		old: `	if !c.TLSEnabled {
+		return false
+	}
+	profile, err := NormalizeDeploymentProfile(c.DeploymentProfile)
+	if err != nil {
+		return false
+	}
+	return profile == DeploymentProfilePublic`,
+		new:       `	return true`,
+		pkg:       "./internal/web",
+		testRegex: "^TestSecurityHeaders_HSTSOnlyOnVerifiedPublicTLS$",
+	},
+	{
 		// Spec 12 §3.1 rule 3: the static-asset rule is method- and
 		// prefix-constrained. A bypass that drops the /api/ exclusion (the old
 		// unbounded suffix exemption) must be killed by the asset-rule negative

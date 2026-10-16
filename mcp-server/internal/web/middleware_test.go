@@ -56,12 +56,13 @@ func TestAPIKeyAuth_StaticExtensionDoesNotBypassAuth(t *testing.T) {
 	}
 }
 
-// TestSecurityHeaders_NoXSSProtection covers the spec 12-3.6 / audit gap 6
-// hardening: the deprecated X-XSS-Protection header must not be emitted, and
-// the headers that do the real work must still be present.
-func TestSecurityHeaders_NoXSSProtection(t *testing.T) {
+// runSecurityHeaders drives the real middleware and returns the response
+// headers, so a header assertion is made against the shipped chain rather than
+// a re-implementation.
+func runSecurityHeaders(t *testing.T, cfg *config.Config) http.Header {
+	t.Helper()
 	e := echo.New()
-	handler := securityHeadersMiddleware()(func(c echo.Context) error {
+	handler := securityHeadersMiddleware(cfg)(func(c echo.Context) error {
 		return c.NoContent(http.StatusOK)
 	})
 
@@ -71,18 +72,60 @@ func TestSecurityHeaders_NoXSSProtection(t *testing.T) {
 	if err := handler(c); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
+	return rec.Header()
+}
 
-	if got := rec.Header().Get("X-XSS-Protection"); got != "" {
+// TestSecurityHeaders_NoXSSProtection covers the spec 12-3.6 / audit gap 6
+// hardening: the deprecated X-XSS-Protection header must not be emitted, and
+// the headers that do the real work must still be present.
+func TestSecurityHeaders_NoXSSProtection(t *testing.T) {
+	h := runSecurityHeaders(t, &config.Config{})
+
+	if got := h.Get("X-XSS-Protection"); got != "" {
 		t.Errorf("X-XSS-Protection must not be set, got %q", got)
 	}
-	if got := rec.Header().Get("Content-Security-Policy"); got == "" {
+	if got := h.Get("Content-Security-Policy"); got == "" {
 		t.Error("Content-Security-Policy must be set")
 	}
-	if got := rec.Header().Get("X-Content-Type-Options"); got != "nosniff" {
+	if got := h.Get("X-Content-Type-Options"); got != "nosniff" {
 		t.Errorf("X-Content-Type-Options = %q, want nosniff", got)
 	}
-	if got := rec.Header().Get("X-Frame-Options"); got != "DENY" {
+	if got := h.Get("X-Frame-Options"); got != "DENY" {
 		t.Errorf("X-Frame-Options = %q, want DENY", got)
+	}
+	if got := h.Get("Referrer-Policy"); got != "strict-origin-when-cross-origin" {
+		t.Errorf("Referrer-Policy = %q, want strict-origin-when-cross-origin", got)
+	}
+}
+
+// TestSecurityHeaders_HSTSOnlyOnVerifiedPublicTLS is Spec 12 §3.6: HSTS is
+// emitted only when TLS is enabled and the effective profile is `public`.
+// The negative cases are the point — a header asserting a posture the operator
+// did not declare is worse than no header.
+func TestSecurityHeaders_HSTSOnlyOnVerifiedPublicTLS(t *testing.T) {
+	tests := []struct {
+		name    string
+		cfg     *config.Config
+		wantHdr bool
+	}{
+		{"public + TLS emits HSTS", &config.Config{DeploymentProfile: config.DeploymentProfilePublic, TLSEnabled: true}, true},
+		{"public without TLS does not emit", &config.Config{DeploymentProfile: config.DeploymentProfilePublic, TLSEnabled: false}, false},
+		{"local with TLS does not emit", &config.Config{DeploymentProfile: config.DeploymentProfileLocal, TLSEnabled: true}, false},
+		{"tailnet with TLS does not emit", &config.Config{DeploymentProfile: config.DeploymentProfileTailnet, TLSEnabled: true}, false},
+		{"nil config does not emit", nil, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			h := runSecurityHeaders(t, tt.cfg)
+			got := h.Get("Strict-Transport-Security")
+			if tt.wantHdr && got != config.HSTSHeaderValue {
+				t.Fatalf("Strict-Transport-Security = %q, want %q", got, config.HSTSHeaderValue)
+			}
+			if !tt.wantHdr && got != "" {
+				t.Fatalf("Strict-Transport-Security must not be set, got %q", got)
+			}
+		})
 	}
 }
 

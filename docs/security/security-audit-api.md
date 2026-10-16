@@ -200,31 +200,31 @@ case strings.HasPrefix(path, "/api/admin"):
 
 ---
 
-### 7. SEC-001: Missing HSTS Header
+### 7. SEC-001: Missing HSTS Header — **RESOLVED 2026-10-16**
 **File**: `/mnt/ollama/git/agent-guardrails-template/mcp-server/internal/web/server.go:246-270`
 
 The security headers middleware doesn't include `Strict-Transport-Security` (HSTS), allowing downgrade attacks when TLS is enabled.
 
 **Severity**: High | **Impact**: SSL/TLS downgrade attacks, MITM
 
-**Remediation**:
-```go
-func securityHeadersMiddleware() echo.MiddlewareFunc {
-    return func(next echo.HandlerFunc) echo.HandlerFunc {
-        return func(c echo.Context) error {
-            // Add HSTS when TLS is enabled
-            if c.Request().TLS != nil {
-                c.Response().Header().Set(
-                    "Strict-Transport-Security",
-                    "max-age=31536000; includeSubDomains; preload",
-                )
-            }
-            // ... existing headers ...
-            return next(c)
-        }
-    }
-}
-```
+**Resolution (2026-10-16, Spec 12 §3.6 / Spec 17 R17-03).** HSTS is now
+emitted, but under a stricter condition than the remediation sketch below
+proposed. The sketch gated on `c.Request().TLS != nil`, which asserts a posture
+per-request and would also emit HSTS for a non-public deployment. The shipped
+gate is the *declared* posture: `Config.EmitsHSTS`
+(`internal/config/headers.go`) requires `TLS_ENABLED=true` **and** effective
+`DEPLOYMENT_PROFILE=public` — matching Spec 17 R17-03 ("HSTS may be emitted only
+for a verified public HTTPS origin, never as a substitute for TLS"). An
+unparsable profile is treated as non-public (no header).
+
+Emitted value: `max-age=31536000; includeSubDomains` — **no** `preload`
+assertion (a commitment the operator has not made).
+
+**Evidence**: `internal/config/headers_test.go` (`TestEmitsHSTS`,
+`TestHSTSHeaderValueIsBounded`), `internal/web/middleware_test.go`
+(`TestSecurityHeaders_HSTSOnlyOnVerifiedPublicTLS`), CI row
+`security-matrix-security-headers`, mutation-kill
+`hsts-emitted-for-non-public-origin`. Landing: `main@<sha>` (Spec 12 §11 note).
 
 ---
 

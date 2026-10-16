@@ -406,9 +406,48 @@ verbatim. Mutation-kill cases `exposure-registry-always-public` and
 the registry or the asset constraint is neutered.
 
 **Remaining in this spec (not addressed here):** the §3.2 public-route
-re-decision itself (`/metrics`, `/docs`, `/openapi.yaml`, the API read set) and
-the §3.5 profile/HSTS items — the `public`-profile `/metrics` auth is an
-operator contract (scrape client) and stays an owner decision (§7).
+re-decision itself (`/metrics`, `/docs`, `/openapi.yaml`, the API read set) —
+the `public`-profile `/metrics` auth is an operator contract (scrape client)
+and stays an owner decision (§7).
+
+## 11. Implementation note — §3.6 security headers, HSTS on public TLS only (2026-10-16)
+
+§3.6 is implemented. The security-headers middleware now decides the HSTS
+header from the effective deployment posture instead of never emitting it:
+
+- **`X-XSS-Protection` is not emitted.** Already true and now pinned by the
+  row that also covers the rest of §3.6 (the legacy XSS auditor is removed in
+  every current browser and its `block` role is superseded by the CSP above).
+- **CSP, `nosniff`, frame denial, `Referrer-Policy` and the empty
+  `Permissions-Policy` are retained** and asserted in the same row.
+- **HSTS is emitted only for a verified public HTTPS origin** — the condition
+  is `TLS_ENABLED=true` **and** the effective deployment profile is `public`
+  (§3.6: "Add HSTS **only** when TLS is enabled and the profile is `public`";
+  Spec 17 R17-03: "HSTS may be emitted only for a verified public HTTPS
+  origin, never as a substitute for TLS").
+- The decision is one method, `Config.EmitsHSTS` (`internal/config/headers.go`),
+  so the header and the profile contract cannot drift apart; an unparsable
+  profile is treated as non-public (no header), because the failure mode of an
+  unread posture must not be an emitted security claim. `Config.Validate`
+  rejects such a profile at load, so this is belt-and-braces for a
+  directly-constructed `Config`.
+- `securityHeadersMiddleware` takes the `*config.Config` and evaluates the
+  condition per request, so a nil config emits no HSTS rather than asserting
+  one.
+
+**Evidence:** `internal/config/headers_test.go` (`TestEmitsHSTS` covers all
+seven profile×TLS combinations; `TestHSTSHeaderValueIsBounded` pins the emitted
+policy — positive `max-age` + `includeSubDomains`, **no** `preload`, which the
+operator has not committed to) and `internal/web/middleware_test.go`
+(`TestSecurityHeaders_NoXSSProtection`; `TestSecurityHeaders_HSTSOnlyOnVerifiedPublicTLS`
+drives the real middleware for the public+TLS, public-without-TLS, local+TLS,
+tailnet+TLS and nil-config cases). CI row `security-matrix-security-headers`
+runs both verbatim. Mutation-kill case `hsts-emitted-for-non-public-origin`
+proves the negative suite flips PASS→FAIL when the posture check is neutered.
+
+**Remaining in this spec (not addressed here):** the §3.2 public-route
+re-decision and the §3.5 profile bind vocabulary beyond what Spec 17 already
+enforces — both stay owner decisions (§7).
 
 ## 7. Non-goals
 
