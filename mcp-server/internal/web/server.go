@@ -240,20 +240,28 @@ func (s *Server) setupMiddleware() {
 	s.echo.Use(cacheControlMiddleware())
 }
 
-// setupRoutes configures all routes
+// setupRoutes configures all routes.
 func (s *Server) setupRoutes() {
+	registerRoutes(s.echo, s)
+}
+
+// registerRoutes declares every route on e for server s. It is split out of
+// setupRoutes so the exposure registry can be checked against the REAL route
+// table (Spec 12 §4.1) without constructing a full Server with live
+// dependencies.
+func registerRoutes(e *echo.Echo, s *Server) {
 	// Health endpoints (no auth required)
-	s.echo.GET("/health/live", s.healthLive)
-	s.echo.GET("/health/ready", s.healthReady)
+	e.GET("/health/live", s.healthLive)
+	e.GET("/health/ready", s.healthReady)
 
 	// Version endpoint (no auth required)
-	s.echo.GET("/version", s.versionInfo)
+	e.GET("/version", s.versionInfo)
 
 	// Metrics endpoint
-	s.echo.GET("/metrics", echo.WrapHandler(promhttp.Handler()))
+	e.GET("/metrics", echo.WrapHandler(promhttp.Handler()))
 
 	// API routes with authentication
-	api := s.echo.Group("/api")
+	api := e.Group("/api")
 
 	// Document routes - order matters: specific routes before parameterized routes
 	api.GET("/documents", s.listDocuments)
@@ -306,11 +314,11 @@ func (s *Server) setupRoutes() {
 	api.POST("/v1/policy/check", s.policyCheck)
 
 	// API documentation (no auth required)
-	s.echo.GET("/docs", s.apiDocs)
-	s.echo.GET("/openapi.yaml", s.openAPISpec)
+	e.GET("/docs", s.apiDocs)
+	e.GET("/openapi.yaml", s.openAPISpec)
 
 	// IDE API endpoints
-	ide := s.echo.Group("/ide")
+	ide := e.Group("/ide")
 	ide.GET("/health", s.ideHealth)
 	ide.POST("/validate/file", s.validateFile)
 	ide.POST("/validate/selection", s.validateSelection)
@@ -322,7 +330,7 @@ func (s *Server) setupRoutes() {
 		// SPA fallback: serve index.html for non-file routes (client-side routing)
 		// This handles /web, /web/dashboard, /web/rules etc but NOT /web/js/app.js
 		// MUST be registered BEFORE the Static("/", ...) route
-		s.echo.GET("/web/*", func(c echo.Context) error {
+		e.GET("/web/*", func(c echo.Context) error {
 			// Check if this is a request for an actual file
 			requestPath := c.Request().URL.Path
 
@@ -340,8 +348,8 @@ func (s *Server) setupRoutes() {
 
 		// Static file serving - register AFTER specific routes
 		// This serves files at root paths like /index.html, /js/app.js, etc.
-		s.echo.Static("/web", "/app/web")
-		s.echo.Static("/", "/app/web")
+		e.Static("/web", "/app/web")
+		e.Static("/", "/app/web")
 	}
 }
 

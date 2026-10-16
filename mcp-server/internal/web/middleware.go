@@ -32,58 +32,14 @@ func APIKeyAuth(cfg *config.Config, auditLogger *audit.Logger) echo.MiddlewareFu
 
 			// Use the actual request URL path, not the route pattern.
 			requestPath := c.Request().URL.Path
-
-			// Skip health checks, metrics, API docs, and Web UI routes.
-			path := c.Path()
-			if path == "/health/live" || path == "/health/ready" || path == "/metrics" {
-				return next(c)
-			}
-			if path == "/docs" || path == "/openapi.yaml" {
-				return next(c)
-			}
-
-			// Skip Web UI routes - these are publicly accessible.
-			if path == "/" || path == "/index.html" || path == "/web/*" || strings.HasPrefix(path, "/static/") {
-				return next(c)
-			}
-			if requestPath == "/" || requestPath == "/index.html" ||
-				strings.HasPrefix(requestPath, "/static/") ||
-				strings.HasPrefix(requestPath, "/web/") ||
-				strings.HasPrefix(requestPath, "/assets/") ||
-				strings.HasPrefix(requestPath, "/js/") ||
-				strings.HasPrefix(requestPath, "/css/") ||
-				requestPath == "/web" {
-				return next(c)
-			}
-			// Static assets are public only when genuinely fetched as assets
-			// (method check + /api/ exclusion are load-bearing).
-			if m := c.Request().Method; (m == http.MethodGet || m == http.MethodHead) && !strings.HasPrefix(requestPath, "/api/") {
-				if strings.HasSuffix(requestPath, ".js") ||
-					strings.HasSuffix(requestPath, ".css") ||
-					strings.HasSuffix(requestPath, ".html") ||
-					strings.HasSuffix(requestPath, ".svg") ||
-					strings.HasSuffix(requestPath, ".png") ||
-					strings.HasSuffix(requestPath, ".jpg") ||
-					strings.HasSuffix(requestPath, ".ico") ||
-					strings.HasSuffix(requestPath, ".woff") ||
-					strings.HasSuffix(requestPath, ".woff2") ||
-					strings.HasSuffix(requestPath, ".ttf") {
-					return next(c)
-				}
-			}
-
-			// Public read-only browsing (GET and OPTIONS).
 			method := c.Request().Method
-			if (method == "GET" || method == "OPTIONS") && (path == "/api/documents" || path == "/api/documents/search" ||
-				strings.HasPrefix(path, "/api/documents/") ||
-				path == "/api/rules" || strings.HasPrefix(path, "/api/rules/") ||
-				path == "/api/stats" || strings.HasPrefix(path, "/api/stats/") ||
-				path == "/api/projects" || strings.HasPrefix(path, "/api/projects/") ||
-				path == "/api/failures" || strings.HasPrefix(path, "/api/failures/") ||
-				path == "/api/ingest/status" ||
-				path == "/api/ingest/orphans" ||
-				path == "/api/updates/status" ||
-				path == "/version") {
+
+			// Spec 12 §3.1: the declared exposure registry is the single source of
+			// truth for this middleware and for RateLimitMiddleware, so the two
+			// can no longer drift. A route that is not declared public is
+			// authenticated (deny by default).
+			path := c.Path()
+			if ExposureFor(method, path, requestPath) == ExposurePublic {
 				return next(c)
 			}
 
@@ -288,53 +244,12 @@ func RateLimitMiddleware(limiter *cache.DistributedRateLimiter, cfg *config.Conf
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			requestPath := c.Request().URL.Path
-
 			path := c.Path()
-			if path == "/health/live" || path == "/health/ready" || path == "/metrics" {
-				return next(c)
-			}
-			if path == "/docs" || path == "/openapi.yaml" {
-				return next(c)
-			}
 
-			if path == "/" || path == "/index.html" || path == "/web/*" || strings.HasPrefix(path, "/static/") {
-				return next(c)
-			}
-			if requestPath == "/" || requestPath == "/index.html" ||
-				strings.HasPrefix(requestPath, "/static/") ||
-				strings.HasPrefix(requestPath, "/web/") ||
-				strings.HasPrefix(requestPath, "/assets/") ||
-				strings.HasPrefix(requestPath, "/js/") ||
-				strings.HasPrefix(requestPath, "/css/") ||
-				requestPath == "/web" {
-				return next(c)
-			}
-			if m := c.Request().Method; (m == http.MethodGet || m == http.MethodHead) && !strings.HasPrefix(requestPath, "/api/") {
-				if strings.HasSuffix(requestPath, ".js") ||
-					strings.HasSuffix(requestPath, ".css") ||
-					strings.HasSuffix(requestPath, ".html") ||
-					strings.HasSuffix(requestPath, ".svg") ||
-					strings.HasSuffix(requestPath, ".png") ||
-					strings.HasSuffix(requestPath, ".jpg") ||
-					strings.HasSuffix(requestPath, ".ico") ||
-					strings.HasSuffix(requestPath, ".woff") ||
-					strings.HasSuffix(requestPath, ".woff2") ||
-					strings.HasSuffix(requestPath, ".ttf") {
-					return next(c)
-				}
-			}
-
-			method := c.Request().Method
-			if (method == "GET" || method == "OPTIONS") && (path == "/api/documents" || path == "/api/documents/search" ||
-				strings.HasPrefix(path, "/api/documents/") ||
-				path == "/api/rules" || strings.HasPrefix(path, "/api/rules/") ||
-				path == "/api/stats" || strings.HasPrefix(path, "/api/stats/") ||
-				path == "/api/projects" || strings.HasPrefix(path, "/api/projects/") ||
-				path == "/api/failures" || strings.HasPrefix(path, "/api/failures/") ||
-				path == "/api/ingest/status" ||
-				path == "/api/ingest/orphans" ||
-				path == "/api/updates/status" ||
-				path == "/version") {
+			// Spec 12 §3.1: the same declared exposure registry APIKeyAuth uses.
+			// A route that is not declared public is authenticated, so the rate
+			// limiter can no longer keep a private skip list of its own.
+			if ExposureFor(c.Request().Method, path, requestPath) == ExposurePublic {
 				return next(c)
 			}
 

@@ -361,6 +361,55 @@ these verbatim. Mutation-kill cases
 `cors-production-wildcard-substituted-not-refused` prove each suite flips
 PASS→FAIL when its control is neutered.
 
+## 10. Implementation note — §3.1 declared exposure registry (2026-10-16)
+
+§3.1 is implemented. There is now a single declared exposure registry that is
+the source of truth for both authentication and rate limiting.
+
+- **One registry, both middlewares (§3.1 rule 2).** New `internal/web/exposure.go`
+  holds an ordered, named rule table. `ExposureFor(method, pattern, requestPath)`
+  returns the class; `APIKeyAuth` and `RateLimitMiddleware` both call it and
+  nothing else. Before this change each middleware carried its own hand-copied
+  skip list (`middleware.go` had two ~40-line blocks that had to be kept in
+  sync by hand), which is exactly the drift §3.1 rule 2 forbids.
+- **Deny by default (§3.1 rule 1).** A request that no rule classifies is
+  `authenticated`. Adding a route cannot make it public; the route must be
+  declared. Pinned by `TestExposureRegistryDeniesByDefault`.
+- **`public` is a written decision, not a suffix (§3.1 rule 3).** Every rule
+  carries a `rationale`, and the extension heuristic is now a declared list
+  (`staticAssetExtensions`) applied only to genuine static fetches — GET/HEAD,
+  never under `/api/`. The unbounded suffix exemption that let
+  `POST /api/ingest/x.js` reach its handler is not reproducible: the asset rule
+  is method- and prefix-constrained and is itself pinned by a negative test and
+  a mutation-kill case.
+- **Behaviour is identical to today (§5).** The rules reproduce the exact
+  pre-registry classification, including `GET /api/rules/sync/status` being
+  public via the `/api/rules/` prefix rule. Tightening the public set per §3.2
+  is the owner decision recorded in §7 and is a separate, reviewed change; the
+  registry is now the single place it will be applied.
+- **Route enumeration (§4.1).** `setupRoutes` was split so the real route table
+  is registered by `registerRoutes(e, s)` and can be enumerated in a test
+  without live dependencies. The two file-serving mounts (`echo.Static("/", …)`
+  and the SPA fallback) are declared as static mounts so enumeration accounts
+  for them; a static mount never classifies a request by pattern, so an
+  undeclared path under `/api/` stays authenticated.
+
+**Evidence:** `internal/web/exposure_test.go` — criterion 1 (every registered
+route maps to exactly one class; zero unmapped; non-vacuous), criterion 2
+(registry says public ⇔ the auth middleware allows it anonymously, checked
+across the whole real route table), criterion 3 (an undocumented route is 401
+without a middleware change), plus pins for the static mounts, the
+method/prefix-constrained asset rule, the GET/OPTIONS-only read set, and a
+rationale for every rule. CI row `security-matrix-exposure-registry` runs these
+verbatim. Mutation-kill cases `exposure-registry-always-public` and
+`exposure-asset-rule-api-exclusion-removed` prove the suites flip PASS→FAIL when
+the registry or the asset constraint is neutered.
+
+**Remaining in this spec (not addressed here):** the §3.2 public-route
+re-decision itself (`/metrics`, `/docs`, `/openapi.yaml`, the API read set) and
+the §3.5 profile/HSTS items — the `public`-profile `/metrics` auth is an
+operator contract (scrape client) and stays an owner decision (§7).
+
 ## 7. Non-goals
 
 - Principal identity and role enforcement — Spec 11.

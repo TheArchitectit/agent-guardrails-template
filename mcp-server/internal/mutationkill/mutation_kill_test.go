@@ -224,6 +224,44 @@ func (s *MCPServer) authorizeToolCallDisabled(ctx context.Context, name string, 
 		pkg:       "./internal/config",
 		testRegex: "^TestEffectiveCORSOrigins$",
 	},
+	{
+		// Spec 12 §3.1: the declared exposure registry is the single skip
+		// source and a route not declared public is authenticated (deny by
+		// default). A bypass that makes every request public must be killed by
+		// the deny-by-default negative suite.
+		name: "exposure-registry-always-public",
+		file: "internal/web/exposure.go",
+		old: `func ExposureFor(method, pattern, requestPath string) ExposureClass {
+	if rule, ok := lookupRule(method, pattern, requestPath); ok {
+		return rule.class
+	}
+	return ExposureAuthenticated
+}`,
+		new: `func ExposureFor(method, pattern, requestPath string) ExposureClass {
+	_, _, _ = method, pattern, requestPath
+	return ExposurePublic
+}`,
+		pkg:       "./internal/web",
+		testRegex: "^TestExposureRegistryDeniesByDefault$",
+	},
+	{
+		// Spec 12 §3.1 rule 3: the static-asset rule is method- and
+		// prefix-constrained. A bypass that drops the /api/ exclusion (the old
+		// unbounded suffix exemption) must be killed by the asset-rule negative
+		// suite.
+		name: "exposure-asset-rule-api-exclusion-removed",
+		file: "internal/web/exposure.go",
+		old: `	if r.assetSuffix {
+		if strings.HasPrefix(requestPath, "/api/") {
+			return false
+		}`,
+		new: `	if r.assetSuffix {
+		if false {
+			return false
+		}`,
+		pkg:       "./internal/web",
+		testRegex: "^TestExposureRegistryAssetRuleStaysConstrained$",
+	},
 }
 
 // findModuleRoot walks up from the test working directory to the directory
