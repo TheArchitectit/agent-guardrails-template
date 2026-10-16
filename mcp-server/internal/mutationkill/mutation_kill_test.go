@@ -281,6 +281,28 @@ func (s *MCPServer) authorizeToolCallDisabled(ctx context.Context, name string, 
 		pkg:       "./internal/web",
 		testRegex: "^TestExposureRegistryAssetRuleStaysConstrained$",
 	},
+	{
+		// Spec 16 R16-01/R16-04: a resource read must be authorized by the same
+		// principal decision model as a tool call. A bypass that makes the
+		// resource boundary always permit must be killed by the resource-read
+		// negative suite.
+		name: "resource-read-authz-always-permits",
+		file: "internal/mcp/resource_policy.go",
+		old: `	decision := auth.Decide(caller, action)
+	// Record the decision with the same audit shape as a tool call. A resource
+	// read is not a security-sensitive mutation, so a missing durable audit is
+	// not fatal here (required=false).
+	_ = s.mcpAuditDecision(ctx, caller, action, decision, false)
+	if !decision.Allow {
+		return errResourcePermissionDenied
+	}
+	return nil`,
+		new: `	_ = action
+	_ = caller
+	return nil`,
+		pkg:       "./internal/mcp",
+		testRegex: "^TestStreamableHTTPResourceReadAuthorization$",
+	},
 }
 
 // findModuleRoot walks up from the test working directory to the directory

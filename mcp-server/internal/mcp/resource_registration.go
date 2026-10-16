@@ -19,7 +19,29 @@ type resourceSpec struct {
 // setupResources registers all guardrail:// resources with the mcp-go server
 // using the v0.58.0 AddResource API.
 func (s *MCPServer) setupResources() {
-	specs := []resourceSpec{
+	for _, spec := range s.resourceSpecs() {
+		spec := spec
+		s.mcpServer.AddResource(
+			mcp.Resource{URI: spec.uri, Name: spec.name},
+			// Every resource read passes the declared resource permission
+			// matrix (Spec 16 R16-01/R16-04) before its handler produces any
+			// contents. The gate is applied centrally here so a newly added
+			// resource cannot bypass authorization by omission.
+			func(ctx context.Context, req mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
+				if err := s.authorizeResourceRead(ctx, req.Params.URI); err != nil {
+					return nil, err
+				}
+				return spec.handler(ctx, req)
+			},
+		)
+	}
+}
+
+// resourceSpecs is the single declared list of registered resources. Split from
+// setupResources so the declared permission matrix can be checked against the
+// real registry without a live server (Spec 16 R16-01).
+func (s *MCPServer) resourceSpecs() []resourceSpec {
+	return []resourceSpec{
 		{
 			uri:  "guardrail://config",
 			name: "Guardrail Configuration",
@@ -91,13 +113,6 @@ func (s *MCPServer) setupResources() {
 			name:    "Available Advisors",
 			handler: s.adaptResource(s.readAvailableAdvisorsResource),
 		},
-	}
-
-	for _, spec := range specs {
-		s.mcpServer.AddResource(
-			mcp.Resource{URI: spec.uri, Name: spec.name},
-			spec.handler,
-		)
 	}
 }
 

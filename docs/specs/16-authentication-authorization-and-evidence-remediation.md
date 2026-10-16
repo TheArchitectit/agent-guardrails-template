@@ -299,3 +299,60 @@ tests, not a runtime permissive fallback.
    non-PASS and disable dependent effects rather than accepting unsigned or
    stale receipts. Retire deprecated trust roots and old keys after the agreed
    overlap, preserving tested revocation and replay bounds.
+
+## 6. Implementation note — R16-01 resource matrix + R16-04 per-resource authorization (2026-10-16)
+
+**Landed on `main`** (strict FF, no force, no PR) via
+`forge/gr-spec16-resource-matrix`. Two named rows of Gate 0/Gate 1 are now
+mechanisms rather than documents.
+
+**The gap was real.** R16-04 required each resource read to be authorized "using
+the same principal decision model as tools", and R16-01 required a complete
+operation-to-permission matrix with default deny for an unmapped resource.
+Before this change the resource handlers produced contents for **any** caller
+that had passed the bearer gate: there was no per-resource decision and no
+declared matrix, so a credential that could not call a read tool (for example a
+`rest:read`-only key) could still read every `guardrail://` resource.
+
+**R16-01 — declared resource permission matrix.**
+`mcp-server/internal/mcp/resource_policy.go` is the single declared table: one
+row per registered resource URI, each with an explicit privilege class and a
+rationale. `classifyResource` returns `known=false` for a URI that is not in the
+table, and `authorizeResourceRead` denies it before any read side effect. The
+registration list was split out of `setupResources` into `resourceSpecs()` so
+the matrix can be checked against the **real registry** without a live server.
+`TestResourcePolicyMatrixCoversEveryRegisteredResource` proves the matrix is
+non-vacuous and cannot fall behind the registry: every registered resource has
+exactly one row, every row names a registered resource, and an undeclared URI is
+unclassifiable (deny by default).
+
+**R16-04 — per-resource authorization.** Every resource handler registered in
+`setupResources` is now wrapped by a central gate that calls
+`authorizeResourceRead(ctx, uri)` before the handler runs. The gate resolves the
+server-controlled principal from the request context (never from the URI or
+request content), classifies the resource, and applies the same
+`auth.Decide` scope × role × resource intersection the tool path uses. A denial
+returns a stable, non-leaking error and produces no contents. The decision is
+recorded with the same audit shape as a tool call (`mcpAuditDecision`,
+`required=false` — a resource read is not a security-sensitive mutation, so a
+missing durable audit is not fatal).
+
+**Evidence.** `resource_policy_test.go` drives the **real StreamableHTTP
+endpoint** (`httptest` + `requireBearerWithRegistry`), not the handlers
+directly: an `mcp:read` + `reader` credential reads `guardrail://config`
+successfully, while an authenticated `rest:read`-only credential is refused and
+the denial message leaks no resource detail. A direct-boundary test proves a
+read with no principal denies, an undeclared resource denies, and an authorized
+principal is allowed (non-vacuous). A new CI row
+`security-matrix-resource-permission` runs all three verbatim, and a new
+mutation-kill case `resource-read-authz-always-permits` proves the negative
+suite flips PASS→FAIL when the decision is neutered.
+
+**Named limits (unchanged, still owner/next-gate work).** R16-06 (role/resource
+enforcement on the tool path) and R16-07 (legacy containment) were already
+implemented in S-A0..A2 and are exercised; this note adds only the resource half
+of the decision surface. R16-09 revocation propagation is exercised for the MCP
+path by `TestLiveRevocationPropagationBound`; the web middleware binds its
+registry at construction, so a source-level revocation there is applied by
+rebuilding the middleware (recorded in that test, not a silent widening).
+R16-10/R16-11 remain unmet by design (no second product consumer yet).
