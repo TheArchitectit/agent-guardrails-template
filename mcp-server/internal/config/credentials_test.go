@@ -19,7 +19,7 @@ func TestIsPlaceholderCredential(t *testing.T) {
 		}
 	}
 	strong := []string{
-		"AbCdEfGhIjKlMnOpQrStUvWxYz123456-db",
+		"operator-db-pass-01",
 		"9f2c7a1e4b6d8f0a2c4e6b8d0f2a4c6e",
 		"correct horse battery staple 42!",
 	}
@@ -40,8 +40,8 @@ func TestValidateNoProductionDefaultCredentials(t *testing.T) {
 		cfg.DBSSLMode = "verify-full"
 		cfg.RedisUseTLS = true
 		cfg.TrustedProxies = []string{"10.0.0.1"}
-		cfg.DBPassword = "AbCdEfGhIjKlMnOpQrStUvWxYz123456-db"
-		cfg.RedisPassword = "AbCdEfGhIjKlMnOpQrStUvWxYz123456-redis"
+		cfg.DBPassword = "operator-db-pass-01"
+		cfg.RedisPassword = "operator-redis-pass-01"
 		return cfg
 	}
 
@@ -82,8 +82,8 @@ func TestValidateNoProductionDefaultCredentials(t *testing.T) {
 	t.Run("production mode rejects a placeholder JWT secret", func(t *testing.T) {
 		cfg := validMinimalConfig()
 		cfg.ProductionMode = true
-		cfg.DBPassword = "AbCdEfGhIjKlMnOpQrStUvWxYz123456-db"
-		cfg.RedisPassword = "AbCdEfGhIjKlMnOpQrStUvWxYz123456-redis"
+		cfg.DBPassword = "operator-db-pass-01"
+		cfg.RedisPassword = "operator-redis-pass-01"
 		cfg.JWTSecret = "changeme"
 		err := cfg.ValidateNoProductionDefaultCredentials()
 		if err == nil {
@@ -115,7 +115,7 @@ func TestValidateCouplesDefaultCredentialGateToProfile(t *testing.T) {
 	cfg.TrustedProxies = []string{"10.0.0.1"}
 	cfg.CORSAllowedOrigins = []string{"https://guardrails.example.com"}
 	cfg.DBPassword = "changeme"
-	cfg.RedisPassword = "AbCdEfGhIjKlMnOpQrStUvWxYz123456-redis"
+	cfg.RedisPassword = "operator-redis-pass-01"
 
 	err := cfg.Validate()
 	if err == nil {
@@ -126,7 +126,7 @@ func TestValidateCouplesDefaultCredentialGateToProfile(t *testing.T) {
 	}
 
 	// Positive control: the same config with a strong credential passes.
-	cfg.DBPassword = "AbCdEfGhIjKlMnOpQrStUvWxYz123456-db"
+	cfg.DBPassword = "operator-db-pass-01"
 	if err := cfg.Validate(); err != nil {
 		t.Fatalf("public config with strong credentials must pass Validate, got %v", err)
 	}

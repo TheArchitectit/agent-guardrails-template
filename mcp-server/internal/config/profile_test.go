@@ -154,8 +154,8 @@ func validMinimalConfig() *Config {
 		// Non-placeholder storage credentials so the R17-05 default-credential
 		// gate (which applies to nonlocal/production profiles) does not mask
 		// the profile/binding failures these tests isolate.
-		DBPassword:    "AbCdEfGhIjKlMnOpQrStUvWxYz123456-db",
-		RedisPassword: "AbCdEfGhIjKlMnOpQrStUvWxYz123456-redis",
+		DBPassword:    "operator-db-pass-01",
+		RedisPassword: "operator-redis-pass-01",
 	}
 }
 
