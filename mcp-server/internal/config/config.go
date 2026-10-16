@@ -298,6 +298,14 @@ func (c *Config) Validate() error {
 		}
 	}
 
+	// Couple the storage transit posture to the effective profile (Spec 17
+	// R17-04): outside the isolated local boundary, DB/Redis transit must be
+	// authenticated and encrypted, and a plaintext posture fails startup rather
+	// than connecting in the clear.
+	if err := c.ValidateStorageTransit(); err != nil {
+		return err
+	}
+
 	// Validate the trusted-proxy stance (Spec 12 §3.4). Every entry must be a
 	// valid IP or CIDR: a malformed entry is a configuration error, not a
 	// silent narrowing to "trust nothing".

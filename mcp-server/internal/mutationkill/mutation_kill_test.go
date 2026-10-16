@@ -327,6 +327,23 @@ func (s *MCPServer) authorizeToolCallDisabled(ctx context.Context, name string, 
 		pkg:       "./internal/mcp",
 		testRegex: "^TestSharedRegistryRevocationPropagatesInProcess$",
 	},
+	{
+		// Spec 17 R17-04: outside the isolated local boundary, DB/Redis transit
+		// must be authenticated and encrypted. A bypass that makes the storage
+		// transit gate always pass (so a nonlocal plaintext posture starts) must
+		// be killed by the storage-transit negative suite.
+		name: "storage-transit-gate-always-permits",
+		file: "internal/config/storage.go",
+		old: `	if profile == DeploymentProfileLocal {
+		return nil
+	}
+	if c.DBSSLMode != "verify-full" {`,
+		new: `	_ = profile
+	return nil
+	if c.DBSSLMode != "verify-full" {`,
+		pkg:       "./internal/config",
+		testRegex: "^TestValidateCouplesStorageTransitToProfile$",
+	},
 }
 
 // findModuleRoot walks up from the test working directory to the directory

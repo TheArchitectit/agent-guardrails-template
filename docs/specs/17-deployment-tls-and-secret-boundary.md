@@ -221,3 +221,47 @@ external bind without an approved profile is likewise only partially enforced
 today: `ValidateDeploymentBinding` covers the bind/profile match and the
 `public`-profile `TRUSTED_PROXIES` requirement, but not "proven TLS termination
 and direct-backend denial". Those remain open and are **not** claimed here.
+
+## 8. Implementation note (2026-10-16) — R17-04 storage transit fail-closed
+
+R17-04 requires authenticated encryption for DB/Redis **whenever either
+connection leaves one verified isolated local boundary**, and requires startup
+to fail if it is missing. Before this change `DB_SSLMode` and `RedisUseTLS`
+were validated only as well-formed values (`config.go`); nothing coupled them to
+the effective deployment profile, so a `tailnet`/`public` deployment could start
+with plaintext DB and Redis and connect in the clear.
+
+**New `Config.ValidateStorageTransit` (`internal/config/storage.go`)** is the
+single decision, called from `Config.Validate` so it gates startup:
+
+- `local` (the default) keeps the isolated-bridge/loopback exception named in
+  R17-04 — the existing Compose posture is unchanged.
+- Any nonlocal profile (`tailnet`, `public`) requires **`DB_SSLMODE=verify-full`**
+  (certificate **and** hostname verification against a trusted CA — `disable`,
+  `prefer`, unverified `require` and `verify-ca` are each refused) **and**
+  `REDIS_USE_TLS=true` (verified server certificate and hostname; no
+  skip-verify path exists in the tree).
+- The check is a hard error naming the requirement and the offending variable,
+  never a silent upgrade, so a misconfiguration stops the process instead of
+  quietly connecting in the clear.
+
+**Evidence.** `internal/config/storage_test.go`: `TestValidateStorageTransit`
+covers the local exception (incl. the empty-profile default), the tailnet and
+public positive cases, and the named negatives (`DB_SSLMODE` ∈ {disable, prefer,
+require, verify-ca} each refused; Redis without TLS refused) asserting the error
+names R17-04 and the variable; `TestValidateCouplesStorageTransitToProfile`
+proves the coupling runs inside `Validate` (a tailnet config with plaintext
+storage fails startup while every other rule is satisfied, and the same config
+with `verify-full` + Redis TLS passes). CI row
+`security-matrix-storage-transit`; mutation-kill case
+`storage-transit-gate-always-permits` proves the negative suite flips PASS→FAIL
+when the gate is neutered (18th case).
+
+**Named limit (documented, not hidden).** This enforces the **posture** — the
+configured transport mode for each connection — which is what a repo-side gate
+can decide. It does not itself prove that a live `verify-full` handshake
+succeeds against a particular CA or that Redis presents a valid certificate;
+that remains a deployment/acceptance-harness assertion under R17-04's scenario 4
+(disposable services), not a claim made here. The rest of spec 17 (profiles
+beyond the bind check, the secret-source/rotation/redaction halves, and the
+metrics/docs binding) remains open.
