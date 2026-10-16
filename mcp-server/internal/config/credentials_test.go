@@ -114,6 +114,9 @@ func TestValidateCouplesDefaultCredentialGateToProfile(t *testing.T) {
 	cfg.RedisUseTLS = true
 	cfg.TrustedProxies = []string{"10.0.0.1"}
 	cfg.CORSAllowedOrigins = []string{"https://guardrails.example.com"}
+	// The R17-02 ingress posture is proven so this test isolates the R17-05
+	// default-credential gate.
+	cfg.DeploymentPreflightFile = writeIngressRecord(t, t.TempDir(), "preflight.json", validIngressRecord(DeploymentProfilePublic))
 	cfg.DBPassword = "changeme"
 	cfg.RedisPassword = "operator-redis-pass-01"
 

@@ -448,6 +448,31 @@ func (s *MCPServer) authorizeToolCallDisabled(ctx context.Context, name string, 
 		pkg:       "./internal/auth",
 		testRegex: "^TestNewRejectsZeroEntropyVerifierKey$",
 	},
+	{
+		// Spec 17 R17-02: before starting a nonlocal listener the process must
+		// fail closed on an unproven ingress posture (public without proven TLS
+		// termination and direct-backend denial; tailnet without verified private
+		// ingress and encrypted authenticated transport). A bypass that makes the
+		// ingress gate always permit (so a public/tailnet deployment starts on an
+		// unproven or plaintext exposure) must be killed by the ingress-posture
+		// negative suite.
+		name: "ingress-posture-gate-always-permits",
+		file: "internal/config/ingress.go",
+		old: `	if profile == DeploymentProfileLocal {
+		return nil
+	}
+
+	path := strings.TrimSpace(c.DeploymentPreflightFile)`,
+		new: `	if profile == DeploymentProfileLocal {
+		return nil
+	}
+	_ = profile
+	return nil
+
+	path := strings.TrimSpace(c.DeploymentPreflightFile)`,
+		pkg:       "./internal/config",
+		testRegex: "^TestValidateCouplesIngressPostureToStartup$",
+	},
 }
 
 // findModuleRoot walks up from the test working directory to the directory

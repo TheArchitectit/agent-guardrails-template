@@ -172,6 +172,13 @@ type Config struct {
 	// which may only listen behind a controlled TLS-terminating proxy.
 	// Empty by default: forwarded headers are ignored (Spec 12 §3.4).
 	TrustedProxies []string `env:"TRUSTED_PROXIES" envSeparator:","`
+	// DeploymentPreflightFile names the commit-bound deployment preflight
+	// record (JSON) that proves the ingress posture for a nonlocal profile
+	// (Spec 17 R17-02): TLS termination and direct-backend denial for `public`,
+	// verified private ingress and encrypted authenticated transport for
+	// `tailnet`. Required outside `local`; a PRODUCTION_MODE flag, TLS_ENABLED
+	// or certificate paths alone never satisfy the gate.
+	DeploymentPreflightFile string `env:"DEPLOYMENT_PREFLIGHT_FILE"`
 
 	// LegacyAcceptanceUntil bounds how long the legacy shared keys
 	// (MCP_API_KEY / IDE_API_KEY) are accepted (Spec 11 §4.5.2). Unset means the
@@ -359,6 +366,15 @@ func (c *Config) Validate() error {
 		if err := c.ValidateDeploymentBinding(c.WebBindAddr()); err != nil {
 			return err
 		}
+	}
+
+	// Fail closed on an unproven nonlocal ingress posture (Spec 17 R17-02): a
+	// `public` deployment must prove TLS termination and direct-backend denial,
+	// a `tailnet` deployment verified private ingress and encrypted
+	// authenticated transport, via a commit-bound preflight record. A bind that
+	// merely is not a wildcard is not evidence of a safe exposure.
+	if err := c.ValidateIngressPosture(); err != nil {
+		return err
 	}
 
 	// Couple the storage transit posture to the effective profile (Spec 17

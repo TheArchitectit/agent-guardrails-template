@@ -525,6 +525,29 @@ jobs:
           cd mcp-server
           go test ./internal/keymaterial ./internal/auth ./internal/config -run 'TestVerifierKeyEntropyBits|TestValidateVerifierKeyEntropyRejectsWeak|TestNewRejectsZeroEntropyVerifierKey|TestValidateCredentialVerifierKeyStrength|TestValidateCouplesVerifierKeyStrengthToStartup' -count=1 -v
 
+  # Spec 17 R17-02: before starting a nonlocal listener the process must fail
+  # closed on an unproven ingress posture. A `public` profile must present a
+  # commit-bound preflight record proving TLS termination AND direct-backend
+  # denial; a `tailnet` profile must prove verified private ingress AND encrypted
+  # authenticated transport. A PRODUCTION_MODE flag, TLS_ENABLED or certificate
+  # paths alone never satisfy the gate, and an operator JSON assertion with no
+  # named positive/negative probe is not evidence.
+  security-matrix-ingress-posture:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Set up Go
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version: '1.25'
+          cache-dependency-path: mcp-server/go.sum
+
+      - name: Ingress posture row
+        run: |
+          cd mcp-server
+          go test ./internal/config -run 'TestValidateIngressPosture|TestValidateIngressPostureRejectsWeakRecordFile|TestValidateCouplesIngressPostureToStartup|TestIngressPreflightPath' -count=1 -v
+
   # R19-04: mutation-kill control. Copies the module to a scratch directory,
   # confirms the real negative suite PASSES, injects a deterministic bypass
   # (webhook SSRF guard always permits; webhook egress policy always permits;
@@ -536,7 +559,8 @@ jobs:
   # non-public origin; resource-read authorization always permits; the
   # legacy-acceptance removal switch ignored; the default-credential gate always
   # permits; the secret-source requirement always satisfied; the debug-endpoint
-  # posture gate always permits; the verifier-key entropy floor removed), and
+  # posture gate always permits; the verifier-key entropy floor removed; the
+  # ingress-posture gate always permits), and
   # requires
   # the SAME suite to FAIL —
   # proving the control detects the bypass. The scratch copy means the protected

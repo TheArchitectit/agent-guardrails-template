@@ -93,6 +93,9 @@ func TestValidateCouplesStorageTransitToProfile(t *testing.T) {
 	cfg.WebEnabled = false
 	cfg.DBSSLMode = "require"
 	cfg.RedisUseTLS = false
+	// The R17-02 ingress posture is proven so this test isolates the R17-04
+	// storage-transit gate.
+	cfg.DeploymentPreflightFile = writeIngressRecord(t, t.TempDir(), "preflight.json", validIngressRecord(DeploymentProfileTailnet))
 	err := cfg.Validate()
 	if err == nil {
 		t.Fatal("Validate must fail on nonlocal plaintext storage transit")

@@ -60,8 +60,8 @@ Before starting this sprint:
 This sprint is complete only when all of the following hold:
 
 - [ ] Named profile selected at startup (default `local`); app bind, host publishes, proxy upstream, and reachability validated as a deployment unit (R17-01). — **EXERCISED (unit)**: `internal/config/profile_test.go`.
-- [ ] Startup fails closed (nonzero exit, no app socket) on insecure external exposure, `public` without TLS termination + direct-backend denial, `tailnet` without verified private ingress + encrypted authenticated transport (R17-02). — **WIRED** (no real-listener negative exercised).
-- [ ] `PRODUCTION_MODE`, `TLS_ENABLED=true`, or cert paths alone never satisfy the exposure gate; no silent downgrade to `local` (R17-02). — **WIRED**.
+- [ ] Startup fails closed (nonzero exit, no app socket) on insecure external exposure, `public` without TLS termination + direct-backend denial, `tailnet` without verified private ingress + encrypted authenticated transport (R17-02). — **EXERCISED (unit) 2026-10-16**: `config.ValidateIngressPosture` / `internal/config/ingress.go` requires a commit-bound preflight record proving the profile's posture; `ingress_test.go` + CI row `security-matrix-ingress-posture`. Real-listener negative still future work.
+- [x] `PRODUCTION_MODE`, `TLS_ENABLED=true`, or cert paths alone never satisfy the exposure gate; no silent downgrade to `local` (R17-02). — **EXERCISED (unit) 2026-10-16**: the gate consults only the proven record (never `TLS_ENABLED`/`PRODUCTION_MODE`), and a record for the wrong profile or an unproven probe fails closed.
 - [ ] Public TLS 1.3+ termination, certificate/hostname/trust validation, trusted-proxy header stance (R17-03). — **NOT_EXERCISED**.
 - [ ] DB/Redis: plaintext only on verified isolated local bridge/loopback for `local`; outside that boundary require `verify-full` / verified Redis TLS, no skip-verify (R17-04). — **WIRED**.
 - [ ] Nonlocal profiles reject unset/empty/placeholder/default/reused/test credentials (R17-05); local generates distinct non-placeholder credentials. — **WIRED**.
