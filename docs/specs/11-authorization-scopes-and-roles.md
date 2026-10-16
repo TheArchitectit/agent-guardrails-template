@@ -1,7 +1,9 @@
 # OpenSpec: API-Key Scopes and Named Roles
 
 **Status:** Proposed; owner decision recorded 2026-10-04: use **both** scoped
-API keys and named roles.
+API keys and named roles. **Implementation status (2026-10-16): substantially
+implemented and exercised on both transports (see §9); the role matrix itself
+still awaits owner acceptance.**
 **Priority:** Critical — prerequisite to destructive/admin operations,
 per-tool access hooks, and Phase 0 exit.
 **Related:** `docs/specs/AUTH-01-mcp-endpoint-auth.md`,
@@ -247,14 +249,81 @@ require the negative tests in §5 before deployment.
 
 ## 9. Implementation status
 
-**Partial, not authorized.** A keyed-HMAC credential registry now loads
-credential/principal IDs, scopes, expiry and revocation flags
-(`mcp-server/internal/auth/registry.go`), and web/MCP authenticate registered
-keys. But `mcp-server/internal/web/middleware.go:115-130` forwards registered
-calls without scope/role/resource checks; `internal/mcp/server.go:388-415`
-accepts registered and legacy keys without principal context at tool dispatch.
-Invalid configured registries can fall back to legacy access. Static
-`MCP_API_KEY` and `IDE_API_KEY` remain; team MCP handlers have no RBAC.
-Confirmation flags are intent controls only. Spec 16 records the blocking
-audit and ordered remediation. This spec must be accepted by the
-owner before implementing the role matrix and legacy-key migration.
+**Substantially implemented; owner acceptance of the role matrix still pending.**
+The §9 text below was re-derived from live source on **2026-10-16** (`main@dccaee9`);
+the prior version of this section described the pre-Spec-16 tree and is
+superseded.
+
+**Implemented and exercised (live-verified 2026-10-16):**
+
+- **Principal/credential model (§4.1).** `mcp-server/internal/auth/registry.go`
+  loads credential/principal IDs, scopes, expiry and revocation state; each
+  record stores only a keyed one-way HMAC-SHA256 verifier, never the secret.
+  `Resolve` uses a constant-time comparison; the secret is never returned or
+  logged (`TestRegistryNeverExposesSecret`, `TestRegistryUsesConstantTimeVerifier`).
+- **Scope catalog (§4.2).** `mcp-server/internal/auth/authz.go` publishes
+  `mcp:read`, `mcp:validate`, `mcp:mutate`, `rest:read`, `rest:write`,
+  `ide:validate`, `admin:manage`; an unknown scope on a credential denies
+  (`TestDecideScopeRoleResourceIntersection` case "unknown scope on credential
+  denies"). Public routes are enumerated in the Spec 12 exposure registry, and
+  the static-asset rule is method- and `/api/`-constrained (no suffix bypass).
+- **Role/permission model (§4.3).** Named roles `reader`, `developer`,
+  `security-operator`, `administrator` map to an explicit permission-class
+  table (`roleActionAllowed`); authorization is by permission class, not
+  role-name string comparison.
+- **Authorization decision (§4.4).** `auth.Decide` implements exactly
+  `authenticated AND not_revoked AND scope_allows AND role_allows AND
+  resource_allows`; missing/unknown inputs deny by default. It is applied on
+  **both** transports before any effect: REST at
+  `mcp-server/internal/web/middleware.go` (`auth.Decide` on the request path)
+  and MCP at `mcp-server/internal/mcp/server.go` `authorizeToolCall` (before
+  tool dispatch), plus the resource-read gate (Spec 16 R16-04). Denials are
+  401 (unauthenticated) / 403 (forbidden) at HTTP and a stable non-leaking
+  permission error on MCP. Security-sensitive mutations fail closed when a
+  required durable audit record cannot be written
+  (`TestAuthzAdminMutationFailsClosedWithoutAudit`).
+- **Legacy migration/containment (§4.5).** `MCP_API_KEY`/`IDE_API_KEY` map to
+  explicit constrained legacy principals (`auth.LegacyPrincipal`); a legacy key
+  is confined to a named read/validate table and can never reach admin
+  (`TestLegacyMCPCallAllowedNamedOnly`, `TestMatchLegacyRouteNoWildcards`,
+  `TestAPIKeyAuth_UnregisteredCredentialDeniedPrivilegedAction`). The truncated
+  `hashAPIKey` is retained only as a non-authoritative log/rate-limit
+  correlation value, never as identity.
+- **Fail-closed registry load.** A configured-but-unloadable registry denies
+  all protected traffic on both transports — there is no legacy fallback
+  (`TestLoadFromSourcesConfiguredInvalidFailsClosed`,
+  `TestStreamableHTTPConfiguredBrokenRegistryDeniesAll`, the web `regErr`
+  branch). The prior §9 claim that an invalid registry "can fall back to legacy
+  access" is no longer true.
+- **Removal-date switch (§4.5.2 / acceptance criterion 8) — added 2026-10-16.**
+  `LEGACY_ACCEPTANCE_UNTIL` (RFC3339) is a **testable** switch: before the
+  deadline the legacy key keeps its surface; once it has passed the key is
+  refused on both transports regardless of registry state, while a registered
+  credential is unaffected; an unset value never retires legacy keys; a
+  malformed value fails closed (503 on REST, startup failure on MCP).
+  `TestLegacyAcceptanceDeadline`, `TestLegacyAcceptanceExpired`,
+  `TestValidateRejectsMalformedLegacyDeadline`,
+  `TestAPIKeyAuth_LegacyAcceptanceRemovalSwitch`,
+  `TestRequireBearerWithPolicyLegacyRemovalSwitch`; CI row
+  `security-matrix-legacy-acceptance`; mutation-kill
+  `legacy-acceptance-removal-switch-ignored` (kills).
+- **Legacy-use observability (§4.5.2) — added 2026-10-16.** Accepted legacy use
+  is counted by `guardrail_legacy_credential_uses_total{surface,class}`, so the
+  migration window is measured (a zero rate gates removal), not assumed.
+
+**Still open (honest limits, not claimed here):**
+
+- **Owner acceptance of the role matrix (§6/§8).** The restrictive matrix and
+  the security-operator/developer postures remain *proposed*; this spec must be
+  accepted by the owner before the matrix is treated as ratified.
+- **Postgres-backed administration** is deferred (§8): the credential store is
+  the operator-owned versioned local registry.
+- **§4.5.2 transition-period mechanics** beyond the removal switch (warning/
+  metric for legacy use is implemented; the documented seven-consecutive-day
+  zero-use precondition is an operator procedure, not a code gate).
+- **R16-06/R16-07** tool-path role/resource enforcement and legacy containment
+  are implemented and exercised (Spec 16); R16-10/R16-11 remain unmet by design
+  (no second product consumer).
+
+Acceptance criteria 1–8 in §5 are now covered by the suites above; criterion 8
+(the deprecation/removal switch) is the mechanism added this pass.

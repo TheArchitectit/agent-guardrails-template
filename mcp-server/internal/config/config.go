@@ -149,6 +149,13 @@ type Config struct {
 	// Empty by default: forwarded headers are ignored (Spec 12 §3.4).
 	TrustedProxies []string `env:"TRUSTED_PROXIES" envSeparator:","`
 
+	// LegacyAcceptanceUntil bounds how long the legacy shared keys
+	// (MCP_API_KEY / IDE_API_KEY) are accepted (Spec 11 §4.5.2). Unset means the
+	// removal switch is not configured and legacy keys keep their historical
+	// surface. A configured value is an RFC3339 timestamp; once it has passed,
+	// a legacy key is refused on both transports regardless of registry state.
+	LegacyAcceptanceUntil string `env:"LEGACY_ACCEPTANCE_UNTIL"`
+
 	// Production Mode Indicator
 	ProductionMode bool `env:"PRODUCTION_MODE" envDefault:"false"`
 }
@@ -187,6 +194,13 @@ func (c *Config) Validate() error {
 	// out-of-band verifier key — supplied inline or as a read-only secret file
 	// — so verifier digests are keyed one-way values.
 	if err := c.validateCredentialRegistry(); err != nil {
+		return err
+	}
+
+	// Validate the legacy-acceptance removal switch (Spec 11 §4.5.2): a
+	// configured value must parse as RFC3339, so an unreadable deadline fails
+	// startup rather than silently disabling the retirement of legacy keys.
+	if _, _, err := c.LegacyAcceptanceDeadline(); err != nil {
 		return err
 	}
 
@@ -352,6 +366,36 @@ func (c *Config) validateCredentialRegistry() error {
 		return fmt.Errorf("CREDENTIAL_VERIFIER_KEY must be at least 16 characters when a credential registry is configured")
 	}
 	return nil
+}
+
+// LegacyAcceptanceDeadline parses LEGACY_ACCEPTANCE_UNTIL. An unset value
+// returns (zero, false, nil): the removal switch is not configured, and legacy
+// keys are not retired by it. A malformed value is a hard error, never a
+// silent "no deadline".
+func (c *Config) LegacyAcceptanceDeadline() (time.Time, bool, error) {
+	if c == nil || strings.TrimSpace(c.LegacyAcceptanceUntil) == "" {
+		return time.Time{}, false, nil
+	}
+	t, err := time.Parse(time.RFC3339, strings.TrimSpace(c.LegacyAcceptanceUntil))
+	if err != nil {
+		return time.Time{}, false, fmt.Errorf("LEGACY_ACCEPTANCE_UNTIL must be an RFC3339 timestamp, got %q", c.LegacyAcceptanceUntil)
+	}
+	return t, true, nil
+}
+
+// LegacyAcceptanceExpired reports whether a configured legacy-acceptance
+// deadline has passed as of now. An unconfigured switch never expires; a
+// malformed one is an error (fail closed at the caller). This is the testable
+// removal-date switch required by Spec 11 acceptance criterion 8.
+func (c *Config) LegacyAcceptanceExpired(now time.Time) (bool, error) {
+	deadline, configured, err := c.LegacyAcceptanceDeadline()
+	if err != nil {
+		return false, err
+	}
+	if !configured {
+		return false, nil
+	}
+	return now.After(deadline), nil
 }
 
 // SourcesConfiguredRegistry reports whether a credential registry source is

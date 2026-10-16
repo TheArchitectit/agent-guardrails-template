@@ -22,6 +22,7 @@ import (
 	"github.com/thearchitectit/guardrail-mcp/internal/config"
 	"github.com/thearchitectit/guardrail-mcp/internal/database"
 	"github.com/thearchitectit/guardrail-mcp/internal/guardrails"
+	"github.com/thearchitectit/guardrail-mcp/internal/metrics"
 	"github.com/thearchitectit/guardrail-mcp/internal/models"
 	"github.com/thearchitectit/guardrail-mcp/internal/notifications"
 	"github.com/thearchitectit/guardrail-mcp/internal/validation"
@@ -539,7 +540,15 @@ func (s *MCPServer) Serve(addr string) error {
 		return fmt.Errorf("credential registry configured but failed to load: %w", err)
 	}
 	mux := http.NewServeMux()
-	mux.Handle("/mcp", requireBearerWithRegistry(s.config.MCPAPIKey, registry, nil, s.httpServer))
+	// Spec 11 §4.5.2: parse the legacy-acceptance removal deadline. A malformed
+	// value fails startup rather than silently disabling the retirement of the
+	// legacy shared key.
+	legacyDeadline, legacyConfigured, err := s.config.LegacyAcceptanceDeadline()
+	if err != nil {
+		slog.Error("legacy-acceptance deadline is malformed; refusing to start", "error", err)
+		return fmt.Errorf("legacy acceptance policy invalid: %w", err)
+	}
+	mux.Handle("/mcp", requireBearerWithPolicy(s.config.MCPAPIKey, registry, nil, legacyConfigured, legacyDeadline, s.httpServer))
 	s.rawServer = &http.Server{Addr: addr, Handler: mux, ReadHeaderTimeout: 10 * time.Second}
 	return s.rawServer.ListenAndServe()
 }
@@ -550,14 +559,20 @@ func requireBearer(key string, next http.Handler) http.Handler {
 	return requireBearerWithRegistry(key, nil, nil, next)
 }
 
-// requireBearerWithRegistry authenticates the MCP endpoint. A credential that
-// resolves in the registry is accepted for its registered principal; otherwise
-// the legacy configured key is accepted unchanged — but only when that key is
-// present, so registry-only cutover does not reinstate legacy access. When
-// regErr is non-nil (a registry was configured but failed to load) every
-// request is denied. Identity is never taken from the presented secret or a
-// log hash.
+// requireBearerWithRegistry authenticates the MCP endpoint with no
+// legacy-acceptance deadline configured. It is retained for callers and tests
+// that exercise the registry behaviour alone; the serving path uses
+// requireBearerWithPolicy so the Spec 11 §4.5.2 removal switch is applied.
 func requireBearerWithRegistry(key string, registry *auth.Registry, regErr error, next http.Handler) http.Handler {
+	return requireBearerWithPolicy(key, registry, regErr, false, time.Time{}, next)
+}
+
+// requireBearerWithPolicy is requireBearerWithRegistry plus the Spec 11 §4.5.2
+// legacy-acceptance removal switch: when legacyConfigured is true and
+// legacyDeadline has passed, the legacy shared key is refused on this surface.
+// A registered credential is unaffected. Accepted legacy use is counted so the
+// migration window is measured, not assumed (acceptance criterion 8).
+func requireBearerWithPolicy(key string, registry *auth.Registry, regErr error, legacyConfigured bool, legacyDeadline time.Time, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Configured-but-broken registry: deny ALL traffic. No legacy fallback.
 		if regErr != nil {
@@ -605,12 +620,26 @@ func requireBearerWithRegistry(key string, registry *auth.Registry, regErr error
 			http.Error(w, "unauthorized", http.StatusUnauthorized)
 			return
 		}
+		// Spec 11 §4.5.2: the legacy-acceptance removal switch. Once the
+		// configured deadline has passed the legacy shared key is refused
+		// regardless of registry state; a registered credential is unaffected.
+		if legacyConfigured && time.Now().After(legacyDeadline) {
+			slog.Warn("Legacy credential refused: acceptance window closed",
+				"credential_class", "legacy_"+legacyClass,
+				"surface", "mcp",
+			)
+			w.Header().Set("WWW-Authenticate", "Bearer")
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			return
+		}
 		caller, ok := auth.LegacyPrincipal(legacyClass)
 		if !ok {
 			w.Header().Set("WWW-Authenticate", "Bearer")
 			http.Error(w, "unauthorized", http.StatusUnauthorized)
 			return
 		}
+		// Spec 11 §4.5.2: accepted legacy use is counted (surface, class only).
+		metrics.RecordLegacyCredentialUse("mcp", legacyClass)
 		ctx := r.Context()
 		ctx = context.WithValue(ctx, ctxKeyPrincipalID, caller.PrincipalID)
 		ctx = context.WithValue(ctx, ctxKeyCredentialID, caller.CredentialID)

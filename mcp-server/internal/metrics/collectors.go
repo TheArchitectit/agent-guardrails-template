@@ -59,6 +59,14 @@ func RecordAuditDrop() {
 	AuditEventsDropped.Inc()
 }
 
+// RecordLegacyCredentialUse counts an accepted legacy-credential request
+// (Spec 11 §4.5.2 / R11.5.2). It is the observable signal that the migration
+// window is still in use, so legacy removal is measured rather than assumed.
+// Labels are the transport surface and the legacy class; never a secret.
+func RecordLegacyCredentialUse(surface, class string) {
+	LegacyCredentialUseTotal.WithLabelValues(surface, class).Inc()
+}
+
 // RecordCircuitBreakerState updates circuit breaker state gauge
 func RecordCircuitBreakerState(name string, state string) {
 	var stateValue float64

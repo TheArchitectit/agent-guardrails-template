@@ -370,6 +370,30 @@ jobs:
           cd mcp-server
           go test ./internal/mcp -run 'TestResourcePolicyMatrixCoversEveryRegisteredResource|TestStreamableHTTPResourceReadAuthorization|TestAuthorizeResourceReadDeniesWithoutPrincipal' -count=1 -v
 
+  # Spec 11 §4.5.2 / acceptance criterion 8: the legacy-acceptance removal
+  # switch is testable on both transports. Before the deadline the legacy
+  # shared key keeps its surface; once the deadline has passed it is refused
+  # while a registered credential is unaffected; a malformed deadline fails
+  # closed. Also proves accepted legacy use is counted (migration measured,
+  # not assumed).
+  security-matrix-legacy-acceptance:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Set up Go
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version: '1.25'
+          cache-dependency-path: mcp-server/go.sum
+
+      - name: Legacy-acceptance removal switch row
+        run: |
+          cd mcp-server
+          go test ./internal/config -run 'TestLegacyAcceptance|TestValidateRejectsMalformedLegacyDeadline' -count=1 -v
+          go test ./internal/web -run 'TestAPIKeyAuth_LegacyAcceptanceRemovalSwitch' -count=1 -v
+          go test ./internal/mcp -run 'TestRequireBearerWithPolicyLegacyRemovalSwitch' -count=1 -v
+
   # Spec 12 §3.6 / Spec 17 R17-03: security-headers row. Drives the real
   # middleware chain and asserts the deprecated X-XSS-Protection header is
   # never emitted, the headers that do the work are present, and HSTS is
@@ -400,7 +424,8 @@ jobs:
   # IP stance trusts every peer; readiness lifecycle gate removed; required
   # readiness probe failure swallowed; exposure registry always public;
   # exposure asset rule /api/ exclusion removed; HSTS emitted for a
-  # non-public origin; resource-read authorization always permits), and requires
+  # non-public origin; resource-read authorization always permits; the
+  # legacy-acceptance removal switch ignored), and requires
   # the SAME suite to FAIL —
   # proving the control detects the bypass. The scratch copy means the protected
   # tree is never left mutated. The docs-gate control runs the real link checker

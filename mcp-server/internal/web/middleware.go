@@ -7,12 +7,14 @@ import (
 	"log/slog"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/labstack/echo/v4"
 	"github.com/thearchitectit/guardrail-mcp/internal/audit"
 	"github.com/thearchitectit/guardrail-mcp/internal/auth"
 	"github.com/thearchitectit/guardrail-mcp/internal/cache"
 	"github.com/thearchitectit/guardrail-mcp/internal/config"
+	"github.com/thearchitectit/guardrail-mcp/internal/metrics"
 )
 
 // APIKeyAuth creates middleware for API key authentication and authorization.
@@ -22,6 +24,10 @@ import (
 // Identity/role/tenant are never taken from request content.
 func APIKeyAuth(cfg *config.Config, auditLogger *audit.Logger) echo.MiddlewareFunc {
 	registry, regErr := buildCredentialRegistry(cfg)
+	// Spec 11 §4.5.2: parse the legacy-acceptance removal deadline once at
+	// construction; the deadline is compared per request so a passed deadline
+	// takes effect without a restart. A malformed value fails closed below.
+	legacyDeadline, legacyConfigured, legacyDeadlineErr := cfg.LegacyAcceptanceDeadline()
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			// Allow OPTIONS requests (CORS preflight) without authentication.
@@ -108,8 +114,36 @@ func APIKeyAuth(cfg *config.Config, auditLogger *audit.Logger) echo.MiddlewareFu
 				if !ok {
 					return echo.NewHTTPError(http.StatusUnauthorized, "Invalid API key")
 				}
+
+				// Spec 11 §4.5.2 / acceptance criterion 8: the legacy-acceptance
+				// removal switch. Once the configured deadline has passed, a legacy
+				// key is refused on this surface regardless of registry state. A
+				// malformed deadline is a hard failure, never a silent pass.
+				if legacyDeadlineErr != nil {
+					slog.Error("legacy-acceptance deadline is malformed; refusing legacy credential",
+						"error", legacyDeadlineErr,
+						"path", path,
+					)
+					return echo.NewHTTPError(http.StatusServiceUnavailable, "legacy acceptance policy unavailable")
+				}
+				if legacyConfigured && time.Now().After(legacyDeadline) {
+					slog.Warn("Legacy credential refused: acceptance window closed",
+						"credential_class", "legacy_"+legacyClass,
+						"path", path,
+						"ip", c.RealIP(),
+					)
+					restAuditDecision(c, auditLogger, legacyCaller, auth.ActionRequest{
+						Name: method + " " + requestPath, Kind: "unknown",
+					}, auth.Decision{Allow: false, Code: auth.ReasonLegacyNotAllowed, Reason: "legacy acceptance window closed"}, false)
+					return echo.NewHTTPError(http.StatusForbidden, "legacy credential acceptance window closed")
+				}
+
 				caller = legacyCaller
 				isLegacy = true
+
+				// Spec 11 §4.5.2: accepted legacy use is counted so the migration
+				// window is measured (a zero rate gates removal), never assumed.
+				metrics.RecordLegacyCredentialUse("rest", legacyClass)
 
 				if registry.Enabled() {
 					// Explicit method/path allowlist. No safe-method wildcard

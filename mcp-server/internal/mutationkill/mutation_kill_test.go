@@ -303,6 +303,18 @@ func (s *MCPServer) authorizeToolCallDisabled(ctx context.Context, name string, 
 		pkg:       "./internal/mcp",
 		testRegex: "^TestStreamableHTTPResourceReadAuthorization$",
 	},
+	{
+		// Spec 11 §4.5.2 / acceptance criterion 8: once the configured
+		// legacy-acceptance deadline has passed, a legacy shared key must be
+		// refused. A bypass that neuters the removal switch (so a legacy key is
+		// accepted forever) must be killed by the legacy-acceptance suite.
+		name: "legacy-acceptance-removal-switch-ignored",
+		file: "internal/web/middleware.go",
+		old:  `if legacyConfigured && time.Now().After(legacyDeadline) {`,
+		new:  `if legacyConfigured && false && time.Now().After(legacyDeadline) {`,
+		pkg:       "./internal/web",
+		testRegex: "^TestAPIKeyAuth_LegacyAcceptanceRemovalSwitch$",
+	},
 }
 
 // findModuleRoot walks up from the test working directory to the directory

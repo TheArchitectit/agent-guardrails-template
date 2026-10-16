@@ -143,6 +143,22 @@ var (
 	)
 )
 
+// Legacy credential metrics (Spec 11 §4.5.2)
+var (
+	// LegacyCredentialUseTotal counts accepted legacy-credential requests,
+	// by transport surface and legacy class. A zero rate over the agreed
+	// window is the precondition for removing the legacy fallback.
+	LegacyCredentialUseTotal = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Namespace: namespace,
+			Subsystem: "legacy_credential",
+			Name:      "uses_total",
+			Help:      "Total number of accepted legacy-credential requests",
+		},
+		[]string{"surface", "class"},
+	)
+)
+
 // Audit metrics
 var (
 	// AuditEventsTotal tracks audit events
