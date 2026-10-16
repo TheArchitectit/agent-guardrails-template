@@ -24,6 +24,15 @@ import (
 // Identity/role/tenant are never taken from request content.
 func APIKeyAuth(cfg *config.Config, auditLogger *audit.Logger) echo.MiddlewareFunc {
 	registry, regErr := buildCredentialRegistry(cfg)
+	return APIKeyAuthWithRegistry(cfg, auditLogger, registry, regErr)
+}
+
+// APIKeyAuthWithRegistry is APIKeyAuth with a caller-supplied registry. The
+// serving path passes the process-wide registry so that a revocation reloaded
+// in place (Spec 16 §4 / R16-09) is observed by this middleware on the next
+// request without rebuilding it. Tests that only exercise one credential set
+// keep using APIKeyAuth, which builds a private registry.
+func APIKeyAuthWithRegistry(cfg *config.Config, auditLogger *audit.Logger, registry *auth.Registry, regErr error) echo.MiddlewareFunc {
 	// Spec 11 §4.5.2: parse the legacy-acceptance removal deadline once at
 	// construction; the deadline is compared per request so a passed deadline
 	// takes effect without a restart. A malformed value fails closed below.

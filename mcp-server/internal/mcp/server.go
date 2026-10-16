@@ -54,6 +54,21 @@ type MCPServer struct {
 	sessionsMu           sync.RWMutex
 	productionCodeStore  *database.ProductionCodeStore
 	fixVerificationStore *database.FixVerificationStore
+
+	// sharedRegistry is the process-wide credential-to-principal registry
+	// (Spec 16 R16-09). When set, Serve authenticates against it instead of
+	// loading a private copy, so an in-place revocation reload driven by the
+	// process owner denies the next request here too. When nil, Serve loads its
+	// own registry (the standalone path).
+	sharedRegistry *auth.Registry
+}
+
+// SetCredentialRegistry installs the process-wide credential registry so the
+// MCP surface shares the exact object the web surface uses. A revocation
+// reloaded in place is then enforced on both surfaces within
+// RevocationPropagationBound.
+func (s *MCPServer) SetCredentialRegistry(registry *auth.Registry) {
+	s.sharedRegistry = registry
 }
 
 // SetWebhookStore sets the webhook store for notification tools.
@@ -531,14 +546,20 @@ func (s *MCPServer) Serve(addr string) error {
 		server.WithEndpointPath("/mcp"),
 		server.WithStateLess(true),
 	)
-	// Load the credential-to-principal registry (Spec 15 / gr-xp-01). When a
-	// registry is configured but fails to load, fail startup: never fall back
-	// to unrestricted legacy access.
-	registry, err := auth.LoadFromSourcesEx(s.config.CredentialRegistryJSON, s.config.CredentialRegistryFile, s.config.CredentialVerifierKey, s.config.CredentialVerifierKeyFile)
-	if err != nil {
-		slog.Error("credential registry configured but failed to load; refusing to start", "error", err)
-		return fmt.Errorf("credential registry configured but failed to load: %w", err)
+	// Use the process-wide registry when the owner installed one (Spec 16
+	// R16-09), so an in-place revocation reload is shared with the web surface.
+	// Otherwise load a private copy; a configured-but-unloadable registry fails
+	// startup rather than falling back to unrestricted legacy access.
+	registry := s.sharedRegistry
+	if registry == nil {
+		loaded, err := auth.LoadFromSourcesEx(s.config.CredentialRegistryJSON, s.config.CredentialRegistryFile, s.config.CredentialVerifierKey, s.config.CredentialVerifierKeyFile)
+		if err != nil {
+			slog.Error("credential registry configured but failed to load; refusing to start", "error", err)
+			return fmt.Errorf("credential registry configured but failed to load: %w", err)
+		}
+		registry = loaded
 	}
+	var err error
 	mux := http.NewServeMux()
 	// Spec 11 §4.5.2: parse the legacy-acceptance removal deadline. A malformed
 	// value fails startup rather than silently disabling the retirement of the

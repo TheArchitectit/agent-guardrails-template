@@ -308,12 +308,24 @@ func (s *MCPServer) authorizeToolCallDisabled(ctx context.Context, name string, 
 		// legacy-acceptance deadline has passed, a legacy shared key must be
 		// refused. A bypass that neuters the removal switch (so a legacy key is
 		// accepted forever) must be killed by the legacy-acceptance suite.
-		name: "legacy-acceptance-removal-switch-ignored",
-		file: "internal/web/middleware.go",
-		old:  `if legacyConfigured && time.Now().After(legacyDeadline) {`,
-		new:  `if legacyConfigured && false && time.Now().After(legacyDeadline) {`,
+		name:      "legacy-acceptance-removal-switch-ignored",
+		file:      "internal/web/middleware.go",
+		old:       `if legacyConfigured && time.Now().After(legacyDeadline) {`,
+		new:       `if legacyConfigured && false && time.Now().After(legacyDeadline) {`,
 		pkg:       "./internal/web",
 		testRegex: "^TestAPIKeyAuth_LegacyAcceptanceRemovalSwitch$",
+	},
+	{
+		// Spec 16 §4 / R16-09: a revocation visible in the registry source must
+		// propagate to denial within the published bound. A bypass that makes the
+		// in-place reload a no-op (so a revoked credential is never re-evaluated)
+		// must be killed by the shared-registry revocation suite.
+		name:      "registry-reload-once-noop-revocation-never-propagates",
+		file:      "internal/auth/reloader.go",
+		old:       `	return r.ReloadFromSources(s.InlineJSON, s.FilePath, key)`,
+		new:       "\t_ = key\n\t_ = s\n\treturn nil",
+		pkg:       "./internal/mcp",
+		testRegex: "^TestSharedRegistryRevocationPropagatesInProcess$",
 	},
 }
 

@@ -15,6 +15,7 @@ import (
 
 	"github.com/thearchitectit/guardrail-mcp/internal/api"
 	"github.com/thearchitectit/guardrail-mcp/internal/audit"
+	"github.com/thearchitectit/guardrail-mcp/internal/auth"
 	"github.com/thearchitectit/guardrail-mcp/internal/cache"
 	"github.com/thearchitectit/guardrail-mcp/internal/config"
 	"github.com/thearchitectit/guardrail-mcp/internal/database"
@@ -145,6 +146,12 @@ func main() {
 	haltEventStore := database.NewHaltEventStore(db)
 	mcpSrv := mcpServer.NewMCPServer(cfg, db, redisClient, auditLogger, validationEngine, fileReadStore, taskAttemptStore, haltEventStore)
 
+	// Share the process-wide credential registry with the MCP surface so a
+	// revocation reloaded in place denies both surfaces (Spec 16 R16-09). A
+	// configured-but-unloadable registry is nil here; the MCP Serve path then
+	// fails closed at startup exactly as before.
+	mcpSrv.SetCredentialRegistry(webServer.CredentialRegistry())
+
 	// Initialize the guardrails engine (content filter + policy engine) for
 	// the guardrail_classify_content and guardrail_check_policy tools. The
 	// Llama Guard backend is enabled when an Ollama URL is configured.
@@ -191,6 +198,24 @@ func main() {
 	// Start servers
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
+	// Revocation reload loop (Spec 16 §4 / R16-09): re-read the configured
+	// registry sources periodically and swap the validated snapshot in, so a
+	// revoked credential is denied on both surfaces within
+	// RevocationPropagationBound without a process restart. A failed reload
+	// leaves the previous snapshot in force (never falls back to legacy).
+	if reg := webServer.CredentialRegistry(); reg != nil {
+		sources := auth.Sources{
+			InlineJSON:      cfg.CredentialRegistryJSON,
+			FilePath:        cfg.CredentialRegistryFile,
+			VerifierKey:     cfg.CredentialVerifierKey,
+			VerifierKeyFile: cfg.CredentialVerifierKeyFile,
+		}
+		reg.StartReloadLoop(ctx, sources, auth.RevocationReloadInterval, func(err error) {
+			slog.Warn("credential registry reload failed; previous validated snapshot remains in force", "error", err)
+		})
+		slog.Info("Credential registry reload loop started", "interval", auth.RevocationReloadInterval, "bound", auth.RevocationPropagationBound)
+	}
 
 	// Lifecycle gate (Spec 18 §5.2 / R18-12): readiness stays non-ready until
 	// every ordered check passes; only then is the READY state published.

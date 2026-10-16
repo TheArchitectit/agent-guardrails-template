@@ -14,6 +14,7 @@ import (
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/thearchitectit/guardrail-mcp/internal/audit"
+	"github.com/thearchitectit/guardrail-mcp/internal/auth"
 	"github.com/thearchitectit/guardrail-mcp/internal/cache"
 	"github.com/thearchitectit/guardrail-mcp/internal/clientip"
 	"github.com/thearchitectit/guardrail-mcp/internal/config"
@@ -47,6 +48,14 @@ type Server struct {
 
 	// readiness runs the ordered readiness checks (Spec 18 §3 / R18-07..R18-13).
 	readiness *ReadinessEvaluator
+
+	// credentialRegistry is the process-wide credential-to-principal registry
+	// (Spec 15 / Spec 16 R16-09). It is loaded once at construction and shared
+	// with the MCP surface so an in-place revocation reload is observed by both
+	// middleware chains within RevocationPropagationBound. A configured-but-
+	// unloadable registry is carried as an error so both surfaces fail closed.
+	credentialRegistry    *auth.Registry
+	credentialRegistryErr error
 }
 
 // NewServer creates a new web server
@@ -101,10 +110,22 @@ func NewServer(cfg *config.Config, db *database.DB, cacheClient *cache.Client, a
 		PolicyRequired:     false,
 	})
 
+	// Load the process-wide credential registry once (Spec 16 R16-09). The
+	// middleware consults this exact object, so an operator reload applied to
+	// it denies the next request on this surface without a rebuild.
+	s.credentialRegistry, s.credentialRegistryErr = buildCredentialRegistry(cfg)
+
 	s.setupMiddleware()
 	s.setupRoutes()
 
 	return s
+}
+
+// CredentialRegistry exposes the process-wide registry so the process owner
+// (cmd/server) can drive an in-place revocation reload shared with the MCP
+// surface, and so readiness can report its state without a second load.
+func (s *Server) CredentialRegistry() *auth.Registry {
+	return s.credentialRegistry
 }
 
 // SetLifecycle moves the process lifecycle state (Spec 18 §5.2 / R18-12).
@@ -220,8 +241,10 @@ func (s *Server) setupMiddleware() {
 		MaxAge:       s.cfg.CORSMaxAge,
 	}))
 
-	// API Key Authentication (required for all routes except health/metrics)
-	s.echo.Use(APIKeyAuth(s.cfg, s.auditLogger))
+	// API Key Authentication (required for all routes except health/metrics).
+	// The process-wide registry is passed so an in-place revocation reload is
+	// seen by this middleware on the next request (Spec 16 R16-09).
+	s.echo.Use(APIKeyAuthWithRegistry(s.cfg, s.auditLogger, s.credentialRegistry, s.credentialRegistryErr))
 
 	// Rate Limiting
 	limiter := s.cache.NewDistributedLimiter()
