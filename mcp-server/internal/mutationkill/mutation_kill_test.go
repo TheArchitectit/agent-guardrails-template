@@ -473,6 +473,28 @@ func (s *MCPServer) authorizeToolCallDisabled(ctx context.Context, name string, 
 		pkg:       "./internal/config",
 		testRegex: "^TestValidateCouplesIngressPostureToStartup$",
 	},
+	{
+		// Spec 17 R17-08: credential material must never reach logs or error
+		// surfaces. The webhook delivery-failure log wrote the raw target URL and
+		// the transport error (a *url.Error embedding the FULL URL), so a
+		// query-string credential (?token=***, ?api_key=***, a signed URL) landed
+		// in the log, the stored delivery row and the get_webhook_deliveries
+		// tool response. A bypass that makes the URL redactor a no-op must be
+		// killed by the delivery-log redaction suite.
+		name: "webhook-target-url-query-redaction-removed",
+		file: "internal/notifications/redact.go",
+		old: `func RedactURLsInText(text string) string {
+	if text == "" {
+		return ""
+	}`,
+		new: `func RedactURLsInText(text string) string {
+	return text
+	if text == "" {
+		return ""
+	}`,
+		pkg:       "./internal/notifications",
+		testRegex: "^TestWebhookDeliveryFailureLogWithholdsTargetQuery$",
+	},
 }
 
 // findModuleRoot walks up from the test working directory to the directory

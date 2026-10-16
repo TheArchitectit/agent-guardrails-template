@@ -343,3 +343,68 @@ is the operator-run preflight the record reports, exactly as §4 specifies. A
 R17-01 loopback/bridge bind rule. Post-start drift re-verification ("halt
 protected traffic until repaired") remains future integration work alongside the
 readiness contract.
+
+## 15. Implementation note (2026-10-16) — R17-08 redaction half (webhook delivery path)
+
+The request-log half (§11) closed one log surface. A second, independent surface
+carried the same class of secret and was still live: the **webhook delivery
+path**. R17-08 requires credential material never reach "errors, logs, audit,
+traces, metrics, crash reports, health output and MCP/REST resources", and a
+webhook target is operator-supplied and routinely carries credential material in
+its query string — `?token=***`, `?api_key=***`, a signed URL, a shared-secret
+query parameter.
+
+Two sites wrote it:
+
+- `internal/notifications/webhook_dispatcher.go` `deliver` recorded the raw
+  `wh.URL` as the `url` attribute of the delivery-failure log line.
+- the error from `http.Client.Do` is a `*url.Error` whose `Error()` text embeds
+  the **FULL** target URL, query string included. That text was written to the
+  same log line's `error` attribute, stored on the delivery row
+  (`recordDelivery`), and returned by the `get_webhook_deliveries` tool.
+  `SendTestEvent` stored and returned the same shape through `test_webhook`.
+
+**Verified live before the fix.** Driving the real `deliver` path with a
+loopback target carrying a canary in its query (`…/hook?token=***<canary>`)
+wrote the canary verbatim, twice over:
+
+```
+level=WARN msg="webhook delivery failed after retries" webhook_id=wh1
+  url="http://127.0.0.1:38033/hook?token=***<canary>"
+  error="request failed: Post \"http://127.0.0.1:38033/hook?token=***<canary>\":
+         refusing webhook delivery to 127.0.0.1 (ipv4 loopback)"
+```
+
+**Fix.** New `internal/notifications/redact.go` is the single decision for URL
+redaction on log and error surfaces: `RedactURLsInText` withholds the query
+string of every absolute http(s) URL in a piece of text (including one embedded
+in a wrapped error) and leaves the rest of the text untouched, so an ordinary
+error message is unaltered. `deliver` now logs `RedactURLForLog(wh.URL)` and
+`RedactURLsInText(lastErr.Error())`; `SendTestEvent` stores
+`RedactURLsInText(err.Error())`. Scheme, host and path survive for correlation —
+the same rule the request logger applies to `RequestURI` (§11). The whole query
+is withheld rather than filtered by parameter name, because a name-based
+allowlist fails open on the first unlisted parameter.
+
+**Evidence.** `internal/notifications/redact_test.go`:
+`TestRedactURLsInText` pins the rule (no URL unchanged, empty unchanged, bare URL
+unchanged, query withheld, URL inside wrapped error text redacted, http scheme
+covered, two URLs both redacted, a non-http scheme untouched);
+`TestWebhookDeliveryFailureLogWithholdsTargetQuery` drives the **real** `deliver`
+path through the real egress dial guard and asserts the log names the path, the
+marker is present, the canary is absent from both the log and the stored error,
+with a positive control that the failure record was emitted (non-vacuous); and
+`TestWebhookTestEventErrorWithholdsTargetQuery` does the same for `SendTestEvent`
+— the path the `test_webhook` / `get_webhook_deliveries` tools expose.
+Red-on-drift proven: neutering `RedactURLsInText` to return its input flips both
+path tests PASS→FAIL (the canary reappears in the log and the returned error).
+New CI step "Webhook target-URL query redaction (Spec 17 R17-08)" in the
+`security-matrix-secret-redaction` job (`team-validation.yml`); new mutation-kill
+case `webhook-target-url-query-redaction-removed` (harness now **25 cases, all
+killed**).
+
+**Named limit (documented, not hidden).** A credential carried in the URL
+*path* is not redacted (paths are the correlation key, mirroring §11). The
+`WEBHOOK_HMAC_SECRET` column, encrypted-at-rest storage and rotation remain the
+open R17-06/R17-10 items already recorded in `docs/security/SECRET-INVENTORY.md`
+— this note claims only the delivery-path query half.

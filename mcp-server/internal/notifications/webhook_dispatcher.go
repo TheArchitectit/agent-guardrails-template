@@ -159,12 +159,15 @@ func (d *Dispatcher) deliver(wh *WebhookConfig, eventType string, payloadJSON []
 
 	errMsg := ""
 	if lastErr != nil {
-		errMsg = lastErr.Error()
+		// R17-08: a transport error from http.Client.Do is a *url.Error whose
+		// text embeds the FULL target URL, query string included, so the
+		// credential must be withheld here as well as from the url attribute.
+		errMsg = RedactURLsInText(lastErr.Error())
 	}
 	d.recordDelivery(ctx, wh.ID, eventType, lastStatusCode, lastResponseBody, false, errMsg)
 	slog.Warn("webhook delivery failed after retries",
 		"webhook_id", wh.ID,
-		"url", wh.URL,
+		"url", RedactURLForLog(wh.URL),
 		"event_type", eventType,
 		"error", errMsg,
 	)
@@ -307,11 +310,14 @@ func (d *Dispatcher) SendTestEvent(ctx context.Context, webhookID string) (*Webh
 	resp, err := d.client.Do(req)
 	if err != nil {
 		delivery := &WebhookDelivery{
-			ID:           uuid.New().String(),
-			WebhookID:    webhookID,
-			EventType:    "test",
-			Success:      false,
-			ErrorMessage: err.Error(),
+			ID:        uuid.New().String(),
+			WebhookID: webhookID,
+			EventType: "test",
+			Success:   false,
+			// R17-08: the *url.Error embeds the full target URL (query string
+			// included), and this message is stored and returned by the
+			// test_webhook / get_webhook_deliveries tools.
+			ErrorMessage: RedactURLsInText(err.Error()),
 			DeliveredAt:  time.Now().UTC(),
 		}
 		_ = d.store.RecordDelivery(ctx, delivery)

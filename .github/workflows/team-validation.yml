@@ -247,6 +247,16 @@ jobs:
           cd mcp-server
           go test ./internal/middleware -run 'TestRedactRequestURI|TestRequestLoggerWithholdsQueryString' -count=1 -v
 
+      # Spec 17 R17-08 (redaction half, delivery path): the webhook
+      # delivery-failure log wrote the raw target URL and the transport error
+      # (a *url.Error embedding the FULL URL), so a query-string credential
+      # reached the log, the stored delivery row and the tool response. Only
+      # the query is now withheld; scheme/host/path survive.
+      - name: Webhook target-URL query redaction (Spec 17 R17-08)
+        run: |
+          cd mcp-server
+          go test ./internal/notifications -run 'TestRedactURLsInText|TestWebhookDeliveryFailureLogWithholdsTargetQuery|TestWebhookTestEventErrorWithholdsTargetQuery' -count=1 -v
+
   # R19-07: webhook SSRF row. The dispatcher POSTs to the stored URL, so the
   # configuration-time URL guard must reject loopback, link-local (including
   # cloud metadata 169.254.169.254 and IPv4-mapped forms), private, and
