@@ -40,9 +40,20 @@ type Config struct {
 	CORSAllowedHeaders []string `env:"CORS_ALLOWED_HEADERS" envDefault:"Authorization,Content-Type,X-Request-ID"`
 	CORSMaxAge         int      `env:"CORS_MAX_AGE" envDefault:"86400"`
 
-	// Profiling Configuration
-	PProfEnabled bool `env:"PPROF_ENABLED" envDefault:"false"`
-	PProfPort    int  `env:"PPROF_PORT" envDefault:"6060"`
+	// Profiling Configuration (Spec 17 R17-09). Disabled by default; when
+	// enabled for diagnosis it must bind a loopback-only address, carry a
+	// bounded access window (PPROF_UNTIL) and, outside the local profile, an
+	// explicit attestation that no public/tailnet proxy route reaches it.
+	PProfEnabled  bool   `env:"PPROF_ENABLED" envDefault:"false"`
+	PProfPort     int    `env:"PPROF_PORT" envDefault:"6060"`
+	PProfBindHost string `env:"PPROF_BIND_HOST" envDefault:"127.0.0.1"`
+	// PProfUntil is the RFC3339 deadline after which the debug endpoint must
+	// stop serving. Required when PProfEnabled is true.
+	PProfUntil string `env:"PPROF_UNTIL"`
+	// PProfNoProxyRouteAttestation is the operator attestation that no
+	// public/tailnet proxy route reaches the loopback debug endpoint. Required
+	// outside the local profile.
+	PProfNoProxyRouteAttestation string `env:"PPROF_NO_PROXY_ROUTE_ATTESTATION"`
 
 	// Health Check Configuration
 	HealthCheckTimeout time.Duration `env:"HEALTH_CHECK_TIMEOUT" envDefault:"3s"`
@@ -244,6 +255,14 @@ func (c *Config) Validate() error {
 	// configured value must parse as RFC3339, so an unreadable deadline fails
 	// startup rather than silently disabling the retirement of legacy keys.
 	if _, _, err := c.LegacyAcceptanceDeadline(); err != nil {
+		return err
+	}
+
+	// Validate the debug/pprof endpoint posture (Spec 17 R17-09): when enabled
+	// it must be loopback-only, time-boxed, and — outside the local profile —
+	// carry an explicit no-proxy-route attestation. A misconfigured debug
+	// endpoint fails startup rather than serving an administrative surface.
+	if err := c.ValidateDebugEndpoint(); err != nil {
 		return err
 	}
 

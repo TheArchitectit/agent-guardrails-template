@@ -412,6 +412,27 @@ func (s *MCPServer) authorizeToolCallDisabled(ctx context.Context, name string, 
 		pkg:       "./internal/middleware",
 		testRegex: "^TestRequestLoggerWithholdsQueryString$",
 	},
+	{
+		// Spec 17 R17-09: when the debug/pprof endpoint is enabled it must be
+		// loopback-only and time-boxed, and the gate must run inside Validate.
+		// A bypass that makes the debug-posture gate always permit (so a
+		// non-loopback, unbounded administrative surface starts) must be killed
+		// by the debug-posture negative suite.
+		name: "debug-endpoint-posture-gate-always-permits",
+		file: "internal/config/debug.go",
+		old: `func (c *Config) ValidateDebugEndpoint() error {
+	if c == nil || !c.PProfEnabled {
+		return nil
+	}`,
+		new: `func (c *Config) ValidateDebugEndpoint() error {
+	_ = c
+	return nil
+	if c == nil || !c.PProfEnabled {
+		return nil
+	}`,
+		pkg:       "./internal/config",
+		testRegex: "^TestValidateCouplesDebugPostureToStartup$",
+	},
 }
 
 // findModuleRoot walks up from the test working directory to the directory

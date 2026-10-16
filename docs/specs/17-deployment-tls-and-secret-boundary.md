@@ -425,3 +425,49 @@ name only host and database). The remaining R17-08 scope — argv in manifests
 (done, §6), shell-expanded command strings outside the manifests, and rotation —
 stays tracked under `SPRINT-A2-credential-lifecycle`; this note claims only the
 request-log query half.
+
+## 12. Implementation note (2026-10-16) — R17-09 debug (pprof) binding
+
+R17-09 requires that pprof stay **disabled by default** and, when enabled for
+diagnosis, "bind to a local-only administrative endpoint with no public/tailnet
+proxy route and time-box access". Only the "disabled by default" half was
+honoured: `PPROF_ENABLED` gated a `startPProfServer(port)` that bound
+`localhost:<port>` **unconditionally**, served the process-wide
+`http.DefaultServeMux` (`http.ListenAndServe(addr, nil)`), and had **no
+expiry** — once enabled it served for the life of the process, and any handler
+registered on the default mux anywhere in the process was reachable through it.
+
+**Fix.** New `internal/config/debug.go` is the single decision, enforced from
+`Config.Validate` at startup and consulted again when the listener starts:
+
+- `ValidateDebugEndpoint` refuses a non-loopback `PPROF_BIND_HOST`, an
+  out-of-range port, an **enabled endpoint with no `PPROF_UNTIL`**, an already
+  elapsed window, a malformed window (never a silent unbounded window), and —
+  outside the `local` profile — an enabled endpoint without
+  `PPROF_NO_PROXY_ROUTE_ATTESTATION`. A disabled endpoint validates to nil, so
+  the default posture is unchanged.
+- `DebugEndpointActive(now)` is the runtime gate; `PProfDeadline` parses the
+  RFC3339 window.
+- `cmd/server/main.go` now binds `cfg.PProfBindAddr()`, refuses to start
+  without a bounded window, serves an **explicit mux holding only the pprof
+  endpoints** (never `DefaultServeMux`), and shuts the listener down the moment
+  the window closes rather than waiting for the next request.
+
+**Evidence.** `internal/config/debug_test.go`: `TestPProfDeadline` (unset /
+valid / malformed), `TestValidateDebugEndpoint` (disabled-nil, local
+loopback+window positive, non-loopback refusal, missing-window refusal, expired
+refusal, malformed refusal, nonlocal-attestation requirement),
+`TestDebugEndpointActive` (within window / elapsed / unconfigured / disabled),
+and `TestValidateCouplesDebugPostureToStartup` proving the gate runs inside
+`Validate` (a config that satisfies every other rule still fails startup on a
+non-loopback debug endpoint). New CI row `security-matrix-debug-binding` in
+`team-validation.yml`; new mutation-kill case
+`debug-endpoint-posture-gate-always-permits` (harness now 22 cases) proves the
+negative suite flips PASS→FAIL when the posture gate is neutered.
+
+**Named limit (documented, not hidden).** This enforces the debug endpoint's
+*bind* posture and access window. The `public`-profile `/metrics`, `/docs` and
+`/openapi.yaml` auth re-decision (R17-09's first sentence, and Spec 12 §3.2)
+remains the owner's scrape-contract call recorded in Spec 12 §7; the current
+posture (authenticated-by-default in production via the exposure registry, with
+`/metrics` declared public per the recorded §3.2 deferral) is unchanged here.

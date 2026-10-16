@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
-	_ "net/http/pprof"
+	"net/http/pprof"
 	"os"
 	"os/signal"
 	"runtime"
@@ -89,9 +89,11 @@ func main() {
 	}
 	slog.Info("Deployment profile selected", "profile", profile)
 
-	// Start pprof server if enabled (for debugging)
+	// Start pprof server if enabled (for debugging). Spec 17 R17-09: the
+	// endpoint is loopback-only and time-boxed; it refuses to start without a
+	// bounded window and stops serving once that window passes.
 	if cfg.PProfEnabled {
-		go startPProfServer(cfg.PProfPort)
+		go startPProfServer(cfg)
 	}
 
 	// Initialize audit logger
@@ -335,17 +337,44 @@ func runHealthCheck(timeout time.Duration) error {
 	return nil
 }
 
-// startPProfServer starts the pprof debugging server
-func startPProfServer(port int) {
-	addr := fmt.Sprintf("localhost:%d", port)
-	slog.Info("Starting pprof server", "addr", addr)
+// startPProfServer starts the pprof debugging server on the declared
+// loopback-only address, gated by the time-boxed access window (Spec 17
+// R17-09). The handler is an explicit mux holding only the pprof endpoints
+// rather than the process-wide DefaultServeMux, so the debug listener can
+// never expose an unrelated handler registered elsewhere in the process.
+func startPProfServer(cfg *config.Config) {
+	addr := cfg.PProfBindAddr()
+	if _, deadline := cfg.DebugEndpointActive(time.Now()); deadline.IsZero() {
+		slog.Error("refusing to start the debug endpoint without a bounded access window (Spec 17 R17-09)", "addr", addr)
+		return
+	}
+	slog.Info("Starting pprof server (loopback-only, time-boxed)", "addr", addr, "until", cfg.PProfUntil)
 
-	// pprof endpoints are registered via _ import
+	// Dedicated mux: only the pprof handlers, never DefaultServeMux.
 	// /debug/pprof/ - profile overview
 	// /debug/pprof/profile - CPU profile
 	// /debug/pprof/heap - heap profile
 	// /debug/pprof/goroutine - goroutine profile
-	if err := http.ListenAndServe(addr, nil); err != nil {
+	dbgMux := http.NewServeMux()
+	dbgMux.HandleFunc("/debug/pprof/", pprof.Index)
+	dbgMux.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
+	dbgMux.HandleFunc("/debug/pprof/profile", pprof.Profile)
+	dbgMux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
+	dbgMux.HandleFunc("/debug/pprof/trace", pprof.Trace)
+	srv := &http.Server{Addr: addr, Handler: dbgMux}
+
+	// Stop serving the moment the window closes instead of waiting for the
+	// next request to notice it has expired.
+	go func() {
+		deadline, _, _ := cfg.PProfDeadline()
+		timer := time.NewTimer(time.Until(deadline))
+		defer timer.Stop()
+		<-timer.C
+		slog.Info("debug endpoint window closed; shutting it down (Spec 17 R17-09)", "addr", addr)
+		_ = srv.Close()
+	}()
+
+	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		slog.Error("pprof server error", "error", err)
 	}
 }
