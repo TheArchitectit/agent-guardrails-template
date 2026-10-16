@@ -1,0 +1,61 @@
+# Secret inventory (Spec 17 R17-10)
+
+**Purpose.** R17-10: *"Maintain a secret inventory (owner, consumer, source,
+expiry, last rotation, revocation procedure) without values."* This file is that
+inventory. It records **what** each secret is, **who** owns and consumes it,
+**where** it comes from, **when** it expires, **how** it is rotated and **how**
+it is revoked — and **no values**.
+
+**No values.** Every cell below is a policy or a mechanism, never credential
+material. Do not paste a secret, a digest, a token or a private key into this
+file. The coverage gate (`scripts/gates/check_secret_inventory.py`) fails if a
+secret-bearing environment name discovered in the tree is missing here, and
+fails if a cell contains an assignment of the form `NAME=<value>`.
+
+**Source column.** `<NAME>_FILE` means a read-only mounted secret file resolved
+by `internal/secretfile` (regular file, no group/world bits, fail-closed; see
+the Spec 17 §10 note). `<NAME>` (no suffix) means the inline environment source.
+Inline wins when both are supplied.
+
+**Owner column.** `deployment owner` is the operator who holds the deployment
+(Spec 17 §2: no separate operations team assumed). `security owner` is the
+reviewer accountable for the secret's posture.
+
+| Secret | Owner | Consumer | Source | Expiry | Last rotation | Revocation |
+|---|---|---|---|---|---|---|
+| `CREDENTIAL_VERIFIER_KEY` | security owner | `internal/auth` registry loader — HMAC key behind every stored credential verifier | `CREDENTIAL_VERIFIER_KEY_FILE` (0600) or `CREDENTIAL_VERIFIER_KEY` | No fixed expiry (long-lived); rotate within 24h of suspected disclosure | operator-recorded in the deployment secret store; never a repo value | Generate a new >=256-bit key out of band, redeploy, re-issue every stored verifier under the new key |
+| `CREDENTIAL_REGISTRY` | security owner | `internal/auth` — scoped credential registry (verifiers, never raw credentials) | `CREDENTIAL_REGISTRY_FILE` (0600) or `CREDENTIAL_REGISTRY` | <=90 days per registered credential (Spec 16); <=24h planned overlap | operator-recorded per entry | Remove or expire the entry; the in-process reload denies it within `auth.RevocationPropagationBound` (60s) on both transports |
+| `JWT_SECRET` | security owner | `internal/auth` — JWT signing material | `JWT_SECRET_FILE` (0600) or `JWT_SECRET` | `JWT_ROTATION_HOURS` (default 168h / 7 days) | operator-recorded | Stage the replacement, keep both valid for the bounded overlap, then retire the old key so it no longer verifies |
+| `MCP_API_KEY` | security owner | `internal/web` + `internal/mcp` — legacy shared transport key (migration surface) | `MCP_API_KEY_FILE` (0600) or `MCP_API_KEY` | Bounded by `LEGACY_ACCEPTANCE_UNTIL` (unset = never retires) | operator-recorded | Set or pass `LEGACY_ACCEPTANCE_UNTIL`; both transports refuse the legacy key after the deadline with no rebuild |
+| `IDE_API_KEY` | security owner | `internal/web` — legacy IDE transport key (migration surface) | `IDE_API_KEY_FILE` (0600) or `IDE_API_KEY` | Bounded by `LEGACY_ACCEPTANCE_UNTIL` (unset = never retires) | operator-recorded | Same removal switch as `MCP_API_KEY`; refused on both transports once the deadline passes |
+| `DB_PASSWORD` | deployment owner | `internal/database` — PostgreSQL app-role credential | `DB_PASSWORD_FILE` (0600) or `DB_PASSWORD` | operator-set | operator-recorded | Rotate in the database, then redeploy; nonlocal profiles additionally require `DB_SSLMODE=verify-full` (R17-04) |
+| `REDIS_PASSWORD` | deployment owner | `internal/cache` — Redis credential | `REDIS_PASSWORD_FILE` (0600) or `REDIS_PASSWORD` | operator-set | operator-recorded | Rotate in Redis, then redeploy; nonlocal profiles additionally require `REDIS_USE_TLS=true` (R17-04) |
+| `TLS_KEY_PATH` | deployment owner | `cmd/server` — private key for the deployment TLS material | mounted file (0600) | Certificate/key validity period | operator-recorded at each certificate renewal | Replace certificate and key together; validate the trust chain before cutover (R17-03) |
+| `TLS_CERT_PATH` | deployment owner | `cmd/server` — server certificate + chain for the deployment TLS material | mounted file | Certificate validity period | operator-recorded at each certificate renewal | Reissue and redeploy the chain; never a substitute for TLS termination proof (R17-03) |
+| `TEAM_ENCRYPTION_KEY` | security owner | `internal/team` — AES-GCM key for team-secret encryption | `TEAM_ENCRYPTION_KEY` (environment only; file source NOT yet supported — named limit) | No fixed expiry; rotate on suspicion | operator-recorded | Re-encrypt affected team secrets under the new key before retiring the old one |
+| `FALLBACK_API_KEY` | security owner | `internal/mcp` vision tools — fallback vision provider key | `FALLBACK_API_KEY` (environment only; file source NOT yet supported — named limit) | Provider-defined | operator-recorded | Revoke provider-side, then redeploy with the replacement |
+| `OPENAI_API_KEY` | security owner | `internal/guardrails` content filter — moderation backend key | `OPENAI_API_KEY` (environment only; file source NOT yet supported — named limit) | Provider-defined | operator-recorded | Revoke provider-side, then redeploy with the replacement |
+| `MIGRATION_DSN` | deployment owner | `mcp-server/scripts/run_migrations.go` — one-shot migration job database URL | `MIGRATION_DSN_FILE` (0600, preferred) | operator-set | operator-recorded | Rotate the DB password embedded in the URL; argv is refused by construction |
+| `MIGRATION_DATABASE_URL` | deployment owner | `mcp-server/scripts/run_migrations.go` — documented migration fallback when no file is mounted | `MIGRATION_DATABASE_URL` (environment fallback) | operator-set | operator-recorded | Rotate the DB password embedded in the URL; the argv interface is removed |
+| `WEBHOOK_HMAC_SECRET` | security owner | `internal/notifications` webhook dispatcher — per-webhook signing material (`secret_hmac` column) | database column (encrypted-at-rest storage is an OPEN R17-06 item) | operator-set per webhook | operator-recorded per webhook | Rotate the receiver secret, keep overlapping verification for the bounded window, then retire the old signing key |
+
+## Non-env secrets covered
+
+`WEBHOOK_HMAC_SECRET` has no environment source; it persists as the
+`secret_hmac` column of `webhook_configs`. It is listed here because R17-10
+names webhook material explicitly. The coverage gate discovers *environment*
+secrets from the tree; this row is documented but not tree-discoverable, which
+is the named limit of the coverage check below.
+
+## Named limits
+
+- The coverage gate proves *no secret-bearing environment name in the tree is
+  absent from this inventory*. It cannot discover a secret that is hard-coded in
+  a Go literal (none are, per the R17-11/R17-08 gates and the secret scanner),
+  nor a non-environment secret such as `WEBHOOK_HMAC_SECRET`.
+- `TEAM_ENCRYPTION_KEY`, `FALLBACK_API_KEY` and `OPENAI_API_KEY` are
+  **environment-only** today: R17-06's file-source rule is not yet applied to
+  them (tracked as the R17-06 residual). This inventory records that honestly
+  rather than implying a file path exists.
+- Encrypted-at-rest storage for `WEBHOOK_HMAC_SECRET` remains an open R17-06
+  item; this inventory does not claim it.

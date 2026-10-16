@@ -533,3 +533,56 @@ passes could still be weaker than its alphabet suggests. It does not generate or
 rotate the key, and it does not cover the JWT signing secret (already gated by
 `ValidateJWTSecret`) or the webhook HMAC secrets (their storage-at-rest and
 rotation half remain open in R17-06/R17-10).
+
+## 13. Implementation note (2026-10-16) — R17-10 secret inventory
+
+R17-10 requires a maintained **secret inventory** — "owner, consumer, source,
+expiry, last rotation, revocation procedure — **without values**". The tree had
+none: the phrase appeared only in this spec and in the SPRINT-A2 entry-gate
+checklist as an unchecked box, so the requirement was genuinely ABSENT, not a
+doc lag. An inventory that can silently fall out of date is not an inventory.
+
+**`docs/security/SECRET-INVENTORY.md`** is the inventory. It carries one row per
+secret with the six R17-10 fields and **no values**, and it records the honest
+gaps rather than implying coverage that does not exist:
+
+- `TEAM_ENCRYPTION_KEY`, `FALLBACK_API_KEY` and `OPENAI_API_KEY` are
+  **environment-only** today — R17-06's file-source rule is not yet applied to
+  them (the R17-06 residual), so their Source cell says so.
+- `WEBHOOK_HMAC_SECRET` persists as the `secret_hmac` column of
+  `webhook_configs`; encrypted-at-rest storage remains an open R17-06 item and
+  the row does not claim otherwise.
+- `MIGRATION_DSN` / `MIGRATION_DATABASE_URL` (the one-shot migration job's DSN)
+  and the `TLS_CERT_PATH`/`TLS_KEY_PATH` deployment material are inventoried
+  alongside the config-struct secrets.
+
+**The inventory is enforced, not just written.**
+`scripts/gates` is not a directory in this repo; the gate lives at
+`scripts/check_secret_inventory.py` beside its siblings. It fails closed when:
+
+- a secret-bearing environment name discovered in the Go tree — an
+  `env:"NAME"` tag or an `os.Getenv`/`getEnv` read matching the reviewed secret
+  pattern — has **no** inventory row (a newly added secret must be documented);
+- a row is missing any of the six required cells;
+- a row contains a pasted **secret** value assignment (`NAME=<value>` for a
+  secret-shaped name) — the inventory holds policy, not credential material;
+- the scan discovers **zero** secret names (non-vacuity).
+
+A `<NAME>_FILE` source is documented by its base `<NAME>` row — the file variant
+is an alternative source for the same secret, not a second secret.
+
+**Evidence.** `scripts/test_check_secret_inventory.py` (8 cases) proves the gate
+fails on a missing row, an empty required cell, a pasted secret value and an
+empty scan scope, passes on a complete inventory, treats a documented non-secret
+flag (`DB_SSLMODE=verify-full`) as policy rather than a value, maps
+`JWT_SECRET_FILE` to the `JWT_SECRET` row, and fails closed on a missing
+inventory file — so a green run cannot come from a gate that never exercises its
+assertion. The gate runs live: **16 secret names covered, 15 rows**. Wired into
+`regression-guard.yml` as the `Secret inventory coverage (Spec 17 R17-10)` step.
+
+**Named limit.** The coverage gate proves *no secret-bearing environment name in
+the tree is absent from the inventory*. It cannot discover a non-environment
+secret such as `WEBHOOK_HMAC_SECRET` (documented, but not tree-discoverable), nor
+a secret hard-coded in a Go literal — that class is covered by the secret
+scanner and the R17-11/R17-08 gates, not here. The inventory records what must be
+rotated and revoked; it does not itself rotate or revoke.

@@ -45,6 +45,14 @@ jobs:
           python scripts/check_secret_argv.py --repo .
           python scripts/test_check_secret_argv.py
 
+      - name: Secret inventory coverage (Spec 17 R17-10)
+        run: |
+          # Every secret-bearing environment name in the tree must have an
+          # inventory row (owner/consumer/source/expiry/rotation/revocation),
+          # and no row may carry a pasted value. Fail-closed, non-vacuous.
+          python scripts/check_secret_inventory.py --repo .
+          python scripts/test_check_secret_inventory.py
+
       - name: Run Regression Check
         id: regression_check
         run: |
