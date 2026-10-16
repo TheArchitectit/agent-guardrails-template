@@ -147,11 +147,11 @@ func TestRegistryRotationOverlapBounds(t *testing.T) {
 	records := []Record{recordFor("s", "cred-1", "p1")}
 
 	for _, overlap := range []time.Duration{0, -time.Minute, MaxRotationOverlap + time.Second} {
-		if err := reg.RotateVerifierKey("new-verifier-key-1234567890", records, overlap); err == nil {
+		if err := reg.RotateVerifierKey("new-verifier-key-fixture-000000000001", records, overlap); err == nil {
 			t.Fatalf("overlap %v must be rejected", overlap)
 		}
 	}
-	if err := reg.RotateVerifierKey("new-verifier-key-1234567890", records, MaxRotationOverlap); err != nil {
+	if err := reg.RotateVerifierKey("new-verifier-key-fixture-000000000001", records, MaxRotationOverlap); err != nil {
 		t.Fatalf("overlap at the maximum must be accepted: %v", err)
 	}
 }

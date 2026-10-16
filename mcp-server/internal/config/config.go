@@ -10,6 +10,7 @@ import (
 	"github.com/caarlos0/env/v11"
 
 	"github.com/thearchitectit/guardrail-mcp/internal/clientip"
+	"github.com/thearchitectit/guardrail-mcp/internal/keymaterial"
 )
 
 // SchemaVersion tracks the configuration schema version for migrations
@@ -431,7 +432,10 @@ func (c *Config) Validate() error {
 // validateCredentialRegistry enforces the load-boundary rule for a configured
 // credential registry: verifier material must come from exactly one of the two
 // approved sources (inline or a read-only secret file), and any inline key must
-// be long enough to be usable.
+// clear the Spec 17 R17-07 strength floor. R17-07 states plainly that "a length
+// check is not an entropy proof", so the length floor below is only the cheap
+// first gate; the real rule is the entropy bound (>=256 bits for a nonlocal or
+// production deployment, the >=128-bit floor for `local`).
 func (c *Config) validateCredentialRegistry() error {
 	if !SourcesConfiguredRegistry(c) {
 		return nil
@@ -441,6 +445,21 @@ func (c *Config) validateCredentialRegistry() error {
 	}
 	if c.CredentialVerifierKey != "" && len(c.CredentialVerifierKey) < 16 {
 		return fmt.Errorf("CREDENTIAL_VERIFIER_KEY must be at least 16 characters when a credential registry is configured")
+	}
+	// Spec 17 R17-07 strength floor. Only the inline value is checked here: a
+	// file-sourced key is validated at the registry load boundary (auth.New),
+	// which reads and applies the same rule. `local` keeps the published
+	// floor; a nonlocal or production deployment must clear the >=256-bit
+	// bound R17-07 names, so a weak key fails startup rather than becoming the
+	// HMAC key behind every stored credential verifier.
+	if c.CredentialVerifierKey != "" {
+		minBits := keymaterial.MinVerifierKeyBits
+		if c.requiresProductionCredentials() {
+			minBits = keymaterial.ProductionVerifierKeyBits
+		}
+		if err := keymaterial.ValidateVerifierKeyEntropy(c.CredentialVerifierKey, minBits); err != nil {
+			return fmt.Errorf("CREDENTIAL_VERIFIER_KEY is too weak for profile %q: %w", c.effectiveProfileName(), err)
+		}
 	}
 	return nil
 }

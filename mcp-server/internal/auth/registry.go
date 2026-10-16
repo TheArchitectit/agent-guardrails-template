@@ -17,6 +17,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/thearchitectit/guardrail-mcp/internal/keymaterial"
 )
 
 // verifierLen is the hex length of a SHA-256 HMAC digest.
@@ -24,7 +26,9 @@ const verifierLen = sha256.Size * 2
 
 // minVerifierKeyLen is the minimum usable length of the registry verifier key.
 // Shorter material is rejected at load so an unusable key can never silently
-// produce a registry that fails open.
+// produce a registry that fails open. It is a cheap first gate; the real
+// strength rule is the Spec 17 R17-07 entropy floor below, because a length
+// check is not an entropy proof.
 const minVerifierKeyLen = 16
 
 // RevocationPropagationBound is the published maximum delay between a
@@ -155,6 +159,13 @@ func buildSnapshot(keys []verifierKeyEntry, records []Record, now time.Time) (*s
 		}
 		if len(k.key) < minVerifierKeyLen {
 			return nil, fmt.Errorf("credential registry verifier key must be at least %d characters", minVerifierKeyLen)
+		}
+		// Spec 17 R17-07: a length check is not an entropy proof. A key that
+		// cannot carry the published bit floor (e.g. a single repeated byte)
+		// is refused here rather than accepted as an HMAC key behind every
+		// stored verifier.
+		if err := keymaterial.ValidateVerifierKeyEntropy(string(k.key), keymaterial.MinVerifierKeyBits); err != nil {
+			return nil, err
 		}
 		if k.active(now) {
 			usableKeys++

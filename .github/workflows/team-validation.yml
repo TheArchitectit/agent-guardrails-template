@@ -504,6 +504,27 @@ jobs:
           cd mcp-server
           go test ./internal/config -run 'TestPProfDeadline|TestValidateDebugEndpoint|TestDebugEndpointActive|TestValidateCouplesDebugPostureToStartup' -count=1 -v
 
+  # Spec 17 R17-07: the credential-registry verifier key must carry real
+  # entropy, not merely length — "a length check is not an entropy proof". A
+  # key that clears the 16-character floor but has one distinct byte (e.g.
+  # strings.Repeat("x", 64)) must be refused at both the config gate and the
+  # registry load boundary; a nonlocal/production profile must clear >=256 bits.
+  security-matrix-verifier-key-strength:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Set up Go
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version: '1.25'
+          cache-dependency-path: mcp-server/go.sum
+
+      - name: Verifier-key strength row
+        run: |
+          cd mcp-server
+          go test ./internal/keymaterial ./internal/auth ./internal/config -run 'TestVerifierKeyEntropyBits|TestValidateVerifierKeyEntropyRejectsWeak|TestNewRejectsZeroEntropyVerifierKey|TestValidateCredentialVerifierKeyStrength|TestValidateCouplesVerifierKeyStrengthToStartup' -count=1 -v
+
   # R19-04: mutation-kill control. Copies the module to a scratch directory,
   # confirms the real negative suite PASSES, injects a deterministic bypass
   # (webhook SSRF guard always permits; webhook egress policy always permits;
@@ -515,7 +536,8 @@ jobs:
   # non-public origin; resource-read authorization always permits; the
   # legacy-acceptance removal switch ignored; the default-credential gate always
   # permits; the secret-source requirement always satisfied; the debug-endpoint
-  # posture gate always permits), and requires
+  # posture gate always permits; the verifier-key entropy floor removed), and
+  # requires
   # the SAME suite to FAIL —
   # proving the control detects the bypass. The scratch copy means the protected
   # tree is never left mutated. The docs-gate control runs the real link checker

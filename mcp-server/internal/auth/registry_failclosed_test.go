@@ -89,6 +89,28 @@ func TestNewRejectsInvalidVerifierMaterial(t *testing.T) {
 	}
 }
 
+// TestNewRejectsZeroEntropyVerifierKey covers Spec 17 R17-07 at the registry
+// load boundary: a key that clears the length floor but carries no real
+// randomness (a single repeated byte) must be refused, because "a length check
+// is not an entropy proof". Accepting it would make every stored verifier
+// forgeable by anyone who guesses the trivial key.
+func TestNewRejectsZeroEntropyVerifierKey(t *testing.T) {
+	records := []Record{recordFor("secret", "cred-1", "p1")}
+	// Length 64 clears the 16-character floor but has one distinct byte.
+	_, err := New(strings.Repeat("x", 64), records)
+	if err == nil {
+		t.Fatal("a zero-entropy verifier key must be refused (R17-07)")
+	}
+	if !strings.Contains(err.Error(), "R17-07") {
+		t.Fatalf("error must name R17-07, got %v", err)
+	}
+
+	// Positive control: a strong key is accepted.
+	if _, err := New("9f2c4e6a8b1d3f5a7c9e0b2d4f6a8c1e3b5d7f9a0c2e4b6d8f1a3c5e7b9d0f2a", records); err != nil {
+		t.Fatalf("a 256-bit verifier key must be accepted, got %v", err)
+	}
+}
+
 func writeTempFile(t *testing.T, content string) string {
 	t.Helper()
 	path := filepath.Join(t.TempDir(), "registry.json")

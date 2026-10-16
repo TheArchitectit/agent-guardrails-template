@@ -471,3 +471,65 @@ negative suite flips PASS→FAIL when the posture gate is neutered.
 remains the owner's scrape-contract call recorded in Spec 12 §7; the current
 posture (authenticated-by-default in production via the exposure registry, with
 `/metrics` declared public per the recorded §3.2 deferral) is unchanged here.
+
+## 13. Implementation note (2026-10-16) — R17-07 verifier-key entropy floor
+
+R17-07 requires the credential-registry verifier key to be generated out of
+band with **>=256 random bits**, and states plainly that "a length check is not
+an entropy proof". The tree enforced only a **16-character length floor**
+(`config.go` `validateCredentialRegistry` and `auth` `buildSnapshot`), which
+accepts `strings.Repeat("x", 64)` — a key with a single distinct byte and
+therefore **zero** real entropy — and any 16-character key drawn from a tiny
+alphabet. The verifier key is the HMAC key behind every stored credential
+verifier (`auth.Digest`), so a guessable key makes the whole credential registry
+forgeable: anyone who can predict the key can mint a verifier digest for a
+secret of their choosing and resolve as any principal.
+
+**Fix.** New `internal/keymaterial` holds the single decision, shared by the two
+loaders that enforce it — the credential-registry loader (`internal/auth`) and
+the configuration gate (`internal/config`) — so they cannot drift apart.
+`VerifierKeyEntropyBits` is a deliberate **upper** bound (alphabet size ×
+effective length, where the effective length is the shortest repeating block so
+a pattern like `abcabcabc` is credited one block, not its full length), so it can
+only reject a key that is provably weak; it never blesses a key as strong.
+`ValidateVerifierKeyEntropy` refuses a key below the floor with an error naming
+R17-07 and the observed bound.
+
+- **`internal/auth/registry.go`:** `buildSnapshot` now refuses a key below
+  `MinVerifierKeyBits` (128) at the load boundary, for every profile — an
+  unusable key can never silently produce a registry that fails open. This is
+  the path a file-sourced `CREDENTIAL_VERIFIER_KEY_FILE` flows through, so a
+  weak file key is caught even though the config gate sees only the inline
+  value.
+- **`internal/config/config.go`:** `validateCredentialRegistry` keeps the
+  16-character length floor as the cheap first gate and adds the strength
+  floor. `local` (the documented development posture) keeps the 128-bit floor;
+  a nonlocal or production deployment must clear the **256-bit** bound R17-07
+  names, so a weak inline key fails startup rather than becoming the HMAC key
+  behind every stored verifier. The gate runs inside `Config.Validate`.
+
+**Evidence.** `internal/keymaterial/keymaterial_test.go`
+(`TestVerifierKeyEntropyBits` — empty/whitespace/single-byte/periodic/strong;
+`TestValidateVerifierKeyEntropyRejectsWeak` — the 64-byte single-char key is
+refused, a 147-bit key clears the local floor but not the production bound, the
+error names R17-07); `internal/auth/registry_failclosed_test.go`
+(`TestNewRejectsZeroEntropyVerifierKey` — the load boundary refuses
+`strings.Repeat("x", 64)` and accepts a 256-bit key);
+`internal/config/verifier_key_test.go`
+(`TestValidateCredentialVerifierKeyStrength` local/production split;
+`TestValidateCouplesVerifierKeyStrengthToStartup` proving the gate runs inside
+`Validate`). New CI row `security-matrix-verifier-key-strength` in
+`team-validation.yml` (22 jobs); new mutation-kill case
+`verifier-key-entropy-floor-removed` (harness now 23 cases) proves the negative
+suite flips PASS→FAIL when the entropy floor is neutered.
+
+**Fix-forward (cause, not gate).** `TestRegistryRotationOverlapBounds` used the
+fixture `new-verifier-key-1234567890` (117 bits), which the new floor correctly
+refused; the **fixture** was strengthened, not the gate relaxed.
+
+**Named limit (documented, not hidden).** This is a floor on the *configured*
+key material, not an oracle: the estimator is an upper bound, so a key that
+passes could still be weaker than its alphabet suggests. It does not generate or
+rotate the key, and it does not cover the JWT signing secret (already gated by
+`ValidateJWTSecret`) or the webhook HMAC secrets (their storage-at-rest and
+rotation half remain open in R17-06/R17-10).

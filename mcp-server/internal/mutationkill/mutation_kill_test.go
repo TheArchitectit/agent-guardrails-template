@@ -433,6 +433,21 @@ func (s *MCPServer) authorizeToolCallDisabled(ctx context.Context, name string, 
 		pkg:       "./internal/config",
 		testRegex: "^TestValidateCouplesDebugPostureToStartup$",
 	},
+	{
+		// Spec 17 R17-07: the registry verifier key must carry real entropy —
+		// "a length check is not an entropy proof". A bypass that neuters the
+		// entropy floor (so a zero-entropy key such as strings.Repeat("x", 64)
+		// is accepted as the HMAC key behind every stored verifier) must be
+		// killed by the verifier-key strength suite.
+		name: "verifier-key-entropy-floor-removed",
+		file: "internal/auth/registry.go",
+		old: `		if err := keymaterial.ValidateVerifierKeyEntropy(string(k.key), keymaterial.MinVerifierKeyBits); err != nil {
+			return nil, err
+		}`,
+		new:       `		_ = keymaterial.ValidateVerifierKeyEntropy(string(k.key), keymaterial.MinVerifierKeyBits)`,
+		pkg:       "./internal/auth",
+		testRegex: "^TestNewRejectsZeroEntropyVerifierKey$",
+	},
 }
 
 // findModuleRoot walks up from the test working directory to the directory
