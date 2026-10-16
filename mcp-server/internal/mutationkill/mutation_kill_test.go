@@ -344,6 +344,29 @@ func (s *MCPServer) authorizeToolCallDisabled(ctx context.Context, name string, 
 		pkg:       "./internal/config",
 		testRegex: "^TestValidateCouplesStorageTransitToProfile$",
 	},
+	{
+		// Spec 17 R17-05: outside the local boundary, a production/nonlocal
+		// deployment must reject known placeholder/default credentials. A bypass
+		// that makes the default-credential gate always permit (so the shipped
+		// Compose fallback starts a public deployment) must be killed by the
+		// default-credential negative suite.
+		name: "default-credential-gate-always-permits",
+		file: "internal/config/credentials.go",
+		old: `func IsPlaceholderCredential(value string) bool {
+	v := strings.ToLower(strings.TrimSpace(value))
+	if v == "" {
+		return true
+	}`,
+		new: `func IsPlaceholderCredential(value string) bool {
+	_ = value
+	return false
+	v := strings.ToLower(strings.TrimSpace(value))
+	if v == "" {
+		return true
+	}`,
+		pkg:       "./internal/config",
+		testRegex: "^TestValidateCouplesDefaultCredentialGateToProfile$",
+	},
 }
 
 // findModuleRoot walks up from the test working directory to the directory

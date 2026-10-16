@@ -306,6 +306,13 @@ func (c *Config) Validate() error {
 		return err
 	}
 
+	// Reject known placeholder/default credentials outside the local boundary
+	// (Spec 17 R17-05): a nonlocal or production deployment must not start with
+	// the shipped Compose fallback or another publicly-known default.
+	if err := c.ValidateNoProductionDefaultCredentials(); err != nil {
+		return err
+	}
+
 	// Validate the trusted-proxy stance (Spec 12 §3.4). Every entry must be a
 	// valid IP or CIDR: a malformed entry is a configuration error, not a
 	// silent narrowing to "trust nothing".

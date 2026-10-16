@@ -151,6 +151,11 @@ func validMinimalConfig() *Config {
 		JWTSecret:                      "abcdefghijklmnopqrstuvwxyz123456",
 		MCPAPIKey:                      "AbCdEfGhIjKlMnOpQrStUvWxYz123456",
 		IDEAPIKey:                      "AbCdEfGhIjKlMnOpQrStUvWxYz123456",
+		// Non-placeholder storage credentials so the R17-05 default-credential
+		// gate (which applies to nonlocal/production profiles) does not mask
+		// the profile/binding failures these tests isolate.
+		DBPassword:    "AbCdEfGhIjKlMnOpQrStUvWxYz123456-db",
+		RedisPassword: "AbCdEfGhIjKlMnOpQrStUvWxYz123456-redis",
 	}
 }
 

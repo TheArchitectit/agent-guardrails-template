@@ -436,6 +436,25 @@ jobs:
           cd mcp-server
           go test ./internal/config -run 'TestValidateStorageTransit|TestValidateCouplesStorageTransitToProfile' -count=1 -v
 
+  # Spec 17 R17-05: outside the local boundary, a production/nonlocal
+  # deployment must reject known placeholder/default credentials (the shipped
+  # Compose fallback is not a production credential).
+  security-matrix-default-credentials:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Set up Go
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version: '1.25'
+          cache-dependency-path: mcp-server/go.sum
+
+      - name: Default-credential rejection row
+        run: |
+          cd mcp-server
+          go test ./internal/config -run 'TestIsPlaceholderCredential|TestValidateNoProductionDefaultCredentials|TestValidateCouplesDefaultCredentialGateToProfile' -count=1 -v
+
   # R19-04: mutation-kill control. Copies the module to a scratch directory,
   # confirms the real negative suite PASSES, injects a deterministic bypass
   # (webhook SSRF guard always permits; webhook egress policy always permits;
@@ -445,7 +464,8 @@ jobs:
   # readiness probe failure swallowed; exposure registry always public;
   # exposure asset rule /api/ exclusion removed; HSTS emitted for a
   # non-public origin; resource-read authorization always permits; the
-  # legacy-acceptance removal switch ignored), and requires
+  # legacy-acceptance removal switch ignored; the default-credential gate always
+  # permits), and requires
   # the SAME suite to FAIL —
   # proving the control detects the bypass. The scratch copy means the protected
   # tree is never left mutated. The docs-gate control runs the real link checker

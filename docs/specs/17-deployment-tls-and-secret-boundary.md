@@ -265,3 +265,50 @@ that remains a deployment/acceptance-harness assertion under R17-04's scenario 4
 (disposable services), not a claim made here. The rest of spec 17 (profiles
 beyond the bind check, the secret-source/rotation/redaction halves, and the
 metrics/docs binding) remains open.
+
+## 9. Implementation note (2026-10-16) — R17-05 no production default credentials
+
+R17-05 requires nonlocal/production profiles to reject unset, empty, known
+placeholder/default, reused or test credentials before startup, and states
+plainly that "no checked-in sample is a production credential". The tree ships a
+fixed, publicly-known Compose fallback (`changeme`) for the DB and Redis
+passwords (`docker-compose.yml`: `${DB_PASSWORD:-changeme}` /
+`${REDIS_PASSWORD:-changeme}`). That fallback is fine for a loopback-only local
+run but was never rejected anywhere: `Validate` checked only length/character
+class for the API keys and the JWT secret and checked the DB/Redis passwords not
+at all, so a `public`/`tailnet` deployment could start with `changeme` and
+connect using a credential any reader of this repository already knows.
+
+**New `Config.ValidateNoProductionDefaultCredentials` (`internal/config/credentials.go`)**
+is the single decision, called from `Config.Validate` so it gates startup:
+
+- `local` (the safe default) is exempt — R17-05 explicitly keeps the documented
+  Compose development posture working.
+- Any nonlocal profile (`tailnet`, `public`) or an explicit `PRODUCTION_MODE`
+  rejects a DB/Redis/MCP/IDE/JWT value that is unset, empty, a known
+  placeholder/default, or an obvious sample form (`your-…`/`replace-…`, a
+  template `<…>`, or a single repeated character). `IsPlaceholderCredential`
+  is the reviewed literal set plus those sample forms.
+- The check is a hard error naming the requirement (R17-05) and the offending
+  variable, never a silent replacement, so a misconfiguration stops the process
+  rather than starting with a default secret.
+
+**Evidence.** `internal/config/credentials_test.go`:
+`TestIsPlaceholderCredential` (the reviewed set + sample forms vs strong
+values), `TestValidateNoProductionDefaultCredentials` (the local exemption
+incl. the empty-profile default; named negatives for a placeholder DB password,
+an empty Redis password and a placeholder JWT secret, each asserting the error
+names R17-05 and the variable; a strong-credential positive), and
+`TestValidateCouplesDefaultCredentialGateToProfile` proves the coupling runs
+inside `Validate` (a public config with the Compose fallback fails startup while
+every other rule is satisfied, and the same config with strong credentials
+passes). CI row `security-matrix-default-credentials`; mutation-kill case
+`default-credential-gate-always-permits` proves the negative suite flips
+PASS→FAIL when the gate is neutered (19th case).
+
+**Named limit (documented, not hidden).** This rejects a *known* placeholder /
+default / obvious-sample credential; it is a reviewed floor, not an entropy
+proof, and it does not verify uniqueness across environments or privilege
+separation (separate DB/Redis accounts per environment) — those stay operator
+contract items under R17-05/R17-06. The rest of spec 17 (secret-source/rotation/
+redaction halves, metrics/docs binding) remains open.
