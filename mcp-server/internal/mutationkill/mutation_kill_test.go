@@ -191,6 +191,39 @@ func (s *MCPServer) authorizeToolCallDisabled(ctx context.Context, name string, 
 		pkg:       "./internal/web",
 		testRegex: "^TestLivenessIsLocalAndReadinessGatesTraffic$",
 	},
+	{
+		// Spec 12 §3.3.4: a CORS preflight must be answered for a declared
+		// route only. A bypass that lets every OPTIONS request through (so the
+		// catch-all fallback declares an undeclared path) must be killed by the
+		// declared-preflight negative suite.
+		name: "preflight-declared-route-guard-removed",
+		file: "internal/web/preflight.go",
+		old: `			if pattern := c.Path(); pattern != "" && strings.Contains(pattern, "*") {
+				return echo.NewHTTPError(http.StatusNotFound, "no such route")
+			}`,
+		new:       `			_ = strings.Contains`,
+		pkg:       "./internal/web",
+		testRegex: "^TestPreflightDeclaredRouteOnly$",
+	},
+	{
+		// Spec 12 §3.3.2: production wildcard/empty CORS origins are a hard
+		// error, never a substitution. A bypass that substitutes the dev
+		// defaults instead of failing must be killed by the effective-origins
+		// negative suite.
+		name: "cors-production-wildcard-substituted-not-refused",
+		file: "internal/config/cors.go",
+		old: `	if len(c.CORSAllowedOrigins) == 0 {
+		if c.ProductionMode {
+			return nil, false, fmt.Errorf("CORS_ALLOWED_ORIGINS must not be empty in production")
+		}
+		return append([]string(nil), defaultDevCORSOrigins...), true, nil
+	}`,
+		new: `	if len(c.CORSAllowedOrigins) == 0 {
+		return append([]string(nil), defaultDevCORSOrigins...), true, nil
+	}`,
+		pkg:       "./internal/config",
+		testRegex: "^TestEffectiveCORSOrigins$",
+	},
 }
 
 // findModuleRoot walks up from the test working directory to the directory

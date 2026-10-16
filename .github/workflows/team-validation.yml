@@ -305,6 +305,29 @@ jobs:
           cd mcp-server
           go test ./internal/web -run 'TestReadinessReadyWhenAllChecksPass|TestLivenessIsLocalAndReadinessGatesTraffic|TestMissingProbeIsNotRunNeverPass|TestRegistryFailClosedButAbsentIsSkipped|TestPolicyHonesty|TestLifecycleDrainingAndStoppedAreNonReady|TestReadinessEvidenceIsBounded|TestHealthReadyHandlerStatusCodes' -count=1 -v
 
+  # R19-08 / Spec 12 §3.3.2 + §3.3.4: CORS posture row. Production
+  # wildcard/empty origins are a hard error, never a substitution
+  # (EffectiveCORSOrigins); non-production substitutes restrictive localhost
+  # defaults and reports the substitution. A CORS preflight is answered for a
+  # DECLARED route only — an OPTIONS request whose matched route is the
+  # catch-all file/SPA fallback is refused (404), so OPTIONS cannot declare an
+  # arbitrary path. Every assertion drives the real router + middleware chain.
+  security-matrix-cors-preflight:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Set up Go
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version: '1.25'
+          cache-dependency-path: mcp-server/go.sum
+
+      - name: CORS posture and declared-preflight row
+        run: |
+          cd mcp-server
+          go test ./internal/config ./internal/web -run 'TestEffectiveCORSOrigins|TestEffectiveCORSOriginsDoesNotAliasCaller|TestPreflightDeclaredRouteOnly|TestPreflightGuardLeavesNonOptionsUntouched' -count=1 -v
+
   # R19-04: mutation-kill control. Copies the module to a scratch directory,
   # confirms the real negative suite PASSES, injects a deterministic bypass
   # (webhook SSRF guard always permits; webhook egress policy always permits;

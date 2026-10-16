@@ -316,10 +316,50 @@ verbatim. Mutation-kill case `clientip-stance-trusts-every-peer` proves the
 suite flips PASS→FAIL when the stance is neutered.
 
 **Remaining in this spec (not addressed here):** the shared exposure registry
-(§3.1/§3.2), CORS production rejection of an explicit `*` at the wiring layer
-(§3.3.2 — validation already rejects it), preflight-only-for-declared-routes
-(§3.3.4), and the `public`-profile `/metrics` auth decision (§3.2) — the latter
-is an operator contract (scrape client) and stays an owner decision.
+(§3.1/§3.2) and the `public`-profile `/metrics` auth decision (§3.2) — the
+latter is an operator contract (scrape client) and stays an owner decision.
+
+## 9. Implementation note — §3.3.2 CORS production rejection + §3.3.4 declared-route preflight (2026-10-16)
+
+§3.3.2 and §3.3.4 are implemented at the wiring layer.
+
+- **§3.3.2 — production wildcard is a startup failure, never a substitution.**
+  `config.Validate` already rejected `*`/empty in production, but
+  `Server.setupMiddleware` re-implemented the default substitution inline: it
+  replaced `*` with localhost defaults *before* the production branch was
+  consulted in the wiring code path, and it silently substituted rather than
+  failing. The substitution is now a single method, `Config.EffectiveCORSOrigins`
+  (new `internal/config/cors.go`): explicit origins pass through; production +
+  empty/`*` returns an error and a nil list; non-production + empty/`*` returns
+  the restrictive localhost defaults with `substituted=true` so the caller logs
+  a warning naming the effective list. `setupMiddleware` fails closed on the
+  error (a sentinel origin that matches nothing — echo treats an empty
+  `AllowOrigins` as the wildcard default) and logs the substitution when it
+  occurs. A directly-constructed `Server` can no longer widen exposure.
+- **§3.3.4 — preflight is answered for declared routes only.** The Web UI mounts
+  a catch-all (`echo.Static("/", …)` plus the SPA fallback `GET /web/*`).
+  Echo's router therefore matches every path, and its default OPTIONS handling
+  answers any such path with `204` + `Allow`, so an OPTIONS request to an
+  *undeclared* path was served as if it were a preflight for a real route —
+  OPTIONS "declared" arbitrary paths and bypassed the normal 404/405 outcome.
+  New `declaredPreflightOnly` middleware (new `internal/web/preflight.go`) runs
+  before CORS and acts only on OPTIONS: when the matched route pattern is a
+  catch-all (contains `*`) the request matched only the file/SPA fallback and is
+  refused with `404`, never reaching CORS. Every other OPTIONS request is left
+  for the CORS middleware. Live probe (before the fix) confirmed the defect:
+  with the catch-all registered, `OPTIONS /api/nope` returned `204` with
+  `Allow: OPTIONS, GET`; after the fix it returns `404`.
+
+**Evidence:** `internal/config/cors_test.go` (explicit pass-through;
+production empty/wildcard fails closed with a nil list; non-production
+substitution reported; no caller-slice aliasing) and
+`internal/web/preflight_test.go` (declared route preflight 204; undeclared,
+undeclared-nested and unrelated paths 404; non-OPTIONS untouched) — all driving
+the real router + middleware chain. CI row `security-matrix-cors-preflight` runs
+these verbatim. Mutation-kill cases
+`preflight-declared-route-guard-removed` and
+`cors-production-wildcard-substituted-not-refused` prove each suite flips
+PASS→FAIL when its control is neutered.
 
 ## 7. Non-goals
 

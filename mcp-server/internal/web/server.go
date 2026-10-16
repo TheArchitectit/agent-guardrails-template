@@ -190,15 +190,26 @@ func (s *Server) setupMiddleware() {
 	s.echo.Use(forwardedHeaderAnomalyMiddleware(stance))
 
 	// CORS - MUST run before auth middleware to handle OPTIONS preflight requests
-	// CORS preflight (OPTIONS) requests should return 200 before auth check
-	corsOrigins := s.cfg.CORSAllowedOrigins
-	if len(corsOrigins) == 0 || (len(corsOrigins) == 1 && corsOrigins[0] == "*") {
-		// Default to restrictive localhost origins if not configured
-		if s.cfg.ProductionMode {
-			corsOrigins = []string{"http://localhost:8081", "https://localhost:8081"}
-		} else {
-			corsOrigins = []string{"http://localhost:*", "https://localhost:*"}
-		}
+	// CORS preflight (OPTIONS) requests should return 200 before auth check.
+	//
+	// Spec 12 §3.3.4: a preflight is answered for a DECLARED route only. This
+	// guard runs before CORS and refuses an OPTIONS request whose matched route
+	// is a catch-all (the Web UI file/SPA fallback), so OPTIONS cannot declare
+	// an arbitrary path. Spec 12 §3.3.2: production wildcard/empty origins are
+	// a startup failure, never a substitution — EffectiveCORSOrigins fails
+	// closed here as well as in config.Validate.
+	s.echo.Use(declaredPreflightOnly())
+
+	corsOrigins, substituted, err := s.cfg.EffectiveCORSOrigins()
+	if err != nil {
+		// Fail closed: an invalid CORS posture must not become a widened one.
+		// echo replaces an empty AllowOrigins with the wildcard default, so a
+		// sentinel that matches nothing is used instead of an empty slice.
+		slog.Error("invalid CORS configuration; refusing to serve cross-origin requests", "error", err)
+		corsOrigins = []string{"https://invalid.invalid"}
+	}
+	if substituted {
+		slog.Warn("CORS_ALLOWED_ORIGINS unset or wildcard; using restrictive development defaults", "origins", corsOrigins)
 	}
 	s.echo.Use(middleware.CORSWithConfig(middleware.CORSConfig{
 		AllowOrigins: corsOrigins,
