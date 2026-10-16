@@ -1,13 +1,13 @@
 # OpenSpec 18: Migration, startup, and readiness
 
-**Status:** Partially implemented (updated 2026-10-15). The migration-job half
+**Status:** Implemented (updated 2026-10-16). The migration-job half
 (R18-01 through R18-06 plus the argv-DSN replacement) is **implemented and
-exercised** against a disposable PostgreSQL 16 — see §11. The remaining
-readiness/lifecycle rows (R18-07 through R18-13) stay **WIRED** (readiness
-endpoints exist; the ordered-startup, dependency-classification and evidence
-contracts are not yet exercised). The server still does not apply migrations at
-startup — migration execution remains a separate one-shot deployment step, by
-design (R18-01).
+exercised** against a disposable PostgreSQL 16 — see §11. The ordered
+readiness/lifecycle half (R18-07 through R18-13) is now **implemented and
+exercised** — see §12: `/health/ready` runs the ordered checks, observes an
+explicit process lifecycle state, and reports bounded per-check evidence. The
+server still does not apply migrations at startup — migration execution remains
+a separate one-shot deployment step, by design (R18-01).
 
 **Owner default:** The solo maintainer owns the migration manifest, release
 decision, rollback decision, and readiness policy. A second reviewer is
@@ -60,6 +60,11 @@ policy-engine state, or the broader dependency graph. The binary's
 healthcheck (`docker-compose.yml:111-116` and
 `mcp-server/deploy/docker-compose.example.yml:210-217`). These facts must not
 be read as an implementation of this proposal.
+
+> **Superseded 2026-10-16 (see §12).** The paragraph above is the baseline as
+> inspected at spec-writing time. `internal/web/readiness.go` now runs the
+> ordered readiness checks, observes the explicit lifecycle state, and the
+> `--health-check` mode calls `/health/ready`, not `/health/live`.
 
 ## 2. Decision: explicit versioned migration job
 
@@ -350,6 +355,15 @@ invalidity, policy-disabled readiness, dependency outage/recovery, readiness
 before shutdown, and zero unauthorized side effects. Compose validation should
 also include `docker compose config` and an isolated probe that verifies the
 server healthcheck uses readiness rather than only `--health-check` liveness.
+
+> **Implemented 2026-10-16 (see §12).** The ordered-readiness assertions now
+exist and are exercised: `internal/web/readiness_test.go` covers ordered checks,
+registry invalidity, policy-disabled readiness, `NOT_RUN` for an absent probe,
+the lifecycle non-ready states, and bounded evidence. The remaining items
+(dependency outage/recovery against live services, a live-process shutdown-drain
+test, and the Compose readiness probe) stay future integration work — the
+readiness *contract* is implemented and unit-exercised; a live outage/recovery
+integration test is not yet added.
 Never run these checks against a production database or with production
 credentials.
 
@@ -420,6 +434,64 @@ replaced".
   (deleting a `.down.sql` fails it).
 
 `go build ./...`, `go vet ./...` and `go test ./internal/database/...` are
-clean at the change. The remaining §5–§7 readiness/lifecycle items (ordered
-startup states, `/health/ready` content, shutdown drain) are unchanged and stay
-as the spec's WIRED rows.
+clean at the change.
+
+## 12. Implementation note (2026-10-16) — ordered readiness and lifecycle
+
+`mcp-server/internal/web/readiness.go` implements the ordered readiness contract
+of §3 and §5 and the lifecycle state of §5.2. `Server.healthReady` now returns
+the full report; the aggregate is derived only from terminal check results, and
+no non-PASS required check is ever converted to PASS.
+
+**Ordered checks (§3 / R18-07).** The evaluator runs, in order: `lifecycle`,
+`config`, `database`, `cache`, `schema`, `credential_registry`, `policy`. The
+live probes (database ping, cache ping, schema compatibility) are injected as
+function fields, so the ordered decision itself is dependency-free and
+unit-exercised without a live PostgreSQL or Redis. A probe that is absent is
+`NOT_RUN`, never `PASS`.
+
+**Probe separation (§5.1/§5.2 / R18-08).** `/health/live` remains local and
+process-only. `/health/ready` returns `503` for any required non-PASS and `200`
+only when every required check is `PASS` and the lifecycle is `READY`. The
+container probe mode (`--health-check`) now calls `/health/ready`, not
+`/health/live`, so a live-but-unready instance fails its probe.
+
+**Dependency classification (§5.3 / R18-09).** Each check carries a `required`
+flag. A required failure yields `NOT_READY`; an optional failure yields
+`DEGRADED` (still admissible). `PASS`/`FAIL`/`NOT_READY`/`DEGRADED`/`SKIPPED`/
+`NOT_RUN` are distinct, and only `PASS` satisfies a required check.
+
+**Registry fail-closed (§6 / R18-10).** An absent registry is the documented
+legacy posture and is recorded as `SKIPPED` (it does not block and does not
+broaden access). A configured-but-unloadable registry is a hard `NOT_READY`,
+matching the auth middleware's fail-closed denial of protected traffic.
+
+**Policy honesty (§6 / R18-11).** `configured`, `enabled`, and `exercised` are
+distinct. A disabled engine reports the explicit reason
+`policy_disabled_non_enforcing` and is never `PASS`; an enabled-but-unexercised
+engine is `DEGRADED` with `policy_enabled_not_yet_exercised`. In an enforcement
+profile (`PolicyRequired`), a disabled engine is `NOT_READY`.
+
+**Lifecycle safety (§5.2/§7 / R18-12).** The server carries an explicit
+`STARTING`/`READY`/`DRAINING`/`STOPPED` state. Startup publishes `READY` only
+after the ordered checks pass; shutdown sets `DRAINING` before drain begins and
+`STOPPED` at the end. `STARTING`/`DRAINING`/`STOPPED` are non-ready by
+construction, independent of dependency health.
+
+**Evidence (§8 / R18-13).** Every check exposes a name, `required` flag,
+terminal result, bounded reason code, and timestamp (plus a version where
+applicable). No credential and no raw dependency error text is emitted — a
+failing probe records `<check>_failed`, never the underlying error string.
+
+**Exercised (not merely wired).** `mcp-server/internal/web/readiness_test.go`
+drives the real evaluator and the real `/health/ready` handler: ordered-check
+sequence, STARTING/DRAINING/STOPPED non-ready, missing-probe `NOT_RUN`,
+registry fail-closed vs. absent-skipped, policy honesty (disabled and
+unexercised), and bounded evidence (a probe error carrying a
+`postgres://user:secret@…` string must not appear in the report). The new CI row
+`security-matrix-readiness-lifecycle` (`.github/workflows/team-validation.yml`)
+runs these assertions verbatim. Two mutation-kill cases
+(`readiness-lifecycle-gate-removed`, `readiness-required-probe-failure-swallowed`)
+prove the negative suites fail against an injected bypass. `go build ./...`,
+`go vet ./...`, `go test ./...`, and `scripts/regression_check.py --all
+--pre-commit` are clean at the change.

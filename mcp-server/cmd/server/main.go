@@ -192,6 +192,15 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	// Lifecycle gate (Spec 18 §5.2 / R18-12): readiness stays non-ready until
+	// every ordered check passes; only then is the READY state published.
+	if report := webServer.EvaluateReadiness(); report.Ready {
+		webServer.SetLifecycle(web.LifecycleReady)
+		slog.Info("Readiness checks passed; instance is READY")
+	} else {
+		slog.Error("Readiness checks failed at startup; instance remains NOT_READY", "status", report.Status)
+	}
+
 	// Start web server
 	go func() {
 		defer func() {
@@ -243,6 +252,10 @@ func main() {
 
 	slog.Info("Initiating graceful shutdown", "timeout", shutdownTimeout)
 
+	// Mark readiness false before drain begins (Spec 18 §5.2 / R18-12): a
+	// probe arriving during shutdown must see DRAINING, never READY.
+	webServer.SetLifecycle(web.LifecycleDraining)
+
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), shutdownTimeout)
 	defer shutdownCancel()
 
@@ -266,6 +279,7 @@ func main() {
 		slog.Error("Redis close error", "error", err)
 	}
 
+	webServer.SetLifecycle(web.LifecycleStopped)
 	slog.Info("Server stopped gracefully")
 }
 
@@ -275,20 +289,22 @@ func runHealthCheck(timeout time.Duration) error {
 		Timeout: timeout,
 	}
 
-	// Check liveness endpoint
+	// Container probe contract (Spec 18 §5.2 / R18-08): the health-check mode
+	// gates on readiness, not liveness alone. A live-but-unready instance must
+	// fail the probe so orchestrators do not route traffic to it.
 	webPort := os.Getenv("WEB_PORT")
 	if webPort == "" {
 		webPort = "8081"
 	}
 
-	resp, err := client.Get(fmt.Sprintf("http://localhost:%s/health/live", webPort))
+	resp, err := client.Get(fmt.Sprintf("http://localhost:%s/health/ready", webPort))
 	if err != nil {
-		return fmt.Errorf("liveness check failed: %w", err)
+		return fmt.Errorf("readiness check failed: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("liveness check returned status %d", resp.StatusCode)
+		return fmt.Errorf("readiness check returned status %d", resp.StatusCode)
 	}
 
 	return nil

@@ -154,6 +154,43 @@ func (s *MCPServer) authorizeToolCallDisabled(ctx context.Context, name string, 
 		pkg:       "./internal/web",
 		testRegex: "^TestRateLimitKeyIgnoresForgedForwardedHeaders$",
 	},
+	{
+		// Spec 18 R18-12: the aggregate readiness decision must never be READY
+		// while STARTING/DRAINING/STOPPED. A bypass that makes the aggregate
+		// always ready must be killed by the lifecycle negative suite.
+		name: "readiness-lifecycle-gate-removed",
+		file: "internal/web/readiness.go",
+		old: `func overall(checks []CheckState, lifecycle LifecycleState) (bool, string) {
+	if lifecycle != LifecycleReady {
+		return false, "not ready"
+	}
+	degraded := false`,
+		new: `func overall(checks []CheckState, lifecycle LifecycleState) (bool, string) {
+	_ = checks
+	_ = lifecycle
+	return true, "ready"
+	degraded := false`,
+		pkg:       "./internal/web",
+		testRegex: "^TestLifecycleDrainingAndStoppedAreNonReady$",
+	},
+	{
+		// Spec 18 R18-09/R18-13: a required check that cannot run must never be
+		// converted to PASS. A bypass that turns a failing required probe into
+		// PASS must be killed by the bounded-evidence negative suite.
+		name: "readiness-required-probe-failure-swallowed",
+		file: "internal/web/readiness.go",
+		old: `	if err := run(ctx); err != nil {
+		st.Result = ResultNotReady
+		st.Reason = reason + "_failed"
+		return st
+	}`,
+		new: `	_ = run(ctx)
+	st.Result = ResultPass
+	st.Reason = reason + "_ok"
+	return st`,
+		pkg:       "./internal/web",
+		testRegex: "^TestLivenessIsLocalAndReadinessGatesTraffic$",
+	},
 }
 
 // findModuleRoot walks up from the test working directory to the directory

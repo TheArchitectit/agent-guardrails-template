@@ -165,6 +165,30 @@ matrix now carries a dedicated row:
   `Stance.Trusts` returns true unconditionally; kills
   `TestRateLimitKeyIgnoresForgedForwardedHeaders`. **EXERCISED**.
 
+## Reconciliation 2026-10-16 — readiness/lifecycle row (R19-08 readiness half)
+
+Spec 18 R18-07..R18-13 (ordered readiness and lifecycle) is implemented, and the
+matrix now carries a dedicated row:
+
+- `security-matrix-readiness-lifecycle` — ordered readiness/lifecycle contract.
+  `internal/web/readiness.go` runs the ordered checks (`lifecycle`, `config`,
+  `database`, `cache`, `schema`, `credential_registry`, `policy`); an absent
+  probe is `NOT_RUN` (never `PASS`); a configured-but-invalid registry is
+  `NOT_READY` while an absent registry is `SKIPPED`; a disabled or unexercised
+  policy engine is never an enforcement `PASS`; the explicit
+  `STARTING`/`READY`/`DRAINING`/`STOPPED` lifecycle makes a non-`READY` instance
+  non-ready; and evidence carries only bounded reason codes. `/health/ready`
+  returns `503` for any required non-PASS and `200` only when ready;
+  `--health-check` now calls `/health/ready`. **WIRED** + **EXERCISED**:
+  `go test ./internal/web -run 'TestReadiness|TestLifecycle|TestHealthReady|TestPolicyHonesty|TestMissingProbe|TestRegistryFailClosed' -count=1` → ok.
+- Mutation-kill cases `readiness-lifecycle-gate-removed` (eighth bypass: the
+  aggregate decision ignores the lifecycle) and
+  `readiness-required-probe-failure-swallowed` (ninth: a failing required probe
+  is recorded `PASS`); each kills the corresponding negative suite. **EXERCISED**.
+
+A live-process shutdown-drain test and the Compose readiness probe swap stay
+future integration work — the readiness *contract* is implemented and exercised.
+
 The web-exposure spec's shared-registry, CORS-wiring and `public`-profile
 `/metrics` rows remain **NOT_RUN** (the last is an operator scrape-contract
 decision, §3.2/§7).
@@ -249,11 +273,11 @@ This sprint is complete only when all of the following hold:
 - [ ] External required-check policy requires every applicable matrix row on PRs (including forks on hosted runners), pushes to protected `main`, and release-candidate tags/dispatches bound to an immutable SHA (R19-01). Missing/renamed/stale-SHA/`NOT_RUN`/unexplained `SKIP` blocks merge and release. — **NOT_RUN**.
 - [ ] Required commands preserve nonzero exit; collection never masks failures (R19-02). — **NOT_RUN**.
 - [ ] Web + MCP negative controls run real middleware/StreamableHTTP paths with positive controls and zero-side-effect assertions (R19-03). — **WIRED** + **EXERCISED** (rows `security-matrix-web-failclosed`, `security-matrix-mcp-fullpath-authz`); mutation-kill half of R19-04 now PARTIAL (see row `security-matrix-mutation-kill`).
-- [ ] Mutation-kill fixtures prove each named bypass changes PASS→FAIL and are restored before publishing PASS (R19-04): auth bypass, MCP authz bypass, registry fallback, SSRF bypass, wildcard prod CORS, secret fixture, broken doc link. — **PARTIAL**: six bypasses EXERCISED (registry fallback, SSRF, auth, MCP authz, secret fixture, broken doc link — row `security-matrix-mutation-kill`); wildcard prod CORS **NOT_RUN** (no negative suite drives CORS origin acceptance).
+- [ ] Mutation-kill fixtures prove each named bypass changes PASS→FAIL and are restored before publishing PASS (R19-04): auth bypass, MCP authz bypass, registry fallback, SSRF bypass, wildcard prod CORS, secret fixture, broken doc link. — **PARTIAL**: eight bypasses EXERCISED (registry fallback, SSRF, auth, MCP authz, secret fixture, broken doc link, client-IP stance, plus the readiness lifecycle gate + required-probe swallow added 2026-10-16 — row `security-matrix-mutation-kill`); wildcard prod CORS **NOT_RUN** (no negative suite drives CORS origin acceptance).
 - [ ] Configured registry fail-closed matrix row (R19-05); no nil-registry legacy restoration. — **WIRED** + **EXERCISED** (row `security-matrix-registry-failclosed`).
 - [ ] Secret leakage / resource boundary rows fail on real findings (R19-06); full-history Gitleaks separate from source regex checks. — **NOT_RUN** (full-history Gitleaks): redaction/no-leak half WIRED + EXERCISED (row `security-matrix-secret-redaction`); full-history Gitleaks WIRED as `scripts/gitleaks-history.sh` + EXERCISED locally over 1149 commits and a reviewed `.gitleaksignore` baseline added (11/16 findings classified as intentional test canaries / documentation placeholders and allowlisted). The remaining **5 findings look like REAL credentials** (`cpofopencode` ×4, `STATUS.md` ×1) and were **deliberately left un-ignored**, so the scan still exits 1 and is **not wired as a blocking CI row**. Blocking wiring is blocked on rotating/purging those credentials; source-regex scans **NOT_RUN**.
 - [ ] Webhook SSRF deterministic resolver/dialer fixtures; policy-denied destination is failed outcome (R19-07). — **WIRED** + **EXERCISED** (row `security-matrix-webhook-ssrf`); configuration-time guard only, no dialer-level/DNS-rebinding defense (documented limitation).
-- [ ] Deployment/readiness/migration rows (R19-08); static assets/CORS/proxy trust (R19-09). — **PARTIAL**: readiness/migration half now WIRED + EXERCISED as spec 18 R18-01..R18-06 (`mcp-server/scripts/run_migrations.go` + `internal/database/migration_manifest_test.go`, landed `main@e4bb65d9`); the client-IP/proxy-trust half of R19-09 is WIRED + EXERCISED (row `security-matrix-clientip-trust`, Spec 12 §3.4, landed 2026-10-15); static-asset/CORS registry rows remain **NOT_RUN**.
+- [ ] Deployment/readiness/migration rows (R19-08); static assets/CORS/proxy trust (R19-09). — **PARTIAL**: migration half WIRED + EXERCISED as spec 18 R18-01..R18-06 (`mcp-server/scripts/run_migrations.go` + `internal/database/migration_manifest_test.go`, landed `main@e4bb65d9`); **readiness/lifecycle half WIRED + EXERCISED 2026-10-16** (row `security-matrix-readiness-lifecycle`, Spec 18 R18-07..R18-13 — ordered checks, lifecycle non-ready states, `NOT_RUN` for an absent probe, registry fail-closed, policy honesty, bounded evidence; `internal/web/readiness_test.go`); the client-IP/proxy-trust half of R19-09 is WIRED + EXERCISED (row `security-matrix-clientip-trust`, Spec 12 §3.4, landed 2026-10-15); static-asset/CORS registry rows remain **NOT_RUN**.
 - [ ] Complete package and test coverage: every Go module (`mcp-server`, `cmd/team-cli`, `examples/go`) + Python tests; counts recorded (R19-10). — **WIRED** (coverage / test-floor).
 - [ ] Docs gate: internal Markdown links + hard 500-line max on PR and protected push/release (R19-11). — **WIRED** (link check now `scripts/check-doc-links.sh`, shared by CI and the mutation harness; 500-line job still inline; trigger incomplete — does not fire on every protected push/release).
 - [ ] Nonzero test floor with checked-in inventory and explicit SKIP/NOT_RUN classification (R19-12). — **WIRED**.

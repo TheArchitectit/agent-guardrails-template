@@ -7,6 +7,7 @@ import (
 	"os"
 	"runtime/debug"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/labstack/echo/v4"
@@ -37,6 +38,15 @@ type Server struct {
 	ingestSvc     *ingest.Service
 	updateChecker *updates.Checker
 	version       string
+
+	// lifecycle is the explicit process lifecycle state observed by
+	// /health/ready (Spec 18 §5.2 / R18-12). It is accessed atomically because
+	// shutdown may move it to DRAINING from the signal goroutine while probes
+	// are being served.
+	lifecycle atomic.Value // LifecycleState
+
+	// readiness runs the ordered readiness checks (Spec 18 §3 / R18-07..R18-13).
+	readiness *ReadinessEvaluator
 }
 
 // NewServer creates a new web server
@@ -62,10 +72,80 @@ func NewServer(cfg *config.Config, db *database.DB, cacheClient *cache.Client, a
 		version:       version,
 	}
 
+	s.lifecycle.Store(LifecycleStarting)
+
+	// The ordered readiness evaluator (Spec 18 §3). Live probes are bound here
+	// so the ordered decision itself stays dependency-free and testable.
+	s.readiness = NewReadinessEvaluator(version, ReadinessDeps{
+		DBHealth: func(ctx context.Context) error {
+			if db == nil {
+				return nil
+			}
+			return db.HealthCheck(ctx)
+		},
+		CacheHealth: func(ctx context.Context) error {
+			if cacheClient == nil {
+				return nil
+			}
+			return cacheClient.HealthCheck(ctx)
+		},
+		SchemaCompatibility: func(ctx context.Context) error {
+			if db == nil {
+				return nil
+			}
+			return database.CheckSchemaCompatibility(ctx, database.NewSQLSchemaLedger(db.DB), database.MinRequiredSchemaVersion)
+		},
+		RegistryConfigured: config.SourcesConfiguredRegistry(cfg),
+		RegistryLoadErr:    registryLoadErr(cfg),
+		Policy:             policyState(),
+		PolicyRequired:     false,
+	})
+
 	s.setupMiddleware()
 	s.setupRoutes()
 
 	return s
+}
+
+// SetLifecycle moves the process lifecycle state (Spec 18 §5.2 / R18-12).
+// Readiness observes it: DRAINING and STOPPED are non-ready by construction.
+func (s *Server) SetLifecycle(state LifecycleState) {
+	s.lifecycle.Store(state)
+}
+
+// Lifecycle returns the current lifecycle state.
+func (s *Server) Lifecycle() LifecycleState {
+	if v, ok := s.lifecycle.Load().(LifecycleState); ok {
+		return v
+	}
+	return LifecycleStarting
+}
+
+// EvaluateReadiness runs the ordered readiness checks against the current
+// lifecycle state (Spec 18 §3).
+func (s *Server) EvaluateReadiness() ReadinessReport {
+	return s.readiness.Evaluate(s.Lifecycle())
+}
+
+// registryLoadErr reports a configured-but-unloadable credential registry
+// without exposing verifier material (Spec 18 §6 / R18-10).
+func registryLoadErr(cfg *config.Config) error {
+	if !config.SourcesConfiguredRegistry(cfg) {
+		return nil
+	}
+	_, err := buildCredentialRegistry(cfg)
+	return err
+}
+
+// policyState reports the policy engine posture. The engine is driven by an
+// Ollama-backed content filter (see cmd/server); when OLLAMA_URL is unset the
+// engine is not configured. Configured/enabled/exercised are distinct facts
+// (Spec 18 §6 / R18-11).
+func policyState() PolicyState {
+	if os.Getenv("OLLAMA_URL") == "" {
+		return PolicyState{Configured: false, Enabled: false, Exercised: false}
+	}
+	return PolicyState{Configured: true, Enabled: true, Exercised: false, Version: os.Getenv("OLLAMA_MODEL")}
 }
 
 // Echo exposes the underlying Echo instance for external route registration.
@@ -413,32 +493,14 @@ func (s *Server) healthLive(c echo.Context) error {
 }
 
 func (s *Server) healthReady(c echo.Context) error {
-	ctx, cancel := context.WithTimeout(c.Request().Context(), s.cfg.HealthCheckTimeout)
-	defer cancel()
+	// Ordered readiness evaluation (Spec 18 §3 / R18-07..R18-13). The report
+	// carries bounded reason codes only — never credentials or raw dependency
+	// errors. A non-ready state returns 503 and gates normal protected traffic.
+	report := s.readiness.Evaluate(s.Lifecycle())
 
-	// Check database
-	if err := s.db.HealthCheck(ctx); err != nil {
-		slog.Error("Readiness check failed - database", "error", err)
-		return c.JSON(http.StatusServiceUnavailable, map[string]interface{}{
-			"status":    "not ready",
-			"timestamp": time.Now().UTC().Format(time.RFC3339),
-			// Don't expose which component failed for security
-		})
+	code := http.StatusOK
+	if !report.Ready {
+		code = http.StatusServiceUnavailable
 	}
-
-	// Check cache
-	if err := s.cache.HealthCheck(ctx); err != nil {
-		slog.Error("Readiness check failed - cache", "error", err)
-		return c.JSON(http.StatusServiceUnavailable, map[string]interface{}{
-			"status":    "not ready",
-			"timestamp": time.Now().UTC().Format(time.RFC3339),
-			// Don't expose which component failed for security
-		})
-	}
-
-	return c.JSON(http.StatusOK, map[string]interface{}{
-		"status":    "ready",
-		"version":   s.version,
-		"timestamp": time.Now().UTC().Format(time.RFC3339),
-	})
+	return c.JSON(code, report)
 }
