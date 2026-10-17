@@ -388,6 +388,31 @@ jobs:
           cd mcp-server
           go test ./internal/mcp -run 'TestResourcePolicyMatrixCoversEveryRegisteredResource|TestStreamableHTTPResourceReadAuthorization|TestAuthorizeResourceReadDeniesWithoutPrincipal' -count=1 -v
 
+  # Spec 16 R16-08: decision/effect audit durability on the MCP transport. The
+  # audit row read E(web) / NR(MCP) — the mechanism existed but was never
+  # exercised over the real endpoint. This row drives the real StreamableHTTP
+  # tools/call path with an admin credential and a real project fixture: when
+  # the required durable record cannot be written the otherwise-authorized
+  # mutation is denied AND leaves no effect, and with a durable store the
+  # effect proceeds while an attributable record (principal, opaque credential
+  # ID, action, outcome, reason code, policy version) is written — never a raw
+  # key or hashAPIKey-as-identity.
+  security-matrix-audit-durability:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Set up Go
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version: '1.25'
+          cache-dependency-path: mcp-server/go.sum
+
+      - name: MCP decision/effect audit durability row
+        run: |
+          cd mcp-server
+          go test ./internal/mcp -run 'TestMCPAuditDurabilityFailsClosed|TestMCPAuditDurabilityRecorded' -count=1 -v
+
   # Spec 11 §4.5.2 / acceptance criterion 8: the legacy-acceptance removal
   # switch is testable on both transports. Before the deadline the legacy
   # shared key keeps its surface; once the deadline has passed it is refused
@@ -570,7 +595,8 @@ jobs:
   # legacy-acceptance removal switch ignored; the default-credential gate always
   # permits; the secret-source requirement always satisfied; the debug-endpoint
   # posture gate always permits; the verifier-key entropy floor removed; the
-  # ingress-posture gate always permits), and
+  # ingress-posture gate always permits; the MCP required-audit gate removed),
+  # and
   # requires
   # the SAME suite to FAIL —
   # proving the control detects the bypass. The scratch copy means the protected

@@ -495,6 +495,21 @@ func (s *MCPServer) authorizeToolCallDisabled(ctx context.Context, name string, 
 		pkg:       "./internal/notifications",
 		testRegex: "^TestWebhookDeliveryFailureLogWithholdsTargetQuery$",
 	},
+	{
+		// Spec 16 R16-08: a security-sensitive MCP mutation must fail closed when
+		// its required durable audit record cannot be written. A bypass that
+		// stops requiring the durable record (so an admin mutation proceeds with
+		// no attributable evidence) must be killed by the MCP audit-durability
+		// negative suite over the real StreamableHTTP endpoint.
+		name: "mcp-required-audit-gate-removed",
+		file: "internal/mcp/server.go",
+		old: `	required := auth.IsSensitiveMCPTool(name) || action.Kind == auth.ActionAdmin
+	if err := s.mcpAuditDecision(ctx, caller, action, decision, required); err != nil {`,
+		new: `	required := false
+	if err := s.mcpAuditDecision(ctx, caller, action, decision, required); err != nil {`,
+		pkg:       "./internal/mcp",
+		testRegex: "^TestMCPAuditDurabilityFailsClosed$",
+	},
 }
 
 // findModuleRoot walks up from the test working directory to the directory
