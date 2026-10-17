@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/thearchitectit/guardrail-mcp/internal/auth"
 )
@@ -29,6 +30,8 @@ func resourcePolicyRecords() []auth.Record {
 			Scopes:       []string{auth.ScopeMCPRead},
 			Role:         auth.RoleReader,
 			Resources:    []string{"*"},
+			IssuedAt:     time.Now().Add(-time.Hour),
+			ExpiresAt:    time.Now().Add(24 * time.Hour),
 			Verifier:     auth.Digest(fullPathVerifierKey, "res-reader-secret"),
 		},
 		{
@@ -39,6 +42,8 @@ func resourcePolicyRecords() []auth.Record {
 			Scopes:       []string{auth.ScopeRESTRead},
 			Role:         auth.RoleReader,
 			Resources:    []string{"*"},
+			IssuedAt:     time.Now().Add(-time.Hour),
+			ExpiresAt:    time.Now().Add(24 * time.Hour),
 			Verifier:     auth.Digest(fullPathVerifierKey, "res-rest-only-secret"),
 		},
 	}

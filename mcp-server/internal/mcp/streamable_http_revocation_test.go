@@ -56,6 +56,8 @@ func revPropRecords() []auth.Record {
 			},
 			Role:      auth.RoleAdministrator,
 			Resources: []string{"*"},
+			IssuedAt:  time.Now().Add(-time.Hour),
+			ExpiresAt: time.Now().Add(24 * time.Hour),
 			Verifier:  auth.Digest(revPropVerifierKey, revPropLiveSecret),
 		},
 		{
@@ -64,6 +66,8 @@ func revPropRecords() []auth.Record {
 			Scopes:       []string{auth.ScopeMCPRead, auth.ScopeRESTRead},
 			Role:         auth.RoleReader,
 			Resources:    []string{"*"},
+			IssuedAt:     time.Now().Add(-time.Hour),
+			ExpiresAt:    time.Now().Add(24 * time.Hour),
 			Verifier:     auth.Digest(revPropVerifierKey, revPropKeepSecret),
 		},
 	}

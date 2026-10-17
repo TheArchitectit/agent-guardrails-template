@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/thearchitectit/guardrail-mcp/internal/audit"
 	"github.com/thearchitectit/guardrail-mcp/internal/auth"
@@ -74,6 +75,8 @@ func r16AuditRecords(project string) []auth.Record {
 			Scopes:       []string{auth.ScopeAdminManage, auth.ScopeMCPRead, auth.ScopeMCPMutate},
 			Role:         auth.RoleAdministrator,
 			Resources:    []string{project},
+			IssuedAt:     time.Now().Add(-time.Hour),
+			ExpiresAt:    time.Now().Add(24 * time.Hour),
 			Verifier:     auth.Digest(fullPathVerifierKey, "r16-audit-secret"),
 		},
 	}

@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/thearchitectit/guardrail-mcp/internal/auth"
 	"github.com/thearchitectit/guardrail-mcp/internal/config"
@@ -132,6 +133,8 @@ func TestRegistryConfiguredValidStillAuthenticates(t *testing.T) {
 		Scopes:       []string{auth.ScopeRESTRead, auth.ScopeRESTWrite},
 		Role:         auth.RoleDeveloper,
 		Resources:    []string{"*"},
+		IssuedAt:     time.Now().Add(-time.Hour),
+		ExpiresAt:    time.Now().Add(24 * time.Hour),
 		Verifier:     auth.Digest(testVerifierKey, "registered-secret"),
 	}}
 	raw, _ := json.Marshal(records)

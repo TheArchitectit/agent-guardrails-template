@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/labstack/echo/v4"
 
@@ -27,6 +28,8 @@ func registryConfig(t *testing.T, secret, principalID string) *config.Config {
 		Scopes:       []string{auth.ScopeRESTRead, auth.ScopeRESTWrite, auth.ScopeMCPRead, auth.ScopeMCPMutate},
 		Role:         auth.RoleDeveloper,
 		Resources:    []string{"*"},
+		IssuedAt:     time.Now().Add(-time.Hour),
+		ExpiresAt:    time.Now().Add(24 * time.Hour),
 		Verifier:     auth.Digest(testVerifierKey, secret),
 	}}
 	raw, err := json.Marshal(records)

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/thearchitectit/guardrail-mcp/internal/audit"
 	"github.com/thearchitectit/guardrail-mcp/internal/auth"
@@ -28,6 +29,8 @@ func scopedRegistryConfig(t *testing.T, secret, principalID, role string, scopes
 		Scopes:       scopes,
 		Role:         role,
 		Resources:    resources,
+		IssuedAt:     time.Now().Add(-time.Hour),
+		ExpiresAt:    time.Now().Add(24 * time.Hour),
 		Verifier:     auth.Digest(testVerifierKey, secret),
 	}}
 	raw, err := json.Marshal(records)

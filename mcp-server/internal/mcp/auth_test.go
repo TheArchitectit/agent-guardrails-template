@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/thearchitectit/guardrail-mcp/internal/auth"
 )
@@ -50,6 +51,8 @@ func TestRequireBearerWithRegistry(t *testing.T) {
 	raw, err := json.Marshal([]auth.Record{{
 		CredentialID: "cred-1",
 		PrincipalID:  "principal-alpha",
+		IssuedAt:     time.Now().Add(-time.Hour),
+		ExpiresAt:    time.Now().Add(24 * time.Hour),
 		Verifier:     auth.Digest(verifierKey, "registered-secret"),
 	}})
 	if err != nil {

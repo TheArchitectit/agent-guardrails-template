@@ -149,7 +149,7 @@ func TestRotationAuditVerifierKeyRotation(t *testing.T) {
 	}
 	events := captureRotations(t, reg)
 
-	newRec := Record{CredentialID: "cred-new", PrincipalID: "principal-new", Scopes: []string{ScopeMCPRead}, Verifier: Digest(newKey, "new-secret")}
+	newRec := Record{CredentialID: "cred-new", PrincipalID: "principal-new", Scopes: []string{ScopeMCPRead}, IssuedAt: time.Now().Add(-time.Hour), ExpiresAt: time.Now().Add(24 * time.Hour), Verifier: Digest(newKey, "new-secret")}
 	if err := reg.RotateVerifierKey(newKey, []Record{
 		recordFor("old-secret", "cred-old", "principal-old"),
 		newRec,
@@ -193,7 +193,7 @@ func TestRotationAuditEventNeverCarriesKeyMaterial(t *testing.T) {
 	events := captureRotations(t, reg)
 
 	if err := reg.RotateVerifierKey(newKey, []Record{
-		{CredentialID: "cred-1", PrincipalID: "principal-1", Scopes: []string{ScopeMCPRead}, Verifier: Digest(newKey, secret)},
+		{CredentialID: "cred-1", PrincipalID: "principal-1", Scopes: []string{ScopeMCPRead}, IssuedAt: time.Now().Add(-time.Hour), ExpiresAt: time.Now().Add(24 * time.Hour), Verifier: Digest(newKey, secret)},
 	}, time.Minute); err != nil {
 		t.Fatalf("RotateVerifierKey: %v", err)
 	}

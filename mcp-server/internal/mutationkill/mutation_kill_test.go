@@ -660,6 +660,28 @@ func (s *MCPServer) authorizeToolCallDisabled(ctx context.Context, name string, 
 		pkg:       "./internal/web",
 		testRegex: "^TestR1909AssetShapedAPIPathsDenyThroughRealChain$",
 	},
+	{
+		// Spec 16 §4 R16-09 / Spec 17 R17-10: a registered credential must
+		// expire within 90 days. Dropping the validity bound (so a record with
+		// no expiry, or an over-long window, is accepted) reintroduces the
+		// unbounded-grant defect this row exists to catch; the registry
+		// validity suite must kill it.
+		name: "credential-validity-bound-removed",
+		file: "internal/auth/registry.go",
+		old: `		if r.ExpiresAt.IsZero() {
+			return nil, fmt.Errorf("credential registry record %d: missing expires_at (Spec 16 §4 / R17-10: new credentials expire within %d days)", i, int(MaxCredentialValidity.Hours()/24))
+		}
+		reference := now
+		if !r.IssuedAt.IsZero() {
+			reference = r.IssuedAt
+		}
+		if r.ExpiresAt.Sub(reference) > MaxCredentialValidity {
+			return nil, fmt.Errorf("credential registry record %d: validity window exceeds the %d-day maximum (Spec 16 §4 / R17-10)", i, int(MaxCredentialValidity.Hours()/24))
+		}`,
+		new:       `		// MUTATION: credential validity bound removed.`,
+		pkg:       "./internal/auth",
+		testRegex: "^TestRegistryRequiresExpiry$",
+	},
 }
 
 // findModuleRoot walks up from the test working directory to the directory

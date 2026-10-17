@@ -77,7 +77,7 @@ Use synthetic credentials, disposable local services and documentation-only topo
 ## 5. Implementation notes
 
 The dated implementation notes for this spec — the evidence record for each
-requirement closed after the original proposal — live in two companion files so
+requirement closed after the original proposal — live in three companion files so
 that no Markdown file exceeds the 500-line limit (Spec 19 R19-11):
 
 - [`17-implementation-notes.md`](17-implementation-notes.md) — R17-11 action
@@ -88,3 +88,5 @@ that no Markdown file exceeds the 500-line limit (Spec 19 R19-11):
   delivery path), R17-09 debug (pprof) binding, R17-07 verifier-key entropy
   floor, R17-10 secret inventory, R17-10 webhook signing-key rotation, R17-02
   fail-closed nonlocal ingress posture.
+- [`17-implementation-notes-3.md`](17-implementation-notes-3.md) — R17-10 /
+  R16-09 registered-credential validity bound (90-day maximum).

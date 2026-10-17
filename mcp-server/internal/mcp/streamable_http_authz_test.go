@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/mark3labs/mcp-go/server"
 	"github.com/thearchitectit/guardrail-mcp/internal/auth"
@@ -169,6 +170,8 @@ func recordsForFullPath() []auth.Record {
 			Scopes:       []string{auth.ScopeMCPMutate, auth.ScopeMCPRead, auth.ScopeMCPValidate},
 			Role:         auth.RoleAdministrator,
 			Resources:    []string{"*"},
+			IssuedAt:     time.Now().Add(-time.Hour),
+			ExpiresAt:    time.Now().Add(24 * time.Hour),
 			Verifier:     auth.Digest(fullPathVerifierKey, "allow-secret"),
 		},
 		{
@@ -178,6 +181,8 @@ func recordsForFullPath() []auth.Record {
 			Scopes:       []string{auth.ScopeMCPRead},
 			Role:         auth.RoleAdministrator,
 			Resources:    []string{"*"},
+			IssuedAt:     time.Now().Add(-time.Hour),
+			ExpiresAt:    time.Now().Add(24 * time.Hour),
 			Verifier:     auth.Digest(fullPathVerifierKey, "noscope-secret"),
 		},
 		{
@@ -187,6 +192,8 @@ func recordsForFullPath() []auth.Record {
 			Scopes:       []string{auth.ScopeMCPMutate, auth.ScopeMCPRead},
 			Role:         auth.RoleReader,
 			Resources:    []string{"*"},
+			IssuedAt:     time.Now().Add(-time.Hour),
+			ExpiresAt:    time.Now().Add(24 * time.Hour),
 			Verifier:     auth.Digest(fullPathVerifierKey, "norole-secret"),
 		},
 		{
@@ -196,6 +203,8 @@ func recordsForFullPath() []auth.Record {
 			Scopes:       []string{auth.ScopeAdminManage, auth.ScopeMCPRead, auth.ScopeMCPMutate},
 			Role:         auth.RoleAdministrator,
 			Resources:    []string{"proj-a"},
+			IssuedAt:     time.Now().Add(-time.Hour),
+			ExpiresAt:    time.Now().Add(24 * time.Hour),
 			Verifier:     auth.Digest(fullPathVerifierKey, "scoped-secret"),
 		},
 	}

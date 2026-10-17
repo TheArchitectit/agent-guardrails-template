@@ -47,6 +47,17 @@ const RevocationPropagationBound = 60 * time.Second
 // accepted indefinitely.
 const MaxRotationOverlap = 24 * time.Hour
 
+// MaxCredentialValidity is the maximum validity window a registered credential
+// record may declare (Spec 16 §4 R16-09: "new credentials expire within 90
+// days"; Spec 17 R17-10 adopts the same bound). Every record MUST declare an
+// expiry, and its window — measured from IssuedAt when supplied, otherwise from
+// the load time — must not exceed this. A credential with no expiry is an
+// unbounded grant, which is exactly the posture the bound forbids; both a
+// missing expiry and an over-long window are refused at the load boundary so a
+// bad registry denies protected traffic rather than becoming an unbounded
+// credential surface.
+const MaxCredentialValidity = 90 * 24 * time.Hour
+
 // Record is a stored credential record. It identifies the credential and the
 // principal it maps to. It never contains the presented secret: only a keyed
 // one-way verifier digest of it.
@@ -217,6 +228,21 @@ func buildSnapshot(keys []verifierKeyEntry, records []Record, now time.Time) (*s
 			return nil, fmt.Errorf("credential registry record %d: duplicate verifier", i)
 		}
 		seenVerifier[r.Verifier] = true
+
+		// Spec 16 §4 R16-09 / Spec 17 R17-10: new credentials expire within 90
+		// days. A record with no expiry is an unbounded grant, and a record whose
+		// declared window exceeds the bound is refused here so the whole snapshot
+		// fails closed rather than installing an over-long credential.
+		if r.ExpiresAt.IsZero() {
+			return nil, fmt.Errorf("credential registry record %d: missing expires_at (Spec 16 §4 / R17-10: new credentials expire within %d days)", i, int(MaxCredentialValidity.Hours()/24))
+		}
+		reference := now
+		if !r.IssuedAt.IsZero() {
+			reference = r.IssuedAt
+		}
+		if r.ExpiresAt.Sub(reference) > MaxCredentialValidity {
+			return nil, fmt.Errorf("credential registry record %d: validity window exceeds the %d-day maximum (Spec 16 §4 / R17-10)", i, int(MaxCredentialValidity.Hours()/24))
+		}
 	}
 	return &snapshot{records: records, keys: keys}, nil
 }

@@ -21,6 +21,8 @@ func TestRequireBearerWithPolicyLegacyRemovalSwitch(t *testing.T) {
 		Scopes:       []string{auth.ScopeMCPRead},
 		Role:         auth.RoleDeveloper,
 		Resources:    []string{"*"},
+		IssuedAt:     time.Now().Add(-time.Hour),
+		ExpiresAt:    time.Now().Add(24 * time.Hour),
 		Verifier:     auth.Digest(fullPathVerifierKey, "registered-secret"),
 	}}
 	raw, err := json.Marshal(records)

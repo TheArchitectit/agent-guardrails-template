@@ -701,6 +701,29 @@ jobs:
           cd mcp-server
           go test ./internal/config -run 'TestValidateIngressPosture|TestValidateIngressPostureRejectsWeakRecordFile|TestValidateCouplesIngressPostureToStartup|TestIngressPreflightPath' -count=1 -v
 
+  # Spec 16 §4 R16-09 / Spec 17 R17-10: a registered credential must expire
+  # within 90 days. The registry validates scopes, verifiers and the <=24h
+  # rotation overlap, but the validity window itself was never checked: a
+  # record with no expires_at was an unbounded grant, and a record could
+  # declare an arbitrarily long window. Both are refused at the load boundary
+  # (buildSnapshot), on the reload and rotation paths too, and the bound is
+  # published so a silent change fails the build.
+  security-matrix-credential-validity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Set up Go
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version: '1.25'
+          cache-dependency-path: mcp-server/go.sum
+
+      - name: Credential validity bound row
+        run: |
+          cd mcp-server
+          go test ./internal/auth -run 'TestRegistryRequiresExpiry|TestRegistryRejectsOverLongValidity|TestRegistryValidityWindowMeasuredFromIssuedAt|TestRegistryValidityBoundAppliesToReloadAndRotate|TestMaxCredentialValidityPublished' -count=1 -v
+
   # R19-04: mutation-kill control. Copies the module to a scratch directory,
   # confirms the real negative suite PASSES, injects a deterministic bypass
   # (webhook SSRF guard always permits; webhook egress policy always permits;
@@ -713,7 +736,8 @@ jobs:
   # legacy-acceptance removal switch ignored; the default-credential gate always
   # permits; the secret-source requirement always satisfied; the debug-endpoint
   # posture gate always permits; the verifier-key entropy floor removed; the
-  # ingress-posture gate always permits; the MCP required-audit gate removed),
+  # ingress-posture gate always permits; the credential validity bound removed;
+  # the MCP required-audit gate removed),
   # and
   # requires
   # the SAME suite to FAIL —

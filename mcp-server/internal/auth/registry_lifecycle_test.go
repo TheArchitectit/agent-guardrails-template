@@ -103,7 +103,7 @@ func TestRegistryVerifierKeyRotationOverlap(t *testing.T) {
 	const newKey = "rotated-verifier-key-9876543210"
 
 	oldRec := recordFor("old-secret", "cred-old", "principal-old") // digest under testVerifierKey
-	newRec := Record{CredentialID: "cred-new", PrincipalID: "principal-new", Scopes: []string{ScopeMCPRead}, Verifier: Digest(newKey, "new-secret")}
+	newRec := Record{CredentialID: "cred-new", PrincipalID: "principal-new", Scopes: []string{ScopeMCPRead}, IssuedAt: time.Now().Add(-time.Hour), ExpiresAt: time.Now().Add(24 * time.Hour), Verifier: Digest(newKey, "new-secret")}
 
 	reg, err := New(testVerifierKey, []Record{oldRec})
 	if err != nil {
@@ -159,7 +159,7 @@ func TestRegistryRotationOverlapBounds(t *testing.T) {
 // TestRegistryRejectsUnknownScope rejects records whose scopes are outside the
 // approved catalog at load time.
 func TestRegistryRejectsUnknownScope(t *testing.T) {
-	base := Record{CredentialID: "cred-1", PrincipalID: "p1", Verifier: Digest(testVerifierKey, "s"), Role: RoleReader}
+	base := Record{CredentialID: "cred-1", PrincipalID: "p1", Verifier: Digest(testVerifierKey, "s"), Role: RoleReader, IssuedAt: time.Now().Add(-time.Hour), ExpiresAt: time.Now().Add(24 * time.Hour)}
 
 	unknown := base
 	unknown.Scopes = []string{"mcp"}
@@ -219,7 +219,9 @@ func TestLoadFromSourcesExVerifierKeyFile(t *testing.T) {
 
 	record := recordFor("registered-secret", "cred-1", "principal-alpha")
 	regJSON := `[{"credential_id":"` + record.CredentialID + `","principal_id":"` + record.PrincipalID +
-		`","scopes":["` + ScopeMCPRead + `"],"verifier":"` + record.Verifier + `"}]`
+		`","scopes":["` + ScopeMCPRead + `"],"issued_at":"` + record.IssuedAt.UTC().Format(time.RFC3339) +
+		`","expires_at":"` + record.ExpiresAt.UTC().Format(time.RFC3339) +
+		`","verifier":"` + record.Verifier + `"}]`
 	if err := os.WriteFile(regFile, []byte(regJSON), SecretFileMode); err != nil {
 		t.Fatalf("write registry file: %v", err)
 	}
@@ -246,7 +248,9 @@ func TestLoadFromSourcesExMissingKeyFileFailsClosed(t *testing.T) {
 	regFile := filepath.Join(dir, "registry.json")
 	record := recordFor("registered-secret", "cred-1", "principal-alpha")
 	regJSON := `[{"credential_id":"` + record.CredentialID + `","principal_id":"` + record.PrincipalID +
-		`","scopes":["` + ScopeMCPRead + `"],"verifier":"` + record.Verifier + `"}]`
+		`","scopes":["` + ScopeMCPRead + `"],"issued_at":"` + record.IssuedAt.UTC().Format(time.RFC3339) +
+		`","expires_at":"` + record.ExpiresAt.UTC().Format(time.RFC3339) +
+		`","verifier":"` + record.Verifier + `"}]`
 	if err := os.WriteFile(regFile, []byte(regJSON), SecretFileMode); err != nil {
 		t.Fatalf("write registry file: %v", err)
 	}
