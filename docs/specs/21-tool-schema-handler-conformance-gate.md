@@ -119,12 +119,19 @@ The injected-drift path is also proven without editing the tree by the pure
 `computeDrift` function under
 `TestToolSchemaHandlerConformance_DetectsInjectedDrift`.
 
-Honest limits (updated 2026-10-14, batch 2). (a) The gate is not yet wired
-into a workflow step in `.github/workflows/team-validation.yml`; it currently
-runs inside the existing `go test ./... -race` job, which is a blocking job, so
-drift already fails CI — but there is no standalone named step/run id yet.
-(b) Drift count IS NOW **zero**: 58 registered tools, 0 drifting, 0
-allowlisted — the 24-entry inventory was remediated in two schema-only
+Honest limits (updated 2026-10-17). (a) CLOSED — the gate is now wired as its
+own named blocking job, `security-matrix-tool-schema-handler`, in
+`.github/workflows/team-validation.yml`, running
+`go test ./internal/mcp -run 'TestToolSchemaHandlerConformance' -count=1 -v`
+(green path over the real registry plus the injected-drift red path in one
+invocation, R21.6). It carries no `continue-on-error`, no skip and no threshold
+(R21.5), so a drift failure now surfaces under a spec-21 label with its own run
+id rather than only inside the `go test ./...` job. Measured at
+`main@d52983a` before the wiring: **59 registered tools, 0 drifting, 0
+allowlisted**.
+(b) Drift count IS NOW **zero**: 59 registered tools, 0 drifting, 0
+allowlisted at `main@d52983a` (58 when the 2026-10-14 batch was measured; the
+registry has gained one tool since) — the 24-entry inventory was remediated in two schema-only
 batches (9 tools at `5a44414`, 14 tools + gate helper attribution made
 transitive at `3a64bf0`), the tracked allowlist is intentionally empty, and
 the gate fails closed on any new divergence. (c) The parser attribute family
