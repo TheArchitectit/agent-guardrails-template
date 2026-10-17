@@ -639,6 +639,27 @@ func (s *MCPServer) authorizeToolCallDisabled(ctx context.Context, name string, 
 		pkg:       "./internal/config",
 		testRegex: "^TestProviderKeysAcceptFileSources$",
 	},
+	{
+		// Spec 19 R19-09: the declared static-asset rule must never exempt an
+		// /api/ path. Reintroducing the unbounded suffix bypass (dropping the
+		// /api/ exclusion) is the historical defect this row exists to catch;
+		// the R19-09 named-coverage suite must kill it.
+		name: "exposure-asset-rule-api-exclusion-removed",
+		file: "internal/web/exposure.go",
+		old: `	if r.assetSuffix {
+		if strings.HasPrefix(requestPath, "/api/") {
+			return false
+		}
+		if method != http.MethodGet && method != http.MethodHead {
+			return false
+		}`,
+		new: `	if r.assetSuffix {
+		if method != http.MethodGet && method != http.MethodHead {
+			return false
+		}`,
+		pkg:       "./internal/web",
+		testRegex: "^TestR1909AssetShapedAPIPathsDenyThroughRealChain$",
+	},
 }
 
 // findModuleRoot walks up from the test working directory to the directory
