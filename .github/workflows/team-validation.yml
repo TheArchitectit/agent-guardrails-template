@@ -88,35 +88,24 @@ jobs:
             cmd/team-cli/go.sum
             examples/go/go.sum
 
-      - name: Run Go tests (mcp-server)
+      # Spec 19 R19-10: enumerate modules from the repository rather than
+      # assuming a go.work workspace (there is none). scripts/check_go_modules.py
+      # is the fail-closed discovery gate: every go.mod in the tree MUST have a
+      # row in .guardrails/test-floor.json and every row MUST name a module that
+      # exists, so a newly added module cannot silently escape test/build/floor
+      # CI. Run it before the loop that trusts the inventory.
+      - name: Enforce Go module discovery (Spec 19 R19-10)
         run: |
-          cd mcp-server
-          go test ./... -v -race
+          python3 scripts/check_go_modules.py --repo .
+          python3 scripts/test_check_go_modules.py
 
-      - name: Run Go tests (cmd/team-cli)
-        run: |
-          cd cmd/team-cli
-          go test ./... -v -count=1
-
-      - name: Run Go tests (examples/go)
-        run: |
-          cd examples/go
-          go test ./... -v -count=1
-
-      - name: Build Go handlers (mcp-server)
-        run: |
-          cd mcp-server
-          go build ./...
-
-      - name: Build Go examples (examples/go)
-        run: |
-          cd examples/go
-          go build ./...
-
-      # Spec 19 R19-12: every Go module needs a discovered count at or above
-      # its declared positive floor in .guardrails/test-floor.json. Zero tests
-      # or missing discovery is a failure, never an implicit green default.
-      - name: Verify per-module test floor
+      # Spec 19 R19-10: execute each Go module the discovery gate enumerated,
+      # using the command the inventory declares for it (test and build), so
+      # module coverage follows the tree, not a hardcoded step list. Spec 19
+      # R19-12: every module also needs a discovered test count at or above its
+      # declared positive floor. Zero tests or missing discovery is a failure,
+      # never an implicit green default.
+      - name: Test and build every enumerated Go module
         run: |
           set -euo pipefail
           INVENTORY=".guardrails/test-floor.json"
@@ -124,15 +113,26 @@ jobs:
           for entry in "${ENTRIES[@]}"; do
             path=$(jq -r '.path' <<< "$entry")
             min=$(jq -r '.min_tests' <<< "$entry")
+            test_cmd=$(jq -r '.test_command' <<< "$entry")
+            build_cmd=$(jq -r '.build_command' <<< "$entry")
+
+            echo "::group::$path"
+            echo "test:  $test_cmd"
+            (cd "$path" && eval "$test_cmd")
+            echo "build: $build_cmd"
+            (cd "$path" && eval "$build_cmd")
+
+            # go test -list prints one discovered Test function per line; a
+            # discovery error or zero matches yields count=0, which the floor
+            # comparison below then fails (deliberately fail-closed).
             listing=$(cd "$path" && go test -list '^Test' ./...)
-            # grep exits 1 on zero matches; that yields count=0, which the
-            # floor comparison below then fails (deliberately fail-closed).
             count=$(printf '%s\n' "$listing" | grep -c '^Test' || true)
             echo "$path: discovered $count tests (floor: $min)"
             if [ "$count" -lt "$min" ]; then
               echo "::error::Module $path discovered $count tests, below the declared floor of $min"
               exit 1
             fi
+            echo "::endgroup::"
           done
 
   build-cli:

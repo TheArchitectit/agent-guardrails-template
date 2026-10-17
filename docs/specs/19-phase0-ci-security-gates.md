@@ -213,6 +213,30 @@ fail on compilation, race, test, or package-discovery errors. Known Windows-only
 failures (`fcntl`, symlink privilege) are `FAIL` or `NOT_RUN` with a required
 supported-runner rerun, never PASS and never an undocumented SKIP.
 
+**Status (2026-10-17).** Enumeration is now WIRED + EXERCISED. The gap was
+narrow but real: there is no `go.work` in this repository (so a workspace
+assumption was never available), and the module list was hardcoded in three
+places — the `team-validation.yml` test/build steps, the
+`team-validation-fleet.yml` steps, and `.guardrails/test-floor.json` — all naming
+the same three modules. Nothing tied that list to the tree, so a newly added
+`go.mod` (a new service, example or nested tool) silently escaped every Go test,
+build and floor check. New fail-closed `scripts/check_go_modules.py` discovers
+every `go.mod` in the tree (excluding `.git`, `node_modules`, `vendor`,
+`testdata`) and requires an inventory row per discovered module **and** an
+existing module per row; a discovered module with no row, a stale row, a
+duplicate row, a missing command/floor/applicability field, a non-positive
+`min_tests`, or an empty scan scope each FAIL. The CI steps no longer name
+modules: they iterate `.guardrails/test-floor.json` and run each row's declared
+`test_command` and `build_command`, then check the declared positive floor, so
+execution follows the tree rather than a hardcoded list. Red-on-drift is proven
+both ways — `scripts/test_check_go_modules.py` (10 cases) and a live fourth
+`go.mod` flipping the gate FAIL. Rows: `regression-guard.yml` step
+`Go module discovery (Spec 19 R19-10)`; `team-validation.yml` + the trusted-main
+fleet lane step `Enforce Go module discovery (Spec 19 R19-10)` followed by
+`Test and build every enumerated Go module`. R19-12's inventory fields
+(`test_command`, `build_command`, `min_tests`, `applicability`) are now declared
+and enforced per module.
+
 ### R19-11 — Documentation and 500-line invariant
 
 The documentation gate MUST run on PR and protected push/release events. It MUST

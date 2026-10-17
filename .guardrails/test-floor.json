@@ -1,26 +1,29 @@
 {
-  "description": "Nonzero test floor per Go module (Spec 19 R19-12, R19-10). CI discovers test functions via 'go test -list' and fails when a module reports fewer than min_tests. Floors sit just below the current discovery count so legitimate refactors do not break CI, while deleting a module's tests or a broken module discovery is a hard failure.",
+  "description": "Nonzero test floor per Go module (Spec 19 R19-12, R19-10). CI discovers test functions via 'go test -list' and fails when a module reports fewer than min_tests. Floors sit just below the current discovery count so legitimate refactors do not break CI, while deleting a module's tests or a broken module discovery is a hard failure. Module discovery is enforced fail-closed by scripts/check_go_modules.py: every go.mod in the repository MUST have a row here (and every row MUST name an existing module), so a new module cannot escape test/build/floor CI.",
   "modules": [
     {
       "module": "mcp-server",
       "path": "mcp-server",
       "test_command": "go test ./... -race -count=1",
       "build_command": "go build ./...",
-      "min_tests": 250
+      "min_tests": 250,
+      "applicability": "required always: the MCP/guardrail server binary and its security matrix"
     },
     {
       "module": "cmd/team-cli",
       "path": "cmd/team-cli",
       "test_command": "go test ./... -count=1",
       "build_command": "make build",
-      "min_tests": 8
+      "min_tests": 8,
+      "applicability": "required always: the shipped team CLI"
     },
     {
       "module": "examples/go",
       "path": "examples/go",
       "test_command": "go test ./... -count=1",
       "build_command": "go build ./...",
-      "min_tests": 10
+      "min_tests": 10,
+      "applicability": "required when present: illustrative Go config demo; tests exist (11 discovered), so it is tested, not SKIP"
     }
   ]
 }

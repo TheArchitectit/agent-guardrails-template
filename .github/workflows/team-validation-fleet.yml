@@ -18,6 +18,8 @@ jobs:
     if: github.ref == 'refs/heads/main'
     runs-on: [self-hosted, Linux, X64, guardrails-ucs03]
     timeout-minutes: 30
+    env:
+      CGO_ENABLED: "1"
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
@@ -49,35 +51,22 @@ jobs:
             cmd/team-cli/go.sum
             examples/go/go.sum
 
-      - name: Run Go tests with race detection
-        working-directory: mcp-server
-        env:
-          CGO_ENABLED: "1"
-        run: go test ./... -v -race
+      # Spec 19 R19-10: enumerate modules from the repository rather than
+      # assuming a go.work workspace (there is none). The discovery gate fails
+      # closed when a go.mod in the tree has no inventory row, so a new module
+      # cannot escape the trusted-lane test/build/floor run either.
+      - name: Enforce Go module discovery (Spec 19 R19-10)
+        run: |
+          python3 scripts/check_go_modules.py --repo .
+          python3 scripts/test_check_go_modules.py
 
-      - name: Run Go tests (cmd/team-cli)
-        working-directory: cmd/team-cli
-        run: go test ./... -v -count=1
-
-      - name: Run Go tests (examples/go)
-        working-directory: examples/go
-        run: go test ./... -v -count=1
-
-      - name: Build MCP server
-        working-directory: mcp-server
-        run: go build ./...
-
-      - name: Build team CLI
-        working-directory: cmd/team-cli
-        run: make build
-
-      - name: Build Go examples (examples/go)
-        working-directory: examples/go
-        run: go build ./...
-
-      # Spec 19 R19-12: nonzero test floor per Go module; zero tests or
-      # missing discovery fails instead of passing silently.
-      - name: Verify per-module test floor
+      # Spec 19 R19-10: execute each enumerated module with the command the
+      # inventory declares for it (test and build). Spec 19 R19-12: every
+      # module also needs a discovered count at or above its declared positive
+      # floor; zero tests or missing discovery fails instead of passing
+      # silently. CGO_ENABLED=1 is set at the job level so the mcp-server race
+      # command runs with cgo as before.
+      - name: Test and build every enumerated Go module
         run: |
           set -euo pipefail
           INVENTORY=".guardrails/test-floor.json"
@@ -85,6 +74,15 @@ jobs:
           for entry in "${ENTRIES[@]}"; do
             path=$(jq -r '.path' <<< "$entry")
             min=$(jq -r '.min_tests' <<< "$entry")
+            test_cmd=$(jq -r '.test_command' <<< "$entry")
+            build_cmd=$(jq -r '.build_command' <<< "$entry")
+
+            echo "::group::$path"
+            echo "test:  $test_cmd"
+            (cd "$path" && eval "$test_cmd")
+            echo "build: $build_cmd"
+            (cd "$path" && eval "$build_cmd")
+
             listing=$(cd "$path" && go test -list '^Test' ./...)
             # grep exits 1 on zero matches; that yields count=0, which the
             # floor comparison below then fails (deliberately fail-closed).
@@ -94,4 +92,5 @@ jobs:
               echo "::error::Module $path discovered $count tests, below the declared floor of $min"
               exit 1
             fi
+            echo "::endgroup::"
           done

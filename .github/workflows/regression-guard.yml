@@ -53,6 +53,16 @@ jobs:
           python scripts/check_secret_inventory.py --repo .
           python scripts/test_check_secret_inventory.py
 
+      - name: Go module discovery (Spec 19 R19-10)
+        run: |
+          # Spec 19 R19-10 requires the package gate to ENUMERATE modules from
+          # the repository rather than assume a go.work workspace. Every go.mod
+          # in the tree must have a row in .guardrails/test-floor.json (and every
+          # row must name a module that exists), so a new module cannot escape
+          # test/build/floor CI. Fail-closed, non-vacuous.
+          python scripts/check_go_modules.py --repo .
+          python scripts/test_check_go_modules.py
+
       - name: Run Regression Check
         id: regression_check
         run: |
