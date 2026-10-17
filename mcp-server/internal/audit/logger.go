@@ -44,6 +44,11 @@ const (
 	// EventAuthzDecision is a structured allow/deny authorization decision
 	// (Spec 11 §4.4 / R16-08). It never contains raw credential material.
 	EventAuthzDecision EventType = "authz_decision"
+	// EventCredentialRotation records an applied credential-registry snapshot
+	// replacement or verifier-key rotation (Spec 16 R16-09 operator audit /
+	// Spec 17 R17-10 log opaque rotation events). It is opaque: a key
+	// fingerprint and counts, never key material or a secret.
+	EventCredentialRotation EventType = "credential_rotation"
 )
 
 // Severity represents event severity
@@ -293,6 +298,31 @@ func (l *Logger) LogConfigChange(ctx context.Context, caller auth.Caller, resour
 		Status:   "success",
 		Details: map[string]interface{}{
 			"credential_id": caller.CredentialID,
+		},
+	})
+}
+
+// LogRotation records an applied credential-registry replacement or
+// verifier-key rotation as an opaque audit event (Spec 16 R16-09 operator
+// audit / Spec 17 R17-10 log opaque rotation events). The event carries the
+// operation, a non-reversible verifier-key fingerprint, record counts and the
+// overlap window — never key material or a credential secret. Actor is the
+// system: the replacement is applied by the reload loop or an operator
+// action, and the registry holds no request principal to attribute it to.
+func (l *Logger) LogRotation(ctx context.Context, ev auth.RotationEvent) {
+	l.Log(ctx, Event{
+		Type:     EventCredentialRotation,
+		Severity: SevCritical,
+		Actor:    "system",
+		Action:   ev.Operation,
+		Resource: "credential_registry",
+		Status:   "success",
+		Details: map[string]interface{}{
+			"operation":       ev.Operation,
+			"key_fingerprint": ev.KeyFingerprint,
+			"record_count":    ev.RecordCount,
+			"revoked_count":   ev.RevokedCount,
+			"overlap_seconds": ev.OverlapSeconds,
 		},
 	})
 }

@@ -213,6 +213,14 @@ func main() {
 			VerifierKey:     cfg.CredentialVerifierKey,
 			VerifierKeyFile: cfg.CredentialVerifierKeyFile,
 		}
+		// Operator audit (Spec 16 R16-09 / Spec 17 R17-10): record every
+		// applied snapshot replacement or verifier-key rotation as an opaque
+		// audit event (key fingerprint + counts, never key material), so an
+		// operator can confirm a rotation was applied and reconstruct when it
+		// happened. A no-op re-read emits nothing.
+		reg.SetRotationObserver(func(ev auth.RotationEvent) {
+			auditLogger.LogRotation(context.Background(), ev)
+		})
 		reg.StartReloadLoop(ctx, sources, auth.RevocationReloadInterval, func(err error) {
 			slog.Warn("credential registry reload failed; previous validated snapshot remains in force", "error", err)
 		})

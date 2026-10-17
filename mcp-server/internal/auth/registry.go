@@ -115,6 +115,13 @@ type snapshot struct {
 type Registry struct {
 	mu   sync.RWMutex
 	snap *snapshot
+
+	// observer, when set, receives an opaque rotation event after every applied
+	// snapshot replacement that changed state (Spec 16 R16-09 operator audit /
+	// Spec 17 R17-10 log opaque rotation events). obsMu guards only the observer
+	// field so it can be set or read without holding the state lock.
+	obsMu    sync.RWMutex
+	observer func(RotationEvent)
 }
 
 // Digest returns the hex-encoded keyed one-way verifier for a secret. It is
@@ -291,13 +298,21 @@ func (r *Registry) Reload(verifierKey string, records []Record) error {
 	if len(records) == 0 {
 		return fmt.Errorf("credential registry reload rejected an empty record set")
 	}
-	snap, err := buildSnapshot([]verifierKeyEntry{{key: []byte(verifierKey)}}, records, time.Now())
+	now := time.Now()
+	snap, err := buildSnapshot([]verifierKeyEntry{{key: []byte(verifierKey)}}, records, now)
 	if err != nil {
 		return err
 	}
 	r.mu.Lock()
+	prev := r.snap
 	r.snap = snap
 	r.mu.Unlock()
+	// Operator audit (R16-09 / R17-10): record the applied replacement only
+	// when it changed state, so the log reconstructs rotations rather than
+	// heartbeating. The event is opaque — a key fingerprint, never the key.
+	if snapshotChanged(prev, snap) {
+		r.notifyRotation(rotationEvent("reload", verifierKey, snap, 0, now))
+	}
 	return nil
 }
 
@@ -356,6 +371,11 @@ func (r *Registry) RotateVerifierKey(newVerifierKey string, records []Record, ov
 	r.mu.Lock()
 	r.snap = snap
 	r.mu.Unlock()
+	// Operator audit (R16-09 / R17-10): an applied verifier-key rotation is
+	// always a state change (a new key is installed), so it always fires. The
+	// event identifies the incoming key by fingerprint and records the overlap
+	// window; it never carries key material.
+	r.notifyRotation(rotationEvent("rotate", newVerifierKey, snap, overlap, now))
 	return nil
 }
 

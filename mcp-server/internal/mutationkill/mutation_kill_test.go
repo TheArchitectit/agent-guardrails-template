@@ -510,6 +510,19 @@ func (s *MCPServer) authorizeToolCallDisabled(ctx context.Context, name string, 
 		pkg:       "./internal/mcp",
 		testRegex: "^TestMCPAuditDurabilityFailsClosed$",
 	},
+	{
+		// Spec 16 R16-09 (operator audit) / Spec 17 R17-10 (log opaque rotation
+		// events): an applied credential-registry replacement or verifier-key
+		// rotation must leave an attributable audit event. A bypass that stops
+		// notifying the observer (so rotations happen silently) must be killed by
+		// the rotation-audit negative suite.
+		name:      "credential-rotation-audit-never-emitted",
+		file:      "internal/auth/rotation_audit.go",
+		old:       "\tif observer != nil {",
+		new:       "\tif observer != nil && false {",
+		pkg:       "./internal/auth",
+		testRegex: "^TestRotationAuditReloadEmitsOpaqueEvent$",
+	},
 }
 
 // findModuleRoot walks up from the test working directory to the directory
