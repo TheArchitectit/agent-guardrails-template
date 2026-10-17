@@ -379,18 +379,24 @@ func (s *MCPServer) authorizeToolCallDisabled(ctx context.Context, name string, 
 		if strings.TrimSpace(*s.value) != "" {
 			continue
 		}
-		if strings.TrimSpace(*s.file) != "" {
-			return fmt.Errorf("%s_FILE %q produced no value (Spec 17 R17-06)", s.name, strings.TrimSpace(*s.file))
-		}`,
+		if s.optional {
+			// Not required at the load boundary; a deployment that needs it
+			// (nonlocal/production) is gated by its own R17-06 check.
+			continue
+		}
+		if strings.TrimSpace(*s.file) != "" {`,
 		new: `	for _, s := range c.secretSources() {
 		_ = s
 		continue
 		if strings.TrimSpace(*s.value) != "" {
 			continue
 		}
-		if strings.TrimSpace(*s.file) != "" {
-			return fmt.Errorf("%s_FILE %q produced no value (Spec 17 R17-06)", s.name, strings.TrimSpace(*s.file))
-		}`,
+		if s.optional {
+			// Not required at the load boundary; a deployment that needs it
+			// (nonlocal/production) is gated by its own R17-06 check.
+			continue
+		}
+		if strings.TrimSpace(*s.file) != "" {`,
 		pkg:       "./internal/config",
 		testRegex: "^TestValidateRequiresASecretSource$",
 	},
@@ -580,6 +586,26 @@ func (s *MCPServer) authorizeToolCallDisabled(ctx context.Context, name string, 
 	return keys`,
 		pkg:       "./internal/notifications",
 		testRegex: "^TestWebhookRotationOverlapOffersBothKeys$",
+	},
+	{
+		// Spec 17 R17-06: webhook signing material must be encrypted at rest. A
+		// bypass that makes the at-rest reader pass a sealed value through as if
+		// it were plaintext (fail-open) must be killed by the negative suite
+		// that requires a sealed value to be refused when no key is configured.
+		name: "webhook-secret-atrest-fail-open",
+		file: "internal/database/webhooks.go",
+		old: `	if s == nil || s.sealer == nil {
+		if secretbox.IsSealed(stored) {
+			return "", errors.New("webhook signing material is encrypted at rest but no WEBHOOK_ENCRYPTION_KEY is configured")
+		}
+		return stored, nil
+	}`,
+		new: `	if s == nil || s.sealer == nil {
+		// MUTATION: pass a sealed value through as if it were the plaintext key.
+		return stored, nil
+	}`,
+		pkg:       "./internal/database",
+		testRegex: "^TestWebhookScanRefusesSealedValueWithoutKey$",
 	},
 }
 

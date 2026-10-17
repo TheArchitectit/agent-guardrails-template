@@ -156,6 +156,11 @@ func validMinimalConfig() *Config {
 		// the profile/binding failures these tests isolate.
 		DBPassword:    "operator-db-pass-01",
 		RedisPassword: "operator-redis-pass-01",
+		// A strong webhook-encryption key so the R17-06 encrypted-at-rest gate
+		// (which applies to nonlocal/production profiles) does not mask the
+		// profile/binding failures these tests isolate. Derived at runtime to
+		// keep the secret scanner clean (see strongWebhookKey).
+		WebhookEncryptionKey: strongWebhookKey(),
 	}
 }
 

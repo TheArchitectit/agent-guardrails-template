@@ -22,6 +22,7 @@ import (
 	"github.com/thearchitectit/guardrail-mcp/internal/guardrails"
 	mcpServer "github.com/thearchitectit/guardrail-mcp/internal/mcp"
 	"github.com/thearchitectit/guardrail-mcp/internal/notifications"
+	"github.com/thearchitectit/guardrail-mcp/internal/secretbox"
 	"github.com/thearchitectit/guardrail-mcp/internal/validation"
 	"github.com/thearchitectit/guardrail-mcp/internal/web"
 )
@@ -170,8 +171,22 @@ func main() {
 		slog.Info("Guardrails engine disabled (OLLAMA_URL not set); content filter tools will return not-configured")
 	}
 
-	// Initialize webhook notifications
+	// Initialize webhook notifications. Webhook signing material is encrypted
+	// at rest (Spec 17 R17-06) when WEBHOOK_ENCRYPTION_KEY is configured; a
+	// nonlocal deployment is required to set it by the config gate, so a nil
+	// sealer can only occur on the local posture.
 	webhookStore := database.NewWebhookStore(db)
+	if key := cfg.WebhookEncryptionKey; key != "" {
+		sealer, err := secretbox.New(key)
+		if err != nil {
+			slog.Error("webhook encryption key is unusable; refusing to start", "error", err)
+			os.Exit(1)
+		}
+		webhookStore = webhookStore.WithSealer(sealer)
+		slog.Info("Webhook signing material encrypted at rest (Spec 17 R17-06)")
+	} else {
+		slog.Warn("WEBHOOK_ENCRYPTION_KEY is not set; webhook signing material is stored unencrypted (permitted for the local profile only)")
+	}
 	webhookDispatcher := notifications.NewDispatcher(webhookStore)
 	mcpSrv.SetWebhookStore(webhookStore)
 	mcpSrv.SetWebhookDispatcher(webhookDispatcher)

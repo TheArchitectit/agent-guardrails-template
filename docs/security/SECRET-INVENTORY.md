@@ -37,7 +37,8 @@ reviewer accountable for the secret's posture.
 | `OPENAI_API_KEY` | security owner | `internal/guardrails` content filter — moderation backend key | `OPENAI_API_KEY` (environment only; file source NOT yet supported — named limit) | Provider-defined | operator-recorded | Revoke provider-side, then redeploy with the replacement |
 | `MIGRATION_DSN` | deployment owner | `mcp-server/scripts/run_migrations.go` — one-shot migration job database URL | `MIGRATION_DSN_FILE` (0600, preferred) | operator-set | operator-recorded | Rotate the DB password embedded in the URL; argv is refused by construction |
 | `MIGRATION_DATABASE_URL` | deployment owner | `mcp-server/scripts/run_migrations.go` — documented migration fallback when no file is mounted | `MIGRATION_DATABASE_URL` (environment fallback) | operator-set | operator-recorded | Rotate the DB password embedded in the URL; the argv interface is removed |
-| `WEBHOOK_HMAC_SECRET` | security owner | `internal/notifications` webhook dispatcher — per-webhook signing material (`secret_hmac` column) | database column (encrypted-at-rest storage is an OPEN R17-06 item) | operator-set per webhook | operator-recorded per webhook | Rotate via `rotate_webhook_key` (staged: the outgoing key stays valid for the 24h bounded overlap, identified to receivers by fingerprint) or cut over immediately; encrypted-at-rest storage remains open |
+| `WEBHOOK_ENCRYPTION_KEY` | security owner | `internal/database` webhook store — AES-256-GCM key that seals per-webhook signing material at rest (Spec 17 R17-06) | `WEBHOOK_ENCRYPTION_KEY_FILE` (0600) or `WEBHOOK_ENCRYPTION_KEY` | No fixed expiry; rotate on suspicion | operator-recorded; required for nonlocal/production, optional for `local` | Generate a new >=256-bit key, re-seal affected rows under the new key, then retire the old one |
+| `WEBHOOK_HMAC_SECRET` | security owner | `internal/notifications` webhook dispatcher — per-webhook signing material (`secret_hmac` column) | database column, **sealed with `WEBHOOK_ENCRYPTION_KEY`** (AES-256-GCM, `v1:` form) when that key is configured | operator-set per webhook | operator-recorded per webhook | Rotate via `rotate_webhook_key` (staged: the outgoing key stays valid for the 24h bounded overlap, identified to receivers by fingerprint) or cut over immediately |
 
 ## Non-env secrets covered
 
@@ -47,9 +48,14 @@ reviewer accountable for the secret's posture.
 here because R17-10 names webhook material explicitly. Rotation is implemented
 (Spec 17 R17-10 webhook half, 2026-10-17): a staged replacement keeps the
 outgoing key valid only inside the 24h bounded overlap and identifies the active
-key to receivers by a non-reversible fingerprint. The coverage gate discovers
-*environment* secrets from the tree; this row is documented but not
-tree-discoverable, which is the named limit of the coverage check below.
+key to receivers by a non-reversible fingerprint. Encrypted-at-rest storage is
+implemented (Spec 17 R17-06, 2026-10-17): the store seals both signing columns
+with `WEBHOOK_ENCRYPTION_KEY` (AES-256-GCM, versioned `v1:` form) on write and
+decrypts on read; a nonlocal/production deployment must set that key, and a
+sealed value read with no key — or a tampered one — is refused rather than used
+as a signing key. The coverage gate discovers *environment* secrets from the
+tree; this row is documented but not tree-discoverable, which is the named limit
+of the coverage check below.
 
 ## Named limits
 
@@ -61,5 +67,7 @@ tree-discoverable, which is the named limit of the coverage check below.
   **environment-only** today: R17-06's file-source rule is not yet applied to
   them (tracked as the R17-06 residual). This inventory records that honestly
   rather than implying a file path exists.
-- Encrypted-at-rest storage for `WEBHOOK_HMAC_SECRET` remains an open R17-06
-  item; this inventory does not claim it.
+- Webhook signing material (`WEBHOOK_HMAC_SECRET`) is encrypted at rest when
+  `WEBHOOK_ENCRYPTION_KEY` is configured (required for nonlocal/production). A
+  legacy plaintext row remains readable during migration, and the store reports
+  a sealed-vs-plaintext distinction rather than assuming the stronger form.

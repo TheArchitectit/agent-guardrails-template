@@ -37,6 +37,12 @@ type secretSource struct {
 	// value is the resolved secret; file is the read-only secret-file path.
 	value *string
 	file  *string
+	// optional marks a secret that is not required to have a source at the
+	// load boundary. WEBHOOK_ENCRYPTION_KEY is optional: `local` may leave it
+	// unset (the signing key is then stored as before), while a nonlocal or
+	// production deployment is required to set it by the R17-06
+	// encrypted-at-rest gate, not by the generic source check.
+	optional bool
 }
 
 // secretSources returns the primary secrets that accept a file source. The
@@ -48,6 +54,7 @@ func (c *Config) secretSources() []secretSource {
 		{name: "JWT_SECRET", value: &c.JWTSecret, file: &c.JWTSecretFile},
 		{name: "DB_PASSWORD", value: &c.DBPassword, file: &c.DBPasswordFile},
 		{name: "REDIS_PASSWORD", value: &c.RedisPassword, file: &c.RedisPasswordFile},
+		{name: "WEBHOOK_ENCRYPTION_KEY", value: &c.WebhookEncryptionKey, file: &c.WebhookEncryptionKeyFile, optional: true},
 	}
 }
 
@@ -97,6 +104,11 @@ func (c *Config) ValidateSecretSources() error {
 	}
 	for _, s := range c.secretSources() {
 		if strings.TrimSpace(*s.value) != "" {
+			continue
+		}
+		if s.optional {
+			// Not required at the load boundary; a deployment that needs it
+			// (nonlocal/production) is gated by its own R17-06 check.
 			continue
 		}
 		if strings.TrimSpace(*s.file) != "" {

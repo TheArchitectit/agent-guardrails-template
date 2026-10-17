@@ -590,6 +590,30 @@ jobs:
           cd mcp-server
           go test ./internal/secretfile ./internal/config -run 'TestPermitsRestrictedOnly|TestReadAcceptsRestrictedFile|TestReadRejectsNonRegularAndPermissive|TestResolveSecretSourcesFromFiles|TestResolveSecretSourcesInlineWins|TestResolveSecretSourcesFailsClosed|TestValidateRequiresASecretSource|TestSecretFileSourceFeedsTheExistingGates' -count=1 -v
 
+  # Spec 17 R17-06: webhook signing material must be encrypted at rest. A
+  # nonlocal/production deployment is required to supply a strong
+  # WEBHOOK_ENCRYPTION_KEY (fail-closed), the store seals the signing key (and
+  # its rotation-overlap predecessor) on write and decrypts on read, and a
+  # sealed value read with no key configured — or a tampered one — is refused
+  # rather than used as a signing key.
+  security-matrix-webhook-atrest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Set up Go
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version: '1.25'
+          cache-dependency-path: mcp-server/go.sum
+
+      - name: Webhook signing-material at-rest encryption row
+        run: |
+          cd mcp-server
+          go test ./internal/secretbox -count=1 -v
+          go test ./internal/database -run 'TestWebhookScan|TestWebhookSeal|TestWebhookRotationEventFingerprint' -count=1 -v
+          go test ./internal/config -run 'TestValidateWebhookEncryption|TestValidateCouplesWebhookEncryptionToStartup' -count=1 -v
+
   # Spec 17 R17-09: pprof stays disabled by default; when enabled for diagnosis
   # it must bind a loopback-only address, carry a bounded access window
   # (PPROF_UNTIL), and — outside the local profile — an explicit

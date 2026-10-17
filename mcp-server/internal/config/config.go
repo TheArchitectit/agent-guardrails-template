@@ -119,6 +119,17 @@ type Config struct {
 	// verifier key, as an alternative to inline CREDENTIAL_VERIFIER_KEY.
 	CredentialVerifierKeyFile string `env:"CREDENTIAL_VERIFIER_KEY_FILE"`
 
+	// Webhook signing material is stored encrypted at rest (Spec 17 R17-06).
+	// WebhookEncryptionKey is the operator key that seals the per-webhook HMAC
+	// secret (and its rotation-overlap predecessor) before it is written to the
+	// `webhook_configs` columns; see internal/secretbox. A nonlocal or
+	// production deployment must set it (a plaintext signing key in a database
+	// dump is exactly the exposure R17-06 forbids); `local` may leave it unset,
+	// in which case the signing key is stored as before. It may also come from a
+	// read-only secret file (WEBHOOK_ENCRYPTION_KEY_FILE).
+	WebhookEncryptionKey     string `env:"WEBHOOK_ENCRYPTION_KEY"`
+	WebhookEncryptionKeyFile string `env:"WEBHOOK_ENCRYPTION_KEY_FILE"`
+
 	// JWT Configuration. The signing secret may come from the environment or
 	// from a read-only secret file (JWT_SECRET_FILE).
 	JWTSecret        string        `env:"JWT_SECRET"`
@@ -389,6 +400,14 @@ func (c *Config) Validate() error {
 	// (Spec 17 R17-05): a nonlocal or production deployment must not start with
 	// the shipped Compose fallback or another publicly-known default.
 	if err := c.ValidateNoProductionDefaultCredentials(); err != nil {
+		return err
+	}
+
+	// Require webhook signing material to be encrypted at rest outside the
+	// local boundary (Spec 17 R17-06): a plaintext signing key in the database
+	// is the exposure R17-06 forbids, so a nonlocal deployment must supply a
+	// strong WEBHOOK_ENCRYPTION_KEY before it starts.
+	if err := c.ValidateWebhookEncryption(); err != nil {
 		return err
 	}
 
@@ -673,5 +692,7 @@ func (c *Config) Masked() *Config {
 	masked.CredentialRegistryJSON = "***"
 	masked.CredentialRegistryFile = "***"
 	masked.CredentialVerifierKeyFile = "***"
+	masked.WebhookEncryptionKey = "***"
+	masked.WebhookEncryptionKeyFile = "***"
 	return &masked
 }

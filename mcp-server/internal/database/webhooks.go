@@ -10,16 +10,56 @@ import (
 	"github.com/google/uuid"
 	"github.com/lib/pq"
 	"github.com/thearchitectit/guardrail-mcp/internal/notifications"
+	"github.com/thearchitectit/guardrail-mcp/internal/secretbox"
 )
 
 // WebhookStore handles webhook config database operations.
 type WebhookStore struct {
 	db *DB
+	// sealer encrypts webhook signing material at rest (Spec 17 R17-06). It is
+	// nil when no WEBHOOK_ENCRYPTION_KEY is configured (`local`), in which case
+	// signing material is stored as before. A nonlocal deployment is required
+	// to supply a key by the config gate, so a nil sealer there cannot occur.
+	sealer *secretbox.Sealer
 }
 
 // NewWebhookStore creates a new webhook store.
 func NewWebhookStore(db *DB) *WebhookStore {
 	return &WebhookStore{db: db}
+}
+
+// WithSealer installs the at-rest encryption decision (Spec 17 R17-06). The
+// sealer is applied to every signing-material write and read, so a stored key
+// is ciphertext and a legacy plaintext key is still readable during migration.
+func (s *WebhookStore) WithSealer(sealer *secretbox.Sealer) *WebhookStore {
+	s.sealer = sealer
+	return s
+}
+
+// sealSecret encrypts a signing secret for storage. With no sealer the value is
+// returned unchanged (local posture).
+func (s *WebhookStore) sealSecret(plaintext string) (string, error) {
+	if s == nil || s.sealer == nil {
+		return plaintext, nil
+	}
+	return s.sealer.Seal(plaintext)
+}
+
+// openSecret decrypts a stored signing secret. A legacy plaintext value is
+// returned unchanged; a sealed value that fails authentication is an error, so
+// a corrupt or wrong-key value never becomes a usable signing key.
+func (s *WebhookStore) openSecret(stored string) (string, error) {
+	if s == nil || s.sealer == nil {
+		if secretbox.IsSealed(stored) {
+			return "", errors.New("webhook signing material is encrypted at rest but no WEBHOOK_ENCRYPTION_KEY is configured")
+		}
+		return stored, nil
+	}
+	plaintext, _, err := s.sealer.Open(stored)
+	if err != nil {
+		return "", fmt.Errorf("webhook signing material could not be decrypted (Spec 17 R17-06): %w", err)
+	}
+	return plaintext, nil
 }
 
 // Create inserts a new webhook configuration.
@@ -29,11 +69,16 @@ func (s *WebhookStore) Create(ctx context.Context, config *notifications.Webhook
 	config.CreatedAt = now
 	config.UpdatedAt = now
 
-	_, err := s.db.ExecContext(ctx, `
+	storedSecret, err := s.sealSecret(config.SecretHMAC)
+	if err != nil {
+		return fmt.Errorf("failed to encrypt webhook signing material: %w", err)
+	}
+
+	_, err = s.db.ExecContext(ctx, `
 		INSERT INTO webhook_configs (id, team_id, url, events, secret_hmac, enabled, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 	`, config.ID, config.TeamID, config.URL, pq.Array(config.Events),
-		config.SecretHMAC, config.Enabled, config.CreatedAt, config.UpdatedAt)
+		storedSecret, config.Enabled, config.CreatedAt, config.UpdatedAt)
 	if err != nil {
 		return fmt.Errorf("failed to create webhook: %w", err)
 	}
@@ -54,8 +99,11 @@ const webhookColumns = `id, team_id, url, events, secret_hmac, secret_hmac_previ
 
 // scanWebhookConfig reads one webhook_configs row in webhookColumns order. The
 // previous signing key is nullable; it is loaded into the model (it must be
-// available to sign inside the overlap) but is never serialized outward.
-func scanWebhookConfig(sc rowScanner) (*notifications.WebhookConfig, error) {
+// available to sign inside the overlap) but is never serialized outward. Both
+// signing columns are decrypted through the store's sealer (Spec 17 R17-06): a
+// sealed value that fails authentication is an error, and a value that is
+// sealed while no key is configured is refused rather than used as a key.
+func (s *WebhookStore) scanWebhookConfig(sc rowScanner) (*notifications.WebhookConfig, error) {
 	var config notifications.WebhookConfig
 	var events []string
 	var prev sql.NullString
@@ -68,7 +116,20 @@ func scanWebhookConfig(sc rowScanner) (*notifications.WebhookConfig, error) {
 		return nil, err
 	}
 	config.Events = events
-	config.SecretHMACPrevious = prev.String
+
+	secret, err := s.openSecret(config.SecretHMAC)
+	if err != nil {
+		return nil, err
+	}
+	config.SecretHMAC = secret
+
+	if prev.Valid && prev.String != "" {
+		previous, err := s.openSecret(prev.String)
+		if err != nil {
+			return nil, err
+		}
+		config.SecretHMACPrevious = previous
+	}
 	if rotatedAt.Valid {
 		t := rotatedAt.Time
 		config.SecretHMACRotatedAt = &t
@@ -78,7 +139,7 @@ func scanWebhookConfig(sc rowScanner) (*notifications.WebhookConfig, error) {
 
 // GetByID retrieves a webhook config by ID.
 func (s *WebhookStore) GetByID(ctx context.Context, id string) (*notifications.WebhookConfig, error) {
-	config, err := scanWebhookConfig(s.db.QueryRowContext(ctx, `
+	config, err := s.scanWebhookConfig(s.db.QueryRowContext(ctx, `
 		SELECT `+webhookColumns+`
 		FROM webhook_configs WHERE id = $1
 	`, id))
@@ -104,7 +165,7 @@ func (s *WebhookStore) ListByTeam(ctx context.Context, teamID string) ([]*notifi
 
 	var configs []*notifications.WebhookConfig
 	for rows.Next() {
-		config, err := scanWebhookConfig(rows)
+		config, err := s.scanWebhookConfig(rows)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan webhook: %w", err)
 		}
@@ -127,7 +188,7 @@ func (s *WebhookStore) GetByEventType(ctx context.Context, eventType string) ([]
 
 	var configs []*notifications.WebhookConfig
 	for rows.Next() {
-		config, err := scanWebhookConfig(rows)
+		config, err := s.scanWebhookConfig(rows)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan webhook: %w", err)
 		}
@@ -141,14 +202,24 @@ func (s *WebhookStore) GetByEventType(ctx context.Context, eventType string) ([]
 // discards an in-flight overlap or cuts over a rotation early.
 func (s *WebhookStore) Update(ctx context.Context, config *notifications.WebhookConfig) error {
 	config.UpdatedAt = time.Now().UTC()
+
+	storedSecret, err := s.sealSecret(config.SecretHMAC)
+	if err != nil {
+		return fmt.Errorf("failed to encrypt webhook signing material: %w", err)
+	}
+	storedPrevious, err := s.sealSecret(config.SecretHMACPrevious)
+	if err != nil {
+		return fmt.Errorf("failed to encrypt webhook signing material: %w", err)
+	}
+
 	result, err := s.db.ExecContext(ctx, `
 		UPDATE webhook_configs
 		SET url = $2, events = $3, secret_hmac = $4, enabled = $5, updated_at = $6,
 		    secret_hmac_previous = $7, secret_hmac_rotated_at = $8
 		WHERE id = $1
 	`, config.ID, config.URL, pq.Array(config.Events),
-		config.SecretHMAC, config.Enabled, config.UpdatedAt,
-		nullableSecret(config.SecretHMACPrevious), nullableTime(config.SecretHMACRotatedAt))
+		storedSecret, config.Enabled, config.UpdatedAt,
+		nullableSecret(storedPrevious), nullableTime(config.SecretHMACRotatedAt))
 	if err != nil {
 		return fmt.Errorf("failed to update webhook: %w", err)
 	}
@@ -169,11 +240,17 @@ func (s *WebhookStore) RotateSigningKey(ctx context.Context, id, newSecret strin
 		return nil, fmt.Errorf("refusing to rotate %s to an empty signing key", id)
 	}
 	now = now.UTC()
+	storedNew, err := s.sealSecret(newSecret)
+	if err != nil {
+		return nil, fmt.Errorf("failed to encrypt webhook signing material: %w", err)
+	}
 	// RETURNING reads the outgoing key (now stored as the previous key) in the
 	// same statement that applies the replacement, so the event describes
-	// exactly the state that was written and no separate read can race it.
+	// exactly the state that was written and no separate read can race it. The
+	// outgoing value is stored ciphertext; its fingerprint is computed over the
+	// decrypted plaintext so it matches the receiver-facing key identity.
 	var previous sql.NullString
-	err := s.db.QueryRowContext(ctx, `
+	err = s.db.QueryRowContext(ctx, `
 		UPDATE webhook_configs
 		SET secret_hmac_previous = secret_hmac,
 		    secret_hmac = $2,
@@ -181,18 +258,22 @@ func (s *WebhookStore) RotateSigningKey(ctx context.Context, id, newSecret strin
 		    updated_at = $3
 		WHERE id = $1
 		RETURNING secret_hmac_previous
-	`, id, newSecret, now).Scan(&previous)
+	`, id, storedNew, now).Scan(&previous)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, fmt.Errorf("webhook not found: %s", id)
 		}
 		return nil, fmt.Errorf("failed to rotate webhook signing key: %w", err)
 	}
+	previousPlain, err := s.openSecret(previous.String)
+	if err != nil {
+		return nil, err
+	}
 	return &notifications.WebhookRotationEvent{
 		WebhookID:      id,
 		Operation:      "rotate",
 		KeyID:          notifications.WebhookKeyFingerprint(newSecret),
-		PreviousKeyID:  notifications.WebhookKeyFingerprint(previous.String),
+		PreviousKeyID:  notifications.WebhookKeyFingerprint(previousPlain),
 		OverlapSeconds: int(notifications.WebhookRotationOverlap / time.Second),
 		OccurredAt:     now,
 	}, nil
@@ -220,11 +301,21 @@ func (s *WebhookStore) CutoverSigningKey(ctx context.Context, id string, now tim
 		}
 		return nil, fmt.Errorf("failed to cut over webhook signing key: %w", err)
 	}
+	// The fingerprints are computed over decrypted plaintext so they match the
+	// receiver-facing key identity regardless of the at-rest form.
+	activePlain, err := s.openSecret(active.String)
+	if err != nil {
+		return nil, err
+	}
+	previousPlain, err := s.openSecret(previous.String)
+	if err != nil {
+		return nil, err
+	}
 	return &notifications.WebhookRotationEvent{
 		WebhookID:     id,
 		Operation:     "cutover",
-		KeyID:         notifications.WebhookKeyFingerprint(active.String),
-		PreviousKeyID: notifications.WebhookKeyFingerprint(previous.String),
+		KeyID:         notifications.WebhookKeyFingerprint(activePlain),
+		PreviousKeyID: notifications.WebhookKeyFingerprint(previousPlain),
 		OccurredAt:    now,
 	}, nil
 }
