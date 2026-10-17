@@ -61,9 +61,13 @@ func TestLogRotationRecordsOpaqueEvent(t *testing.T) {
 	l := NewLoggerWithStore(8, store)
 	defer l.Stop()
 
+	// A deliberately low-entropy synthetic fingerprint: a real fingerprint is 12
+	// hex characters, but a high-entropy fixture literal trips the generic-api-key
+	// secret scanner (the cause is the fixture, not the scan). The contract under
+	// test is that the field is persisted and echoed, not its entropy.
 	l.LogRotation(context.Background(), auth.RotationEvent{
 		Operation:      "rotate",
-		KeyFingerprint: "abc123def456",
+		KeyFingerprint: "aaaa0000bbbb",
 		RecordCount:    4,
 		RevokedCount:   1,
 		OverlapSeconds: 3600,
@@ -83,7 +87,7 @@ func TestLogRotationRecordsOpaqueEvent(t *testing.T) {
 	if ev.Details["operation"] != "rotate" {
 		t.Fatalf("operation = %v", ev.Details["operation"])
 	}
-	if ev.Details["key_fingerprint"] != "abc123def456" {
+	if ev.Details["key_fingerprint"] != "aaaa0000bbbb" {
 		t.Fatalf("key_fingerprint = %v", ev.Details["key_fingerprint"])
 	}
 	if ev.Details["overlap_seconds"] != 3600 {
@@ -103,7 +107,7 @@ func TestLogRotationDetailsCarryNoKeyMaterial(t *testing.T) {
 
 	l.LogRotation(context.Background(), auth.RotationEvent{
 		Operation:      "reload",
-		KeyFingerprint: "deadbeefcafe",
+		KeyFingerprint: "cccc1111dddd",
 		RecordCount:    2,
 	})
 
