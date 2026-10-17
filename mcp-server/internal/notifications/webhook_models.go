@@ -7,14 +7,22 @@ import (
 
 // WebhookConfig represents a configured webhook endpoint.
 type WebhookConfig struct {
-	ID         string    `json:"id"`
-	TeamID     string    `json:"team_id"`
-	URL        string    `json:"url"`
-	Events     []string  `json:"events"`
-	SecretHMAC string    `json:"secret_hmac,omitempty"`
-	Enabled    bool      `json:"enabled"`
-	CreatedAt  time.Time `json:"created_at"`
-	UpdatedAt  time.Time `json:"updated_at"`
+	ID         string   `json:"id"`
+	TeamID     string   `json:"team_id"`
+	URL        string   `json:"url"`
+	Events     []string `json:"events"`
+	SecretHMAC string   `json:"secret_hmac,omitempty"`
+	// SecretHMACPrevious is the outgoing signing key kept valid for the bounded
+	// rotation overlap (Spec 17 R17-10). It is never returned on any read path:
+	// like SecretHMAC it is credential material.
+	SecretHMACPrevious string `json:"-"`
+	// SecretHMACRotatedAt is when the staged replacement above was applied. The
+	// previous key is offered for signing only while `now` is inside
+	// WebhookRotationOverlap of this instant.
+	SecretHMACRotatedAt *time.Time `json:"-"`
+	Enabled             bool       `json:"enabled"`
+	CreatedAt           time.Time  `json:"created_at"`
+	UpdatedAt           time.Time  `json:"updated_at"`
 }
 
 // WebhookPayload is the body sent to webhook endpoints.

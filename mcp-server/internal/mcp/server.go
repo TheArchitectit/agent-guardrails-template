@@ -433,6 +433,8 @@ func (s *MCPServer) dispatchToolCall(ctx context.Context, name string, args map[
 		return s.handleDeleteWebhook(ctx, args)
 	case "get_webhook_deliveries":
 		return s.handleGetWebhookDeliveries(ctx, args)
+	case "rotate_webhook_key":
+		return s.handleRotateWebhookKey(ctx, args)
 	// Budget management tools
 	case "configure_budget":
 		return s.handleConfigureBudget(ctx, args)

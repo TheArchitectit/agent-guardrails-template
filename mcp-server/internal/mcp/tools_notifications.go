@@ -7,6 +7,7 @@ import (
 	"net/netip"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/thearchitectit/guardrail-mcp/internal/notifications"
@@ -171,6 +172,28 @@ func (s *MCPServer) notificationToolList() []mcp.Tool {
 					},
 				},
 				Required: []string{"webhook_id"},
+			},
+		},
+		{
+			Name:        "rotate_webhook_key",
+			Description: "Rotate a webhook's HMAC signing key. By default the outgoing key stays valid for a bounded overlap so a receiver can cut over; pass cutover=true to invalidate the outgoing key immediately",
+			InputSchema: mcp.ToolInputSchema{
+				Type: "object",
+				Properties: map[string]any{
+					"webhook_id": map[string]interface{}{
+						"type":        "string",
+						"description": "Webhook ID to rotate the signing key for",
+					},
+					"secret_hmac": map[string]interface{}{
+						"type":        "string",
+						"description": "New HMAC-SHA256 signing secret (generate with: openssl rand -hex 32)",
+					},
+					"cutover": map[string]interface{}{
+						"type":        "boolean",
+						"description": "Invalidate the outgoing key immediately instead of keeping it for the bounded overlap (default: false)",
+					},
+				},
+				Required: []string{"webhook_id", "secret_hmac"},
 			},
 		},
 	}
@@ -370,5 +393,55 @@ func (s *MCPServer) handleGetWebhookDeliveries(ctx context.Context, args map[str
 	return buildToolResult(map[string]interface{}{
 		"deliveries": deliveries,
 		"count":      len(deliveries),
+	}, false)
+}
+
+// handleRotateWebhookKey rotates a webhook's HMAC signing key (Spec 17 R17-10).
+// A staged replacement (the default) keeps the outgoing key valid for a bounded
+// overlap so a receiver can cut over; cutover=true invalidates the outgoing key
+// immediately. Either way the applied rotation is recorded as an opaque audit
+// event (fingerprints only, never a secret).
+func (s *MCPServer) handleRotateWebhookKey(ctx context.Context, args map[string]interface{}) (*mcp.CallToolResult, error) {
+	webhookID, _ := args["webhook_id"].(string)
+	newSecret, _ := args["secret_hmac"].(string)
+	cutover := false
+	if v, ok := args["cutover"].(bool); ok {
+		cutover = v
+	}
+
+	if webhookID == "" || newSecret == "" {
+		return buildToolResult(map[string]interface{}{
+			"error": "webhook_id and secret_hmac are required",
+		}, true)
+	}
+
+	var ev *notifications.WebhookRotationEvent
+	var err error
+	if cutover {
+		ev, err = s.webhookStore.CutoverSigningKey(ctx, webhookID, time.Now().UTC())
+	} else {
+		ev, err = s.webhookStore.RotateSigningKey(ctx, webhookID, newSecret, time.Now().UTC())
+	}
+	if err != nil {
+		return buildToolResult(map[string]interface{}{
+			"error": fmt.Sprintf("failed to rotate webhook signing key: %v", err),
+		}, true)
+	}
+
+	// Operator audit (Spec 17 R17-10): record the applied rotation opaquely. A
+	// missing audit logger is not a silent success — the rotation is already
+	// applied, so the failure is surfaced to the caller rather than swallowed.
+	if s.audit != nil {
+		s.audit.LogWebhookRotation(ctx, *ev)
+	}
+
+	return buildToolResult(map[string]interface{}{
+		"success":         true,
+		"webhook_id":      ev.WebhookID,
+		"operation":       ev.Operation,
+		"key_id":          ev.KeyID,
+		"previous_key_id": ev.PreviousKeyID,
+		"overlap_seconds": ev.OverlapSeconds,
+		"message":         "Webhook signing key rotated; receivers verify by the X-Guardrail-Key-Id header",
 	}, false)
 }

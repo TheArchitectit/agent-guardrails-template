@@ -52,9 +52,9 @@ func TestSchemaCompatibilityAtOrAboveTargetPassesStartup(t *testing.T) {
 		name     string
 		versions []string
 	}{
-		{"at target", []string{"018_add_agent_state_tables"}},
-		{"full history at target", []string{"001_create_tables", "016_add_webhooks_table", "017_add_budget_tables", "018_add_agent_state_tables"}},
-		{"above target", []string{"019_add_future_table"}},
+		{"at target", []string{"019_add_webhook_rotation_columns"}},
+		{"full history at target", []string{"001_create_tables", "016_add_webhooks_table", "017_add_budget_tables", "018_add_agent_state_tables", "019_add_webhook_rotation_columns"}},
+		{"above target", []string{"020_add_future_table"}},
 	}
 
 	for _, tt := range tests {
@@ -136,7 +136,7 @@ func TestParseMigrationVersion(t *testing.T) {
 // TestMinRequiredSchemaVersionMatchesMigrations pins the declared minimum to
 // the highest numbered migration shipped with the binary.
 func TestMinRequiredSchemaVersionMatchesMigrations(t *testing.T) {
-	const expected = 18
+	const expected = 19
 	if MinRequiredSchemaVersion != expected {
 		t.Errorf("MinRequiredSchemaVersion = %d, want %d; update it when migrations change", MinRequiredSchemaVersion, expected)
 	}

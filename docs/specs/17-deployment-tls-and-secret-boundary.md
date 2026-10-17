@@ -86,4 +86,5 @@ that no Markdown file exceeds the 500-line limit (Spec 19 R19-11):
 - [`17-implementation-notes-2.md`](17-implementation-notes-2.md) — R17-06
   secret-source file path, R17-08 redaction halves (request log + webhook
   delivery path), R17-09 debug (pprof) binding, R17-07 verifier-key entropy
-  floor, R17-10 secret inventory, R17-02 fail-closed nonlocal ingress posture.
+  floor, R17-10 secret inventory, R17-10 webhook signing-key rotation, R17-02
+  fail-closed nonlocal ingress posture.

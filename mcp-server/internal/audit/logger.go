@@ -12,6 +12,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/thearchitectit/guardrail-mcp/internal/auth"
 	"github.com/thearchitectit/guardrail-mcp/internal/database"
+	"github.com/thearchitectit/guardrail-mcp/internal/notifications"
 )
 
 // bufferPool provides reusable buffers for JSON encoding
@@ -322,6 +323,30 @@ func (l *Logger) LogRotation(ctx context.Context, ev auth.RotationEvent) {
 			"key_fingerprint": ev.KeyFingerprint,
 			"record_count":    ev.RecordCount,
 			"revoked_count":   ev.RevokedCount,
+			"overlap_seconds": ev.OverlapSeconds,
+		},
+	})
+}
+
+// LogWebhookRotation records an applied webhook signing-key rotation as an
+// opaque audit event (Spec 17 R17-10 log opaque rotation events; webhook
+// rotation must identify the active signing key to receivers without leaking
+// it). The event carries the operation and non-reversible key fingerprints —
+// never a signing secret. Actor is the system: the rotation is applied by an
+// operator action and the dispatcher holds no request principal.
+func (l *Logger) LogWebhookRotation(ctx context.Context, ev notifications.WebhookRotationEvent) {
+	l.Log(ctx, Event{
+		Type:     EventCredentialRotation,
+		Severity: SevCritical,
+		Actor:    "system",
+		Action:   ev.Operation,
+		Resource: "webhook_signing_key",
+		Status:   "success",
+		Details: map[string]interface{}{
+			"operation":       ev.Operation,
+			"webhook_id":      ev.WebhookID,
+			"key_fingerprint": ev.KeyID,
+			"previous_key_id": ev.PreviousKeyID,
 			"overlap_seconds": ev.OverlapSeconds,
 		},
 	})

@@ -461,6 +461,29 @@ jobs:
           go test ./internal/auth -run 'TestRotationAudit' -count=1 -v
           go test ./internal/audit -run 'TestLogRotation' -count=1 -v
 
+  # Spec 17 R17-10 (webhook half): staged signing-key rotation row. Proves a
+  # staged replacement keeps the outgoing key valid only inside the bounded
+  # overlap (and drops it once the window elapses), a cutover invalidates it
+  # immediately, and every delivery identifies the active signing key to the
+  # receiver by a non-reversible fingerprint without leaking the secret. Also
+  # proves the applied rotation is recorded as an opaque audit event.
+  security-matrix-webhook-rotation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Set up Go
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version: '1.25'
+          cache-dependency-path: mcp-server/go.sum
+
+      - name: Webhook signing-key rotation row
+        run: |
+          cd mcp-server
+          go test ./internal/notifications -run 'TestWebhookSigningKey|TestWebhookRotation|TestWebhookKeyFingerprint|TestWebhookSigningHeaders' -count=1 -v
+          go test ./internal/audit -run 'TestLogWebhookRotation' -count=1 -v
+
   # Spec 11 §4.5.2 / acceptance criterion 8: the legacy-acceptance removal
   # switch is testable on both transports. Before the deadline the legacy
   # shared key keeps its surface; once the deadline has passed it is refused

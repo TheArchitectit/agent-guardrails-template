@@ -101,14 +101,18 @@ func (d *Dispatcher) deliver(wh *WebhookConfig, eventType string, payloadJSON []
 	defer cancel()
 
 	webhookID := uuid.New().String()
-	signature := signPayload(payloadJSON, wh.SecretHMAC)
+	// One signing decision for both the body signature and the receiver-facing
+	// key identity (Spec 17 R17-10). During a bounded rotation overlap the
+	// outgoing key is carried as a second signature so a receiver that has not
+	// yet cut over still verifies; a cutover clears it outright.
+	h := buildWebhookSigningHeaders(webhookSigningKeysFor(wh), payloadJSON)
 
 	wp := WebhookPayload{
 		ID:        webhookID,
 		EventType: eventType,
 		Timestamp: time.Now().UTC(),
 		Payload:   payloadJSON,
-		Signature: signature,
+		Signature: h.activeSignature,
 	}
 
 	body, err := json.Marshal(wp)
@@ -125,7 +129,7 @@ func (d *Dispatcher) deliver(wh *WebhookConfig, eventType string, payloadJSON []
 
 	for attempt := 0; attempt < 3; attempt++ {
 		result, err := breaker.Execute(func() (interface{}, error) {
-			return d.doRequest(ctx, wh.URL, body, signature)
+			return d.doRequest(ctx, wh.URL, body, h)
 		})
 
 		if err != nil {
@@ -178,14 +182,19 @@ type deliveryResult struct {
 	Body       string
 }
 
-func (d *Dispatcher) doRequest(ctx context.Context, url string, body []byte, signature string) (*deliveryResult, error) {
+func (d *Dispatcher) doRequest(ctx context.Context, url string, body []byte, h webhookSigningHeaders) (*deliveryResult, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-Guardrail-Signature", signature)
+	req.Header.Set("X-Guardrail-Signature", h.activeSignature)
+	req.Header.Set(WebhookKeyIDHeader, h.activeKeyID)
 	req.Header.Set("X-Guardrail-Event", "webhook")
+	if h.previousSignature != "" {
+		req.Header.Set(WebhookPreviousSignatureHeader, h.previousSignature)
+		req.Header.Set(WebhookPreviousKeyIDHeader, h.previousKeyID)
+	}
 
 	resp, err := d.client.Do(req)
 	if err != nil {
@@ -255,6 +264,40 @@ func (d *Dispatcher) getBreaker(webhookID string) *gobreaker.CircuitBreaker {
 	return cb
 }
 
+// webhookSigningHeaders is the receiver-facing view of one signing decision:
+// the active key's fingerprint and signature, plus the outgoing key's when a
+// bounded rotation overlap is in force. It never carries a secret.
+type webhookSigningHeaders struct {
+	activeKeyID       string
+	activeSignature   string
+	previousKeyID     string
+	previousSignature string
+}
+
+// webhookSigningKeysFor resolves the keys valid for this delivery at now.
+func webhookSigningKeysFor(wh *WebhookConfig) []WebhookSigningKey {
+	return WebhookSigningKeys(wh, time.Now().UTC())
+}
+
+// webhookSigningHeaders builds the wire headers from the resolved signing keys.
+// The first key is the active signer; a second key, when present, is the
+// outgoing key inside its bounded overlap and is carried as an additional
+// signature so a receiver that has not yet cut over still verifies.
+func buildWebhookSigningHeaders(keys []WebhookSigningKey, payload []byte) webhookSigningHeaders {
+	if len(keys) == 0 {
+		return webhookSigningHeaders{}
+	}
+	h := webhookSigningHeaders{
+		activeKeyID:     keys[0].KeyID,
+		activeSignature: signPayload(payload, keys[0].Secret),
+	}
+	if len(keys) > 1 {
+		h.previousKeyID = keys[1].KeyID
+		h.previousSignature = signPayload(payload, keys[1].Secret)
+	}
+	return h
+}
+
 // signPayload computes HMAC-SHA256 of the payload.
 func signPayload(payload []byte, secret string) string {
 	mac := hmac.New(sha256.New, []byte(secret))
@@ -287,14 +330,14 @@ func (d *Dispatcher) SendTestEvent(ctx context.Context, webhookID string) (*Webh
 	}
 
 	payloadJSON, _ := json.Marshal(testEvent)
-	signature := signPayload(payloadJSON, wh.SecretHMAC)
+	h := buildWebhookSigningHeaders(webhookSigningKeysFor(wh), payloadJSON)
 
 	wp := WebhookPayload{
 		ID:        uuid.New().String(),
 		EventType: "test",
 		Timestamp: time.Now().UTC(),
 		Payload:   payloadJSON,
-		Signature: signature,
+		Signature: h.activeSignature,
 	}
 
 	body, _ := json.Marshal(wp)
@@ -304,8 +347,13 @@ func (d *Dispatcher) SendTestEvent(ctx context.Context, webhookID string) (*Webh
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-Guardrail-Signature", signature)
+	req.Header.Set("X-Guardrail-Signature", h.activeSignature)
+	req.Header.Set(WebhookKeyIDHeader, h.activeKeyID)
 	req.Header.Set("X-Guardrail-Event", "test")
+	if h.previousSignature != "" {
+		req.Header.Set(WebhookPreviousSignatureHeader, h.previousSignature)
+		req.Header.Set(WebhookPreviousKeyIDHeader, h.previousKeyID)
+	}
 
 	resp, err := d.client.Do(req)
 	if err != nil {

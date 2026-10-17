@@ -408,3 +408,73 @@ killed**).
 `WEBHOOK_HMAC_SECRET` column, encrypted-at-rest storage and rotation remain the
 open R17-06/R17-10 items already recorded in `docs/security/SECRET-INVENTORY.md`
 — this note claims only the delivery-path query half.
+
+## 15. Implementation note (2026-10-17) — R17-10 webhook signing-key rotation
+
+R17-10 requires webhook material to rotate with **"a staged replacement and
+explicit cutover"**, old material to be **"invalidated after a bounded
+overlap"**, continuity preserved **"only while both are valid"**, and — the
+receiver-facing half — that **"webhook rotation must identify the active signing
+key to receivers without leaking it"**.
+
+**The gap.** The tree could only replace a webhook HMAC secret *in place*:
+`webhook_configs.secret_hmac` was overwritten, the very next delivery signed with
+the new value, and the receiver had no way to know a rotation had happened or
+which key signed a payload. A receiver that had not yet been updated rejected
+every delivery; a receiver that never rotated kept accepting a value the operator
+believed was retired. There was no previous-key window, no key identity on the
+wire, no cutover and no rotation record. The `WEBHOOK_HMAC_SECRET` row of
+`docs/security/SECRET-INVENTORY.md` already named rotation as open.
+
+**Fix.** New `internal/notifications/webhook_rotation.go` is the single decision:
+
+- `WebhookSigningKeys(wh, now)` resolves the keys valid at an instant — the
+  active key first, the outgoing key appended **only** while `now` is inside
+  `WebhookRotationOverlap` (24h, the same bound Spec 16 R16-09 names for
+  registered credentials). A cutover clears the previous key outright, so it is
+  absent even inside the window; an elapsed window drops it without an operator
+  action; a keyless config offers none.
+- `WebhookKeyFingerprint` is a domain-separated, truncated SHA-256 (distinct
+  from the credential-registry verifier-key fingerprint) — an identifier that
+  cannot sign or verify anything.
+- The wire contract: `X-Guardrail-Key-Id` names the active key by fingerprint;
+  during an overlap `X-Guardrail-Signature-Previous` +
+  `X-Guardrail-Previous-Key-Id` carry the outgoing key's signature and
+  fingerprint so a not-yet-cut-over receiver still verifies. The signing secret
+  never leaves the process.
+
+Both delivery paths (`deliver` and `SendTestEvent`) share the decision via
+`buildWebhookSigningHeaders`, so they cannot disagree about which key is live.
+`internal/database/webhooks.go` persists the rotation state
+(`secret_hmac_previous`, `secret_hmac_rotated_at` — migration
+`019_add_webhook_rotation_columns`) and adds `RotateSigningKey` (staged
+replacement, single statement, `RETURNING` the outgoing fingerprint so the event
+describes exactly the state written) and `CutoverSigningKey` (immediate
+invalidation). An ordinary edit carries the rotation state through, so it cannot
+silently discard an in-flight overlap. New MCP tool `rotate_webhook_key`
+(default staged, `cutover=true` to invalidate now) records the applied rotation
+opaquely via `audit.Logger.LogWebhookRotation`.
+
+**Evidence.** `internal/notifications/webhook_rotation_test.go`: steady-state
+identifies the active key by fingerprint and sends no previous-key headers;
+a staged rotation identifies the **incoming** key as active while still carrying
+a verifiable outgoing signature (both `VerifySignature`-checked);
+the overlap **expires** once the window elapses; a cutover offers exactly one
+key; a keyless/nil config offers none; the fingerprint is stable, distinct and
+never the secret; and the header set never contains a signing secret. The wire
+assertions drive the real request builder (`doRequest`) against a real
+`httptest` receiver. `internal/audit/rotation_test.go`
+(`TestLogWebhookRotationRecordsOpaqueEvent` + `…CarryNoKeyMaterial`) proves the
+applied rotation is persisted as a critical opaque event (fingerprints + bounded
+overlap only). New CI row `security-matrix-webhook-rotation`
+(`team-validation.yml`, 23 jobs); new mutation-kill case
+`webhook-rotation-overlap-key-dropped` — verified killed (harness **29 cases,
+all killed**).
+
+**Named limit (documented, not hidden).** The overlap window is enforced by the
+delivery path (the key is offered for signing only inside it) and by the
+`RotateSigningKey`/`CutoverSigningKey` operations; a receiver that has not cut
+over after the window elapses will reject, which is the intended bounded
+continuity. The stored previous key is not yet encrypted at rest (the same open
+R17-06 item the inventory names), and DB/JWT/TLS staged rotation stays open under
+R17-10.

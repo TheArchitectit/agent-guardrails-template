@@ -216,7 +216,7 @@ func TestBothDeliveryPathsDenyBlockedDestination(t *testing.T) {
 	}
 
 	// Event path (synchronous form of the async deliver()).
-	_, derr := d.doRequest(context.Background(), backend.URL, []byte("{}"), "sig")
+	_, derr := d.doRequest(context.Background(), backend.URL, []byte("{}"), webhookSigningHeaders{activeSignature: "sig"})
 	if derr == nil {
 		t.Fatal("event path: a blocked destination must be denied")
 	}

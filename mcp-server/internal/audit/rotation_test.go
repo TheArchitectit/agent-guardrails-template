@@ -8,6 +8,7 @@ import (
 
 	"github.com/thearchitectit/guardrail-mcp/internal/auth"
 	"github.com/thearchitectit/guardrail-mcp/internal/database"
+	"github.com/thearchitectit/guardrail-mcp/internal/notifications"
 )
 
 // captureStore records every persisted audit event. The rotation event goes
@@ -122,6 +123,83 @@ func TestLogRotationDetailsCarryNoKeyMaterial(t *testing.T) {
 	for k := range ev.Details {
 		if !allowed[k] {
 			t.Fatalf("rotation details carry an unexpected field %q (a rotation event must stay opaque)", k)
+		}
+	}
+}
+
+// TestLogWebhookRotationRecordsOpaqueEvent covers Spec 17 R17-10 at the
+// audit-logger boundary for the webhook half: an applied webhook signing-key
+// rotation is persisted as a critical event whose details identify the active
+// key by fingerprint and record the bounded overlap — never a signing secret.
+func TestLogWebhookRotationRecordsOpaqueEvent(t *testing.T) {
+	store := &captureStore{}
+	l := NewLoggerWithStore(8, store)
+	defer l.Stop()
+
+	l.LogWebhookRotation(context.Background(), notifications.WebhookRotationEvent{
+		WebhookID:      "wh-1",
+		Operation:      "rotate",
+		KeyID:          "eeee2222ffff",
+		PreviousKeyID:  "1111aaaa2222",
+		OverlapSeconds: 86400,
+		OccurredAt:     time.Now().UTC(),
+	})
+
+	ev := store.waitFor(t, string(EventCredentialRotation))
+	if ev == nil {
+		t.Fatal("expected the webhook rotation event to be persisted")
+	}
+	if ev.Actor != "system" {
+		t.Fatalf("actor = %q, want system", ev.Actor)
+	}
+	if ev.Severity != string(SevCritical) {
+		t.Fatalf("severity = %q, want critical", ev.Severity)
+	}
+	if ev.Resource != "webhook_signing_key" {
+		t.Fatalf("resource = %q, want webhook_signing_key", ev.Resource)
+	}
+	if ev.Details["operation"] != "rotate" {
+		t.Fatalf("operation = %v", ev.Details["operation"])
+	}
+	if ev.Details["webhook_id"] != "wh-1" {
+		t.Fatalf("webhook_id = %v", ev.Details["webhook_id"])
+	}
+	if ev.Details["key_fingerprint"] != "eeee2222ffff" {
+		t.Fatalf("key_fingerprint = %v", ev.Details["key_fingerprint"])
+	}
+	if ev.Details["previous_key_id"] != "1111aaaa2222" {
+		t.Fatalf("previous_key_id = %v", ev.Details["previous_key_id"])
+	}
+	if ev.Details["overlap_seconds"] != 86400 {
+		t.Fatalf("overlap_seconds = %v", ev.Details["overlap_seconds"])
+	}
+}
+
+// TestLogWebhookRotationDetailsCarryNoKeyMaterial is the opacity guard for the
+// webhook rotation event: the persisted details map must hold only the opaque
+// fields, never a signing secret.
+func TestLogWebhookRotationDetailsCarryNoKeyMaterial(t *testing.T) {
+	store := &captureStore{}
+	l := NewLoggerWithStore(8, store)
+	defer l.Stop()
+
+	l.LogWebhookRotation(context.Background(), notifications.WebhookRotationEvent{
+		WebhookID: "wh-2",
+		Operation: "cutover",
+		KeyID:     "3333bbbb4444",
+	})
+
+	ev := store.waitFor(t, string(EventCredentialRotation))
+	if ev == nil {
+		t.Fatal("expected the webhook rotation event to be persisted")
+	}
+	allowed := map[string]bool{
+		"operation": true, "webhook_id": true, "key_fingerprint": true,
+		"previous_key_id": true, "overlap_seconds": true,
+	}
+	for k := range ev.Details {
+		if !allowed[k] {
+			t.Fatalf("webhook rotation details carry an unexpected field %q (the event must stay opaque)", k)
 		}
 	}
 }

@@ -13,7 +13,7 @@ import (
 // the highest numbered migration shipped in internal/database/migrations; a
 // database below this version must be brought up by the one-shot migration
 // job before the server starts.
-const MinRequiredSchemaVersion = 18
+const MinRequiredSchemaVersion = 19
 
 // SchemaLedger abstracts the migration ledger so the compatibility decision
 // can be tested without a live database.

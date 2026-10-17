@@ -557,6 +557,30 @@ func (s *MCPServer) authorizeToolCallDisabled(ctx context.Context, name string, 
 		pkg:       "./internal/web",
 		testRegex: "^TestSPAHandlerRefusesPathTraversal$",
 	},
+	{
+		name: "webhook-rotation-overlap-key-dropped",
+		file: "internal/notifications/webhook_rotation.go",
+		old: `	if wh.SecretHMACPrevious == "" || wh.SecretHMACRotatedAt == nil {
+		return keys
+	}
+	if !now.Before(wh.SecretHMACRotatedAt.Add(WebhookRotationOverlap)) {
+		// The overlap has elapsed: the outgoing key is invalid. The record is
+		// left in place (a caller may still cut it over explicitly) but it is
+		// not offered for signing.
+		return keys
+	}
+	keys = append(keys, WebhookSigningKey{
+		KeyID:  WebhookKeyFingerprint(wh.SecretHMACPrevious),
+		Secret: wh.SecretHMACPrevious,
+	})
+	return keys`,
+		new: `	// MUTATION: the outgoing key is never offered, so a staged rotation
+	// silently drops the overlap and a not-yet-cut-over receiver cannot verify.
+	_ = now
+	return keys`,
+		pkg:       "./internal/notifications",
+		testRegex: "^TestWebhookRotationOverlapOffersBothKeys$",
+	},
 }
 
 // findModuleRoot walks up from the test working directory to the directory

@@ -37,15 +37,19 @@ reviewer accountable for the secret's posture.
 | `OPENAI_API_KEY` | security owner | `internal/guardrails` content filter — moderation backend key | `OPENAI_API_KEY` (environment only; file source NOT yet supported — named limit) | Provider-defined | operator-recorded | Revoke provider-side, then redeploy with the replacement |
 | `MIGRATION_DSN` | deployment owner | `mcp-server/scripts/run_migrations.go` — one-shot migration job database URL | `MIGRATION_DSN_FILE` (0600, preferred) | operator-set | operator-recorded | Rotate the DB password embedded in the URL; argv is refused by construction |
 | `MIGRATION_DATABASE_URL` | deployment owner | `mcp-server/scripts/run_migrations.go` — documented migration fallback when no file is mounted | `MIGRATION_DATABASE_URL` (environment fallback) | operator-set | operator-recorded | Rotate the DB password embedded in the URL; the argv interface is removed |
-| `WEBHOOK_HMAC_SECRET` | security owner | `internal/notifications` webhook dispatcher — per-webhook signing material (`secret_hmac` column) | database column (encrypted-at-rest storage is an OPEN R17-06 item) | operator-set per webhook | operator-recorded per webhook | Rotate the receiver secret, keep overlapping verification for the bounded window, then retire the old signing key |
+| `WEBHOOK_HMAC_SECRET` | security owner | `internal/notifications` webhook dispatcher — per-webhook signing material (`secret_hmac` column) | database column (encrypted-at-rest storage is an OPEN R17-06 item) | operator-set per webhook | operator-recorded per webhook | Rotate via `rotate_webhook_key` (staged: the outgoing key stays valid for the 24h bounded overlap, identified to receivers by fingerprint) or cut over immediately; encrypted-at-rest storage remains open |
 
 ## Non-env secrets covered
 
 `WEBHOOK_HMAC_SECRET` has no environment source; it persists as the
-`secret_hmac` column of `webhook_configs`. It is listed here because R17-10
-names webhook material explicitly. The coverage gate discovers *environment*
-secrets from the tree; this row is documented but not tree-discoverable, which
-is the named limit of the coverage check below.
+`secret_hmac` column of `webhook_configs` (with the rotation state
+`secret_hmac_previous` / `secret_hmac_rotated_at`, migration 019). It is listed
+here because R17-10 names webhook material explicitly. Rotation is implemented
+(Spec 17 R17-10 webhook half, 2026-10-17): a staged replacement keeps the
+outgoing key valid only inside the 24h bounded overlap and identifies the active
+key to receivers by a non-reversible fingerprint. The coverage gate discovers
+*environment* secrets from the tree; this row is documented but not
+tree-discoverable, which is the named limit of the coverage check below.
 
 ## Named limits
 
