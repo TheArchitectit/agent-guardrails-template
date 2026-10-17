@@ -130,6 +130,16 @@ type Config struct {
 	WebhookEncryptionKey     string `env:"WEBHOOK_ENCRYPTION_KEY"`
 	WebhookEncryptionKeyFile string `env:"WEBHOOK_ENCRYPTION_KEY_FILE"`
 
+	// Provider secrets for the optional guardrail backends. R17-06 names both
+	// explicitly as first-choice file-sourced production secrets. Neither is
+	// required at the load boundary (the backends are optional and fail closed
+	// when unconfigured); each may still be supplied from a read-only secret
+	// file (FALLBACK_API_KEY_FILE / OPENAI_API_KEY_FILE).
+	FallbackAPIKey     string `env:"FALLBACK_API_KEY"`
+	FallbackAPIKeyFile string `env:"FALLBACK_API_KEY_FILE"`
+	OpenAIAPIKey       string `env:"OPENAI_API_KEY"`
+	OpenAIAPIKeyFile   string `env:"OPENAI_API_KEY_FILE"`
+
 	// JWT Configuration. The signing secret may come from the environment or
 	// from a read-only secret file (JWT_SECRET_FILE).
 	JWTSecret        string        `env:"JWT_SECRET"`
@@ -694,5 +704,9 @@ func (c *Config) Masked() *Config {
 	masked.CredentialVerifierKeyFile = "***"
 	masked.WebhookEncryptionKey = "***"
 	masked.WebhookEncryptionKeyFile = "***"
+	masked.FallbackAPIKey = "***"
+	masked.FallbackAPIKeyFile = "***"
+	masked.OpenAIAPIKey = "***"
+	masked.OpenAIAPIKeyFile = "***"
 	return &masked
 }

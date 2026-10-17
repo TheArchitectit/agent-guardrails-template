@@ -114,9 +114,11 @@ func NewMCPServer(cfg *config.Config, db *database.DB, cacheClient *cache.Client
 		fixVerificationStore: database.NewFixVerificationStore(db),
 	}
 
-	// Initialize vision tools if configured
+	// Initialize vision tools if configured. The fallback provider credential is
+	// taken from the resolved config so it may come from a read-only secret file
+	// (Spec 17 R17-06) rather than only the environment.
 	if os.Getenv("VISION_ENABLED") == "true" {
-		vts, err := NewVisionToolSet()
+		vts, err := NewVisionToolSet(cfg.FallbackAPIKey)
 		if err != nil {
 			slog.Error("Failed to initialize vision tools", "error", err)
 		} else {

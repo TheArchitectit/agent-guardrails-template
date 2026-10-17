@@ -157,18 +157,29 @@ func main() {
 
 	// Initialize the guardrails engine (content filter + policy engine) for
 	// the guardrail_classify_content and guardrail_check_policy tools. The
-	// Llama Guard backend is enabled when an Ollama URL is configured.
-	if ollamaURL := os.Getenv("OLLAMA_URL"); ollamaURL != "" {
+	// Llama Guard backend is enabled when an Ollama URL is configured; the
+	// OpenAI Moderation backend is enabled when a key is configured, which may
+	// come from the environment or from a read-only secret file (Spec 17 R17-06
+	// OPENAI_API_KEY / OPENAI_API_KEY_FILE). Each backend fails closed on an
+	// empty key, so adding one only when configured cannot widen the surface.
+	ollamaURL := os.Getenv("OLLAMA_URL")
+	if ollamaURL != "" || cfg.OpenAIAPIKey != "" {
 		engine := guardrails.NewEngine(nil, slog.Default())
-		model := os.Getenv("OLLAMA_MODEL")
-		if model == "" {
-			model = "llama-guard-3"
+		if ollamaURL != "" {
+			model := os.Getenv("OLLAMA_MODEL")
+			if model == "" {
+				model = "llama-guard-3"
+			}
+			engine.AddContentFilterBackend(guardrails.NewLlamaGuardBackend(model, ollamaURL))
+			slog.Info("Guardrails engine initialized", "backend", "llama-guard", "model", model)
 		}
-		engine.AddContentFilterBackend(guardrails.NewLlamaGuardBackend(model, ollamaURL))
+		if cfg.OpenAIAPIKey != "" {
+			engine.AddContentFilterBackend(guardrails.NewOpenAIModerationBackend(cfg.OpenAIAPIKey))
+			slog.Info("Guardrails engine initialized", "backend", "openai-moderation")
+		}
 		mcpSrv.SetGuardrailsEngine(engine)
-		slog.Info("Guardrails engine initialized", "backend", "llama-guard", "model", model)
 	} else {
-		slog.Info("Guardrails engine disabled (OLLAMA_URL not set); content filter tools will return not-configured")
+		slog.Info("Guardrails engine disabled (OLLAMA_URL and OPENAI_API_KEY unset); content filter tools will return not-configured")
 	}
 
 	// Initialize webhook notifications. Webhook signing material is encrypted

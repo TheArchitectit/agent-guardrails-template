@@ -33,8 +33,8 @@ reviewer accountable for the secret's posture.
 | `TLS_KEY_PATH` | deployment owner | `cmd/server` — private key for the deployment TLS material | mounted file (0600) | Certificate/key validity period | operator-recorded at each certificate renewal | Replace certificate and key together; validate the trust chain before cutover (R17-03) |
 | `TLS_CERT_PATH` | deployment owner | `cmd/server` — server certificate + chain for the deployment TLS material | mounted file | Certificate validity period | operator-recorded at each certificate renewal | Reissue and redeploy the chain; never a substitute for TLS termination proof (R17-03) |
 | `TEAM_ENCRYPTION_KEY` | security owner | `internal/team` — AES-GCM key for team-secret encryption | `TEAM_ENCRYPTION_KEY` (environment only; file source NOT yet supported — named limit) | No fixed expiry; rotate on suspicion | operator-recorded | Re-encrypt affected team secrets under the new key before retiring the old one |
-| `FALLBACK_API_KEY` | security owner | `internal/mcp` vision tools — fallback vision provider key | `FALLBACK_API_KEY` (environment only; file source NOT yet supported — named limit) | Provider-defined | operator-recorded | Revoke provider-side, then redeploy with the replacement |
-| `OPENAI_API_KEY` | security owner | `internal/guardrails` content filter — moderation backend key | `OPENAI_API_KEY` (environment only; file source NOT yet supported — named limit) | Provider-defined | operator-recorded | Revoke provider-side, then redeploy with the replacement |
+| `FALLBACK_API_KEY` | security owner | `internal/mcp` vision tools — fallback vision provider key | `FALLBACK_API_KEY_FILE` (0600) or `FALLBACK_API_KEY` | Provider-defined | operator-recorded | Revoke provider-side, then redeploy with the replacement |
+| `OPENAI_API_KEY` | security owner | `internal/guardrails` content filter — moderation backend key | `OPENAI_API_KEY_FILE` (0600) or `OPENAI_API_KEY` | Provider-defined | operator-recorded | Revoke provider-side, then redeploy with the replacement |
 | `MIGRATION_DSN` | deployment owner | `mcp-server/scripts/run_migrations.go` — one-shot migration job database URL | `MIGRATION_DSN_FILE` (0600, preferred) | operator-set | operator-recorded | Rotate the DB password embedded in the URL; argv is refused by construction |
 | `MIGRATION_DATABASE_URL` | deployment owner | `mcp-server/scripts/run_migrations.go` — documented migration fallback when no file is mounted | `MIGRATION_DATABASE_URL` (environment fallback) | operator-set | operator-recorded | Rotate the DB password embedded in the URL; the argv interface is removed |
 | `WEBHOOK_ENCRYPTION_KEY` | security owner | `internal/database` webhook store — AES-256-GCM key that seals per-webhook signing material at rest (Spec 17 R17-06) | `WEBHOOK_ENCRYPTION_KEY_FILE` (0600) or `WEBHOOK_ENCRYPTION_KEY` | No fixed expiry; rotate on suspicion | operator-recorded; required for nonlocal/production, optional for `local` | Generate a new >=256-bit key, re-seal affected rows under the new key, then retire the old one |
@@ -63,10 +63,12 @@ of the coverage check below.
   absent from this inventory*. It cannot discover a secret that is hard-coded in
   a Go literal (none are, per the R17-11/R17-08 gates and the secret scanner),
   nor a non-environment secret such as `WEBHOOK_HMAC_SECRET`.
-- `TEAM_ENCRYPTION_KEY`, `FALLBACK_API_KEY` and `OPENAI_API_KEY` are
-  **environment-only** today: R17-06's file-source rule is not yet applied to
-  them (tracked as the R17-06 residual). This inventory records that honestly
-  rather than implying a file path exists.
+- `TEAM_ENCRYPTION_KEY` is **environment-only** today: R17-06's file-source
+  rule is not yet applied to it (tracked as the R17-06 residual). This inventory
+  records that honestly rather than implying a file path exists. `FALLBACK_API_KEY`
+  and `OPENAI_API_KEY` now accept a read-only secret file
+  (`FALLBACK_API_KEY_FILE` / `OPENAI_API_KEY_FILE`); `TEAM_ENCRYPTION_KEY`
+  remains the last environment-only secret.
 - Webhook signing material (`WEBHOOK_HMAC_SECRET`) is encrypted at rest when
   `WEBHOOK_ENCRYPTION_KEY` is configured (required for nonlocal/production). A
   legacy plaintext row remains readable during migration, and the store reports

@@ -478,3 +478,21 @@ over after the window elapses will reject, which is the intended bounded
 continuity. The stored previous key is not yet encrypted at rest (the same open
 R17-06 item the inventory names), and DB/JWT/TLS staged rotation stays open under
 R17-10.
+
+## 16. Implementation note (2026-10-17) — R17-06 provider-key file sources
+
+R17-06 names `FALLBACK_API_KEY` (vision fallback) and `OPENAI_API_KEY`
+(content-filter moderation) among the secrets that must have a first-choice
+read-only secret-file source; both were read only from the environment
+(`internal/mcp/vision_tools.go`, `internal/guardrails/content_filter_backends.go`).
+`Config` now carries `FALLBACK_API_KEY_FILE` / `OPENAI_API_KEY_FILE`, resolved
+through the same `internal/secretfile` rule as the primary secrets. Both are
+**optional** at the load boundary (the backends fail closed when unconfigured),
+so an unset provider key never fails startup; inline environment material still
+wins. The resolved values are consumed, not merely accepted: the vision tool set
+takes the resolved key (`NewVisionToolSet(cfg.FallbackAPIKey)`) and
+`cmd/server/main.go` registers the OpenAI moderation backend when configured.
+Evidence `TestProviderKeysAcceptFileSources`; CI row
+`security-matrix-secret-sources` extended; mutation-kill case
+`provider-secret-file-source-ignored` (30/30). `TEAM_ENCRYPTION_KEY` stays the
+last environment-only secret (named limit).

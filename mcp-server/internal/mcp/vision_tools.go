@@ -22,7 +22,14 @@ type VisionToolSet struct {
 
 // NewVisionToolSet initializes vision components from environment.
 // Returns nil (and no error) if vision is not enabled, so the caller can skip registration.
-func NewVisionToolSet() (*VisionToolSet, error) {
+//
+// fallbackKey is the resolved vision fallback-provider credential (Spec 17
+// R17-06): the caller passes the config value so the credential may come from
+// the environment or from a read-only secret file (FALLBACK_API_KEY_FILE)
+// without this constructor reading the environment itself. A non-empty
+// argument wins over the environment; an empty one falls back to the
+// environment so the historical direct read still works.
+func NewVisionToolSet(fallbackKey string) (*VisionToolSet, error) {
 	enabled := os.Getenv("VISION_ENABLED") == "true"
 	if !enabled {
 		return nil, nil
@@ -39,7 +46,9 @@ func NewVisionToolSet() (*VisionToolSet, error) {
 
 	fallbackProvider := os.Getenv("FALLBACK_PROVIDER")
 	fallbackModel := os.Getenv("FALLBACK_MODEL")
-	fallbackKey := os.Getenv("FALLBACK_API_KEY")
+	if fallbackKey == "" {
+		fallbackKey = os.Getenv("FALLBACK_API_KEY")
+	}
 
 	screenshotDir := os.Getenv("SCREENSHOT_DIR")
 	if screenshotDir == "" {

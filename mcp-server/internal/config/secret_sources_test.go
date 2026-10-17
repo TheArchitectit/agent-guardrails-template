@@ -210,3 +210,63 @@ func TestSecretFileSourceFeedsTheExistingGates(t *testing.T) {
 		t.Fatalf("error must name R17-05 (the file source must not bypass the gate), got %v", err)
 	}
 }
+
+// TestProviderKeysAcceptFileSources covers the R17-06 residual: FALLBACK_API_KEY
+// and OPENAI_API_KEY (the vision fallback and the OpenAI moderation backend)
+// may come from a read-only secret file just like the primary secrets, and a
+// file-only deployment resolves both. Neither is required at the load boundary,
+// so an unset provider key with no file must NOT fail startup.
+func TestProviderKeysAcceptFileSources(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("POSIX secret-file mode rule is not enforced on Windows")
+	}
+	dir := t.TempDir()
+
+	// Unset provider keys with no file source: still a valid config (the
+	// backends are optional and fail closed when unconfigured).
+	cfg := validMinimalConfig()
+	cfg.FallbackAPIKey, cfg.OpenAIAPIKey = "", ""
+	if err := cfg.Validate(); err != nil {
+		t.Fatalf("unset provider keys must not fail validation, got %v", err)
+	}
+
+	// File-only provider keys resolve.
+	cfg = validMinimalConfig()
+	cfg.FallbackAPIKey, cfg.OpenAIAPIKey = "", ""
+	cfg.FallbackAPIKeyFile = writeSecretFile(t, dir, "fallback.cred", "operator-fallback-key-01")
+	cfg.OpenAIAPIKeyFile = writeSecretFile(t, dir, "openai.cred", "operator-openai-key-01\n")
+	if err := cfg.ResolveSecretSources(); err != nil {
+		t.Fatalf("ResolveSecretSources: %v", err)
+	}
+	if cfg.FallbackAPIKey != "operator-fallback-key-01" {
+		t.Fatalf("FALLBACK_API_KEY must resolve from its file, got %q", cfg.FallbackAPIKey)
+	}
+	if cfg.OpenAIAPIKey != "operator-openai-key-01" {
+		t.Fatalf("OPENAI_API_KEY must resolve from its file (newline trimmed), got %q", cfg.OpenAIAPIKey)
+	}
+
+	// Inline wins over the file for a provider key too.
+	cfg = validMinimalConfig()
+	cfg.FallbackAPIKey = "inline-fallback-key-01"
+	cfg.FallbackAPIKeyFile = writeSecretFile(t, dir, "fallback2.cred", "file-fallback-key-01")
+	if err := cfg.ResolveSecretSources(); err != nil {
+		t.Fatalf("ResolveSecretSources: %v", err)
+	}
+	if cfg.FallbackAPIKey != "inline-fallback-key-01" {
+		t.Fatalf("inline FALLBACK_API_KEY must win over the file, got %q", cfg.FallbackAPIKey)
+	}
+
+	// A configured-but-permissive provider-key file still fails closed.
+	if runtime.GOOS != "windows" {
+		path := filepath.Join(dir, "permissive-provider.cred")
+		if err := os.WriteFile(path, []byte("operator-openai-key-01"), 0o644); err != nil {
+			t.Fatalf("write permissive file: %v", err)
+		}
+		cfg = validMinimalConfig()
+		cfg.OpenAIAPIKey = ""
+		cfg.OpenAIAPIKeyFile = path
+		if err := cfg.ResolveSecretSources(); err == nil {
+			t.Fatal("a group/world-readable provider-key file must be rejected")
+		}
+	}
+}

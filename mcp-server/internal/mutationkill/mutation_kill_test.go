@@ -607,6 +607,38 @@ func (s *MCPServer) authorizeToolCallDisabled(ctx context.Context, name string, 
 		pkg:       "./internal/database",
 		testRegex: "^TestWebhookScanRefusesSealedValueWithoutKey$",
 	},
+	{
+		// Spec 17 R17-06: a provider secret (FALLBACK_API_KEY / OPENAI_API_KEY)
+		// may be supplied from a read-only mounted file. A bypass that skips
+		// resolving a configured provider-key file (so the secret silently stays
+		// unset) must be killed by the provider-key negative suite.
+		name: "provider-secret-file-source-ignored",
+		file: "internal/config/secret_sources.go",
+		old: `	for _, s := range c.secretSources() {
+		filePath := strings.TrimSpace(*s.file)
+		if filePath == "" {
+			continue
+		}
+		if strings.TrimSpace(*s.value) != "" {
+			// Inline material present: it wins and the file is not read.
+			continue
+		}`,
+		new: `	for _, s := range c.secretSources() {
+		filePath := strings.TrimSpace(*s.file)
+		if filePath == "" {
+			continue
+		}
+		if strings.Contains(s.name, "API_KEY") {
+			// MUTATION: skip provider-key files, leaving the secret unset.
+			continue
+		}
+		if strings.TrimSpace(*s.value) != "" {
+			// Inline material present: it wins and the file is not read.
+			continue
+		}`,
+		pkg:       "./internal/config",
+		testRegex: "^TestProviderKeysAcceptFileSources$",
+	},
 }
 
 // findModuleRoot walks up from the test working directory to the directory

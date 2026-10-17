@@ -55,6 +55,13 @@ func (c *Config) secretSources() []secretSource {
 		{name: "DB_PASSWORD", value: &c.DBPassword, file: &c.DBPasswordFile},
 		{name: "REDIS_PASSWORD", value: &c.RedisPassword, file: &c.RedisPasswordFile},
 		{name: "WEBHOOK_ENCRYPTION_KEY", value: &c.WebhookEncryptionKey, file: &c.WebhookEncryptionKeyFile, optional: true},
+		// R17-06 names both provider keys explicitly. They are optional at the
+		// load boundary (the vision fallback and the OpenAI moderation backend
+		// are optional and fail closed when unconfigured), but each accepts a
+		// read-only secret file so a file-only deployment does not have to use
+		// environment injection for them.
+		{name: "FALLBACK_API_KEY", value: &c.FallbackAPIKey, file: &c.FallbackAPIKeyFile, optional: true},
+		{name: "OPENAI_API_KEY", value: &c.OpenAIAPIKey, file: &c.OpenAIAPIKeyFile, optional: true},
 	}
 }
 

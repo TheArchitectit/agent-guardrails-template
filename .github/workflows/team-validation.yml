@@ -588,7 +588,7 @@ jobs:
       - name: Secret-source row
         run: |
           cd mcp-server
-          go test ./internal/secretfile ./internal/config -run 'TestPermitsRestrictedOnly|TestReadAcceptsRestrictedFile|TestReadRejectsNonRegularAndPermissive|TestResolveSecretSourcesFromFiles|TestResolveSecretSourcesInlineWins|TestResolveSecretSourcesFailsClosed|TestValidateRequiresASecretSource|TestSecretFileSourceFeedsTheExistingGates' -count=1 -v
+          go test ./internal/secretfile ./internal/config -run 'TestPermitsRestrictedOnly|TestReadAcceptsRestrictedFile|TestReadRejectsNonRegularAndPermissive|TestResolveSecretSourcesFromFiles|TestResolveSecretSourcesInlineWins|TestResolveSecretSourcesFailsClosed|TestValidateRequiresASecretSource|TestSecretFileSourceFeedsTheExistingGates|TestProviderKeysAcceptFileSources' -count=1 -v
 
   # Spec 17 R17-06: webhook signing material must be encrypted at rest. A
   # nonlocal/production deployment is required to supply a strong
