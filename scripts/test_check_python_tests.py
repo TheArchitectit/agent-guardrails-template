@@ -107,6 +107,20 @@ class CheckPythonTestsTest(unittest.TestCase):
             _write_inv(root, [_entry("scripts", test_command="  ")])
             self.assertEqual(self._run(root), gate.EXIT_VIOLATIONS)
 
+    def test_empty_setup_command_fails(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            _write_suite(root, "scripts")
+            _write_inv(root, [_entry("scripts", setup_command="  ")])
+            self.assertEqual(self._run(root), gate.EXIT_VIOLATIONS)
+
+    def test_omitted_setup_command_is_allowed(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            _write_suite(root, "scripts")
+            _write_inv(root, [_entry("scripts")])
+            self.assertEqual(self._run(root), gate.EXIT_OK)
+
     def test_underscore_test_filename_is_discovered(self):
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)

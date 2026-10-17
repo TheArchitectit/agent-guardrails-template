@@ -60,8 +60,15 @@ jobs:
             path=$(jq -r '.path' <<< "$entry")
             min=$(jq -r '.min_tests' <<< "$entry")
             test_cmd=$(jq -r '.test_command' <<< "$entry")
+            setup_cmd=$(jq -r '.setup_command // empty' <<< "$entry")
 
             echo "::group::$path"
+            # A suite declares its own test dependencies so the runner does not
+            # have to know any suite's imports in advance (R19-10).
+            if [ -n "$setup_cmd" ]; then
+              echo "setup: $setup_cmd"
+              eval "$setup_cmd"
+            fi
             echo "test:  $test_cmd"
             eval "$test_cmd"
 

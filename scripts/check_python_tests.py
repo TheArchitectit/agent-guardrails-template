@@ -29,7 +29,10 @@ This gate closes that gap fail-closed:
   4. **Declared command + positive floor.** Each row MUST declare a non-empty
      ``test_command``, a positive integer ``min_tests`` and a non-empty
      ``applicability`` reason (R19-12's "declare each required package, test
-     command, positive minimum count and applicability condition").
+     command, positive minimum count and applicability condition"). A
+     ``setup_command`` is optional but, when present, must be a non-empty
+     string; it is how a suite declares its own test dependencies, so the
+     runner does not have to know any suite's imports in advance.
   5. **Non-vacuity.** A discovery that finds zero suites FAILS; a green result
      may never come from an empty scan scope.
 
@@ -126,6 +129,11 @@ def load_inventory(path: Path) -> tuple[dict[str, dict], list[str]]:
             errors.append(
                 f"{path}: suites[{idx}] ({entry.get('suite', '?')}) must declare "
                 f"a positive integer min_tests (got {floor!r})"
+            )
+        if "setup_command" in entry and not str(entry.get("setup_command", "")).strip():
+            errors.append(
+                f"{path}: suites[{idx}] ({entry.get('suite', '?')}) has an empty "
+                f"setup_command (omit the key or give a non-empty command)"
             )
         raw_path = entry.get("path")
         if not isinstance(raw_path, str) or not raw_path.strip():

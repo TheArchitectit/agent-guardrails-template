@@ -4,6 +4,7 @@
     {
       "suite": "scripts",
       "path": "scripts",
+      "setup_command": "python3 -m pip install pytest pytest-cov",
       "test_command": "python3 -m pytest scripts/ -v --cov=scripts --cov-report=xml",
       "min_tests": 100,
       "applicability": "required always: the gate/regression scripts and their red-on-drift self-tests"
@@ -11,6 +12,7 @@
     {
       "suite": "examples/python/tests",
       "path": "examples/python/tests",
+      "setup_command": "python3 -m pip install pytest pyyaml",
       "test_command": "python3 -m pytest examples/python/tests/ -v",
       "min_tests": 30,
       "applicability": "required when present: illustrative config-loader example; tests exist (32 collected), so it is tested, not SKIP"
