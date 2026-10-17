@@ -237,7 +237,7 @@ For real-time agent output filtering:
 Evidence: `docs/specs/guardrail-gaps-2026/STATUS.md`. **This spec is the only
 one whose tools actually shipped.**
 
-| § | Requirement | Status | Evidence |
+| Sec. | Requirement | Status | Evidence |
 |---|-------------|--------|----------|
 | 3.1 | `guardrail_classify_content` | **Implemented** | dispatched `server.go:234`; handler `tools_guardrails.go:62-83` |
 | 3.1 | `guardrail_check_policy` | **Implemented** | dispatched `server.go:236`; handler `tools_guardrails.go:87-127` |
@@ -265,7 +265,7 @@ fail-closed unknown-policy branch. Configured policies now reach the filter
    configured" and `classify_content` **fails open** (`safe:true`,
    `tools_guardrails.go:69`). A deployment that forgets the env var has no
    content filtering and no error telling it so.
-2. **§5.3 accuracy criteria are untestable.** FP <5%, FN <1% and
+2. **Sec. 5.3 accuracy criteria are untestable.** FP <5%, FN <1% and
    precision/recall within 10% of Llama Guard require a labelled evaluation
    harness; none exists in the repo.
 3. **Backend failover is list order, not a declared chain**

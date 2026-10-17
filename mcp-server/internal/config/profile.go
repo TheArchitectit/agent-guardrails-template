@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-// Deployment profile names (Spec 17 §2). The profile is selected explicitly at
+// Deployment profile names (Spec 17 Sec. 2). The profile is selected explicitly at
 // startup via DEPLOYMENT_PROFILE and defaults to the safest option.
 const (
 	DeploymentProfileLocal   = "local"

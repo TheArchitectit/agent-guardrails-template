@@ -16,7 +16,7 @@ func req(t *testing.T, remoteAddr string, headers map[string]string) *http.Reque
 	return r
 }
 
-// TestDefaultTrustsNoProxy covers Spec 12 §3.4.2: with TRUSTED_PROXIES unset
+// TestDefaultTrustsNoProxy covers Spec 12 Sec. 3.4.2: with TRUSTED_PROXIES unset
 // the socket peer is the client IP and forwarded headers are ignored.
 func TestDefaultTrustsNoProxy(t *testing.T) {
 	s, err := NewStance(nil)
@@ -50,7 +50,7 @@ func TestDefaultTrustsNoProxy(t *testing.T) {
 	}
 }
 
-// TestTrustedPeerHonoursForwarded covers Spec 12 §3.4.1: forwarded headers are
+// TestTrustedPeerHonoursForwarded covers Spec 12 Sec. 3.4.1: forwarded headers are
 // honoured only when the immediate peer is inside a configured CIDR.
 func TestTrustedPeerHonoursForwarded(t *testing.T) {
 	s, err := NewStance([]string{"10.0.0.0/8"})

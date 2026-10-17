@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-// TestValidateTrustedProxiesStance covers the Spec 12 §3.4 configuration
+// TestValidateTrustedProxiesStance covers the Spec 12 Sec. 3.4 configuration
 // boundary: valid CIDRs and bare IPs pass, an empty list (trust no proxy) is
 // the default, and a malformed entry fails closed rather than silently
 // narrowing to "trust nothing".

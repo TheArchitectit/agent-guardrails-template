@@ -6,9 +6,9 @@ resolves the destination, refuses the whole answer set if any member is
 non-public, and dials only a validated literal (rebinding closed); redirects are
 refused; a policy denial is terminal and is never retried. The remaining
 open items are owner deployment decisions, not missing mechanisms: the
-HTTPS-only / port-443 default (§3.1, a behaviour change for existing HTTP
-webhooks) and the internal-destination exception (§3.5, default = none). See
-§9 for the implementation record.
+HTTPS-only / port-443 default (Sec. 3.1, a behaviour change for existing HTTP
+webhooks) and the internal-destination exception (Sec. 3.5, default = none). See
+Sec. 9 for the implementation record.
 **Owner:** Project maintainer.
 **Date:** 2026-10-04.
 **Roadmap:** Phase 0, work package 07
@@ -72,7 +72,7 @@ Before every delivery attempt, parse the configured URL and require:
 
 1. Scheme is exactly `https` by default. Plain HTTP is denied unless an
    explicit deployment policy allows it for a reviewed internal destination
-   (§3.5). HTTPS must be used for public endpoints so payloads and signatures
+   (Sec. 3.5). HTTPS must be used for public endpoints so payloads and signatures
    are not exposed in transit.
 2. A non-empty DNS hostname or IP literal is present. Reject userinfo,
    fragments, opaque URLs, control characters, invalid ports, IPv6 zone
@@ -278,10 +278,10 @@ IPv6 special-purpose registry snapshot by version and digest, with a test
 fixture for every denied range; updating it is a reviewed policy change, not
 a live DNS fallback. These are proposed implementation choices, not shipped
 delivery-time enforcement. A deployment requiring an internal destination must
-stop and amend §3.5 before allowing it.
+stop and amend Sec. 3.5 before allowing it.
 
 1. Is any internal webhook required? If yes, name the exact deployment use case
-   and approve the exact-host/CIDR/port allowlist model in §3.5. Default: no.
+   and approve the exact-host/CIDR/port allowlist model in Sec. 3.5. Default: no.
 2. Is HTTPS-only acceptable for all existing deployments? Default: yes; plain
    HTTP is denied.
 3. Are nonstandard public HTTPS ports required? Default: no; allow only 443.
@@ -341,12 +341,12 @@ test fails; restored, all green. The `mutationkill` battery gained a
 
 **Named limits (recorded, not silently accepted).**
 
-1. **HTTPS-only / port-443 (§3.1) is not enforced here.** Configuration-time
+1. **HTTPS-only / port-443 (Sec. 3.1) is not enforced here.** Configuration-time
    validation still accepts `http`, and delivery still dials the configured
    scheme/port. Enforcing HTTPS-only would change behaviour for existing
-   deployments and is a §7 owner decision; the default is recorded but not
+   deployments and is a Sec. 7 owner decision; the default is recorded but not
    applied.
-2. **No internal-destination exception (§3.5).** Default = none, matching §7.
+2. **No internal-destination exception (Sec. 3.5).** Default = none, matching Sec. 7.
    No escape hatch was added.
 3. **DNS answer-set check is per-dial**, which is the correct seam; a keep-alive
    connection is reused only after its peer was validated.

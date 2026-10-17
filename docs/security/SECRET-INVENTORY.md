@@ -14,11 +14,11 @@ fails if a cell contains an assignment of the form `NAME=<value>`.
 
 **Source column.** `<NAME>_FILE` means a read-only mounted secret file resolved
 by `internal/secretfile` (regular file, no group/world bits, fail-closed; see
-the Spec 17 §10 note). `<NAME>` (no suffix) means the inline environment source.
+the Spec 17 Sec. 10 note). `<NAME>` (no suffix) means the inline environment source.
 Inline wins when both are supplied.
 
 **Owner column.** `deployment owner` is the operator who holds the deployment
-(Spec 17 §2: no separate operations team assumed). `security owner` is the
+(Spec 17 Sec. 2: no separate operations team assumed). `security owner` is the
 reviewer accountable for the secret's posture.
 
 | Secret | Owner | Consumer | Source | Expiry | Last rotation | Revocation |

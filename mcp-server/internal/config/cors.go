@@ -3,12 +3,12 @@ package config
 import "fmt"
 
 // defaultDevCORSOrigins is the convenience origin list used outside production
-// when CORS_ALLOWED_ORIGINS is unset or a bare wildcard (Spec 12 §3.3.2.2).
+// when CORS_ALLOWED_ORIGINS is unset or a bare wildcard (Spec 12 Sec. 3.3.2.2).
 var defaultDevCORSOrigins = []string{"http://localhost:*", "https://localhost:*"}
 
 // EffectiveCORSOrigins resolves the origin list the server will actually use.
 // It is the single place the non-production default substitution happens, so
-// the wiring layer cannot silently widen exposure (Spec 12 §3.3.2):
+// the wiring layer cannot silently widen exposure (Spec 12 Sec. 3.3.2):
 //
 //   - production: an empty list or a wildcard entry is a hard error — a
 //     startup failure, never a substitution. config.Validate already rejects

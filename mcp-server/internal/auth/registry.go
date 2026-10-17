@@ -33,7 +33,7 @@ const minVerifierKeyLen = 16
 
 // RevocationPropagationBound is the published maximum delay between a
 // revocation becoming visible in the registry source and new web/MCP requests
-// being denied (Spec 16 §4 R16-09). The bound is met by loading the complete
+// being denied (Spec 16 Sec. 4 R16-09). The bound is met by loading the complete
 // replacement snapshot and swapping it in atomically: a revoked record denies
 // the very next Resolve after Reload, so propagation is bounded by the reload
 // interval, not by any lazy re-verification. Operators MUST reload (or
@@ -42,13 +42,13 @@ const RevocationPropagationBound = 60 * time.Second
 
 // MaxRotationOverlap is the maximum supported overlap window during which a
 // rotated-out verifier key still resolves alongside its replacement
-// (Spec 16 §4: planned rotation overlap is at most 24 hours). A longer window
+// (Spec 16 Sec. 4: planned rotation overlap is at most 24 hours). A longer window
 // is rejected rather than silently accepted, and a rotated-out key is never
 // accepted indefinitely.
 const MaxRotationOverlap = 24 * time.Hour
 
 // MaxCredentialValidity is the maximum validity window a registered credential
-// record may declare (Spec 16 §4 R16-09: "new credentials expire within 90
+// record may declare (Spec 16 Sec. 4 R16-09: "new credentials expire within 90
 // days"; Spec 17 R17-10 adopts the same bound). Every record MUST declare an
 // expiry, and its window — measured from IssuedAt when supplied, otherwise from
 // the load time — must not exceed this. A credential with no expiry is an
@@ -65,7 +65,7 @@ type Record struct {
 	CredentialID string   `json:"credential_id"`
 	PrincipalID  string   `json:"principal_id"`
 	Scopes       []string `json:"scopes,omitempty"`
-	// Role is the named role grant for the principal (Spec 16 §4 catalog).
+	// Role is the named role grant for the principal (Spec 16 Sec. 4 catalog).
 	// Missing/unknown roles deny at the authorization decision boundary.
 	Role string `json:"role,omitempty"`
 	// Resources lists project/resource IDs the principal may act on.
@@ -229,19 +229,19 @@ func buildSnapshot(keys []verifierKeyEntry, records []Record, now time.Time) (*s
 		}
 		seenVerifier[r.Verifier] = true
 
-		// Spec 16 §4 R16-09 / Spec 17 R17-10: new credentials expire within 90
+		// Spec 16 Sec. 4 R16-09 / Spec 17 R17-10: new credentials expire within 90
 		// days. A record with no expiry is an unbounded grant, and a record whose
 		// declared window exceeds the bound is refused here so the whole snapshot
 		// fails closed rather than installing an over-long credential.
 		if r.ExpiresAt.IsZero() {
-			return nil, fmt.Errorf("credential registry record %d: missing expires_at (Spec 16 §4 / R17-10: new credentials expire within %d days)", i, int(MaxCredentialValidity.Hours()/24))
+			return nil, fmt.Errorf("credential registry record %d: missing expires_at (Spec 16 Sec. 4 / R17-10: new credentials expire within %d days)", i, int(MaxCredentialValidity.Hours()/24))
 		}
 		reference := now
 		if !r.IssuedAt.IsZero() {
 			reference = r.IssuedAt
 		}
 		if r.ExpiresAt.Sub(reference) > MaxCredentialValidity {
-			return nil, fmt.Errorf("credential registry record %d: validity window exceeds the %d-day maximum (Spec 16 §4 / R17-10)", i, int(MaxCredentialValidity.Hours()/24))
+			return nil, fmt.Errorf("credential registry record %d: validity window exceeds the %d-day maximum (Spec 16 Sec. 4 / R17-10)", i, int(MaxCredentialValidity.Hours()/24))
 		}
 	}
 	return &snapshot{records: records, keys: keys}, nil

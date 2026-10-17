@@ -14,7 +14,7 @@ func recordFor(secret, credentialID, principalID string) Record {
 		CredentialID: credentialID,
 		PrincipalID:  principalID,
 		Scopes:       []string{ScopeMCPRead},
-		// A bounded validity window is mandatory (Spec 16 §4 / R17-10): every
+		// A bounded validity window is mandatory (Spec 16 Sec. 4 / R17-10): every
 		// fixture declares one inside the 90-day maximum.
 		IssuedAt:  time.Now().Add(-time.Hour),
 		ExpiresAt: time.Now().Add(24 * time.Hour),

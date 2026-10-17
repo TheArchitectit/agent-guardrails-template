@@ -9,7 +9,7 @@ import (
 	"github.com/thearchitectit/guardrail-mcp/internal/auth"
 )
 
-// TestRequireBearerWithPolicyLegacyRemovalSwitch covers Spec 11 §4.5.2 /
+// TestRequireBearerWithPolicyLegacyRemovalSwitch covers Spec 11 Sec. 4.5.2 /
 // acceptance criterion 8 on the MCP surface: once the configured
 // legacy-acceptance deadline has passed, the legacy shared key is refused,
 // while a registered credential is unaffected. A registered credential keeps

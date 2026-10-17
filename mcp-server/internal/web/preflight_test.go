@@ -12,7 +12,7 @@ import (
 )
 
 // newPreflightServer builds an Echo instance with the same ordering the real
-// server uses: the §3.3.4 declared-preflight guard, then CORS, then a declared
+// server uses: the Sec. 3.3.4 declared-preflight guard, then CORS, then a declared
 // API route and a catch-all file/SPA fallback (as echo.Static registers).
 func newPreflightServer(t *testing.T, cfg *config.Config) *echo.Echo {
 	t.Helper()
@@ -35,7 +35,7 @@ func newPreflightServer(t *testing.T, cfg *config.Config) *echo.Echo {
 	return e
 }
 
-// TestPreflightDeclaredRouteOnly covers Spec 12 §3.3.4: a CORS preflight for a
+// TestPreflightDeclaredRouteOnly covers Spec 12 Sec. 3.3.4: a CORS preflight for a
 // declared route is answered (204), while an OPTIONS request for an undeclared
 // path — which the catch-all fallback would otherwise match — is refused (404)
 // and never reaches CORS. The check is on the real router + middleware chain.

@@ -565,7 +565,7 @@ func (s *MCPServer) Serve(addr string) error {
 	}
 	var err error
 	mux := http.NewServeMux()
-	// Spec 11 §4.5.2: parse the legacy-acceptance removal deadline. A malformed
+	// Spec 11 Sec. 4.5.2: parse the legacy-acceptance removal deadline. A malformed
 	// value fails startup rather than silently disabling the retirement of the
 	// legacy shared key.
 	legacyDeadline, legacyConfigured, err := s.config.LegacyAcceptanceDeadline()
@@ -587,12 +587,12 @@ func requireBearer(key string, next http.Handler) http.Handler {
 // requireBearerWithRegistry authenticates the MCP endpoint with no
 // legacy-acceptance deadline configured. It is retained for callers and tests
 // that exercise the registry behaviour alone; the serving path uses
-// requireBearerWithPolicy so the Spec 11 §4.5.2 removal switch is applied.
+// requireBearerWithPolicy so the Spec 11 Sec. 4.5.2 removal switch is applied.
 func requireBearerWithRegistry(key string, registry *auth.Registry, regErr error, next http.Handler) http.Handler {
 	return requireBearerWithPolicy(key, registry, regErr, false, time.Time{}, next)
 }
 
-// requireBearerWithPolicy is requireBearerWithRegistry plus the Spec 11 §4.5.2
+// requireBearerWithPolicy is requireBearerWithRegistry plus the Spec 11 Sec. 4.5.2
 // legacy-acceptance removal switch: when legacyConfigured is true and
 // legacyDeadline has passed, the legacy shared key is refused on this surface.
 // A registered credential is unaffected. Accepted legacy use is counted so the
@@ -645,7 +645,7 @@ func requireBearerWithPolicy(key string, registry *auth.Registry, regErr error, 
 			http.Error(w, "unauthorized", http.StatusUnauthorized)
 			return
 		}
-		// Spec 11 §4.5.2: the legacy-acceptance removal switch. Once the
+		// Spec 11 Sec. 4.5.2: the legacy-acceptance removal switch. Once the
 		// configured deadline has passed the legacy shared key is refused
 		// regardless of registry state; a registered credential is unaffected.
 		if legacyConfigured && time.Now().After(legacyDeadline) {
@@ -663,7 +663,7 @@ func requireBearerWithPolicy(key string, registry *auth.Registry, regErr error, 
 			http.Error(w, "unauthorized", http.StatusUnauthorized)
 			return
 		}
-		// Spec 11 §4.5.2: accepted legacy use is counted (surface, class only).
+		// Spec 11 Sec. 4.5.2: accepted legacy use is counted (surface, class only).
 		metrics.RecordLegacyCredentialUse("mcp", legacyClass)
 		ctx := r.Context()
 		ctx = context.WithValue(ctx, ctxKeyPrincipalID, caller.PrincipalID)

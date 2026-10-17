@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-// Spec 16 §4 R16-09 / Spec 17 R17-10 — registered-credential validity bound.
+// Spec 16 Sec. 4 R16-09 / Spec 17 R17-10 — registered-credential validity bound.
 //
 // R16-09 requires new credentials to "expire within 90 days"; Spec 17 R17-10
 // adopts the same bound. Before this rule the registry validated scopes,

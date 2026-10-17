@@ -9,7 +9,7 @@ import (
 )
 
 // MinRequiredSchemaVersion is the minimum applied schema version this binary
-// requires before it will serve traffic (Spec 18 §2/§3, R18-05). It matches
+// requires before it will serve traffic (Spec 18 Sec. 2/Sec. 3, R18-05). It matches
 // the highest numbered migration shipped in internal/database/migrations; a
 // database below this version must be brought up by the one-shot migration
 // job before the server starts.
@@ -72,7 +72,7 @@ func ParseMigrationVersion(version string) (int, error) {
 }
 
 // EvaluateSchemaCompatibility is the pure compatibility decision (Spec 18
-// §3 step 3): the ledger must record at least one applied migration and the
+// Sec. 3 step 3): the ledger must record at least one applied migration and the
 // highest applied version must be at or above minVersion. It never repairs,
 // renumbers, or interprets an empty/ambiguous ledger as success.
 func EvaluateSchemaCompatibility(versions []string, minVersion int) error {

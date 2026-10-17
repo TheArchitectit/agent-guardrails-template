@@ -98,7 +98,7 @@ func TestSecurityHeaders_NoXSSProtection(t *testing.T) {
 	}
 }
 
-// TestSecurityHeaders_HSTSOnlyOnVerifiedPublicTLS is Spec 12 §3.6: HSTS is
+// TestSecurityHeaders_HSTSOnlyOnVerifiedPublicTLS is Spec 12 Sec. 3.6: HSTS is
 // emitted only when TLS is enabled and the effective profile is `public`.
 // The negative cases are the point — a header asserting a posture the operator
 // did not declare is worse than no header.

@@ -131,11 +131,11 @@ fail closed by design.
 | Privilege-escalation / fork-bomb detection | Not implemented (3 of 5 required violation classes absent) |
 | L3 Firecracker | Not implemented (the spec itself marks it optional) |
 
-**Spec amendment, not a gap:** the spec (§4.3) specifies unconditional
+**Spec amendment, not a gap:** the spec (Sec. 4.3) specifies unconditional
 L2→L1→L0 fallback. The implementation deliberately does not: it downgrades
 only on genuine setup errors, and treats a command *denied while running
 under isolation* as a security breach to be reported. That is the correct
-fail-closed behaviour and the spec text is wrong. §4.3 should be amended.
+fail-closed behaviour and the spec text is wrong. Sec. 4.3 should be amended.
 
 ### 04 — Multi-agent safety policies
 
@@ -186,7 +186,7 @@ satisfy spec 05.
 
 The data file covers EU AI Act art. 9, 10, 12, 13, 14, 15, 50 and NIST RMF
 govern/map/measure/manage. **Art. 11 is absent**, although the spec lists it
-as a known gap — so spec §5.1's own acceptance criterion currently fails.
+as a known gap — so spec Sec. 5.1's own acceptance criterion currently fails.
 
 **Treat these scores as fiction until implemented.** `CheckRequirement`
 returns `true` purely because a hand-written string in the JSON says
@@ -246,7 +246,7 @@ requirement tables; one status per requirement row): ABSENT 101 · WIRED 75 ·
 EXERCISED 59 · NOT_RUN 26 · ACCEPTED 0 · **total 261 requirement rows**.
 The AUDIT's earlier `100/78/52/27 = 257` figure is not reproducible from those
 tables and is superseded; see
-[AUDIT-2026-10-09.md §5](AUDIT-2026-10-09.md) for the per-section breakdown.
+[AUDIT-2026-10-09.md Sec. 5](AUDIT-2026-10-09.md) for the per-section breakdown.
 
 **B7 sync re-verification (2026-10-13, `main` `9fac99b1`):** zero non-test Go
 changes since the recount base `f85aa67` — the only deltas are spec-21/22/23
@@ -260,7 +260,7 @@ Several specs specify acceptance criteria with no oracle in this repository:
 
 - Spec 01: latency budgets — no pipeline benchmark exists.
 - Spec 02: FP <5%, FN <1% — no labelled evaluation harness.
-- Spec 04 §5.3: "Agent A instructs Agent B to bypass guardrails" —
+- Spec 04 Sec. 5.3: "Agent A instructs Agent B to bypass guardrails" —
   presupposes a multi-agent runtime that does not exist here.
 - Spec 06: "scores match manual audit", "evidence satisfies auditors" — no
   defined threshold or pass condition.

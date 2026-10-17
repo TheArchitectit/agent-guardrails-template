@@ -111,7 +111,7 @@ correlation key, and R17-08 keeps "paths to secret files" out of ordinary-caller
 probed and is **not** a leak: `pgx v5` masks the password in its own error text
 (`cannot parse …@x/d` renders the credential as `xxxxxx`; connect/dial errors
 name only host and database). The remaining R17-08 scope — argv in manifests
-(done, §6), shell-expanded command strings outside the manifests, and rotation —
+(done, Sec. 6), shell-expanded command strings outside the manifests, and rotation —
 stays tracked under `SPRINT-A2-credential-lifecycle`; this note claims only the
 request-log query half.
 
@@ -156,10 +156,10 @@ negative suite flips PASS→FAIL when the posture gate is neutered.
 
 **Named limit (documented, not hidden).** This enforces the debug endpoint's
 *bind* posture and access window. The `public`-profile `/metrics`, `/docs` and
-`/openapi.yaml` auth re-decision (R17-09's first sentence, and Spec 12 §3.2)
-remains the owner's scrape-contract call recorded in Spec 12 §7; the current
+`/openapi.yaml` auth re-decision (R17-09's first sentence, and Spec 12 Sec. 3.2)
+remains the owner's scrape-contract call recorded in Spec 12 Sec. 7; the current
 posture (authenticated-by-default in production via the exposure registry, with
-`/metrics` declared public per the recorded §3.2 deferral) is unchanged here.
+`/metrics` declared public per the recorded Sec. 3.2 deferral) is unchanged here.
 
 ## 13. Implementation note (2026-10-16) — R17-07 verifier-key entropy floor
 
@@ -295,7 +295,7 @@ gate green — exactly the "TLS_ENABLED is not evidence" failure R17-02 names.
 The audit row recorded the gap honestly: `17-R17-02 | W | ValidateDeploymentBinding;
 no real-listener negative exercised`.
 
-**The evidence form is the requirement.** §4 states plainly that "an
+**The evidence form is the requirement.** Sec. 4 states plainly that "an
 operator-supplied JSON assertion without an actual external reachability/
 certificate test is NOT evidence". So the gate does not accept a free-text env
 attestation (the shape R17-09 uses for the debug endpoint). A nonlocal profile
@@ -338,7 +338,7 @@ killed**.
 
 **Named limit.** This gate enforces the *presence and shape of proven evidence*;
 it does not itself perform the external reachability or certificate test — that
-is the operator-run preflight the record reports, exactly as §4 specifies. A
+is the operator-run preflight the record reports, exactly as Sec. 4 specifies. A
 `local` deployment is not constrained here: its exposure is bounded by the
 R17-01 loopback/bridge bind rule. Post-start drift re-verification ("halt
 protected traffic until repaired") remains future integration work alongside the
@@ -346,7 +346,7 @@ readiness contract.
 
 ## 15. Implementation note (2026-10-16) — R17-08 redaction half (webhook delivery path)
 
-The request-log half (§11) closed one log surface. A second, independent surface
+The request-log half (Sec. 11) closed one log surface. A second, independent surface
 carried the same class of secret and was still live: the **webhook delivery
 path**. R17-08 requires credential material never reach "errors, logs, audit,
 traces, metrics, crash reports, health output and MCP/REST resources", and a
@@ -382,7 +382,7 @@ in a wrapped error) and leaves the rest of the text untouched, so an ordinary
 error message is unaltered. `deliver` now logs `RedactURLForLog(wh.URL)` and
 `RedactURLsInText(lastErr.Error())`; `SendTestEvent` stores
 `RedactURLsInText(err.Error())`. Scheme, host and path survive for correlation —
-the same rule the request logger applies to `RequestURI` (§11). The whole query
+the same rule the request logger applies to `RequestURI` (Sec. 11). The whole query
 is withheld rather than filtered by parameter name, because a name-based
 allowlist fails open on the first unlisted parameter.
 
@@ -404,7 +404,7 @@ case `webhook-target-url-query-redaction-removed` (harness now **25 cases, all
 killed**).
 
 **Named limit (documented, not hidden).** A credential carried in the URL
-*path* is not redacted (paths are the correlation key, mirroring §11). The
+*path* is not redacted (paths are the correlation key, mirroring Sec. 11). The
 `WEBHOOK_HMAC_SECRET` column, encrypted-at-rest storage and rotation remain the
 open R17-06/R17-10 items already recorded in `docs/security/SECRET-INVENTORY.md`
 — this note claims only the delivery-path query half.

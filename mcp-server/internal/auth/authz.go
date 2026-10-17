@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-// Scope catalog (Spec 16 §4). Unknown scopes never grant authority.
+// Scope catalog (Spec 16 Sec. 4). Unknown scopes never grant authority.
 const (
 	ScopeMCPRead     = "mcp:read"
 	ScopeMCPValidate = "mcp:validate"
@@ -17,7 +17,7 @@ const (
 	ScopeAdminManage = "admin:manage"
 )
 
-// Role catalog (Spec 16 §4). Unknown roles deny.
+// Role catalog (Spec 16 Sec. 4). Unknown roles deny.
 const (
 	RoleReader           = "reader"
 	RoleDeveloper        = "developer"
@@ -115,7 +115,7 @@ type Decision struct {
 	Code    string // stable machine-readable reason code
 }
 
-// roleActionAllowed is the role × action privilege matrix (Spec 16 §4).
+// roleActionAllowed is the role × action privilege matrix (Spec 16 Sec. 4).
 // Roles never widen a key scope; scopes never widen a role.
 var roleActionAllowed = map[string]map[ActionKind]bool{
 	RoleReader: {
@@ -141,7 +141,7 @@ var roleActionAllowed = map[string]map[ActionKind]bool{
 	},
 }
 
-// Decide evaluates Spec 11 §4.4:
+// Decide evaluates Spec 11 Sec. 4.4:
 //
 //	allow(P, K, A, R) =
 //	    authenticated(K)
@@ -396,7 +396,7 @@ func IsSensitiveMCPTool(name string) bool {
 }
 
 // ---------------------------------------------------------------------------
-// Legacy containment (Spec 16 §4 / R16-07)
+// Legacy containment (Spec 16 Sec. 4 / R16-07)
 // ---------------------------------------------------------------------------
 
 // LegacyPrincipal returns the constrained server-controlled principal for a
@@ -443,7 +443,7 @@ type LegacyRoute struct {
 }
 
 // legacyAllowlist is the approved method/path/action table for legacy keys
-// once a credential registry is configured (Spec 16 §4 legacy mapping).
+// once a credential registry is configured (Spec 16 Sec. 4 legacy mapping).
 //
 //	mcp: named read/validate MCP-tool REST surface
 //	ide: named IDE validation routes

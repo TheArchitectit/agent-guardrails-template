@@ -54,14 +54,14 @@ if !ok {
 
 **Severity**: Critical (CVSS 8.2) | **Impact**: Rate limit bypass, potential DoS
 
-**Status: RESOLVED (2026-10-15, Spec 12 §3.4).** `c.RealIP()` no longer trusts
+**Status: RESOLVED (2026-10-15, Spec 12 Sec. 3.4).** `c.RealIP()` no longer trusts
 forwarded headers unconditionally: `internal/clientip` derives the effective
 client IP from an explicit `TRUSTED_PROXIES` stance (empty = trust no proxy, the
 default) and that value is installed as `echo.IPExtractor`, so the rate-limit
 key fallback and log attribution use the socket peer unless the immediate peer
 is a configured proxy. A forged `X-Forwarded-For`/`X-Real-IP`/`Forwarded` no
 longer creates a separate rate-limit bucket. See
-[`../specs/12-web-exposure-boundary.md`](../specs/12-web-exposure-boundary.md) §8.
+[`../specs/12-web-exposure-boundary.md`](../specs/12-web-exposure-boundary.md) Sec. 8.
 
 **Original remediation sketch (superseded by the stance above):**
 ```go
@@ -207,7 +207,7 @@ The security headers middleware doesn't include `Strict-Transport-Security` (HST
 
 **Severity**: High | **Impact**: SSL/TLS downgrade attacks, MITM
 
-**Resolution (2026-10-16, Spec 12 §3.6 / Spec 17 R17-03).** HSTS is now
+**Resolution (2026-10-16, Spec 12 Sec. 3.6 / Spec 17 R17-03).** HSTS is now
 emitted, but under a stricter condition than the remediation sketch below
 proposed. The sketch gated on `c.Request().TLS != nil`, which asserts a posture
 per-request and would also emit HSTS for a non-public deployment. The shipped
@@ -224,7 +224,7 @@ assertion (a commitment the operator has not made).
 `TestHSTSHeaderValueIsBounded`), `internal/web/middleware_test.go`
 (`TestSecurityHeaders_HSTSOnlyOnVerifiedPublicTLS`), CI row
 `security-matrix-security-headers`, mutation-kill
-`hsts-emitted-for-non-public-origin`. Landing: `main@<sha>` (Spec 12 §11 note).
+`hsts-emitted-for-non-public-origin`. Landing: `main@<sha>` (Spec 12 Sec. 11 note).
 
 ---
 

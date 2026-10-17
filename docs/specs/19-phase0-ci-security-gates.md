@@ -39,7 +39,7 @@ commit. The current repository does not yet provide that contract:
   is incomplete.
 - Existing Windows-only failures are known evidence limits, not passes: the focused
   MCP suite previously hit Python `fcntl` and Windows symlink privilege failures
-  ([16](16-authentication-authorization-and-evidence-remediation.md) §3).
+  ([16](16-authentication-authorization-and-evidence-remediation.md) Sec. 3).
 
 This proposal closes those gaps without changing any workflow in this document.
 Required status checks MUST be configured outside repository-controlled workflow
@@ -110,7 +110,7 @@ resource-boundary tests.
 
 ### R19-01 — Required same-commit matrix
 
-The external required-check policy MUST require every applicable matrix row in §3
+The external required-check policy MUST require every applicable matrix row in Sec. 3
 on PRs (including forks on hosted runners), pushes to protected `main`, and
 release-candidate tags or manual release dispatches bound to an immutable SHA.
 The solo maintainer configures and records the required-check list in GitHub
@@ -195,14 +195,14 @@ rate-limit, or authorization identity. These controls align with Spec 12 and
 remain blocking even when the UI is otherwise healthy.
 
 **Status (2026-10-15).** The proxy-trust half is WIRED + EXERCISED: the
-client-IP trust boundary (Spec 12 §3.4, `internal/clientip`) derives the
+client-IP trust boundary (Spec 12 Sec. 3.4, `internal/clientip`) derives the
 effective client IP from an explicit `TRUSTED_PROXIES` stance and installs it as
 `echo.IPExtractor`, so an untrusted forwarded header cannot change the
 rate-limit key or log attribution. Row `security-matrix-clientip-trust`; mutation
 kill `clientip-stance-trusts-every-peer`. The static-suffix half is already
 covered (`TestAPIKeyAuth_StaticExtensionDoesNotBypassAuth`, `/api/ingest/x.js`
 POST → 401). The production-CORS-enumeration and shared static-route-registry
-halves remain **NOT_RUN** (Spec 12 §3.1/§3.3).
+halves remain **NOT_RUN** (Spec 12 Sec. 3.1/Sec. 3.3).
 
 ### R19-10 — Complete package and test coverage
 
@@ -380,7 +380,7 @@ enforced. No gate was weakened.
 ## 7. Implementation note (2026-10-15) — R19-15 image-digest half
 
 R19-15 also requires that release/base **images** use immutable digests. That
-half is now implemented and enforced (see Spec 17 R17-11 §5 for the full
+half is now implemented and enforced (see Spec 17 R17-11 Sec. 5 for the full
 record): every external image ref in `docker-compose.yml`,
 `mcp-server/deploy/{podman-compose,docker-compose.example}.yml` and
 `mcp-server/deploy/Dockerfile` is pinned by an immutable `@sha256` digest, and
@@ -403,4 +403,4 @@ weakened.
 A third fail-closed gate now runs in the same `regression-guard.yml` job —
 `scripts/check_secret_argv.py` (Spec 17 R17-08): a credential in a container
 manifest's argv (`redis-cli -a`, `--requirepass <pw>`) fails the build. It is
-the Phase 0 "no secret in process arguments" control; see Spec 17 §6.
+the Phase 0 "no secret in process arguments" control; see Spec 17 Sec. 6.

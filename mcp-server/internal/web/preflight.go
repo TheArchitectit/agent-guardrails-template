@@ -7,7 +7,7 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-// declaredPreflightOnly enforces Spec 12 §3.3.4: a CORS preflight (OPTIONS) is
+// declaredPreflightOnly enforces Spec 12 Sec. 3.3.4: a CORS preflight (OPTIONS) is
 // answered by the CORS middleware only for a DECLARED route.
 //
 // The Web UI mounts a catch-all static handler (echo.Static("/", …) plus the

@@ -1,6 +1,6 @@
 # OpenSpec: Runtime Sandbox Isolation
 
-> **The library shipped; neither tool exists.** The sandbox is fully built in `internal/guardrails/sandbox.go` but no MCP tool exposes it. §4.3 fallback text is also wrong — see the amendment note in [STATUS.md](STATUS.md).
+> **The library shipped; neither tool exists.** The sandbox is fully built in `internal/guardrails/sandbox.go` but no MCP tool exposes it. Sec. 4.3 fallback text is also wrong — see the amendment note in [STATUS.md](STATUS.md).
 
 **Gap:** Important — Pre-execution validation only; no OS-level isolation
 **Priority:** 🟡 Important (Phase 2)
@@ -237,7 +237,7 @@ func sandboxExecL2(command string, limits ResourceLimits) (*SandboxResult, error
 
 Evidence: `docs/specs/guardrail-gaps-2026/STATUS.md`.
 
-| § | Requirement | Status | Evidence |
+| Sec. | Requirement | Status | Evidence |
 |---|-------------|--------|----------|
 | 3.1 | `guardrail_sandbox_execute` | **Not implemented** | name absent from every `.go` file; `ExecuteSandbox` (`engine.go:299`) has zero callers |
 | 3.1 | `guardrail_sandbox_config` | **Not implemented** | no tool, no runtime config setter |
@@ -251,8 +251,8 @@ Evidence: `docs/specs/guardrail-gaps-2026/STATUS.md`.
 | 4.x | Privilege-escalation / fork-bomb detection | **Not implemented** | absent from `detectViolations` (`:408-427`) — 3 of 5 required violation classes are missing |
 | 5.2 | Config hot-reload | **Not implemented** | no sandbox YAML loader exists; `SandboxConfig` is only ever `DefaultSandboxConfig()` |
 
-**Spec amendment — §4.3 fallback is wrong and should be rewritten.**
-§4.3 specifies unconditional L2→L1→L0 fallback. The implementation
+**Spec amendment — Sec. 4.3 fallback is wrong and should be rewritten.**
+Sec. 4.3 specifies unconditional L2→L1→L0 fallback. The implementation
 deliberately downgrades **only** on genuine setup errors (`isSetupError`,
 `sandbox.go:61-78`); a command denied while running under isolation is
 treated as a security breach and reported as a violation. That is the correct
@@ -267,8 +267,8 @@ protect anything until something calls it.
 **Blocking decisions:**
 
 1. Expose `guardrail_sandbox_execute` or accept that L0–L2 is internal-only.
-2. Implement the 2 missing violation classes, or amend §4.x to drop them.
-3. Add a YAML loader, or amend §3.3 to rename `sandbox_policies` →
+2. Implement the 2 missing violation classes, or amend Sec. 4.x to drop them.
+3. Add a YAML loader, or amend Sec. 3.3 to rename `sandbox_policies` →
    `tool_policies` and mark hot-reload out of scope.
-4. §5.x security criteria (container escape, fork bomb) need a defined test
+4. Sec. 5.x security criteria (container escape, fork bomb) need a defined test
    harness to be checkable.

@@ -3,7 +3,7 @@
 **Status:** Proposed — opened 2026-10-10; required parity items all met 2026-10-14 (R20.1 via spec 21 closure; R20.3–R20.4 previously evidenced; R20.5 spec-22 owner decision remains open).
 Consolidates and takes over the
 closure obligation of `10-mcp-protocol-and-fastmcp-parity.md`. Adds no new
-capability beyond what §4.1–4.4 of spec 10 already requires; it exists so the
+capability beyond what Sec. 4.1–4.4 of spec 10 already requires; it exists so the
 parity work has one closable unit with acceptance criteria and a status table.
 R20.2 is now met by a live gate (spec 21); several other requirements remain
 open — see the closure-status block.
@@ -126,4 +126,4 @@ Live real-transport test run (2026-10-10, `go test ./internal/mcp/`):
 (live list-tools / list-resources sequence over the production transport) —
 now **implemented** as `TestStreamableHTTPListingSequence`.
 
-Owner decision still open: the required compat-matrix row (spec 22 §4).
+Owner decision still open: the required compat-matrix row (spec 22 Sec. 4).

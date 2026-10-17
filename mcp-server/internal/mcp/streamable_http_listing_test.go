@@ -1,7 +1,7 @@
 package mcp
 
 // Spec 23 — live tools/list and resources/list sequence over the production
-// Streamable HTTP transport. Closes the R20.3 (spec 10 §4.2.1) gap: the real
+// Streamable HTTP transport. Closes the R20.3 (spec 10 Sec. 4.2.1) gap: the real
 // transport was exercised for initialize and tools/call and resources/read but
 // never for tool or resource *listing*.
 //

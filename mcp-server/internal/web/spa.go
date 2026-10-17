@@ -13,7 +13,7 @@ import (
 // (mcp-server/deploy/Dockerfile: `COPY --from=builder /app/web /app/web`).
 const defaultWebRoot = "/app/web"
 
-// newSPAHandler serves the Web UI shell and its real asset files (Spec 12 §3.1
+// newSPAHandler serves the Web UI shell and its real asset files (Spec 12 Sec. 3.1
 // web-shell rules; Spec 19 R19-09 path/method-bypass controls).
 //
 // Confinement (Spec 19 R19-09). The request path is re-rooted under the web
@@ -22,7 +22,7 @@ const defaultWebRoot = "/app/web"
 // path onto the root and called `c.File`, so `/web/../<file>` and
 // `/web/..%2f<file>` served any file the process could read. Verified live
 // before this fix: an unauthenticated `GET /web/../SECRET.txt` returned the
-// file. The route is declared public in the exposure registry (Spec 12 §3.1
+// file. The route is declared public in the exposure registry (Spec 12 Sec. 3.1
 // web-spa-fallback), so the bypass needed no credential at all.
 //
 // Behaviour:

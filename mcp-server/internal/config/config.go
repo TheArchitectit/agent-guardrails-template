@@ -178,7 +178,7 @@ type Config struct {
 	CircuitBreakerMaxRequests      int           `env:"CIRCUIT_BREAKER_MAX_REQUESTS" envDefault:"3"`
 	CircuitBreakerInterval         time.Duration `env:"CIRCUIT_BREAKER_INTERVAL" envDefault:"10s"`
 
-	// Deployment Profile (Spec 17 §2 / R17-01). Selects the effective
+	// Deployment Profile (Spec 17 Sec. 2 / R17-01). Selects the effective
 	// exposure profile: local (default, loopback-only), tailnet, or public.
 	// The profile is validated against the actual listener bind addresses at
 	// startup; a mismatch fails startup instead of downgrading silently.
@@ -191,7 +191,7 @@ type Config struct {
 	// TrustedProxies are the proxy peers allowed to supply forwarded
 	// identity/scheme headers. Required (non-empty) for the public profile,
 	// which may only listen behind a controlled TLS-terminating proxy.
-	// Empty by default: forwarded headers are ignored (Spec 12 §3.4).
+	// Empty by default: forwarded headers are ignored (Spec 12 Sec. 3.4).
 	TrustedProxies []string `env:"TRUSTED_PROXIES" envSeparator:","`
 	// DeploymentPreflightFile names the commit-bound deployment preflight
 	// record (JSON) that proves the ingress posture for a nonlocal profile
@@ -202,7 +202,7 @@ type Config struct {
 	DeploymentPreflightFile string `env:"DEPLOYMENT_PREFLIGHT_FILE"`
 
 	// LegacyAcceptanceUntil bounds how long the legacy shared keys
-	// (MCP_API_KEY / IDE_API_KEY) are accepted (Spec 11 §4.5.2). Unset means the
+	// (MCP_API_KEY / IDE_API_KEY) are accepted (Spec 11 Sec. 4.5.2). Unset means the
 	// removal switch is not configured and legacy keys keep their historical
 	// surface. A configured value is an RFC3339 timestamp; once it has passed,
 	// a legacy key is refused on both transports regardless of registry state.
@@ -280,7 +280,7 @@ func (c *Config) Validate() error {
 		return err
 	}
 
-	// Validate the legacy-acceptance removal switch (Spec 11 §4.5.2): a
+	// Validate the legacy-acceptance removal switch (Spec 11 Sec. 4.5.2): a
 	// configured value must parse as RFC3339, so an unreadable deadline fails
 	// startup rather than silently disabling the retirement of legacy keys.
 	if _, _, err := c.LegacyAcceptanceDeadline(); err != nil {
@@ -421,7 +421,7 @@ func (c *Config) Validate() error {
 		return err
 	}
 
-	// Validate the trusted-proxy stance (Spec 12 §3.4). Every entry must be a
+	// Validate the trusted-proxy stance (Spec 12 Sec. 3.4). Every entry must be a
 	// valid IP or CIDR: a malformed entry is a configuration error, not a
 	// silent narrowing to "trust nothing".
 	if _, err := clientip.NewStance(c.TrustedProxies); err != nil {

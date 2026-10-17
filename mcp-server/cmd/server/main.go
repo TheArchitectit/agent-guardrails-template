@@ -227,7 +227,7 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// Revocation reload loop (Spec 16 §4 / R16-09): re-read the configured
+	// Revocation reload loop (Spec 16 Sec. 4 / R16-09): re-read the configured
 	// registry sources periodically and swap the validated snapshot in, so a
 	// revoked credential is denied on both surfaces within
 	// RevocationPropagationBound without a process restart. A failed reload
@@ -253,7 +253,7 @@ func main() {
 		slog.Info("Credential registry reload loop started", "interval", auth.RevocationReloadInterval, "bound", auth.RevocationPropagationBound)
 	}
 
-	// Lifecycle gate (Spec 18 §5.2 / R18-12): readiness stays non-ready until
+	// Lifecycle gate (Spec 18 Sec. 5.2 / R18-12): readiness stays non-ready until
 	// every ordered check passes; only then is the READY state published.
 	if report := webServer.EvaluateReadiness(); report.Ready {
 		webServer.SetLifecycle(web.LifecycleReady)
@@ -313,7 +313,7 @@ func main() {
 
 	slog.Info("Initiating graceful shutdown", "timeout", shutdownTimeout)
 
-	// Mark readiness false before drain begins (Spec 18 §5.2 / R18-12): a
+	// Mark readiness false before drain begins (Spec 18 Sec. 5.2 / R18-12): a
 	// probe arriving during shutdown must see DRAINING, never READY.
 	webServer.SetLifecycle(web.LifecycleDraining)
 
@@ -350,7 +350,7 @@ func runHealthCheck(timeout time.Duration) error {
 		Timeout: timeout,
 	}
 
-	// Container probe contract (Spec 18 §5.2 / R18-08): the health-check mode
+	// Container probe contract (Spec 18 Sec. 5.2 / R18-08): the health-check mode
 	// gates on readiness, not liveness alone. A live-but-unready instance must
 	// fail the probe so orchestrators do not route traffic to it.
 	webPort := os.Getenv("WEB_PORT")

@@ -10,7 +10,7 @@ import (
 )
 
 // TestRevocationPropagationBoundPublished pins the published lifecycle bounds
-// required by Spec 16 §4 / R16-09 so a silent change fails the build.
+// required by Spec 16 Sec. 4 / R16-09 so a silent change fails the build.
 func TestRevocationPropagationBoundPublished(t *testing.T) {
 	if RevocationPropagationBound != 60*time.Second {
 		t.Fatalf("RevocationPropagationBound = %v, want 60s", RevocationPropagationBound)

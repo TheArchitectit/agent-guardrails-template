@@ -41,12 +41,12 @@ type Server struct {
 	version       string
 
 	// lifecycle is the explicit process lifecycle state observed by
-	// /health/ready (Spec 18 §5.2 / R18-12). It is accessed atomically because
+	// /health/ready (Spec 18 Sec. 5.2 / R18-12). It is accessed atomically because
 	// shutdown may move it to DRAINING from the signal goroutine while probes
 	// are being served.
 	lifecycle atomic.Value // LifecycleState
 
-	// readiness runs the ordered readiness checks (Spec 18 §3 / R18-07..R18-13).
+	// readiness runs the ordered readiness checks (Spec 18 Sec. 3 / R18-07..R18-13).
 	readiness *ReadinessEvaluator
 
 	// credentialRegistry is the process-wide credential-to-principal registry
@@ -83,7 +83,7 @@ func NewServer(cfg *config.Config, db *database.DB, cacheClient *cache.Client, a
 
 	s.lifecycle.Store(LifecycleStarting)
 
-	// The ordered readiness evaluator (Spec 18 §3). Live probes are bound here
+	// The ordered readiness evaluator (Spec 18 Sec. 3). Live probes are bound here
 	// so the ordered decision itself stays dependency-free and testable.
 	s.readiness = NewReadinessEvaluator(version, ReadinessDeps{
 		DBHealth: func(ctx context.Context) error {
@@ -128,7 +128,7 @@ func (s *Server) CredentialRegistry() *auth.Registry {
 	return s.credentialRegistry
 }
 
-// SetLifecycle moves the process lifecycle state (Spec 18 §5.2 / R18-12).
+// SetLifecycle moves the process lifecycle state (Spec 18 Sec. 5.2 / R18-12).
 // Readiness observes it: DRAINING and STOPPED are non-ready by construction.
 func (s *Server) SetLifecycle(state LifecycleState) {
 	s.lifecycle.Store(state)
@@ -143,13 +143,13 @@ func (s *Server) Lifecycle() LifecycleState {
 }
 
 // EvaluateReadiness runs the ordered readiness checks against the current
-// lifecycle state (Spec 18 §3).
+// lifecycle state (Spec 18 Sec. 3).
 func (s *Server) EvaluateReadiness() ReadinessReport {
 	return s.readiness.Evaluate(s.Lifecycle())
 }
 
 // registryLoadErr reports a configured-but-unloadable credential registry
-// without exposing verifier material (Spec 18 §6 / R18-10).
+// without exposing verifier material (Spec 18 Sec. 6 / R18-10).
 func registryLoadErr(cfg *config.Config) error {
 	if !config.SourcesConfiguredRegistry(cfg) {
 		return nil
@@ -161,7 +161,7 @@ func registryLoadErr(cfg *config.Config) error {
 // policyState reports the policy engine posture. The engine is driven by an
 // Ollama-backed content filter (see cmd/server); when OLLAMA_URL is unset the
 // engine is not configured. Configured/enabled/exercised are distinct facts
-// (Spec 18 §6 / R18-11).
+// (Spec 18 Sec. 6 / R18-11).
 func policyState() PolicyState {
 	if os.Getenv("OLLAMA_URL") == "" {
 		return PolicyState{Configured: false, Enabled: false, Exercised: false}
@@ -176,7 +176,7 @@ func (s *Server) Echo() *echo.Echo {
 
 // setupMiddleware configures Echo middleware
 func (s *Server) setupMiddleware() {
-	// Client-IP trust boundary (Spec 12 §3.4). Forwarded headers are honoured
+	// Client-IP trust boundary (Spec 12 Sec. 3.4). Forwarded headers are honoured
 	// only from a configured TRUSTED_PROXIES peer; otherwise the socket peer is
 	// used and a forwarded header is recorded as a protocol anomaly. The
 	// stance is validated at config load, so a parse error here falls back to
@@ -203,22 +203,22 @@ func (s *Server) setupMiddleware() {
 	// Request logging
 	s.echo.Use(loggingMiddleware.RequestLogger())
 
-	// Security headers (Spec 12 §3.6). The middleware reads the effective
+	// Security headers (Spec 12 Sec. 3.6). The middleware reads the effective
 	// deployment posture, so HSTS is emitted only for a verified public HTTPS
 	// origin.
 	s.echo.Use(securityHeadersMiddleware(s.cfg))
 
-	// Forwarded-header protocol anomaly (Spec 12 §3.4.4): an untrusted peer
+	// Forwarded-header protocol anomaly (Spec 12 Sec. 3.4.4): an untrusted peer
 	// that asserts a forwarded header is logged, not rejected.
 	s.echo.Use(forwardedHeaderAnomalyMiddleware(stance))
 
 	// CORS - MUST run before auth middleware to handle OPTIONS preflight requests
 	// CORS preflight (OPTIONS) requests should return 200 before auth check.
 	//
-	// Spec 12 §3.3.4: a preflight is answered for a DECLARED route only. This
+	// Spec 12 Sec. 3.3.4: a preflight is answered for a DECLARED route only. This
 	// guard runs before CORS and refuses an OPTIONS request whose matched route
 	// is a catch-all (the Web UI file/SPA fallback), so OPTIONS cannot declare
-	// an arbitrary path. Spec 12 §3.3.2: production wildcard/empty origins are
+	// an arbitrary path. Spec 12 Sec. 3.3.2: production wildcard/empty origins are
 	// a startup failure, never a substitution — EffectiveCORSOrigins fails
 	// closed here as well as in config.Validate.
 	s.echo.Use(declaredPreflightOnly())
@@ -272,7 +272,7 @@ func (s *Server) setupRoutes() {
 
 // registerRoutes declares every route on e for server s. It is split out of
 // setupRoutes so the exposure registry can be checked against the REAL route
-// table (Spec 12 §4.1) without constructing a full Server with live
+// table (Spec 12 Sec. 4.1) without constructing a full Server with live
 // dependencies.
 func registerRoutes(e *echo.Echo, s *Server) {
 	// Health endpoints (no auth required)
@@ -440,7 +440,7 @@ func panicRecoveryMiddleware() echo.MiddlewareFunc {
 }
 
 // forwardedHeaderAnomalyMiddleware records a protocol anomaly when a request
-// from an untrusted peer asserts a forwarded header (Spec 12 §3.4.4). It does
+// from an untrusted peer asserts a forwarded header (Spec 12 Sec. 3.4.4). It does
 // not reject: misconfiguration stays visible without breaking traffic, and the
 // effective client IP is already the socket peer via the IPExtractor.
 func forwardedHeaderAnomalyMiddleware(stance clientip.Stance) echo.MiddlewareFunc {
@@ -459,7 +459,7 @@ func forwardedHeaderAnomalyMiddleware(stance clientip.Stance) echo.MiddlewareFun
 
 // securityHeadersMiddleware adds security headers.
 //
-// Spec 12 §3.6: the deprecated X-XSS-Protection header is never emitted, and
+// Spec 12 Sec. 3.6: the deprecated X-XSS-Protection header is never emitted, and
 // HSTS is added **only** when TLS is enabled and the effective deployment
 // profile is `public` (a verified public HTTPS origin). The decision lives in
 // config.EmitsHSTS so the header and the profile contract cannot drift apart.
@@ -487,7 +487,7 @@ func securityHeadersMiddleware(cfg *config.Config) echo.MiddlewareFunc {
 			c.Response().Header().Set("Referrer-Policy", "strict-origin-when-cross-origin")
 			c.Response().Header().Set("Permissions-Policy", "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()")
 
-			// Spec 12 §3.6: HSTS only for a verified public HTTPS origin. The
+			// Spec 12 Sec. 3.6: HSTS only for a verified public HTTPS origin. The
 			// condition is evaluated per request so a config reload cannot
 			// leave a stale header decision behind.
 			if cfg != nil && cfg.EmitsHSTS() {
@@ -538,7 +538,7 @@ func (s *Server) healthLive(c echo.Context) error {
 }
 
 func (s *Server) healthReady(c echo.Context) error {
-	// Ordered readiness evaluation (Spec 18 §3 / R18-07..R18-13). The report
+	// Ordered readiness evaluation (Spec 18 Sec. 3 / R18-07..R18-13). The report
 	// carries bounded reason codes only — never credentials or raw dependency
 	// errors. A non-ready state returns 503 and gates normal protected traffic.
 	report := s.readiness.Evaluate(s.Lifecycle())

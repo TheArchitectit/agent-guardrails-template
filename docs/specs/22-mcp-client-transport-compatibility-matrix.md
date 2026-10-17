@@ -1,8 +1,8 @@
 # OpenSpec: MCP Client / Transport Compatibility Matrix
 
 **Status:** Proposed — opened 2026-10-10 (spin-out from spec 20 / spec 10
-§4.2.3, §5.4); closure block added 2026-10-10; **required row PASSES
-2026-10-10** (R22.1 SUPPORTED — see §R22.1 and `22-evidence-2026-10-10.md`).
+Sec. 4.2.3, Sec. 5.4); closure block added 2026-10-10; **required row PASSES
+2026-10-10** (R22.1 SUPPORTED — see Sec. R22.1 and `22-evidence-2026-10-10.md`).
 The remaining candidate rows are product choices and stay pending/unsupported;
 the required row is closed.
 
@@ -16,10 +16,10 @@ intentionally-unsupported surfaces with rationale.
 
 ## 1. Problem
 
-The AUDIT (§10-4.2.3) records client/transport compatibility tests as
+The AUDIT (Sec. 10-4.2.3) records client/transport compatibility tests as
 **NOT_RUN**. The Pi bridge's documented SSE endpoint does not match this
 server's Streamable HTTP `/mcp` endpoint, so compatibility cannot be inferred
-from similar tool names (spec 10 §3). Until a supported client is proven to
+from similar tool names (spec 10 Sec. 3). Until a supported client is proven to
 initialize, authenticate, discover, invoke, and parse both success and error
 results against the real transport, parity is unproven.
 
@@ -112,7 +112,7 @@ mismatch was spin-out **spec 25**, now resolved (option 1 adopted).
 
 ## 5. Closure status — 2026-10-10
 
-The **required row is SUPPORTED** (official MCP Inspector, see §R22.1 and
+The **required row is SUPPORTED** (official MCP Inspector, see Sec. R22.1 and
 `22-evidence-2026-10-10.md`). The remaining candidate rows below are product
 choices and stay **pending** or **unsupported**, because a row may not be listed
 as supported without a same-commit passing test (R22.3).
@@ -121,12 +121,12 @@ Candidate clients enumerated from the repository on 2026-10-10:
 
 | Candidate | Source of truth in repo | Documented transport | Server transport | Status |
 |---|---|---|---|---|
-| Pi extension MCP bridge | `pi-extension/mcp-bridge/mcp-client.ts` | **fixed 2026-10-10** — `StreamableHTTPClientTransport` at `/mcp/stream` (was `SSEClientTransport` at `${url}/mcp/v1/sse`, spec 24); SDK loaded via real subpath entrypoints (`client/index.js`, `client/streamableHttp.js`, `client/stdio.js`), not the package root (spec 27) | stateless Streamable HTTP `POST /mcp/stream` | **SUPPORTED (live)** — re-driven 2026-10-10 after the spec 27 fix: the real bridge module `tryConnect` → `true`, discovered 4 tools, `tools/call` success parsed, `tools/call` rejected parsed (structured `-32602`). Earlier same-day live run was **BLOCKED** by the SDK root-import defect (spec 27, now resolved). Raw output: §6 below + `22-evidence-pi-bridge-2026-10-10.md` |
+| Pi extension MCP bridge | `pi-extension/mcp-bridge/mcp-client.ts` | **fixed 2026-10-10** — `StreamableHTTPClientTransport` at `/mcp/stream` (was `SSEClientTransport` at `${url}/mcp/v1/sse`, spec 24); SDK loaded via real subpath entrypoints (`client/index.js`, `client/streamableHttp.js`, `client/stdio.js`), not the package root (spec 27) | stateless Streamable HTTP `POST /mcp/stream` | **SUPPORTED (live)** — re-driven 2026-10-10 after the spec 27 fix: the real bridge module `tryConnect` → `true`, discovered 4 tools, `tools/call` success parsed, `tools/call` rejected parsed (structured `-32602`). Earlier same-day live run was **BLOCKED** by the SDK root-import defect (spec 27, now resolved). Raw output: Sec. 6 below + `22-evidence-pi-bridge-2026-10-10.md` |
 | VS Code extension | `ide/vscode-extension/src/utils/client.ts` (`serverUrl` default `http://localhost:8095`) | plain HTTP REST to the web service, not MCP JSON-RPC | web REST (separate auth path) | **Not an MCP client** — does not initialize/speak MCP; cannot be a compat-matrix row |
 | JetBrains plugin | `ide/jetbrains-plugin/src/main/kotlin/com/guardrail/plugin/GuardrailService.kt` (`serverUrl` default `http://localhost:8095`) | OkHttp REST to the web service | web REST | **Not an MCP client** |
 | Vim / Neovim plugins | `ide/vim-plugin`, `ide/neovim-plugin` | thin wrappers over the same REST server | web REST | **Not MCP clients** |
-| MCP Inspector (official, `@modelcontextprotocol/inspector`) | external, not vendored | Streamable HTTP `/mcp/stream` | stateless Streamable HTTP `/mcp/stream` | **SUPPORTED (required row)** — passed end-to-end 2026-10-10; see §R22.1 and `22-evidence-2026-10-10.md` |
-| pi-extension "Phase A: Inspector Bridge" | referenced in spec 22 §4 only; no source in this repo | — | — | **Pending owner decision** |
+| MCP Inspector (official, `@modelcontextprotocol/inspector`) | external, not vendored | Streamable HTTP `/mcp/stream` | stateless Streamable HTTP `/mcp/stream` | **SUPPORTED (required row)** — passed end-to-end 2026-10-10; see Sec. R22.1 and `22-evidence-2026-10-10.md` |
+| pi-extension "Phase A: Inspector Bridge" | referenced in spec 22 Sec. 4 only; no source in this repo | — | — | **Pending owner decision** |
 
 What a compatibility test would need (recorded so the row is testable, not
 asserted):
@@ -149,7 +149,7 @@ for the Streamable HTTP transport the required row uses. The Pi bridge SSE path
 mismatch is resolved in code by spec 24 (Streamable HTTP `/mcp/stream`).
 
 **Owner decision — closed 2026-10-10:** the required supported row is the
-official MCP Inspector, and it passes (§R22.1).
+official MCP Inspector, and it passes (Sec. R22.1).
 
 Intentionally-unsupported surfaces (R22.4), with rationale: MCP **prompts**
 (no prompt registration in the inspected package; no product requirement);
@@ -157,7 +157,7 @@ Intentionally-unsupported surfaces (R22.4), with rationale: MCP **prompts**
 **notifications/progress and Tasks** (application task-attempt tracking is not
 protocol Tasks support); **stdio and SSE transports** (server exposes only
 stateless Streamable HTTP); no vendored generic client SDK (a server need not
-reproduce FastMCP's client library). These are copied from spec 10 §3/§4.3 and
+reproduce FastMCP's client library). These are copied from spec 10 Sec. 3/Sec. 4.3 and
 the `platform-current-state.md` baseline, and should be re-confirmed when a
 row is added.
 

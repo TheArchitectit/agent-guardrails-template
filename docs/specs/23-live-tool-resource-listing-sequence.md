@@ -5,7 +5,7 @@ committed as `mcp-server/internal/mcp/streamable_http_listing_test.go`:
 `TestStreamableHTTPListingSequence`.
 
 **Priority:** High — it is the one remaining gap in spec 20 R20.3 (and spec 10
-§4.2.1): the real transport is exercised for `initialize` and `tools/call` and
+Sec. 4.2.1): the real transport is exercised for `initialize` and `tools/call` and
 `resources/read`, but there is **no live `tools/list` or `resources/list`
 sequence test** in `mcp-server/internal/mcp`.
 
@@ -70,7 +70,7 @@ or network beyond the `httptest` server.
 
 ## 4. Dependencies and notes
 
-- Closes the gap recorded in spec 20 R20.3 and referenced by spec 22 §5.
+- Closes the gap recorded in spec 20 R20.3 and referenced by spec 22 Sec. 5.
 - Reuses `newFullPathServer` / `rpcPost` / `decodeToolResult` from
   `streamable_http_authz_test.go`; the only new code is the `initialize`
   capability assertions and the `tools/list` / `resources/list` calls.
@@ -109,7 +109,7 @@ ok  github.com/thearchitectit/guardrail-mcp/internal/mcp
 Honest limits. The capability assertions check only presence of the `tools` and
 `resources` keys, not their exact sub-capabilities. `resources/templates/list`
 and `prompts/list` are intentionally not tested because the server registers
-neither (spec 22 §5 records them as intentionally unsupported). The registry is
+neither (spec 22 Sec. 5 records them as intentionally unsupported). The registry is
 still the process-local `toolList()`, so this run enumerates 37 always-on tools
 (conditional tools are absent unless their store is set on the test server);
 the spec 21 gate covers the full 58 both-states inventory.

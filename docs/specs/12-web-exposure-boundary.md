@@ -1,7 +1,7 @@
 # OpenSpec: Web Exposure Boundary — Public Routes, CORS, Trusted Proxies, and Exposure Profiles
 
 **Status:** Proposed. Describes intended behavior; the current code does not yet
-enforce everything below. §3.4 (trusted-proxy and client-IP stance) is
+enforce everything below. Sec. 3.4 (trusted-proxy and client-IP stance) is
 **IMPLEMENTED** — see the implementation note at the end of this file.
 **Owner:** Project maintainer.
 **Date:** 2026-10-03.
@@ -148,7 +148,7 @@ Rules:
 | `/api/documents*`, `/api/rules*`, `/api/stats*`, `/api/projects*`, `/api/failures*` (GET) | **`authenticated`** unless a named anonymous consumer exists | Guardrail content can embed repository paths and rule text. |
 | `/api/ingest/status`, `/api/ingest/orphans`, `/api/updates/status` (GET) | `authenticated` | Operational state; not needed anonymously. |
 
-The exact final set is an owner decision (§7); the contract is that the set is
+The exact final set is an owner decision (Sec. 7); the contract is that the set is
 *declared and reviewed*, not inherited.
 
 ### 3.3 CORS policy
@@ -256,7 +256,7 @@ condition. All are to run in CI under the Phase 0 security gate.
 
 ## 6. Open decisions and first-implementation defaults
 
-[Spec 16 §4](16-authentication-authorization-and-evidence-remediation.md)
+[Spec 16 Sec. 4](16-authentication-authorization-and-evidence-remediation.md)
 selects the conservative initial profile for implementation: only liveness,
 readiness and version are anonymous operational endpoints; metrics, docs and
 API data require authentication in production; static assets are explicit
@@ -282,9 +282,9 @@ route tests before enabling it.
 These are proposed implementation defaults. If a real client cannot migrate,
 stop and revise the profile with tests instead of enabling wildcard access.
 
-## 8. Implementation note — §3.4 trusted-proxy and client-IP stance (2026-10-15)
+## 8. Implementation note — Sec. 3.4 trusted-proxy and client-IP stance (2026-10-15)
 
-§3.4 is implemented. The effective client IP is derived from a single explicit
+Sec. 3.4 is implemented. The effective client IP is derived from a single explicit
 stance, not from `c.RealIP()`'s unconditional header trust:
 
 - New `internal/clientip` package: `NewStance(entries)` parses `TRUSTED_PROXIES`
@@ -300,8 +300,8 @@ stance, not from `c.RealIP()`'s unconditional header trust:
   so `c.RealIP()` — used for the rate-limit key fallback (`middleware.go`) and
   log attribution (`middleware/logging.go`) — is the stance-derived value.
   Forwarded headers can no longer be used to evade or poison rate-limit buckets
-  (§3.4.3); `RealIP` remains a non-authoritative value (never an authz input).
-- `forwardedHeaderAnomalyMiddleware` logs a protocol anomaly (§3.4.4) when an
+  (Sec. 3.4.3); `RealIP` remains a non-authoritative value (never an authz input).
+- `forwardedHeaderAnomalyMiddleware` logs a protocol anomaly (Sec. 3.4.4) when an
   untrusted peer asserts a forwarded header — logged, **not rejected**.
 - `Config.Validate` parses the stance so a malformed `TRUSTED_PROXIES` fails
   startup (fail-closed).
@@ -316,14 +316,14 @@ verbatim. Mutation-kill case `clientip-stance-trusts-every-peer` proves the
 suite flips PASS→FAIL when the stance is neutered.
 
 **Remaining in this spec (not addressed here):** the shared exposure registry
-(§3.1/§3.2) and the `public`-profile `/metrics` auth decision (§3.2) — the
+(Sec. 3.1/Sec. 3.2) and the `public`-profile `/metrics` auth decision (Sec. 3.2) — the
 latter is an operator contract (scrape client) and stays an owner decision.
 
-## 9. Implementation note — §3.3.2 CORS production rejection + §3.3.4 declared-route preflight (2026-10-16)
+## 9. Implementation note — Sec. 3.3.2 CORS production rejection + Sec. 3.3.4 declared-route preflight (2026-10-16)
 
-§3.3.2 and §3.3.4 are implemented at the wiring layer.
+Sec. 3.3.2 and Sec. 3.3.4 are implemented at the wiring layer.
 
-- **§3.3.2 — production wildcard is a startup failure, never a substitution.**
+- **Sec. 3.3.2 — production wildcard is a startup failure, never a substitution.**
   `config.Validate` already rejected `*`/empty in production, but
   `Server.setupMiddleware` re-implemented the default substitution inline: it
   replaced `*` with localhost defaults *before* the production branch was
@@ -336,7 +336,7 @@ latter is an operator contract (scrape client) and stays an owner decision.
   error (a sentinel origin that matches nothing — echo treats an empty
   `AllowOrigins` as the wildcard default) and logs the substitution when it
   occurs. A directly-constructed `Server` can no longer widen exposure.
-- **§3.3.4 — preflight is answered for declared routes only.** The Web UI mounts
+- **Sec. 3.3.4 — preflight is answered for declared routes only.** The Web UI mounts
   a catch-all (`echo.Static("/", …)` plus the SPA fallback `GET /web/*`).
   Echo's router therefore matches every path, and its default OPTIONS handling
   answers any such path with `204` + `Allow`, so an OPTIONS request to an
@@ -361,33 +361,33 @@ these verbatim. Mutation-kill cases
 `cors-production-wildcard-substituted-not-refused` prove each suite flips
 PASS→FAIL when its control is neutered.
 
-## 10. Implementation note — §3.1 declared exposure registry (2026-10-16)
+## 10. Implementation note — Sec. 3.1 declared exposure registry (2026-10-16)
 
-§3.1 is implemented. There is now a single declared exposure registry that is
+Sec. 3.1 is implemented. There is now a single declared exposure registry that is
 the source of truth for both authentication and rate limiting.
 
-- **One registry, both middlewares (§3.1 rule 2).** New `internal/web/exposure.go`
+- **One registry, both middlewares (Sec. 3.1 rule 2).** New `internal/web/exposure.go`
   holds an ordered, named rule table. `ExposureFor(method, pattern, requestPath)`
   returns the class; `APIKeyAuth` and `RateLimitMiddleware` both call it and
   nothing else. Before this change each middleware carried its own hand-copied
   skip list (`middleware.go` had two ~40-line blocks that had to be kept in
-  sync by hand), which is exactly the drift §3.1 rule 2 forbids.
-- **Deny by default (§3.1 rule 1).** A request that no rule classifies is
+  sync by hand), which is exactly the drift Sec. 3.1 rule 2 forbids.
+- **Deny by default (Sec. 3.1 rule 1).** A request that no rule classifies is
   `authenticated`. Adding a route cannot make it public; the route must be
   declared. Pinned by `TestExposureRegistryDeniesByDefault`.
-- **`public` is a written decision, not a suffix (§3.1 rule 3).** Every rule
+- **`public` is a written decision, not a suffix (Sec. 3.1 rule 3).** Every rule
   carries a `rationale`, and the extension heuristic is now a declared list
   (`staticAssetExtensions`) applied only to genuine static fetches — GET/HEAD,
   never under `/api/`. The unbounded suffix exemption that let
   `POST /api/ingest/x.js` reach its handler is not reproducible: the asset rule
   is method- and prefix-constrained and is itself pinned by a negative test and
   a mutation-kill case.
-- **Behaviour is identical to today (§5).** The rules reproduce the exact
+- **Behaviour is identical to today (Sec. 5).** The rules reproduce the exact
   pre-registry classification, including `GET /api/rules/sync/status` being
-  public via the `/api/rules/` prefix rule. Tightening the public set per §3.2
-  is the owner decision recorded in §7 and is a separate, reviewed change; the
+  public via the `/api/rules/` prefix rule. Tightening the public set per Sec. 3.2
+  is the owner decision recorded in Sec. 7 and is a separate, reviewed change; the
   registry is now the single place it will be applied.
-- **Route enumeration (§4.1).** `setupRoutes` was split so the real route table
+- **Route enumeration (Sec. 4.1).** `setupRoutes` was split so the real route table
   is registered by `registerRoutes(e, s)` and can be enumerated in a test
   without live dependencies. The two file-serving mounts (`echo.Static("/", …)`
   and the SPA fallback) are declared as static mounts so enumeration accounts
@@ -405,24 +405,24 @@ verbatim. Mutation-kill cases `exposure-registry-always-public` and
 `exposure-asset-rule-api-exclusion-removed` prove the suites flip PASS→FAIL when
 the registry or the asset constraint is neutered.
 
-**Remaining in this spec (not addressed here):** the §3.2 public-route
+**Remaining in this spec (not addressed here):** the Sec. 3.2 public-route
 re-decision itself (`/metrics`, `/docs`, `/openapi.yaml`, the API read set) —
 the `public`-profile `/metrics` auth is an operator contract (scrape client)
-and stays an owner decision (§7).
+and stays an owner decision (Sec. 7).
 
-## 11. Implementation note — §3.6 security headers, HSTS on public TLS only (2026-10-16)
+## 11. Implementation note — Sec. 3.6 security headers, HSTS on public TLS only (2026-10-16)
 
-§3.6 is implemented. The security-headers middleware now decides the HSTS
+Sec. 3.6 is implemented. The security-headers middleware now decides the HSTS
 header from the effective deployment posture instead of never emitting it:
 
 - **`X-XSS-Protection` is not emitted.** Already true and now pinned by the
-  row that also covers the rest of §3.6 (the legacy XSS auditor is removed in
+  row that also covers the rest of Sec. 3.6 (the legacy XSS auditor is removed in
   every current browser and its `block` role is superseded by the CSP above).
 - **CSP, `nosniff`, frame denial, `Referrer-Policy` and the empty
   `Permissions-Policy` are retained** and asserted in the same row.
 - **HSTS is emitted only for a verified public HTTPS origin** — the condition
   is `TLS_ENABLED=true` **and** the effective deployment profile is `public`
-  (§3.6: "Add HSTS **only** when TLS is enabled and the profile is `public`";
+  (Sec. 3.6: "Add HSTS **only** when TLS is enabled and the profile is `public`";
   Spec 17 R17-03: "HSTS may be emitted only for a verified public HTTPS
   origin, never as a substitute for TLS").
 - The decision is one method, `Config.EmitsHSTS` (`internal/config/headers.go`),
@@ -445,9 +445,9 @@ tailnet+TLS and nil-config cases). CI row `security-matrix-security-headers`
 runs both verbatim. Mutation-kill case `hsts-emitted-for-non-public-origin`
 proves the negative suite flips PASS→FAIL when the posture check is neutered.
 
-**Remaining in this spec (not addressed here):** the §3.2 public-route
-re-decision and the §3.5 profile bind vocabulary beyond what Spec 17 already
-enforces — both stay owner decisions (§7).
+**Remaining in this spec (not addressed here):** the Sec. 3.2 public-route
+re-decision and the Sec. 3.5 profile bind vocabulary beyond what Spec 17 already
+enforces — both stay owner decisions (Sec. 7).
 
 ## 7. Non-goals
 

@@ -24,7 +24,7 @@ func deny(format string, args ...any) error {
 	return &egressDeniedError{reason: fmt.Sprintf(format, args...)}
 }
 
-// Webhook delivery egress policy (Spec 13 §3.2).
+// Webhook delivery egress policy (Spec 13 Sec. 3.2).
 //
 // The policy is DATA, not predicates: every denied range is a reviewed entry in
 // the table below, so a new IANA special-purpose allocation is a one-line
@@ -34,9 +34,9 @@ func deny(format string, args ...any) error {
 // address is refused outright rather than being allowed to pick the public one.
 // A mixed answer is the rebinding attack, not a preference.
 //
-// The default posture is the spec's first-implementation default (§7): no
+// The default posture is the spec's first-implementation default (Sec. 7): no
 // internal-destination exception, no redirects. HTTPS-only / port-443
-// enforcement (§3.1) is a separate deployment-behaviour decision and is not
+// enforcement (Sec. 3.1) is a separate deployment-behaviour decision and is not
 // applied here.
 
 // webhookResolver resolves a webhook destination host to its full address set.

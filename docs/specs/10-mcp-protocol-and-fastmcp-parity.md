@@ -65,7 +65,7 @@ normative dependencies.
 
 The Pi bridge’s documented SSE endpoint does not match this server’s
 Streamable HTTP `/mcp` endpoint; see
-[`platform-current-state.md`](../platform-current-state.md) §6. Compatibility
+[`platform-current-state.md`](../platform-current-state.md) Sec. 6. Compatibility
 must be tested against the versioned Go contract, not inferred from similar
 tool names.
 

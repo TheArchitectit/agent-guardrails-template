@@ -43,7 +43,7 @@ const (
 	EventSessionCreated EventType = "session_created"
 	EventSessionExpired EventType = "session_expired"
 	// EventAuthzDecision is a structured allow/deny authorization decision
-	// (Spec 11 §4.4 / R16-08). It never contains raw credential material.
+	// (Spec 11 Sec. 4.4 / R16-08). It never contains raw credential material.
 	EventAuthzDecision EventType = "authz_decision"
 	// EventCredentialRotation records an applied credential-registry snapshot
 	// replacement or verifier-key rotation (Spec 16 R16-09 operator audit /
@@ -381,7 +381,7 @@ const (
 )
 
 // DecisionRecord is the structured authorization decision payload
-// (Spec 11 §4.4 / R16-08). It carries opaque identifiers only — never the
+// (Spec 11 Sec. 4.4 / R16-08). It carries opaque identifiers only — never the
 // raw credential or a truncated log hash used as identity.
 type DecisionRecord struct {
 	PrincipalID  string

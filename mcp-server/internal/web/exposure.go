@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-// ExposureClass is the declared exposure of a route (Spec 12 §3.1).
+// ExposureClass is the declared exposure of a route (Spec 12 Sec. 3.1).
 //
 // Every route is assigned exactly one class in the single registry below, which
 // is the source of truth for BOTH authentication (APIKeyAuth) and rate limiting
@@ -20,7 +20,7 @@ const (
 	ExposurePublic ExposureClass = "public"
 	// ExposureAuthenticated — requires a valid bearer key; no anonymous access.
 	// This is also the deny-by-default class for a route that is not declared
-	// public (Spec 12 §3.1 rule 1), so adding a route cannot accidentally make
+	// public (Spec 12 Sec. 3.1 rule 1), so adding a route cannot accidentally make
 	// it public.
 	ExposureAuthenticated ExposureClass = "authenticated"
 )
@@ -65,25 +65,25 @@ type exposureRule struct {
 }
 
 // exposureRegistry is the single source of truth for both middlewares
-// (Spec 12 §3.1 rule 2). Ordered: first match wins. Rules reproduce the exact
-// pre-registry behaviour (Spec 12 §5: "Registry first … with behavior identical
+// (Spec 12 Sec. 3.1 rule 2). Ordered: first match wins. Rules reproduce the exact
+// pre-registry behaviour (Spec 12 Sec. 5: "Registry first … with behavior identical
 // to today"); tightening the public set is a separate, reviewed change.
 var exposureRegistry = []exposureRule{
-	// --- Anonymous operational endpoints (§3.2, current posture) ------------
+	// --- Anonymous operational endpoints (Sec. 3.2, current posture) ------------
 	{name: "health-live", class: ExposurePublic, patternExact: "/health/live",
 		rationale: "Container/orchestrator liveness probe; no secret material."},
 	{name: "health-ready", class: ExposurePublic, patternExact: "/health/ready",
 		rationale: "Container/orchestrator readiness probe; already omits failing components."},
 	{name: "metrics", class: ExposurePublic, patternExact: "/metrics",
-		rationale: "Prometheus scrape. Spec 12 §3.2 proposes `authenticated` in the public profile; that tightening is the owner decision recorded in §7, so the current posture declares it public."},
+		rationale: "Prometheus scrape. Spec 12 Sec. 3.2 proposes `authenticated` in the public profile; that tightening is the owner decision recorded in Sec. 7, so the current posture declares it public."},
 	{name: "api-docs", class: ExposurePublic, patternExact: "/docs",
-		rationale: "Schema disclosure is low risk in dev; §3.2 proposes authenticated in production."},
+		rationale: "Schema disclosure is low risk in dev; Sec. 3.2 proposes authenticated in production."},
 	{name: "openapi", class: ExposurePublic, patternExact: "/openapi.yaml",
 		rationale: "Same posture as /docs."},
 	{name: "version", class: ExposurePublic, methods: []string{http.MethodGet, http.MethodOptions}, patternExact: "/version",
 		rationale: "No secret material; used by clients."},
 
-	// --- Web UI shell and static assets (§3.1 rule 3) -----------------------
+	// --- Web UI shell and static assets (Sec. 3.1 rule 3) -----------------------
 	{name: "web-root", class: ExposurePublic, patternExact: "/",
 		rationale: "Web UI shell; the browser must load it before auth."},
 	{name: "web-index", class: ExposurePublic, patternExact: "/index.html",
@@ -95,7 +95,7 @@ var exposureRegistry = []exposureRule{
 	{name: "static-prefix-pattern", class: ExposurePublic, patternPrefix: "/static/",
 		rationale: "Declared static asset mount."},
 
-	// --- Static request paths (§3.1 rule 3: explicit, not a suffix guess) ---
+	// --- Static request paths (Sec. 3.1 rule 3: explicit, not a suffix guess) ---
 	{name: "static-prefix-path", class: ExposurePublic, pathPrefix: "/static/",
 		rationale: "Declared static asset prefix."},
 	{name: "web-prefix-path", class: ExposurePublic, pathPrefix: "/web/",
@@ -115,9 +115,9 @@ var exposureRegistry = []exposureRule{
 	{name: "static-asset-suffix", class: ExposurePublic, assetSuffix: true,
 		rationale: "GET/HEAD of a declared asset extension outside /api/. The extension list is reviewed; the rule is method- and prefix-constrained, so an asset-shaped /api/ path is never public (the old unbounded suffix exemption is what made POST /api/ingest/x.js reach its handler)."},
 
-	// --- Declared public read-only API (§3.2, current posture) --------------
-	// §3.2 proposes moving these to `authenticated` unless a named anonymous
-	// consumer exists. That re-decision is the owner call recorded in §7; the
+	// --- Declared public read-only API (Sec. 3.2, current posture) --------------
+	// Sec. 3.2 proposes moving these to `authenticated` unless a named anonymous
+	// consumer exists. That re-decision is the owner call recorded in Sec. 7; the
 	// registry is the single place it will be applied.
 	{name: "read-documents", class: ExposurePublic, methods: []string{http.MethodGet, http.MethodOptions}, patternExact: "/api/documents",
 		rationale: "Public read-only browsing (current posture)."},
@@ -211,7 +211,7 @@ func hasStaticAssetSuffix(path string) bool {
 // route pattern (c.Path()) and the actual request path are consulted, exactly
 // as the pre-registry middlewares did; the difference is that the rules now
 // live in one table. A route that is not declared public is authenticated
-// (deny by default, Spec 12 §3.1 rule 1).
+// (deny by default, Spec 12 Sec. 3.1 rule 1).
 func ExposureFor(method, pattern, requestPath string) ExposureClass {
 	if rule, ok := lookupRule(method, pattern, requestPath); ok {
 		return rule.class
@@ -230,7 +230,7 @@ func lookupRule(method, pattern, requestPath string) (exposureRule, bool) {
 }
 
 // IsDeclaredPublic reports whether a route is explicitly declared public in the
-// registry. It is the "written decision" half of Spec 12 §3.1 rule 3: a route
+// registry. It is the "written decision" half of Spec 12 Sec. 3.1 rule 3: a route
 // is public only because a rule says so, never because of an inherited
 // heuristic. Static file mounts are not public by pattern (their requests are
 // classified by request path), so they report false here.

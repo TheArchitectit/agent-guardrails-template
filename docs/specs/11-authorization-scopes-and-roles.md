@@ -2,13 +2,13 @@
 
 **Status:** Proposed; owner decision recorded 2026-10-04: use **both** scoped
 API keys and named roles. **Implementation status (2026-10-16): substantially
-implemented and exercised on both transports (see §9); the role matrix itself
+implemented and exercised on both transports (see Sec. 9); the role matrix itself
 still awaits owner acceptance.**
 **Priority:** Critical — prerequisite to destructive/admin operations,
 per-tool access hooks, and Phase 0 exit.
 **Related:** `docs/specs/AUTH-01-mcp-endpoint-auth.md`,
 `docs/specs/09-system-roadmap-and-phase-gates.md` Phase 0, and
-`docs/platform-current-state.md` §§3, 5.
+`docs/platform-current-state.md` Sec. Sec. 3, 5.
 
 ## 1. Problem
 
@@ -222,7 +222,7 @@ credentials, and whether any developer role may mutate team assignments.
 ## 8. Open decisions and first-implementation defaults
 
 The solo-maintainer proposed choices in
-[Spec 16 §4](16-authentication-authorization-and-evidence-remediation.md)
+[Spec 16 Sec. 4](16-authentication-authorization-and-evidence-remediation.md)
 answer the initial matrix and migration posture for an executor: no developer
 team-assignment changes, security-operator policy write only under a distinct
 key scope, no implicit legacy administrator, file-backed registry validated
@@ -234,7 +234,7 @@ silent exception.
 
 For the first implementation, use `reader`, `developer`,
 `security-operator`, and `administrator` with the restrictive matrix in
-Spec 16 §4. Store the initial credential-to-principal and role/scope mapping
+Spec 16 Sec. 4. Store the initial credential-to-principal and role/scope mapping
 in an operator-owned versioned local registry; validate and atomically replace
 the whole snapshot before use, with no permissive fallback on invalid config.
 Postgres-backed administration is deferred until it has an equally testable
@@ -245,33 +245,33 @@ removal; an integration that cannot migrate stops rollout rather than extending
 the window silently. Emergency disable must deny new calls within 60 seconds
 by verified reload or process replacement. Destructive/admin operations block
 if required audit persistence fails. These choices are proposed targets and
-require the negative tests in §5 before deployment.
+require the negative tests in Sec. 5 before deployment.
 
 ## 9. Implementation status
 
 **Substantially implemented; owner acceptance of the role matrix still pending.**
-The §9 text below was re-derived from live source on **2026-10-16** (`main@dccaee9`);
+The Sec. 9 text below was re-derived from live source on **2026-10-16** (`main@dccaee9`);
 the prior version of this section described the pre-Spec-16 tree and is
 superseded.
 
 **Implemented and exercised (live-verified 2026-10-16):**
 
-- **Principal/credential model (§4.1).** `mcp-server/internal/auth/registry.go`
+- **Principal/credential model (Sec. 4.1).** `mcp-server/internal/auth/registry.go`
   loads credential/principal IDs, scopes, expiry and revocation state; each
   record stores only a keyed one-way HMAC-SHA256 verifier, never the secret.
   `Resolve` uses a constant-time comparison; the secret is never returned or
   logged (`TestRegistryNeverExposesSecret`, `TestRegistryUsesConstantTimeVerifier`).
-- **Scope catalog (§4.2).** `mcp-server/internal/auth/authz.go` publishes
+- **Scope catalog (Sec. 4.2).** `mcp-server/internal/auth/authz.go` publishes
   `mcp:read`, `mcp:validate`, `mcp:mutate`, `rest:read`, `rest:write`,
   `ide:validate`, `admin:manage`; an unknown scope on a credential denies
   (`TestDecideScopeRoleResourceIntersection` case "unknown scope on credential
   denies"). Public routes are enumerated in the Spec 12 exposure registry, and
   the static-asset rule is method- and `/api/`-constrained (no suffix bypass).
-- **Role/permission model (§4.3).** Named roles `reader`, `developer`,
+- **Role/permission model (Sec. 4.3).** Named roles `reader`, `developer`,
   `security-operator`, `administrator` map to an explicit permission-class
   table (`roleActionAllowed`); authorization is by permission class, not
   role-name string comparison.
-- **Authorization decision (§4.4).** `auth.Decide` implements exactly
+- **Authorization decision (Sec. 4.4).** `auth.Decide` implements exactly
   `authenticated AND not_revoked AND scope_allows AND role_allows AND
   resource_allows`; missing/unknown inputs deny by default. It is applied on
   **both** transports before any effect: REST at
@@ -282,7 +282,7 @@ superseded.
   permission error on MCP. Security-sensitive mutations fail closed when a
   required durable audit record cannot be written
   (`TestAuthzAdminMutationFailsClosedWithoutAudit`).
-- **Legacy migration/containment (§4.5).** `MCP_API_KEY`/`IDE_API_KEY` map to
+- **Legacy migration/containment (Sec. 4.5).** `MCP_API_KEY`/`IDE_API_KEY` map to
   explicit constrained legacy principals (`auth.LegacyPrincipal`); a legacy key
   is confined to a named read/validate table and can never reach admin
   (`TestLegacyMCPCallAllowedNamedOnly`, `TestMatchLegacyRouteNoWildcards`,
@@ -293,9 +293,9 @@ superseded.
   all protected traffic on both transports — there is no legacy fallback
   (`TestLoadFromSourcesConfiguredInvalidFailsClosed`,
   `TestStreamableHTTPConfiguredBrokenRegistryDeniesAll`, the web `regErr`
-  branch). The prior §9 claim that an invalid registry "can fall back to legacy
+  branch). The prior Sec. 9 claim that an invalid registry "can fall back to legacy
   access" is no longer true.
-- **Removal-date switch (§4.5.2 / acceptance criterion 8) — added 2026-10-16.**
+- **Removal-date switch (Sec. 4.5.2 / acceptance criterion 8) — added 2026-10-16.**
   `LEGACY_ACCEPTANCE_UNTIL` (RFC3339) is a **testable** switch: before the
   deadline the legacy key keeps its surface; once it has passed the key is
   refused on both transports regardless of registry state, while a registered
@@ -307,23 +307,23 @@ superseded.
   `TestRequireBearerWithPolicyLegacyRemovalSwitch`; CI row
   `security-matrix-legacy-acceptance`; mutation-kill
   `legacy-acceptance-removal-switch-ignored` (kills).
-- **Legacy-use observability (§4.5.2) — added 2026-10-16.** Accepted legacy use
+- **Legacy-use observability (Sec. 4.5.2) — added 2026-10-16.** Accepted legacy use
   is counted by `guardrail_legacy_credential_uses_total{surface,class}`, so the
   migration window is measured (a zero rate gates removal), not assumed.
 
 **Still open (honest limits, not claimed here):**
 
-- **Owner acceptance of the role matrix (§6/§8).** The restrictive matrix and
+- **Owner acceptance of the role matrix (Sec. 6/Sec. 8).** The restrictive matrix and
   the security-operator/developer postures remain *proposed*; this spec must be
   accepted by the owner before the matrix is treated as ratified.
-- **Postgres-backed administration** is deferred (§8): the credential store is
+- **Postgres-backed administration** is deferred (Sec. 8): the credential store is
   the operator-owned versioned local registry.
-- **§4.5.2 transition-period mechanics** beyond the removal switch (warning/
+- **Sec. 4.5.2 transition-period mechanics** beyond the removal switch (warning/
   metric for legacy use is implemented; the documented seven-consecutive-day
   zero-use precondition is an operator procedure, not a code gate).
 - **R16-06/R16-07** tool-path role/resource enforcement and legacy containment
   are implemented and exercised (Spec 16); R16-10/R16-11 remain unmet by design
   (no second product consumer).
 
-Acceptance criteria 1–8 in §5 are now covered by the suites above; criterion 8
+Acceptance criteria 1–8 in Sec. 5 are now covered by the suites above; criterion 8
 (the deprecation/removal switch) is the mechanism added this pass.

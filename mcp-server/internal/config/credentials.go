@@ -117,7 +117,7 @@ func (c *Config) ValidateNoProductionDefaultCredentials() error {
 			c.effectiveProfileName())
 	}
 
-	// Legacy shared keys are still accepted during migration (Spec 11 §4.5.2)
+	// Legacy shared keys are still accepted during migration (Spec 11 Sec. 4.5.2)
 	// but must not themselves be a default/placeholder.
 	if IsPlaceholderCredential(c.MCPAPIKey) {
 		return fmt.Errorf(

@@ -16,7 +16,7 @@ not yet scheduled into a sprint. One entry per item; move to a sprint doc under
 
 This repo uses the OpenSpec framework for its spec corpus (`docs/specs/*`), but
 the existing references are vague and carry no links to the official sources.
-`docs/standards/api-specifications.md` §"OpenSpec Overview" even reads as a
+`docs/standards/api-specifications.md` Sec. "OpenSpec Overview" even reads as a
 placeholder — *"OpenSpec is a specification format that may offer different
 capabilities… (Note: If referring to a specific OpenSpec project, details would
 go here.)"* — and offers a "hypothetical" YAML example. Contributors and agents

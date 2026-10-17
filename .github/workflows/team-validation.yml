@@ -321,7 +321,7 @@ jobs:
           cd mcp-server
           go test ./internal/mcp -run 'TestValidateWebhookURL' -count=1 -v
 
-  # R19-08: client-IP trust boundary row (Spec 12 §3.4). With TRUSTED_PROXIES
+  # R19-08: client-IP trust boundary row (Spec 12 Sec. 3.4). With TRUSTED_PROXIES
   # unset the socket peer is the client IP and a forged X-Forwarded-For/
   # X-Real-IP/Forwarded header must not change the rate-limit key; a peer inside
   # a configured CIDR may supply the client IP; a malformed TRUSTED_PROXIES
@@ -366,7 +366,7 @@ jobs:
           cd mcp-server
           go test ./internal/web -run 'TestReadinessReadyWhenAllChecksPass|TestLivenessIsLocalAndReadinessGatesTraffic|TestMissingProbeIsNotRunNeverPass|TestRegistryFailClosedButAbsentIsSkipped|TestPolicyHonesty|TestLifecycleDrainingAndStoppedAreNonReady|TestReadinessEvidenceIsBounded|TestHealthReadyHandlerStatusCodes' -count=1 -v
 
-  # R19-08 / Spec 12 §3.3.2 + §3.3.4: CORS posture row. Production
+  # R19-08 / Spec 12 Sec. 3.3.2 + Sec. 3.3.4: CORS posture row. Production
   # wildcard/empty origins are a hard error, never a substitution
   # (EffectiveCORSOrigins); non-production substitutes restrictive localhost
   # defaults and reports the substitution. A CORS preflight is answered for a
@@ -389,7 +389,7 @@ jobs:
           cd mcp-server
           go test ./internal/config ./internal/web -run 'TestEffectiveCORSOrigins|TestEffectiveCORSOriginsDoesNotAliasCaller|TestPreflightDeclaredRouteOnly|TestPreflightGuardLeavesNonOptionsUntouched' -count=1 -v
 
-  # R19-08 / Spec 12 §3.1: declared exposure registry row. Every registered
+  # R19-08 / Spec 12 Sec. 3.1: declared exposure registry row. Every registered
   # route is enumerated from the REAL route table and must map to exactly one
   # exposure class; a route not declared public is authenticated (deny by
   # default); APIKeyAuth and RateLimitMiddleware derive their skip set from the
@@ -434,7 +434,7 @@ jobs:
           go test ./internal/web -run 'TestR1909' -count=1 -v
 
   # Spec 19 R19-09: Web UI shell path-confinement row. The /web/* SPA route is
-  # declared public (Spec 12 §3.1 web-spa-fallback), so a request path must
+  # declared public (Spec 12 Sec. 3.1 web-spa-fallback), so a request path must
   # never escape the web root. Proves an unauthenticated traversal
   # (/web/../<file>, encoded and double-encoded forms) cannot reach a file
   # outside the root, and that the shell and real assets still serve.
@@ -550,7 +550,7 @@ jobs:
           go test ./internal/notifications -run 'TestWebhookSigningKey|TestWebhookRotation|TestWebhookKeyFingerprint|TestWebhookSigningHeaders' -count=1 -v
           go test ./internal/audit -run 'TestLogWebhookRotation' -count=1 -v
 
-  # Spec 11 §4.5.2 / acceptance criterion 8: the legacy-acceptance removal
+  # Spec 11 Sec. 4.5.2 / acceptance criterion 8: the legacy-acceptance removal
   # switch is testable on both transports. Before the deadline the legacy
   # shared key keeps its surface; once the deadline has passed it is refused
   # while a registered credential is unaffected; a malformed deadline fails
@@ -574,7 +574,7 @@ jobs:
           go test ./internal/web -run 'TestAPIKeyAuth_LegacyAcceptanceRemovalSwitch' -count=1 -v
           go test ./internal/mcp -run 'TestRequireBearerWithPolicyLegacyRemovalSwitch' -count=1 -v
 
-  # Spec 12 §3.6 / Spec 17 R17-03: security-headers row. Drives the real
+  # Spec 12 Sec. 3.6 / Spec 17 R17-03: security-headers row. Drives the real
   # middleware chain and asserts the deprecated X-XSS-Protection header is
   # never emitted, the headers that do the work are present, and HSTS is
   # emitted ONLY for a verified public HTTPS origin (TLS enabled + profile
@@ -744,7 +744,7 @@ jobs:
           cd mcp-server
           go test ./internal/config -run 'TestValidateIngressPosture|TestValidateIngressPostureRejectsWeakRecordFile|TestValidateCouplesIngressPostureToStartup|TestIngressPreflightPath' -count=1 -v
 
-  # Spec 16 §4 R16-09 / Spec 17 R17-10: a registered credential must expire
+  # Spec 16 Sec. 4 R16-09 / Spec 17 R17-10: a registered credential must expire
   # within 90 days. The registry validates scopes, verifiers and the <=24h
   # rotation overlap, but the validity window itself was never checked: a
   # record with no expires_at was an unbounded grant, and a record could

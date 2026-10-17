@@ -53,7 +53,7 @@ updated to match.
 exact server route table, so it is verifiable rather than asserted (done above).
 
 **R24.2** The bridge SHALL be made to speak a transport the server actually
-serves, by exactly one of the fix options in §3. No option may weaken, skip, or
+serves, by exactly one of the fix options in Sec. 3. No option may weaken, skip, or
 `continue-on-error` any existing gate.
 
 **R24.3** A same-commit test SHALL prove the bridge connects to the real server
@@ -61,7 +61,7 @@ endpoint (mirroring the R22.3 requirement for a supported row).
 
 **R24.4** If the bridge is not fixed in the same change, the compatibility-matrix
 row for the Pi bridge SHALL remain **unsupported** with a dated rationale (it
-already is; see spec 22 §5).
+already is; see spec 22 Sec. 5).
 
 ## 3. Fix options
 
@@ -98,7 +98,7 @@ URL returning 404 — those are historical, not live clients).
 ## 6. Resolution — implemented 2026-10-10 (option 1)
 
 The Pi bridge now uses the SDK's **Streamable HTTP** client transport against the
-server's real route, as recommended in §3 option 1.
+server's real route, as recommended in Sec. 3 option 1.
 
 Changed: `pi-extension/mcp-bridge/mcp-client.ts`
 
@@ -145,4 +145,4 @@ rejected=true`. R24.4 is moot — the compat-matrix row is **SUPPORTED (live)**.
 - Test: `pi-extension/mcp-bridge/mcp-client.test.ts`.
 - Server routes: `crates/server/src/router.rs:79-85` (OMCP).
 - Existing warning: `mcp-server/README.md:408`.
-- Related: spec 22 §5 (Pi bridge marked unsupported mismatch).
+- Related: spec 22 Sec. 5 (Pi bridge marked unsupported mismatch).

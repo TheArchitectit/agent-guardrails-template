@@ -18,7 +18,7 @@
 
 ## Reconciliation 2026-10-15 — client-IP trust boundary row (R19-09 proxy half)
 
-Spec 12 §3.4 (trusted-proxy and client-IP stance) is implemented, and the
+Spec 12 Sec. 3.4 (trusted-proxy and client-IP stance) is implemented, and the
 matrix now carries a dedicated row:
 
 - `security-matrix-clientip-trust` — client-IP trust boundary. `internal/clientip`
@@ -64,7 +64,7 @@ future integration work — the readiness *contract* is implemented and exercise
 
 The web-exposure spec's shared-registry, CORS-wiring and `public`-profile
 `/metrics` rows remain **NOT_RUN** (the last is an operator scrape-contract
-decision, §3.2/§7).
+decision, Sec. 3.2/Sec. 7).
 
 The `check-broken-links` job in `.github/workflows/documentation-check.yml` was
 rewired to call `scripts/check-doc-links.sh` so the CI control and the harness
@@ -192,7 +192,7 @@ This sprint is complete only when all of the following hold:
 - [ ] Configured registry fail-closed matrix row (R19-05); no nil-registry legacy restoration. — **WIRED** + **EXERCISED** (row `security-matrix-registry-failclosed`).
 - [ ] Secret leakage / resource boundary rows fail on real findings (R19-06); full-history Gitleaks separate from source regex checks. — **NOT_RUN** (full-history Gitleaks): redaction/no-leak half WIRED + EXERCISED (row `security-matrix-secret-redaction`); full-history Gitleaks WIRED as `scripts/gitleaks-history.sh` + EXERCISED locally over 1149 commits and a reviewed `.gitleaksignore` baseline added (11/16 findings classified as intentional test canaries / documentation placeholders and allowlisted). The remaining **5 findings look like REAL credentials** (`cpofopencode` ×4, `STATUS.md` ×1) and were **deliberately left un-ignored**, so the scan still exits 1 and is **not wired as a blocking CI row**. Blocking wiring is blocked on rotating/purging those credentials; source-regex scans **NOT_RUN**.
 - [ ] Webhook SSRF deterministic resolver/dialer fixtures; policy-denied destination is failed outcome (R19-07). — **WIRED** + **EXERCISED** (row `security-matrix-webhook-ssrf`); configuration-time guard only, no dialer-level/DNS-rebinding defense (documented limitation).
-- [ ] Deployment/readiness/migration rows (R19-08); static assets/CORS/proxy trust (R19-09). — **PARTIAL**: migration half WIRED + EXERCISED as spec 18 R18-01..R18-06 (`mcp-server/scripts/run_migrations.go` + `internal/database/migration_manifest_test.go`, landed `main@e4bb65d9`); **readiness/lifecycle half WIRED + EXERCISED 2026-10-16** (row `security-matrix-readiness-lifecycle`, Spec 18 R18-07..R18-13 — ordered checks, lifecycle non-ready states, `NOT_RUN` for an absent probe, registry fail-closed, policy honesty, bounded evidence; `internal/web/readiness_test.go`); the client-IP/proxy-trust half of R19-09 is WIRED + EXERCISED (row `security-matrix-clientip-trust`, Spec 12 §3.4, landed 2026-10-15); static-asset/CORS registry rows remain **NOT_RUN**.
+- [ ] Deployment/readiness/migration rows (R19-08); static assets/CORS/proxy trust (R19-09). — **PARTIAL**: migration half WIRED + EXERCISED as spec 18 R18-01..R18-06 (`mcp-server/scripts/run_migrations.go` + `internal/database/migration_manifest_test.go`, landed `main@e4bb65d9`); **readiness/lifecycle half WIRED + EXERCISED 2026-10-16** (row `security-matrix-readiness-lifecycle`, Spec 18 R18-07..R18-13 — ordered checks, lifecycle non-ready states, `NOT_RUN` for an absent probe, registry fail-closed, policy honesty, bounded evidence; `internal/web/readiness_test.go`); the client-IP/proxy-trust half of R19-09 is WIRED + EXERCISED (row `security-matrix-clientip-trust`, Spec 12 Sec. 3.4, landed 2026-10-15); static-asset/CORS registry rows remain **NOT_RUN**.
 - [ ] Complete package and test coverage: every Go module (`mcp-server`, `cmd/team-cli`, `examples/go`) + Python tests; counts recorded (R19-10). — **WIRED + EXERCISED (Go modules)**; module list is now discovered from the tree, not hardcoded — `scripts/check_go_modules.py` (fail-closed, red-on-drift, 10-case self-test) + inventory-driven CI loop; end-to-end run green (436/9/11 tests vs floors 250/8/10). Python discovery and per-package floors remain **NOT_RUN**.
 - [ ] Docs gate: internal Markdown links + hard 500-line max on PR and protected push/release (R19-11). — **WIRED** (link check now `scripts/check-doc-links.sh`, shared by CI and the mutation harness; 500-line job still inline; trigger incomplete — does not fire on every protected push/release).
 - [ ] Nonzero test floor with checked-in inventory and explicit SKIP/NOT_RUN classification (R19-12). — **WIRED**.
@@ -200,7 +200,7 @@ This sprint is complete only when all of the following hold:
 - [ ] Path-filter safeguards: security/secret/registry/deploy/package/test-floor rows on every protected push and release candidate (R19-14). — **NOT_RUN**.
 - [ ] Immutable workflow/image provenance: full commit SHA actions, image digests, identity recorded (R19-15). — **NOT_RUN**.
 - [ ] Release contract fails on any FAIL/NOT_RUN/real secret/side effect/missing row/etc. (R19-16); staged rollout executed per spec. — **NOT_RUN**.
-- [ ] Acceptance evidence bundle recorded (Spec 19 §5) at the exact commit SHA. — **NOT_RUN** (release evidence bundle).
+- [ ] Acceptance evidence bundle recorded (Spec 19 Sec. 5) at the exact commit SHA. — **NOT_RUN** (release evidence bundle).
 
 ---
 
@@ -334,7 +334,7 @@ protected traffic.
 **Acceptance criteria:**
 - Isolation probe or host attestation recorded for UCS03; fork jobs have no deployment secrets/private runners.
 - Provenance test accepts only full-SHA actions and digest images; tag-only fails.
-- Release bundle includes commit SHA, matrix manifest, negative/side-effect results, mutation-kill results, scan dispositions, module counts, docs report, provenance report, runner evidence (Spec 19 §5).
+- Release bundle includes commit SHA, matrix manifest, negative/side-effect results, mutation-kill results, scan dispositions, module counts, docs report, provenance report, runner evidence (Spec 19 Sec. 5).
 
 **Expected test commands:**
 ```sh
@@ -355,7 +355,7 @@ go test ./... -run 'TestProvenance|TestPinned|TestWorkflow' -count=1
 | Requires | SPRINT-A2 (R17-06–08) | Secret-boundary and argv-free rows need secret sources/redaction |
 | Requires | SPRINT-A3 (R17-01–05, R18) | Deploy-readiness and migration rows need profile/migration work |
 | Aligns | Spec 16 R16-02, Spec 17 R17-11 | Secret-scan reconciliation and CI/image provenance |
-| Blocks | Phase 0 release claim | Cannot advertise Phase 0 complete without §5 evidence bundle |
+| Blocks | Phase 0 release claim | Cannot advertise Phase 0 complete without Sec. 5 evidence bundle |
 
 ---
 
@@ -396,13 +396,13 @@ go test ./... -run 'TestProvenance|TestPinned|TestWorkflow' -count=1
 | 3 | Registry/secrets/SSRF (R19-05–07) | Deterministic fixtures | Fail closed; real findings block |
 | 4 | Deploy/assets (R19-08–09) | Profile/CORS/static negatives | Reject unsafe; readiness honest |
 | 5 | Coverage/docs/floor (R19-10–12) | Per-module counts + docs gate | No omission; ≤500 lines; positive floors |
-| 6 | Trust/provenance/release (R19-13–16) | Isolation + pin validators + release dry-run | Restrictive gates; §5 evidence complete |
+| 6 | Trust/provenance/release (R19-13–16) | Isolation + pin validators + release dry-run | Restrictive gates; Sec. 5 evidence complete |
 
 ---
 
 ## Reference
 
-- [Spec 19](../specs/19-phase0-ci-security-gates.md) — R19-01–16, §3 matrix, §5 evidence bundle
+- [Spec 19](../specs/19-phase0-ci-security-gates.md) — R19-01–16, Sec. 3 matrix, Sec. 5 evidence bundle
 - [Spec 16](../specs/16-authentication-authorization-and-evidence-remediation.md) — R16-02 secret-scan reconciliation
 - [Spec 17](../specs/17-deployment-tls-and-secret-boundary.md) — R17-11 CI and image provenance
 - [Spec 18](../specs/18-migration-startup-and-readiness.md) — R18 migration/readiness (deploy-readiness row)

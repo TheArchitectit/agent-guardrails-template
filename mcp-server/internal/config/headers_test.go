@@ -2,7 +2,7 @@ package config
 
 import "testing"
 
-// TestEmitsHSTS covers Spec 12 §3.6 / Spec 17 R17-03: HSTS is emitted only for
+// TestEmitsHSTS covers Spec 12 Sec. 3.6 / Spec 17 R17-03: HSTS is emitted only for
 // a verified public HTTPS origin — TLS enabled AND the effective deployment
 // profile is `public`. Every other combination must not emit the header, so the
 // header cannot be used to assert a posture the operator never declared.

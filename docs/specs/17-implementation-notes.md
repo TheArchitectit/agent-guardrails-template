@@ -147,7 +147,7 @@ TLS 1.3+ at the public ingress, certificate/trust-chain rotation and validation,
 rejecting TLS 1.2 and plaintext public connections, and the direct-backend
 denial — is an **operator/proxy contract**, not a repo artifact: this binary
 does not terminate public TLS (`TLS_ENABLED` is validated but does not change
-either serving path — see §1). R17-02's fail-closed startup gate for an
+either serving path — see Sec. 1). R17-02's fail-closed startup gate for an
 external bind without an approved profile is likewise only partially enforced
 today: `ValidateDeploymentBinding` covers the bind/profile match and the
 `public`-profile `TRUSTED_PROXIES` requirement, but not "proven TLS termination

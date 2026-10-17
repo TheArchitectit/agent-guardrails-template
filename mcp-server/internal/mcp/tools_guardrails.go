@@ -9,7 +9,7 @@ import (
 )
 
 // guardrailsToolList returns the semantic content filtering tools defined by
-// Spec 02 §3.1: guardrail_classify_content and guardrail_check_policy.
+// Spec 02 Sec. 3.1: guardrail_classify_content and guardrail_check_policy.
 func (s *MCPServer) guardrailsToolList() []mcp.Tool {
 	return []mcp.Tool{
 		{

@@ -14,7 +14,7 @@ import (
 	"github.com/thearchitectit/guardrail-mcp/internal/web"
 )
 
-// This test proves the LIVE revocation-propagation bound (Spec 16 §4 / R16-09)
+// This test proves the LIVE revocation-propagation bound (Spec 16 Sec. 4 / R16-09)
 // on the real HTTP surfaces, not by calling registry helpers directly:
 //
 //  1. A credential is registered for both the REST and the MCP surface and is

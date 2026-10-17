@@ -12,7 +12,7 @@
 // The database URL is read from a protected secret source ONLY: a 0600 file
 // named by MIGRATION_DSN_FILE (preferred; a mounted secret), or the
 // MIGRATION_DATABASE_URL environment variable (documented migration fallback).
-// It is NEVER accepted on the command line and NEVER logged (Spec 18 §4.1,
+// It is NEVER accepted on the command line and NEVER logged (Spec 18 Sec. 4.1,
 // Spec 17 R17-08).
 //
 // Guarantees:
@@ -99,7 +99,7 @@ func main() {
 			usage()
 			return
 		default:
-			// A DSN on the command line is forbidden (R18-04/§4.1). Refuse
+			// A DSN on the command line is forbidden (R18-04/Sec. 4.1). Refuse
 			// loudly rather than risk leaking a credential into argv/logs.
 			log.Fatalf("refusing argument %q: the database URL must come from MIGRATION_DSN_FILE or MIGRATION_DATABASE_URL, never argv", arg)
 		}

@@ -11,7 +11,7 @@ exceeds the 500-line limit — Spec 19 R19-11.)
 R17-10 requires webhook/JWT/TLS/DB/Redis rotation **and** adopts Spec 16's
 registered-credential lifecycle: *"For registered credentials adopt Spec 16's
 proposed <=90-day validity, <=24-hour planned overlap and <=60-second tested
-denial of revoked keys on both transports."* Spec 16 §4 states the same bound:
+denial of revoked keys on both transports."* Spec 16 Sec. 4 states the same bound:
 *"new credentials expire within 90 days."*
 
 Two of the three bounds were already enforced and pinned — the <=24h planned
@@ -58,6 +58,6 @@ killed**).
 
 **Named limit (documented, not hidden).** The bound is enforced at the load
 boundary for a registry that is configured; the unconfigured (absent) registry
-keeps the documented bounded legacy mode (Spec 16 §4) and is unaffected. DB/JWT/
+keeps the documented bounded legacy mode (Spec 16 Sec. 4) and is unaffected. DB/JWT/
 TLS staged rotation remains open under R17-10 (the webhook half landed
-2026-10-17; see part 2 §15).
+2026-10-17; see part 2 Sec. 15).

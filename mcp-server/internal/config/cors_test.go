@@ -2,7 +2,7 @@ package config
 
 import "testing"
 
-// TestEffectiveCORSOrigins covers Spec 12 §3.3.2: production wildcard/empty is
+// TestEffectiveCORSOrigins covers Spec 12 Sec. 3.3.2: production wildcard/empty is
 // a hard error (never a substitution); non-production substitutes restrictive
 // localhost defaults and reports the substitution so the caller can warn.
 func TestEffectiveCORSOrigins(t *testing.T) {

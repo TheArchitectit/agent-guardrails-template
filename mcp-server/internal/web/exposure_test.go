@@ -11,7 +11,7 @@ import (
 	"github.com/thearchitectit/guardrail-mcp/internal/config"
 )
 
-// registryServer builds the real route table (Spec 12 §4.1) without live
+// registryServer builds the real route table (Spec 12 Sec. 4.1) without live
 // dependencies: route registration binds method values, it never calls them.
 func registryServer(t *testing.T) *echo.Echo {
 	t.Helper()
@@ -40,7 +40,7 @@ func TestExposureRegistryCoversEveryRoute(t *testing.T) {
 		case ExposurePublic:
 			publicCount++
 			// A route is public only because a rule declares it, never by
-			// omission (Spec 12 §3.1 rule 3).
+			// omission (Spec 12 Sec. 3.1 rule 3).
 			if !IsDeclaredPublic(r.Method, r.Path) && !IsDeclaredStaticMount(r.Path) {
 				// Static mounts are accounted for by request path; a public
 				// request-path rule must still exist for the pattern.

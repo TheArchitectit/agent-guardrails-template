@@ -192,7 +192,7 @@ func (s *MCPServer) authorizeToolCallDisabled(ctx context.Context, name string, 
 		testRegex: "^TestLivenessIsLocalAndReadinessGatesTraffic$",
 	},
 	{
-		// Spec 12 §3.3.4: a CORS preflight must be answered for a declared
+		// Spec 12 Sec. 3.3.4: a CORS preflight must be answered for a declared
 		// route only. A bypass that lets every OPTIONS request through (so the
 		// catch-all fallback declares an undeclared path) must be killed by the
 		// declared-preflight negative suite.
@@ -206,7 +206,7 @@ func (s *MCPServer) authorizeToolCallDisabled(ctx context.Context, name string, 
 		testRegex: "^TestPreflightDeclaredRouteOnly$",
 	},
 	{
-		// Spec 12 §3.3.2: production wildcard/empty CORS origins are a hard
+		// Spec 12 Sec. 3.3.2: production wildcard/empty CORS origins are a hard
 		// error, never a substitution. A bypass that substitutes the dev
 		// defaults instead of failing must be killed by the effective-origins
 		// negative suite.
@@ -225,7 +225,7 @@ func (s *MCPServer) authorizeToolCallDisabled(ctx context.Context, name string, 
 		testRegex: "^TestEffectiveCORSOrigins$",
 	},
 	{
-		// Spec 12 §3.1: the declared exposure registry is the single skip
+		// Spec 12 Sec. 3.1: the declared exposure registry is the single skip
 		// source and a route not declared public is authenticated (deny by
 		// default). A bypass that makes every request public must be killed by
 		// the deny-by-default negative suite.
@@ -245,7 +245,7 @@ func (s *MCPServer) authorizeToolCallDisabled(ctx context.Context, name string, 
 		testRegex: "^TestExposureRegistryDeniesByDefault$",
 	},
 	{
-		// Spec 12 §3.6 / Spec 17 R17-03: HSTS is emitted only for a verified
+		// Spec 12 Sec. 3.6 / Spec 17 R17-03: HSTS is emitted only for a verified
 		// public HTTPS origin. A bypass that emits it unconditionally asserts a
 		// security posture the operator never declared and must be killed by the
 		// HSTS negative suite.
@@ -264,7 +264,7 @@ func (s *MCPServer) authorizeToolCallDisabled(ctx context.Context, name string, 
 		testRegex: "^TestSecurityHeaders_HSTSOnlyOnVerifiedPublicTLS$",
 	},
 	{
-		// Spec 12 §3.1 rule 3: the static-asset rule is method- and
+		// Spec 12 Sec. 3.1 rule 3: the static-asset rule is method- and
 		// prefix-constrained. A bypass that drops the /api/ exclusion (the old
 		// unbounded suffix exemption) must be killed by the asset-rule negative
 		// suite.
@@ -304,7 +304,7 @@ func (s *MCPServer) authorizeToolCallDisabled(ctx context.Context, name string, 
 		testRegex: "^TestStreamableHTTPResourceReadAuthorization$",
 	},
 	{
-		// Spec 11 §4.5.2 / acceptance criterion 8: once the configured
+		// Spec 11 Sec. 4.5.2 / acceptance criterion 8: once the configured
 		// legacy-acceptance deadline has passed, a legacy shared key must be
 		// refused. A bypass that neuters the removal switch (so a legacy key is
 		// accepted forever) must be killed by the legacy-acceptance suite.
@@ -316,7 +316,7 @@ func (s *MCPServer) authorizeToolCallDisabled(ctx context.Context, name string, 
 		testRegex: "^TestAPIKeyAuth_LegacyAcceptanceRemovalSwitch$",
 	},
 	{
-		// Spec 16 §4 / R16-09: a revocation visible in the registry source must
+		// Spec 16 Sec. 4 / R16-09: a revocation visible in the registry source must
 		// propagate to denial within the published bound. A bypass that makes the
 		// in-place reload a no-op (so a revoked credential is never re-evaluated)
 		// must be killed by the shared-registry revocation suite.
@@ -661,7 +661,7 @@ func (s *MCPServer) authorizeToolCallDisabled(ctx context.Context, name string, 
 		testRegex: "^TestR1909AssetShapedAPIPathsDenyThroughRealChain$",
 	},
 	{
-		// Spec 16 §4 R16-09 / Spec 17 R17-10: a registered credential must
+		// Spec 16 Sec. 4 R16-09 / Spec 17 R17-10: a registered credential must
 		// expire within 90 days. Dropping the validity bound (so a record with
 		// no expiry, or an over-long window, is accepted) reintroduces the
 		// unbounded-grant defect this row exists to catch; the registry
@@ -669,14 +669,14 @@ func (s *MCPServer) authorizeToolCallDisabled(ctx context.Context, name string, 
 		name: "credential-validity-bound-removed",
 		file: "internal/auth/registry.go",
 		old: `		if r.ExpiresAt.IsZero() {
-			return nil, fmt.Errorf("credential registry record %d: missing expires_at (Spec 16 §4 / R17-10: new credentials expire within %d days)", i, int(MaxCredentialValidity.Hours()/24))
+			return nil, fmt.Errorf("credential registry record %d: missing expires_at (Spec 16 Sec. 4 / R17-10: new credentials expire within %d days)", i, int(MaxCredentialValidity.Hours()/24))
 		}
 		reference := now
 		if !r.IssuedAt.IsZero() {
 			reference = r.IssuedAt
 		}
 		if r.ExpiresAt.Sub(reference) > MaxCredentialValidity {
-			return nil, fmt.Errorf("credential registry record %d: validity window exceeds the %d-day maximum (Spec 16 §4 / R17-10)", i, int(MaxCredentialValidity.Hours()/24))
+			return nil, fmt.Errorf("credential registry record %d: validity window exceeds the %d-day maximum (Spec 16 Sec. 4 / R17-10)", i, int(MaxCredentialValidity.Hours()/24))
 		}`,
 		new:       `		// MUTATION: credential validity bound removed.`,
 		pkg:       "./internal/auth",

@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-// TestLegacyAcceptanceDeadline covers the Spec 11 §4.5.2 removal switch:
+// TestLegacyAcceptanceDeadline covers the Spec 11 Sec. 4.5.2 removal switch:
 // an unset value means "not configured" (never expires), a valid RFC3339
 // value parses, and a malformed value is a hard error rather than a silent
 // "no deadline".

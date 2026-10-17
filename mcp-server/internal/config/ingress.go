@@ -27,7 +27,7 @@ import (
 // profile could start on a plaintext, directly reachable backend while every
 // other gate stayed green.
 //
-// The evidence form matters. Spec 17 §4 states plainly that "an operator-
+// The evidence form matters. Spec 17 Sec. 4 states plainly that "an operator-
 // supplied JSON assertion without an actual external reachability/certificate
 // test is NOT evidence". So this gate does not accept a free-text env
 // attestation: a nonlocal profile must present a commit-bound preflight record

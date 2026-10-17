@@ -105,5 +105,5 @@ Recommended: **option 1.**
 - **Fix + closure evidence 2026-10-14:** OMCP `ca1db65` (ancestor of
   `master@eec3d15`, same-commit green ci + security-regression 04:20Z);
   `cargo test -p radical-mcp-server shutdown` at the tip → 7 passed / 0 failed;
-  live serve-past-GRACE + SIGTERM drain as recorded in §4.
+  live serve-past-GRACE + SIGTERM drain as recorded in Sec. 4.
 - Related: spec 17 R17.8 (graceful shutdown), spec 22 R22.1.

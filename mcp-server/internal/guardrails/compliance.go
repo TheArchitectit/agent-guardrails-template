@@ -50,7 +50,7 @@ type ComplianceSection struct {
 // produced by this package. It is a warning label: the scores below restate the
 // declared compliance_status strings in compliance_requirements.json; they are
 // NOT a measurement of the running system. A consumer must not present a report
-// carrying this value as audit evidence. See AUDIT-2026-10-09 §2 (gap 06).
+// carrying this value as audit evidence. See AUDIT-2026-10-09 Sec. 2 (gap 06).
 const UnimplementedMethodology = "unimplemented"
 
 // ComplianceReport is the final output of a compliance audit.

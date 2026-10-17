@@ -143,7 +143,7 @@ var (
 	)
 )
 
-// Legacy credential metrics (Spec 11 §4.5.2)
+// Legacy credential metrics (Spec 11 Sec. 4.5.2)
 var (
 	// LegacyCredentialUseTotal counts accepted legacy-credential requests,
 	// by transport surface and legacy class. A zero rate over the agreed

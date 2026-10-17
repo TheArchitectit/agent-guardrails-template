@@ -276,7 +276,7 @@ Critical characters to strip from untrusted content:
 Evidence: `docs/specs/guardrail-gaps-2026/STATUS.md`. **Of the six specs this
 is the most completely built — and it is still unreachable.**
 
-| § | Requirement | Status | Evidence |
+| Sec. | Requirement | Status | Evidence |
 |---|-------------|--------|----------|
 | 3.1 | `guardrail_scan_external_content` | **Not implemented** | name absent from every `.go` file |
 | 3.1 | `guardrail_mark_provenance` | **Not implemented** | same |
@@ -308,7 +308,7 @@ content scanning, and do not satisfy this spec.
 1. Give `Engine.Evaluate` a caller, or accept provenance tagging as internal
    only. This is the single change that decides whether spec 05 exists in
    practice.
-2. §3.2 ("provenance-aware agent instructions") is not implemented at all —
+2. Sec. 3.2 ("provenance-aware agent instructions") is not implemented at all —
    decide whether it is in scope.
-3. Reconcile the cache: in-memory contradicts §4.1/§6's Redis. Pick one and
+3. Reconcile the cache: in-memory contradicts Sec. 4.1/Sec. 6's Redis. Pick one and
    correct the other.

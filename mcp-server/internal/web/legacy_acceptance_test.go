@@ -7,7 +7,7 @@ import (
 	"github.com/thearchitectit/guardrail-mcp/internal/config"
 )
 
-// TestAPIKeyAuth_LegacyAcceptanceRemovalSwitch covers Spec 11 §4.5.2 /
+// TestAPIKeyAuth_LegacyAcceptanceRemovalSwitch covers Spec 11 Sec. 4.5.2 /
 // acceptance criterion 8 on the REST surface: the legacy-acceptance removal
 // switch is testable. Before the deadline the legacy key keeps its surface;
 // once the deadline has passed the legacy key is refused even though nothing

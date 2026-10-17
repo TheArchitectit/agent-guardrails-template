@@ -2,9 +2,9 @@
 
 **Status:** Implemented (updated 2026-10-16). The migration-job half
 (R18-01 through R18-06 plus the argv-DSN replacement) is **implemented and
-exercised** against a disposable PostgreSQL 16 — see §11. The ordered
+exercised** against a disposable PostgreSQL 16 — see Sec. 11. The ordered
 readiness/lifecycle half (R18-07 through R18-13) is now **implemented and
-exercised** — see §12: `/health/ready` runs the ordered checks, observes an
+exercised** — see Sec. 12: `/health/ready` runs the ordered checks, observes an
 explicit process lifecycle state, and reports bounded per-check evidence. The
 server still does not apply migrations at startup — migration execution remains
 a separate one-shot deployment step, by design (R18-01).
@@ -31,9 +31,9 @@ startup path contains no automatic numbered migration application; migration
 execution is therefore an external deployment step until a reviewed contract is
 implemented.
 
-> **Superseded 2026-10-15 (see §11).** The paragraph below is the baseline as
+> **Superseded 2026-10-15 (see Sec. 11).** The paragraph below is the baseline as
 > inspected at spec-writing time. `mcp-server/scripts/run_migrations.go` has
-> since been rewritten as the versioned one-shot job (§11): the DSN-argv
+> since been rewritten as the versioned one-shot job (Sec. 11): the DSN-argv
 > interface is gone, and the manifest/checksum/lock/effect guarantees below are
 > now implemented and exercised.
 
@@ -61,7 +61,7 @@ healthcheck (`docker-compose.yml:111-116` and
 `mcp-server/deploy/docker-compose.example.yml:210-217`). These facts must not
 be read as an implementation of this proposal.
 
-> **Superseded 2026-10-16 (see §12).** The paragraph above is the baseline as
+> **Superseded 2026-10-16 (see Sec. 12).** The paragraph above is the baseline as
 > inspected at spec-writing time. `internal/web/readiness.go` now runs the
 > ordered readiness checks, observes the explicit lifecycle state, and the
 > `--health-check` mode calls `/health/ready`, not `/health/live`.
@@ -345,8 +345,8 @@ go test ./internal/database -run 'TestMigrationManifestIntegrity|TestLedgerVersi
 #   MIGRATION_DATABASE_URL=<disposable> go run scripts/run_migrations.go
 #   MIGRATION_DATABASE_URL=<disposable> go run scripts/run_migrations.go --verify
 # The job no longer accepts a DSN argument: the URL is read only from
-# MIGRATION_DSN_FILE (0600 file) or MIGRATION_DATABASE_URL (Spec 18 §4.1 /
-# Spec 17 R17-08). argv is refused with the value redacted. See §11.
+# MIGRATION_DSN_FILE (0600 file) or MIGRATION_DATABASE_URL (Spec 18 Sec. 4.1 /
+# Spec 17 R17-08). argv is refused with the value redacted. See Sec. 11.
 ```
 
 The future integration suite MUST add deterministic tests for lock contention,
@@ -356,7 +356,7 @@ before shutdown, and zero unauthorized side effects. Compose validation should
 also include `docker compose config` and an isolated probe that verifies the
 server healthcheck uses readiness rather than only `--health-check` liveness.
 
-> **Implemented 2026-10-16 (see §12).** The ordered-readiness assertions now
+> **Implemented 2026-10-16 (see Sec. 12).** The ordered-readiness assertions now
 exist and are exercised: `internal/web/readiness_test.go` covers ordered checks,
 registry invalidity, policy-disabled readiness, `NOT_RUN` for an absent probe,
 the lifecycle non-ready states, and bounded evidence. The remaining items
@@ -379,8 +379,8 @@ Compose file, workflow, or migration is changed by this document.
 ## 11. Implementation note (2026-10-15) — the versioned migration job
 
 `mcp-server/scripts/run_migrations.go` is now the one-shot, versioned migration
-job this spec's §4 describes, and it replaces the DSN-argv runner that the
-SPRINT-A3 exit gate and §10 both flagged as unsafe. The change is code, not
+job this spec's Sec. 4 describes, and it replaces the DSN-argv runner that the
+SPRINT-A3 exit gate and Sec. 10 both flagged as unsafe. The change is code, not
 docs, and it was verified live against a disposable local PostgreSQL 16
 database.
 
@@ -410,7 +410,7 @@ dropped.
 | R18-05 | The ledger is authoritative and records the exact identifier `ParseMigrationVersion` reads back (pinned by a round-trip test). |
 | R18-06 | `.down.sql` files are never executed by this job; rollback stays an explicit operator action. |
 
-**Credential handling (R18-04 / §4.1 / Spec 17 R17-08).** The database URL is
+**Credential handling (R18-04 / Sec. 4.1 / Spec 17 R17-08).** The database URL is
 read only from `MIGRATION_DSN_FILE` (a `0600` file; group/world-readable is
 refused) or `MIGRATION_DATABASE_URL`. Any other argument is refused with the
 value redacted, so a DSN can no longer reach argv or a log line. This satisfies
@@ -439,46 +439,46 @@ clean at the change.
 ## 12. Implementation note (2026-10-16) — ordered readiness and lifecycle
 
 `mcp-server/internal/web/readiness.go` implements the ordered readiness contract
-of §3 and §5 and the lifecycle state of §5.2. `Server.healthReady` now returns
+of Sec. 3 and Sec. 5 and the lifecycle state of Sec. 5.2. `Server.healthReady` now returns
 the full report; the aggregate is derived only from terminal check results, and
 no non-PASS required check is ever converted to PASS.
 
-**Ordered checks (§3 / R18-07).** The evaluator runs, in order: `lifecycle`,
+**Ordered checks (Sec. 3 / R18-07).** The evaluator runs, in order: `lifecycle`,
 `config`, `database`, `cache`, `schema`, `credential_registry`, `policy`. The
 live probes (database ping, cache ping, schema compatibility) are injected as
 function fields, so the ordered decision itself is dependency-free and
 unit-exercised without a live PostgreSQL or Redis. A probe that is absent is
 `NOT_RUN`, never `PASS`.
 
-**Probe separation (§5.1/§5.2 / R18-08).** `/health/live` remains local and
+**Probe separation (Sec. 5.1/Sec. 5.2 / R18-08).** `/health/live` remains local and
 process-only. `/health/ready` returns `503` for any required non-PASS and `200`
 only when every required check is `PASS` and the lifecycle is `READY`. The
 container probe mode (`--health-check`) now calls `/health/ready`, not
 `/health/live`, so a live-but-unready instance fails its probe.
 
-**Dependency classification (§5.3 / R18-09).** Each check carries a `required`
+**Dependency classification (Sec. 5.3 / R18-09).** Each check carries a `required`
 flag. A required failure yields `NOT_READY`; an optional failure yields
 `DEGRADED` (still admissible). `PASS`/`FAIL`/`NOT_READY`/`DEGRADED`/`SKIPPED`/
 `NOT_RUN` are distinct, and only `PASS` satisfies a required check.
 
-**Registry fail-closed (§6 / R18-10).** An absent registry is the documented
+**Registry fail-closed (Sec. 6 / R18-10).** An absent registry is the documented
 legacy posture and is recorded as `SKIPPED` (it does not block and does not
 broaden access). A configured-but-unloadable registry is a hard `NOT_READY`,
 matching the auth middleware's fail-closed denial of protected traffic.
 
-**Policy honesty (§6 / R18-11).** `configured`, `enabled`, and `exercised` are
+**Policy honesty (Sec. 6 / R18-11).** `configured`, `enabled`, and `exercised` are
 distinct. A disabled engine reports the explicit reason
 `policy_disabled_non_enforcing` and is never `PASS`; an enabled-but-unexercised
 engine is `DEGRADED` with `policy_enabled_not_yet_exercised`. In an enforcement
 profile (`PolicyRequired`), a disabled engine is `NOT_READY`.
 
-**Lifecycle safety (§5.2/§7 / R18-12).** The server carries an explicit
+**Lifecycle safety (Sec. 5.2/Sec. 7 / R18-12).** The server carries an explicit
 `STARTING`/`READY`/`DRAINING`/`STOPPED` state. Startup publishes `READY` only
 after the ordered checks pass; shutdown sets `DRAINING` before drain begins and
 `STOPPED` at the end. `STARTING`/`DRAINING`/`STOPPED` are non-ready by
 construction, independent of dependency health.
 
-**Evidence (§8 / R18-13).** Every check exposes a name, `required` flag,
+**Evidence (Sec. 8 / R18-13).** Every check exposes a name, `required` flag,
 terminal result, bounded reason code, and timestamp (plus a version where
 applicable). No credential and no raw dependency error text is emitted — a
 failing probe records `<check>_failed`, never the underlying error string.

@@ -29,11 +29,11 @@ func APIKeyAuth(cfg *config.Config, auditLogger *audit.Logger) echo.MiddlewareFu
 
 // APIKeyAuthWithRegistry is APIKeyAuth with a caller-supplied registry. The
 // serving path passes the process-wide registry so that a revocation reloaded
-// in place (Spec 16 §4 / R16-09) is observed by this middleware on the next
+// in place (Spec 16 Sec. 4 / R16-09) is observed by this middleware on the next
 // request without rebuilding it. Tests that only exercise one credential set
 // keep using APIKeyAuth, which builds a private registry.
 func APIKeyAuthWithRegistry(cfg *config.Config, auditLogger *audit.Logger, registry *auth.Registry, regErr error) echo.MiddlewareFunc {
-	// Spec 11 §4.5.2: parse the legacy-acceptance removal deadline once at
+	// Spec 11 Sec. 4.5.2: parse the legacy-acceptance removal deadline once at
 	// construction; the deadline is compared per request so a passed deadline
 	// takes effect without a restart. A malformed value fails closed below.
 	legacyDeadline, legacyConfigured, legacyDeadlineErr := cfg.LegacyAcceptanceDeadline()
@@ -49,7 +49,7 @@ func APIKeyAuthWithRegistry(cfg *config.Config, auditLogger *audit.Logger, regis
 			requestPath := c.Request().URL.Path
 			method := c.Request().Method
 
-			// Spec 12 §3.1: the declared exposure registry is the single source of
+			// Spec 12 Sec. 3.1: the declared exposure registry is the single source of
 			// truth for this middleware and for RateLimitMiddleware, so the two
 			// can no longer drift. A route that is not declared public is
 			// authenticated (deny by default).
@@ -124,7 +124,7 @@ func APIKeyAuthWithRegistry(cfg *config.Config, auditLogger *audit.Logger, regis
 					return echo.NewHTTPError(http.StatusUnauthorized, "Invalid API key")
 				}
 
-				// Spec 11 §4.5.2 / acceptance criterion 8: the legacy-acceptance
+				// Spec 11 Sec. 4.5.2 / acceptance criterion 8: the legacy-acceptance
 				// removal switch. Once the configured deadline has passed, a legacy
 				// key is refused on this surface regardless of registry state. A
 				// malformed deadline is a hard failure, never a silent pass.
@@ -150,7 +150,7 @@ func APIKeyAuthWithRegistry(cfg *config.Config, auditLogger *audit.Logger, regis
 				caller = legacyCaller
 				isLegacy = true
 
-				// Spec 11 §4.5.2: accepted legacy use is counted so the migration
+				// Spec 11 Sec. 4.5.2: accepted legacy use is counted so the migration
 				// window is measured (a zero rate gates removal), never assumed.
 				metrics.RecordLegacyCredentialUse("rest", legacyClass)
 
@@ -289,7 +289,7 @@ func RateLimitMiddleware(limiter *cache.DistributedRateLimiter, cfg *config.Conf
 			requestPath := c.Request().URL.Path
 			path := c.Path()
 
-			// Spec 12 §3.1: the same declared exposure registry APIKeyAuth uses.
+			// Spec 12 Sec. 3.1: the same declared exposure registry APIKeyAuth uses.
 			// A route that is not declared public is authenticated, so the rate
 			// limiter can no longer keep a private skip list of its own.
 			if ExposureFor(c.Request().Method, path, requestPath) == ExposurePublic {

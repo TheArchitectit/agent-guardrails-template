@@ -5,7 +5,7 @@
 in `SUPPORTED_PROTOCOL_VERSIONS` (`crates/mcp/src/state.rs`) on
 `master@eec3d15`, and OMCP `master` is same-commit green (ci +
 security-regression SUCCESS 2026-10-14 04:20Z). Opened 2026-10-10 (spin-out
-from the spec 22 required-row live run). See §3.
+from the spec 22 required-row live run). See Sec. 3.
 
 **Priority:** High — blocks the single required compatibility row (spec 22
 R22.1).
@@ -77,7 +77,7 @@ compatible revision (or OMCP adds it).
 2. **Pin the Inspector's protocol revision.** Not currently possible via the
    CLI; would require an Inspector-side change (out of this repo's control).
 3. **Record as unsupported for now** and revisit when either side changes.
-   Mirror the finding into spec 22 §5.
+   Mirror the finding into spec 22 Sec. 5.
 
 Recommended: option 3 now (row stays FAILED/unsupported), with option 1 as the
 tracked remediation.

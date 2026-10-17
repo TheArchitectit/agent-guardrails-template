@@ -1,5 +1,5 @@
 // Package clientip derives the effective client IP for a request under an
-// explicit trusted-proxy stance (Spec 12 §3.4).
+// explicit trusted-proxy stance (Spec 12 Sec. 3.4).
 //
 // Default posture: trust no proxy. When TRUSTED_PROXIES is empty the socket
 // peer address is the client IP and forwarded headers (X-Forwarded-For,

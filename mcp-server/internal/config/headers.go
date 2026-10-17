@@ -1,10 +1,10 @@
 package config
 
 // HSTSHeaderValue is the emitted HTTP Strict-Transport-Security policy.
-// Spec 12 §3.6 requires the header only on a verified public HTTPS origin.
+// Spec 12 Sec. 3.6 requires the header only on a verified public HTTPS origin.
 const HSTSHeaderValue = "max-age=31536000; includeSubDomains"
 
-// EmitsHSTS reports whether this deployment may emit HSTS (Spec 12 §3.6,
+// EmitsHSTS reports whether this deployment may emit HSTS (Spec 12 Sec. 3.6,
 // Spec 17 R17-03: "HSTS may be emitted only for a verified public HTTPS
 // origin, never as a substitute for TLS").
 //

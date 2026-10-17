@@ -1,7 +1,7 @@
 # OpenSpec: Tool Schema ↔ Handler Conformance Gate
 
 **Status:** Implemented (gate live) — opened 2026-10-10 (spin-out from spec 20
-/ spec 10 §4.1.2); gate landed 2026-10-10. The gate runs and blocks on drift;
+/ spec 10 Sec. 4.1.2); gate landed 2026-10-10. The gate runs and blocks on drift;
 the discovered drift inventory is pinned in an allowlist and remains open work.
 This is the CI gate that closes the single most important required
 FastMCP-parity item.
@@ -16,10 +16,10 @@ with a deprecation/removal issue.
 
 ## 1. Problem
 
-The AUDIT (§10-4.1.2) records this requirement as **ABSENT** — no conformance
+The AUDIT (Sec. 10-4.1.2) records this requirement as **ABSENT** — no conformance
 test exists. Handlers currently validate inputs, but nothing proves the
 advertised schema and the handler agree. Schema/handler drift is the top
-recorded risk in spec 10 §1.
+recorded risk in spec 10 Sec. 1.
 
 ## 2. Requirements
 
@@ -52,7 +52,7 @@ the clean tree in the same evidence turn.
 
 ## 4. Dependencies
 
-Blocks closure of spec 20 R20.2 and spec 10 §4.1.2. Depends on spec 09 Phase 1
+Blocks closure of spec 20 R20.2 and spec 10 Sec. 4.1.2. Depends on spec 09 Phase 1
 (contract integrity).
 
 ## 5. Closure status — 2026-10-10

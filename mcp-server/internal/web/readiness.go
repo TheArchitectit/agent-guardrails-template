@@ -5,13 +5,13 @@ import (
 	"time"
 )
 
-// This file implements the ordered readiness contract of Spec 18 §3/§5
+// This file implements the ordered readiness contract of Spec 18 Sec. 3/Sec. 5
 // (R18-07 through R18-13). It is deliberately free of database/cache imports so
 // the ordered decision can be exercised without a live PostgreSQL or Redis: the
 // live probes are injected as function fields by NewServer.
 
 // LifecycleState is the explicit process lifecycle state observed by
-// /health/ready (Spec 18 §5.2 / R18-12).
+// /health/ready (Spec 18 Sec. 5.2 / R18-12).
 type LifecycleState string
 
 const (
@@ -27,7 +27,7 @@ const (
 	LifecycleStopped LifecycleState = "STOPPED"
 )
 
-// CheckResult is the terminal result of one readiness check (Spec 18 §3).
+// CheckResult is the terminal result of one readiness check (Spec 18 Sec. 3).
 type CheckResult string
 
 const (
@@ -60,7 +60,7 @@ type ReadinessReport struct {
 	Checks    []CheckState   `json:"checks"`
 }
 
-// PolicyState reports the policy engine state distinctly (Spec 18 §6 / R18-11):
+// PolicyState reports the policy engine state distinctly (Spec 18 Sec. 6 / R18-11):
 // installed, enabled, and exercised are distinct facts, and a disabled or merely
 // installed engine is never an enforcement PASS.
 type PolicyState struct {
@@ -91,17 +91,17 @@ type ReadinessDeps struct {
 	// RegistryLoadErr is non-nil when a configured registry failed to load.
 	RegistryLoadErr error
 
-	// Policy is the policy engine posture (Spec 18 §6 / R18-11).
+	// Policy is the policy engine posture (Spec 18 Sec. 6 / R18-11).
 	Policy PolicyState
 	// PolicyRequired is true when the selected profile is an enforcement
-	// profile, where a disabled policy engine is non-ready (Spec 18 §5.3).
+	// profile, where a disabled policy engine is non-ready (Spec 18 Sec. 5.3).
 	PolicyRequired bool
 
 	// Clock is injectable for deterministic tests; defaults to time.Now.
 	Clock func() time.Time
 }
 
-// ReadinessEvaluator runs the ordered checks of Spec 18 §3 and produces a
+// ReadinessEvaluator runs the ordered checks of Spec 18 Sec. 3 and produces a
 // bounded report. The order is: lifecycle, config, database, cache, schema,
 // credential registry, policy. It never converts FAIL/NOT_READY/NOT_RUN/SKIPPED
 // (for a required check) into PASS.
@@ -122,7 +122,7 @@ func (e *ReadinessEvaluator) check(name string, required bool, reason string, ve
 	now := e.deps.Clock().UTC()
 	st := CheckState{Name: name, Required: required, CheckedAt: now, Version: version}
 	if run == nil {
-		// A missing probe is NOT_RUN, never PASS (Spec 18 §3: unexercised is
+		// A missing probe is NOT_RUN, never PASS (Spec 18 Sec. 3: unexercised is
 		// not evidence of health).
 		st.Result = ResultNotRun
 		st.Reason = reason + "_probe_absent"

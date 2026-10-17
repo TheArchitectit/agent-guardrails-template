@@ -68,7 +68,7 @@ func TestTrustedProxyPeerUsesForwardedHeader(t *testing.T) {
 	}
 }
 
-// TestForwardedHeaderAnomalyMiddlewarePassesThrough covers §3.4.4: an
+// TestForwardedHeaderAnomalyMiddlewarePassesThrough covers Sec. 3.4.4: an
 // untrusted peer's forwarded header is logged as an anomaly but the request is
 // still served (not rejected).
 func TestForwardedHeaderAnomalyMiddlewarePassesThrough(t *testing.T) {

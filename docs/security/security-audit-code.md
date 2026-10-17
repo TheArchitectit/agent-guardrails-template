@@ -260,7 +260,7 @@ The security headers middleware doesn't set the `Strict-Transport-Security` (HST
 
 **Resolution (2026-10-16).** The recommended fix below gated on `TLSEnabled`
 alone; the shipped gate is `Config.EmitsHSTS` (`internal/config/headers.go`) =
-`TLS_ENABLED` **and** effective `DEPLOYMENT_PROFILE=public`, per Spec 12 §3.6 /
+`TLS_ENABLED` **and** effective `DEPLOYMENT_PROFILE=public`, per Spec 12 Sec. 3.6 /
 Spec 17 R17-03 ("HSTS may be emitted only for a verified public HTTPS origin,
 never as a substitute for TLS"). Value: `max-age=31536000; includeSubDomains`
 (no `preload`). Evidence: `internal/config/headers_test.go`,

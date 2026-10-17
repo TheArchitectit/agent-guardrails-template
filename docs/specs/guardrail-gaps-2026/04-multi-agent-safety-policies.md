@@ -273,7 +273,7 @@ When Agent A delegates to Agent B:
 
 Evidence: `docs/specs/guardrail-gaps-2026/STATUS.md`.
 
-| § | Requirement | Status | Evidence |
+| Sec. | Requirement | Status | Evidence |
 |---|-------------|--------|----------|
 | 3.1 | `guardrail_validate_agent_output` | **Not implemented** | name absent from every `.go` file |
 | 3.1 | `guardrail_check_agent_constraints` | **Not implemented** | same |
@@ -299,10 +299,10 @@ path. Nothing in this spec runs today.
 
 **Blocking decisions:**
 
-1. §5.3 ("Agent A instructs Agent B to bypass guardrails") presupposes an
+1. Sec. 5.3 ("Agent A instructs Agent B to bypass guardrails") presupposes an
    agent-to-agent runtime this repo does not have. Either that transport
-   becomes a requirement here or §5.3 moves to a spec that owns it.
+   becomes a requirement here or Sec. 5.3 moves to a spec that owns it.
 2. Decide whether multi-agent validation runs in-process (chains) or via MCP
-   tools (§3.1) — currently both are described and neither is built.
+   tools (Sec. 3.1) — currently both are described and neither is built.
 3. Fix the Law-2 keyword logic before wiring the chain, or the wiring ships a
    false-positive generator.

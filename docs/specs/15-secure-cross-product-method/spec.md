@@ -6,7 +6,7 @@ question without inventing authority: identity comes from an explicit
 credential registry, never from content or a truncated log hash.
 **Related:** [Spec 11](../11-authorization-scopes-and-roles.md),
 [Spec 14](../14-optional-oap-guardrail-checker/spec.md),
-`platform-current-state.md` §§3, 5.
+`platform-current-state.md` Sec. Sec. 3, 5.
 
 ## Purpose
 
