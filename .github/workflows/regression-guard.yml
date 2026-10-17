@@ -63,6 +63,16 @@ jobs:
           python scripts/check_go_modules.py --repo .
           python scripts/test_check_go_modules.py
 
+      - name: Python test discovery (Spec 19 R19-10)
+        run: |
+          # Spec 19 R19-10 also requires running Python tests. Every directory
+          # holding a collectable test_*.py / *_test.py must have a row in
+          # .guardrails/python-test-floor.json (and every row must name an
+          # existing suite), so a new Python suite cannot escape the Python run.
+          # Fail-closed, non-vacuous.
+          python scripts/check_python_tests.py --repo .
+          python scripts/test_check_python_tests.py
+
       - name: Run Regression Check
         id: regression_check
         run: |

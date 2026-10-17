@@ -213,29 +213,50 @@ fail on compilation, race, test, or package-discovery errors. Known Windows-only
 failures (`fcntl`, symlink privilege) are `FAIL` or `NOT_RUN` with a required
 supported-runner rerun, never PASS and never an undocumented SKIP.
 
-**Status (2026-10-17).** Enumeration is now WIRED + EXERCISED. The gap was
-narrow but real: there is no `go.work` in this repository (so a workspace
-assumption was never available), and the module list was hardcoded in three
-places — the `team-validation.yml` test/build steps, the
-`team-validation-fleet.yml` steps, and `.guardrails/test-floor.json` — all naming
-the same three modules. Nothing tied that list to the tree, so a newly added
-`go.mod` (a new service, example or nested tool) silently escaped every Go test,
-build and floor check. New fail-closed `scripts/check_go_modules.py` discovers
-every `go.mod` in the tree (excluding `.git`, `node_modules`, `vendor`,
-`testdata`) and requires an inventory row per discovered module **and** an
-existing module per row; a discovered module with no row, a stale row, a
-duplicate row, a missing command/floor/applicability field, a non-positive
-`min_tests`, or an empty scan scope each FAIL. The CI steps no longer name
-modules: they iterate `.guardrails/test-floor.json` and run each row's declared
-`test_command` and `build_command`, then check the declared positive floor, so
-execution follows the tree rather than a hardcoded list. Red-on-drift is proven
+**Status (2026-10-17).** Enumeration is now WIRED + EXERCISED, for **both**
+Go modules and Python suites. The gap was narrow but real: there is no `go.work`
+in this repository (so a workspace assumption was never available), and the
+module list was hardcoded in three places — the `team-validation.yml` test/build
+steps, the `team-validation-fleet.yml` steps, and `.guardrails/test-floor.json`
+— all naming the same three modules. The Python half had the same defect class:
+CI ran one hardcoded `pytest scripts/` invocation, so the `examples/python`
+loader suite (32 tests) escaped every Python run entirely.
+
+**Go half.** New fail-closed `scripts/check_go_modules.py` discovers every
+`go.mod` in the tree (excluding `.git`, `node_modules`, `vendor`, `testdata`)
+and requires an inventory row per discovered module **and** an existing module
+per row; a discovered module with no row, a stale row, a duplicate row, a
+missing command/floor/applicability field, a non-positive `min_tests`, or an
+empty scan scope each FAIL. The CI steps no longer name modules: they iterate
+`.guardrails/test-floor.json` and run each row's declared `test_command` and
+`build_command`, then check the declared positive floor. Red-on-drift is proven
 both ways — `scripts/test_check_go_modules.py` (10 cases) and a live fourth
-`go.mod` flipping the gate FAIL. Rows: `regression-guard.yml` step
-`Go module discovery (Spec 19 R19-10)`; `team-validation.yml` + the trusted-main
-fleet lane step `Enforce Go module discovery (Spec 19 R19-10)` followed by
-`Test and build every enumerated Go module`. R19-12's inventory fields
-(`test_command`, `build_command`, `min_tests`, `applicability`) are now declared
-and enforced per module.
+`go.mod` flipping the gate FAIL.
+
+**Python half.** New fail-closed `scripts/check_python_tests.py` discovers every
+directory holding a pytest-collectable file (`test_*.py` / `*_test.py`, pytest's
+default `python_files`, matched case-sensitively so the illustrative
+`EXAMPLE_REGRESSION_TEST.py` template is not mistaken for a live suite) and
+requires an inventory row per discovered suite **and** an existing suite per row
+in the new `.guardrails/python-test-floor.json` (a non-empty `test_command`, a
+positive `min_tests` and a non-empty `applicability` per row). CI no longer
+hardcodes a pytest path: `team-validation.yml` and the trusted-main fleet lane
+run the discovery gate then iterate the inventory executing each row's declared
+`test_command` before enforcing its floor. Red-on-drift is proven by
+`scripts/test_check_python_tests.py` (12 cases: undocumented suite, stale row,
+duplicate row, missing field, non-positive floor, empty scope, missing inventory,
+plus positive controls for `_test.py` discovery and cache/vendor exclusion).
+
+Rows: `regression-guard.yml` step `Go module discovery (Spec 19 R19-10)` and
+`Python test discovery (Spec 19 R19-10)`; `team-validation.yml` + the
+trusted-main fleet lane steps `Enforce Go module discovery (Spec 19 R19-10)` /
+`Enforce Python test discovery (Spec 19 R19-10)` followed by `Test and build
+every enumerated Go module` and `Run every enumerated Python test suite`.
+R19-12's inventory fields are now declared and enforced per module and per
+suite. Named limit: enumeration covers collectable test files by directory; a
+Python suite whose tests are not named `test_*.py`/`*_test.py` is outside the
+default `python_files` and would need an explicit override, and the Windows-only
+`fcntl`/symlink rerun (R19-10) is still not a separate row.
 
 ### R19-11 — Documentation and 500-line invariant
 

@@ -65,9 +65,45 @@ jobs:
         run: |
           pip install pytest pytest-cov
 
-      - name: Run Python tests
+      # Spec 19 R19-10: enumerate Python test suites from the repository rather
+      # than hardcoding a single pytest path, so a new suite (a nested tool, an
+      # examples/ suite) cannot silently escape the Python test run. The
+      # discovery gate is fail-closed: every directory holding a collectable
+      # test_*.py / *_test.py MUST have a row in
+      # .guardrails/python-test-floor.json and every row MUST name an existing
+      # suite.
+      - name: Enforce Python test discovery (Spec 19 R19-10)
         run: |
-          pytest scripts/ -v --cov=scripts --cov-report=xml
+          python3 scripts/check_python_tests.py --repo .
+          python3 scripts/test_check_python_tests.py
+
+      # Spec 19 R19-10 / R19-12: execute each enumerated suite with the command
+      # the inventory declares and fail when a suite collects fewer tests than
+      # its declared positive floor. Zero collected tests where a floor is
+      # declared is non-releaseable, never an implicit green default.
+      - name: Run every enumerated Python test suite
+        run: |
+          set -euo pipefail
+          INVENTORY=".guardrails/python-test-floor.json"
+          mapfile -t ENTRIES < <(jq -c '.suites[]' "$INVENTORY")
+          for entry in "${ENTRIES[@]}"; do
+            path=$(jq -r '.path' <<< "$entry")
+            min=$(jq -r '.min_tests' <<< "$entry")
+            test_cmd=$(jq -r '.test_command' <<< "$entry")
+
+            echo "::group::$path"
+            echo "test:  $test_cmd"
+            eval "$test_cmd"
+
+            count=$(python3 -m pytest "$path" --collect-only -q -o addopts="" 2>/dev/null | grep -oE '[0-9]+ tests? collected' | grep -oE '^[0-9]+' | tail -1 || true)
+            count=${count:-0}
+            echo "$path: collected $count tests (floor: $min)"
+            if [ "$count" -lt "$min" ]; then
+              echo "::error::Suite $path collected $count tests, below the declared floor of $min"
+              exit 1
+            fi
+            echo "::endgroup::"
+          done
 
       - name: Upload coverage
         uses: codecov/codecov-action@ab904c41d6ece82784817410c45d8b8c02684457 # v3.1.6
