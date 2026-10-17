@@ -348,11 +348,21 @@ principal is allowed (non-vacuous). A new CI row
 mutation-kill case `resource-read-authz-always-permits` proves the negative
 suite flips PASS→FAIL when the decision is neutered.
 
-**Named limits (unchanged, still owner/next-gate work).** R16-06 (role/resource
-enforcement on the tool path) and R16-07 (legacy containment) were already
-implemented in S-A0..A2 and are exercised; this note adds only the resource half
-of the decision surface. R16-09 revocation propagation is exercised for the MCP
-path by `TestLiveRevocationPropagationBound`; the web middleware binds its
-registry at construction, so a source-level revocation there is applied by
-rebuilding the middleware (recorded in that test, not a silent widening).
-R16-10/R16-11 remain unmet by design (no second product consumer yet).
+**Named limits (corrected 2026-10-17 against the landed tree).** R16-06
+(role/resource enforcement on the tool path) and R16-07 (legacy containment)
+were already implemented in S-A0..A2 and are exercised; this note adds only the
+resource half of the decision surface. R16-09 revocation propagation is now
+in-process on **both** surfaces: one process-wide registry is loaded once and
+exposed by `web.Server.CredentialRegistry()`, the web middleware consumes it via
+`APIKeyAuthWithRegistry` (no per-construction copy), `mcp.MCPServer` shares the
+same object via `SetCredentialRegistry`, and `cmd/server/main.go` starts
+`Registry.StartReloadLoop` at `RevocationReloadInterval` (15s, inside
+`RevocationPropagationBound` 60s). `TestSharedRegistryRevocationPropagatesInProcess`
+(`internal/mcp/shared_registry_revocation_test.go`) drives the real web
+middleware and the real StreamableHTTP endpoint against ONE registry: one
+in-place `ReloadOnce` denies the revoked credential on both surfaces on the next
+request with no rebuild or restart, an unrelated credential survives, and a
+malformed reload keeps the prior validated snapshot. An earlier revision of this
+note recorded the web half as a construction-bound registry; that is no longer
+true of the tree and has been corrected. R16-10/R16-11 remain unmet by design
+(no second product consumer yet).
