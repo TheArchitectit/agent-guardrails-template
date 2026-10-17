@@ -367,6 +367,27 @@ jobs:
           cd mcp-server
           go test ./internal/web -run 'TestExposureRegistry' -count=1 -v
 
+  # Spec 19 R19-09: Web UI shell path-confinement row. The /web/* SPA route is
+  # declared public (Spec 12 §3.1 web-spa-fallback), so a request path must
+  # never escape the web root. Proves an unauthenticated traversal
+  # (/web/../<file>, encoded and double-encoded forms) cannot reach a file
+  # outside the root, and that the shell and real assets still serve.
+  security-matrix-spa-confinement:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Set up Go
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version: '1.25'
+          cache-dependency-path: mcp-server/go.sum
+
+      - name: Web UI shell path-confinement row
+        run: |
+          cd mcp-server
+          go test ./internal/web -run 'TestSPAHandler' -count=1 -v
+
   # Spec 16 R16-01/R16-04: declared resource permission matrix row. Proves every
   # registered guardrail:// resource has exactly one declared permission row
   # (matrix cannot fall behind the registry), that an undeclared resource denies,

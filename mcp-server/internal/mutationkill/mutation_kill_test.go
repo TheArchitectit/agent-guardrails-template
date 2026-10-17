@@ -523,6 +523,40 @@ func (s *MCPServer) authorizeToolCallDisabled(ctx context.Context, name string, 
 		pkg:       "./internal/auth",
 		testRegex: "^TestRotationAuditReloadEmitsOpaqueEvent$",
 	},
+	{
+		// Spec 19 R19-09 (static assets and path/method bypasses): the Web UI
+		// shell route is declared public, so a request path must never escape
+		// the web root. The pre-fix handler concatenated the raw request path
+		// onto the root and called c.File, so an unauthenticated
+		// `/web/../<file>` served any readable file. A bypass that restores that
+		// concatenation must be killed by the SPA confinement negative suite.
+		name: "spa-shell-path-traversal-reopened",
+		file: "internal/web/spa.go",
+		old: `		name := strings.TrimPrefix(path.Clean("/"+rel), "/")
+		if name == "" || name == "." {
+			name = "index.html"
+		}
+		if !fs.ValidPath(name) {
+			return echo.ErrNotFound
+		}
+
+		sub := os.DirFS(root)
+		if fi, err := fs.Stat(sub, name); err == nil && !fi.IsDir() {
+			return echo.StaticFileHandler(name, sub)(c)
+		}
+		return echo.StaticFileHandler("index.html", sub)(c)`,
+		new: `		// MUTATION: pre-fix vulnerable concatenation (compiles; leaks).
+		_ = path.Clean
+		_ = fs.ValidPath
+		_ = strings.TrimPrefix
+		filePath := root + rel
+		if _, err := os.Stat(filePath); err == nil {
+			return c.File(filePath)
+		}
+		return c.File(root + "/index.html")`,
+		pkg:       "./internal/web",
+		testRegex: "^TestSPAHandlerRefusesPathTraversal$",
+	},
 }
 
 // findModuleRoot walks up from the test working directory to the directory

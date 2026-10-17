@@ -352,29 +352,18 @@ func registerRoutes(e *echo.Echo, s *Server) {
 
 	// Static files (Web UI) - ORDER MATTERS: specific routes first
 	if s.cfg.WebEnabled {
-		// SPA fallback: serve index.html for non-file routes (client-side routing)
-		// This handles /web, /web/dashboard, /web/rules etc but NOT /web/js/app.js
-		// MUST be registered BEFORE the Static("/", ...) route
-		e.GET("/web/*", func(c echo.Context) error {
-			// Check if this is a request for an actual file
-			requestPath := c.Request().URL.Path
-
-			// If the path has a file extension, try to serve it directly first
-			if strings.Contains(requestPath, ".") {
-				filePath := "/app/web" + strings.TrimPrefix(requestPath, "/web")
-				if _, err := os.Stat(filePath); err == nil {
-					return c.File(filePath)
-				}
-			}
-
-			// For routes without file extension (client-side routes), serve index.html
-			return c.File("/app/web/index.html")
-		})
+		// SPA fallback: serve index.html for non-file routes (client-side
+		// routing) and the real asset files for file requests. The handler is
+		// confined to the web root (Spec 19 R19-09 path-bypass controls); the
+		// previous hand-rolled version concatenated the raw request path onto
+		// the root, so `/web/../<file>` served any readable file with no
+		// credential. MUST be registered BEFORE the Static("/", ...) route.
+		e.GET("/web/*", newSPAHandler(defaultWebRoot))
 
 		// Static file serving - register AFTER specific routes
 		// This serves files at root paths like /index.html, /js/app.js, etc.
-		e.Static("/web", "/app/web")
-		e.Static("/", "/app/web")
+		e.Static("/web", defaultWebRoot)
+		e.Static("/", defaultWebRoot)
 	}
 }
 
