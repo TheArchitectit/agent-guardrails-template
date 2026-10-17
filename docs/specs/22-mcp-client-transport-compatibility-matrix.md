@@ -82,6 +82,35 @@ and schema revision.
 **R22.3** Each supported client/transport pair SHALL have a same-commit
 compatibility test; rows without a test SHALL NOT be listed as supported.
 
+**R22.3 — same-commit test LANDED 2026-10-17 (OMCP `master@063d315`).**
+The required row previously rested on one manual run (2026-10-10) against a
+single OMCP HEAD — a point-in-time proof that any later transport, header or
+revision change would silently invalidate while the row still read SUPPORTED.
+
+OMCP now carries the test: `scripts/gates/spec22_compat.py` starts the
+**release binary**, drives the **real official Inspector CLI** (pinned
+`2.10.1`, the exact version recorded in `22-evidence-2026-10-10.md`), and
+asserts the full required sequence:
+
+| Step | Assertion |
+|---|---|
+| `initialize` | a `2025-*` revision is negotiated with `serverInfo.name=radical-mcp` |
+| `tools/list` | at least one tool is discovered over the wire |
+| `tools/call` success | a read-only tool returns content |
+| `tools/call` rejected | a `../../etc/passwd` escape is refused (`isError:true`) and the path is never echoed (spec 13 R13.1) |
+
+It runs in OMCP's `conformance` job on every push, prints a machine-readable
+record (`spec22-compat.json`: client version, transport, endpoint, negotiated
+revision, commit, per-step verdicts), and exits **2 (UNRUN)** — never 0 — when
+the binary or npm is absent, so a runner that cannot run it cannot report a
+pass.
+
+Local verification at the landing commit: **4/4 steps PASS** —
+`server=radical-mcp`, `revision=2025-11-25`, `4 tools`, `git_status` content,
+escape refused with no path echoed. Red-on-drift proven: a stub binary yields
+exit 2. The hosted run on `063d315` was still queued when this record was
+written; the row's standing evidence is the CI job, not this paragraph.
+
 **R22.4** Intentionally-unsupported surfaces (prompts, resource templates,
 notifications/progress, additional transports) SHALL be listed with rationale.
 
