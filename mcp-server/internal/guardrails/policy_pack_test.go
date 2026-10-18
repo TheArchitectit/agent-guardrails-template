@@ -81,7 +81,7 @@ func TestLoadPolicySet_RealRepoTree(t *testing.T) {
 	if !set.Active() {
 		t.Fatal("a successfully loaded set must report Active")
 	}
-	if got, want := set.EffectiveDigest(), "sha256:980f2d482b331f9e7dd436747e2aad242b3ae625aa641aebe966fa517ee0c260"; got != want {
+	if got, want := set.EffectiveDigest(), "sha256:5d3674c2dab95b7700f157a433c7b06014a7124bbc880c0d2706fa18c217720e"; got != want {
 		t.Fatalf("effective digest = %s, want the checked-in lock value %s", got, want)
 	}
 	if got := len(set.Rules()); got != 4 {
@@ -127,7 +127,7 @@ func TestActivateFrom_FailedCandidateLeavesPriorSetInForce(t *testing.T) {
 	}
 
 	bad := t.TempDir()
-	writePack(t, bad, "core/four-laws", `{"pack":"core/four-laws","version":"0.1.0","rules":[]}`)
+	writePack(t, bad, "core/four-laws", `{"pack":"core/four-laws","version":"0.1.0","tier":"core","rules":[]}`)
 	// No LOCK.json at all in the candidate.
 	if err := m.ActivateFrom(bad, knownToolsFor(t)); err == nil {
 		t.Fatal("a candidate with no lock record must be refused")
@@ -147,7 +147,7 @@ func TestActivateFrom_FailedCandidateLeavesPriorSetInForce(t *testing.T) {
 // than silently activated.
 func TestLoadPolicySet_DigestRefusesDrift(t *testing.T) {
 	dir := t.TempDir()
-	writePack(t, dir, "core/sample", `{"pack":"core/sample","version":"1.0.0","rules":[{"id":"R1","enforcement":"advisory","tool":"guardrail_validate_scope","on_unknown":"stop"}]}`)
+	writePack(t, dir, "core/sample", `{"pack":"core/sample","version":"1.0.0","tier":"core","rules":[{"id":"R1","enforcement":"advisory","tool":"guardrail_validate_scope","on_unknown":"stop"}]}`)
 	writeLock(t, dir, map[string]string{"core/sample.pack.json": "sha256:0000000000000000000000000000000000000000000000000000000000000000"})
 
 	_, err := LoadPolicySet(dir, nil)
@@ -164,7 +164,7 @@ func TestLoadPolicySet_DigestRefusesDrift(t *testing.T) {
 // enforcement and does nothing.
 func TestLoadPolicySet_RefusesUnknownTool(t *testing.T) {
 	dir := t.TempDir()
-	writePack(t, dir, "core/sample", `{"pack":"core/sample","version":"1.0.0","rules":[{"id":"R1","enforcement":"advisory","tool":"guardrail_does_not_exist","on_unknown":"stop"}]}`)
+	writePack(t, dir, "core/sample", `{"pack":"core/sample","version":"1.0.0","tier":"core","rules":[{"id":"R1","enforcement":"advisory","tool":"guardrail_does_not_exist","on_unknown":"stop"}]}`)
 	writeLockFor(t, dir, "core/sample.pack.json")
 
 	_, err := LoadPolicySet(dir, map[string]bool{"guardrail_validate_scope": true})
@@ -183,6 +183,7 @@ func TestLoadPolicySet_TreatsPackTextAsInert(t *testing.T) {
 	body, err := json.Marshal(map[string]any{
 		"pack":    "core/inert",
 		"version": "1.0.0",
+		"tier":    "core",
 		"rules": []map[string]any{{
 			"id": "R1", "law": payload, "enforcement": "advisory",
 			"tool": "guardrail_validate_scope", "on_unknown": "stop",
@@ -213,7 +214,7 @@ func TestLoadPolicySet_RejectsEmptyAndUnlocked(t *testing.T) {
 	}
 
 	dir := t.TempDir()
-	writePack(t, dir, "core/sample", `{"pack":"core/sample","version":"1.0.0","seed":true,"rules":[]}`)
+	writePack(t, dir, "core/sample", `{"pack":"core/sample","version":"1.0.0","tier":"core","seed":true,"rules":[]}`)
 	// A lock that records a DIFFERENT pack (stale entry) and not this one.
 	stale := map[string]PackRecord{
 		"policy-packs/core/gone.pack.json": {
@@ -232,7 +233,7 @@ func TestLoadPolicySet_RejectsEmptyAndUnlocked(t *testing.T) {
 // seed or it is a mistake, and a seed must say so.
 func TestLoadPolicySet_RequiresSeedForEmptyPack(t *testing.T) {
 	dir := t.TempDir()
-	writePack(t, dir, "core/sample", `{"pack":"core/sample","version":"1.0.0","rules":[]}`)
+	writePack(t, dir, "core/sample", `{"pack":"core/sample","version":"1.0.0","tier":"core","rules":[]}`)
 	writeLockFor(t, dir, "core/sample.pack.json")
 	if _, err := LoadPolicySet(dir, nil); err == nil {
 		t.Fatal("an empty non-seed pack must be refused")
@@ -243,7 +244,7 @@ func TestLoadPolicySet_RequiresSeedForEmptyPack(t *testing.T) {
 // unknown outcome take the weaker action, which the spec forbids.
 func TestLoadPolicySet_RejectsNonStopOnUnknown(t *testing.T) {
 	dir := t.TempDir()
-	writePack(t, dir, "core/sample", `{"pack":"core/sample","version":"1.0.0","rules":[{"id":"R1","enforcement":"advisory","tool":"guardrail_validate_scope","on_unknown":"continue"}]}`)
+	writePack(t, dir, "core/sample", `{"pack":"core/sample","version":"1.0.0","tier":"core","rules":[{"id":"R1","enforcement":"advisory","tool":"guardrail_validate_scope","on_unknown":"continue"}]}`)
 	writeLockFor(t, dir, "core/sample.pack.json")
 	if _, err := LoadPolicySet(dir, nil); err == nil {
 		t.Fatal("on_unknown != stop must be refused")
@@ -253,7 +254,7 @@ func TestLoadPolicySet_RejectsNonStopOnUnknown(t *testing.T) {
 // TestLoadPolicySet_RejectsUnknownCriticalField is R07-4.3.2.
 func TestLoadPolicySet_RejectsUnknownCriticalField(t *testing.T) {
 	dir := t.TempDir()
-	writePack(t, dir, "core/sample", `{"pack":"core/sample","version":"1.0.0","exec":"rm -rf /","rules":[]}`)
+	writePack(t, dir, "core/sample", `{"pack":"core/sample","version":"1.0.0","tier":"core","exec":"rm -rf /","rules":[]}`)
 	writeLockFor(t, dir, "core/sample.pack.json")
 	if _, err := LoadPolicySet(dir, nil); err == nil {
 		t.Fatal("an unknown critical field must be refused")
@@ -282,8 +283,8 @@ func TestNilManagerIsNotConfigured(t *testing.T) {
 // snapshot so the graph an operator reads is the one resolution walked.
 func TestLoadPolicySet_ResolvesDeclaredDependency(t *testing.T) {
 	dir := t.TempDir()
-	writePack(t, dir, "core/base", `{"pack":"core/base","version":"1.0.0","rules":[{"id":"B1","enforcement":"advisory","tool":"guardrail_alpha","on_unknown":"stop"}]}`)
-	writePack(t, dir, "core/domain", `{"pack":"core/domain","version":"1.0.0","depends_on":[{"pack":"core/base","range":">=1.0.0"}],"rules":[{"id":"D1","enforcement":"advisory","tool":"guardrail_beta","on_unknown":"stop"}]}`)
+	writePack(t, dir, "core/base", `{"pack":"core/base","version":"1.0.0","tier":"core","rules":[{"id":"B1","enforcement":"advisory","tool":"guardrail_alpha","on_unknown":"stop"}]}`)
+	writePack(t, dir, "core/domain", `{"pack":"core/domain","version":"1.0.0","tier":"core","depends_on":[{"pack":"core/base","range":">=1.0.0"}],"rules":[{"id":"D1","enforcement":"advisory","tool":"guardrail_beta","on_unknown":"stop"}]}`)
 	writeLockFor(t, dir, "")
 
 	set, err := LoadPolicySet(dir, nil)
@@ -305,7 +306,7 @@ func TestLoadPolicySet_ResolvesDeclaredDependency(t *testing.T) {
 // not actionable.
 func TestLoadPolicySet_AbsentDependencyNamesThePath(t *testing.T) {
 	dir := t.TempDir()
-	writePack(t, dir, "core/domain", `{"pack":"core/domain","version":"1.0.0","depends_on":[{"pack":"core/missing","range":">=1.0.0"}],"rules":[{"id":"D1","enforcement":"advisory","tool":"guardrail_alpha","on_unknown":"stop"}]}`)
+	writePack(t, dir, "core/domain", `{"pack":"core/domain","version":"1.0.0","tier":"core","depends_on":[{"pack":"core/missing","range":">=1.0.0"}],"rules":[{"id":"D1","enforcement":"advisory","tool":"guardrail_alpha","on_unknown":"stop"}]}`)
 	writeLockFor(t, dir, "")
 
 	_, err := LoadPolicySet(dir, nil)
@@ -321,8 +322,8 @@ func TestLoadPolicySet_AbsentDependencyNamesThePath(t *testing.T) {
 // and must print the cycle, not merely two node names.
 func TestLoadPolicySet_DependencyCycleNamesTheClosingPath(t *testing.T) {
 	dir := t.TempDir()
-	writePack(t, dir, "core/a", `{"pack":"core/a","version":"1.0.0","depends_on":[{"pack":"core/b","range":">=1.0.0"}],"rules":[{"id":"A1","enforcement":"advisory","tool":"guardrail_alpha","on_unknown":"stop"}]}`)
-	writePack(t, dir, "core/b", `{"pack":"core/b","version":"1.0.0","depends_on":[{"pack":"core/a","range":">=1.0.0"}],"rules":[{"id":"B1","enforcement":"advisory","tool":"guardrail_beta","on_unknown":"stop"}]}`)
+	writePack(t, dir, "core/a", `{"pack":"core/a","version":"1.0.0","tier":"core","depends_on":[{"pack":"core/b","range":">=1.0.0"}],"rules":[{"id":"A1","enforcement":"advisory","tool":"guardrail_alpha","on_unknown":"stop"}]}`)
+	writePack(t, dir, "core/b", `{"pack":"core/b","version":"1.0.0","tier":"core","depends_on":[{"pack":"core/a","range":">=1.0.0"}],"rules":[{"id":"B1","enforcement":"advisory","tool":"guardrail_beta","on_unknown":"stop"}]}`)
 	writeLockFor(t, dir, "")
 
 	_, err := LoadPolicySet(dir, nil)
@@ -339,8 +340,8 @@ func TestLoadPolicySet_DependencyCycleNamesTheClosingPath(t *testing.T) {
 // whether the pack or the lock is wrong.
 func TestLoadPolicySet_IncompatibleDependencyVersion(t *testing.T) {
 	dir := t.TempDir()
-	writePack(t, dir, "core/base", `{"pack":"core/base","version":"1.0.0","rules":[{"id":"B1","enforcement":"advisory","tool":"guardrail_alpha","on_unknown":"stop"}]}`)
-	writePack(t, dir, "core/domain", `{"pack":"core/domain","version":"1.0.0","depends_on":[{"pack":"core/base","range":"^2.0.0"}],"rules":[{"id":"D1","enforcement":"advisory","tool":"guardrail_beta","on_unknown":"stop"}]}`)
+	writePack(t, dir, "core/base", `{"pack":"core/base","version":"1.0.0","tier":"core","rules":[{"id":"B1","enforcement":"advisory","tool":"guardrail_alpha","on_unknown":"stop"}]}`)
+	writePack(t, dir, "core/domain", `{"pack":"core/domain","version":"1.0.0","tier":"core","depends_on":[{"pack":"core/base","range":"^2.0.0"}],"rules":[{"id":"D1","enforcement":"advisory","tool":"guardrail_beta","on_unknown":"stop"}]}`)
 	writeLockFor(t, dir, "")
 
 	_, err := LoadPolicySet(dir, nil)
@@ -359,8 +360,8 @@ func TestLoadPolicySet_RangeMustConstrainSomething(t *testing.T) {
 	for _, rng := range []string{"", "   ", "*", "latest", ">=1", "^v1.0.0"} {
 		t.Run("range="+rng, func(t *testing.T) {
 			dir := t.TempDir()
-			writePack(t, dir, "core/base", `{"pack":"core/base","version":"1.0.0","rules":[{"id":"B1","enforcement":"advisory","tool":"guardrail_alpha","on_unknown":"stop"}]}`)
-			body := `{"pack":"core/domain","version":"1.0.0","depends_on":[{"pack":"core/base","range":"` + rng + `"}],"rules":[{"id":"D1","enforcement":"advisory","tool":"guardrail_beta","on_unknown":"stop"}]}`
+			writePack(t, dir, "core/base", `{"pack":"core/base","version":"1.0.0","tier":"core","rules":[{"id":"B1","enforcement":"advisory","tool":"guardrail_alpha","on_unknown":"stop"}]}`)
+			body := `{"pack":"core/domain","version":"1.0.0","tier":"core","depends_on":[{"pack":"core/base","range":"` + rng + `"}],"rules":[{"id":"D1","enforcement":"advisory","tool":"guardrail_beta","on_unknown":"stop"}]}`
 			writePack(t, dir, "core/domain", body)
 			writeLockFor(t, dir, "")
 			if _, err := LoadPolicySet(dir, nil); err == nil {
@@ -374,7 +375,7 @@ func TestLoadPolicySet_RangeMustConstrainSomething(t *testing.T) {
 // one-node cycle and is refused at parse time with a message that says so.
 func TestLoadPolicySet_RefusesSelfDependency(t *testing.T) {
 	dir := t.TempDir()
-	writePack(t, dir, "core/a", `{"pack":"core/a","version":"1.0.0","depends_on":[{"pack":"core/a","range":">=1.0.0"}],"rules":[{"id":"A1","enforcement":"advisory","tool":"guardrail_alpha","on_unknown":"stop"}]}`)
+	writePack(t, dir, "core/a", `{"pack":"core/a","version":"1.0.0","tier":"core","depends_on":[{"pack":"core/a","range":">=1.0.0"}],"rules":[{"id":"A1","enforcement":"advisory","tool":"guardrail_alpha","on_unknown":"stop"}]}`)
 	writeLockFor(t, dir, "")
 
 	_, err := LoadPolicySet(dir, nil)

@@ -810,6 +810,19 @@ func (s *MCPServer) authorizeToolCallDisabled(ctx context.Context, name string, 
 		testRegex: "^TestUnmetRequirementPreventsPass$",
 	},
 	{
+		// Spec 07 R07-4.2.1: a higher-tier pack must not be able to lower a
+		// mandatory core rule without a reviewed exception. The mutation stops
+		// the resolver from noticing a weakening at all, so every override
+		// reads as a legitimate strengthening and a control can be shed with no
+		// record — the state this requirement exists to end.
+		name:      "policy-precedence-weakening-undetected",
+		file:      "internal/guardrails/policy_precedence.go",
+		old:       "\t\tif hasLowerTier {\n\t\t\tapp.Weakened = enforcementRank[top.rule.Enforcement] < enforcementRank[base.Enforcement] || top.rule.Tool != base.Tool\n\t\t}",
+		new:       "\t\tif hasLowerTier {\n\t\t\tapp.Weakened = false // mutation: an override always reads as a strengthening\n\t\t}",
+		pkg:       "./internal/guardrails",
+		testRegex: "^TestPrecedence_LowerTierCannotWeakenCoreWithoutAnException$",
+	},
+	{
 		// Spec 08 R08-4.5.4: a process running a policy set it did not declare
 		// is broken, not merely unmeasured. The mutation drops the failure, so a
 		// provenance mismatch is reported and then ignored by the verdict — the

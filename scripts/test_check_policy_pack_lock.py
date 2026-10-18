@@ -39,7 +39,10 @@ def _pack(pack="core/demo", version="1.0.0", rules=None, **extra):
             {"id": "R1", "law": "read first", "enforcement": "advisory",
              "tool": "guardrail_alpha", "on_unknown": "stop"},
         ]
-    data = {"pack": pack, "version": version, "rules": rules}
+    # Tier is derived from the pack name so a fixture states precedence the way
+    # the real tree does; a case that wants a WRONG tier passes tier= explicitly.
+    tier = pack.split("/", 1)[0] if "/" in pack else "core"
+    data = {"pack": pack, "version": version, "tier": tier, "rules": rules}
     data.update(extra)
     return data
 

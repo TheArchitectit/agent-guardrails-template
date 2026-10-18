@@ -1,7 +1,7 @@
 {
   "version": "2026.10.18",
   "profile": "local",
-  "policy_digest": "sha256:980f2d482b331f9e7dd436747e2aad242b3ae625aa641aebe966fa517ee0c260",
+  "policy_digest": "sha256:5d3674c2dab95b7700f157a433c7b06014a7124bbc880c0d2706fa18c217720e",
   "supported_interfaces": [
     "controlplane.component/v1"
   ],
@@ -9,10 +9,11 @@
     {
       "id": "policy-engine",
       "version": "1.2.0",
-      "digest": "sha256:858af3293648638573998506f94a997b044ed1fc4d7a05783fd934699db710be",
+      "digest": "sha256:3c2c7c95d0914a6f84b20c2e02b0faffc88c8b1e27c1e24f2d1a863249880eef",
       "source_paths": [
         "mcp-server/internal/guardrails/engine.go",
-        "mcp-server/internal/guardrails/policy_pack.go"
+        "mcp-server/internal/guardrails/policy_pack.go",
+        "mcp-server/internal/guardrails/policy_precedence.go"
       ],
       "owner": "guardrails",
       "interface": "controlplane.component/v1",

@@ -81,10 +81,14 @@ TOOLS_PATH = Path("site/src/data/tools.json")
 RESOLVER_VERSION = "1"
 SEMVER_RE = re.compile(r"^\d+\.\d+\.\d+$")
 ENFORCEMENTS = ("advisory", "checked", "blocking")
+# Spec 07 R07-4.2.1 — declared precedence tiers, strongest first. The tier is
+# declared in the pack and must agree with the pack's path prefix, so a domain
+# policy cannot be filed as core (or the reverse) by moving a file.
+TIERS = ("core", "domain", "overlay")
 # Top-level fields a pack may carry. Anything else is an unknown *critical*
 # field (R07-4.3.2) and fails; ``x-`` prefixed keys are explicit non-critical
 # annotations and do not participate in resolution.
-PACK_FIELDS = ("pack", "version", "rules", "seed", "depends_on")
+PACK_FIELDS = ("pack", "version", "tier", "rules", "seed", "depends_on")
 RULE_FIELDS = ("id", "law", "enforcement", "tool", "on_unknown", "evidence")
 DEP_FIELDS = ("pack", "range")
 ANNOTATION_PREFIX = "x-"
@@ -171,6 +175,20 @@ def validate_pack(root: Path, path: Path, known_tools: set[str]) -> list[Violati
     version = data.get("version")
     if not isinstance(version, str) or not SEMVER_RE.match(version):
         out.append(Violation(where, f"'version' must be semver MAJOR.MINOR.PATCH, got {version!r}"))
+
+    tier = data.get("tier")
+    if tier not in TIERS:
+        out.append(Violation(where, f"'tier' must be one of {TIERS}, got {tier!r} (R07-4.2.1)"))
+    elif isinstance(name, str) and name:
+        implied = name.split("/", 1)[0]
+        if tier != implied:
+            out.append(
+                Violation(
+                    where,
+                    f"'tier' is {tier!r} but the pack name implies {implied!r}"
+                    " — precedence must be visible in the declaration, not only the path (R07-4.2.1)",
+                )
+            )
 
     seed = data.get("seed", False)
     if not isinstance(seed, bool):

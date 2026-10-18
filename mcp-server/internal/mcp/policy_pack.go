@@ -30,15 +30,23 @@ import (
 
 // policyPackStatus is the JSON shape of guardrail://policy-packs.
 type policyPackStatus struct {
-	Status          string                       `json:"status"`
-	Source          string                       `json:"source,omitempty"`
-	EffectiveDigest string                       `json:"effective_digest,omitempty"`
-	ResolverVersion string                       `json:"resolver_version,omitempty"`
-	Packs           []guardrails.PackRecord      `json:"packs,omitempty"`
-	Dependencies    []guardrails.PackEdge        `json:"dependencies,omitempty"`
-	Rules           []guardrails.PackRule        `json:"rules,omitempty"`
-	Attribution     map[string]policyAttribution `json:"attribution,omitempty"`
-	Error           string                       `json:"error,omitempty"`
+	Status          string                  `json:"status"`
+	Source          string                  `json:"source,omitempty"`
+	EffectiveDigest string                  `json:"effective_digest,omitempty"`
+	ResolverVersion string                  `json:"resolver_version,omitempty"`
+	Packs           []guardrails.PackRecord `json:"packs,omitempty"`
+	Dependencies    []guardrails.PackEdge   `json:"dependencies,omitempty"`
+	// Spec 07 R07-4.2 — the precedence decision, the per-tool composition and
+	// the reviewed exceptions. Reported from the resolved snapshot, never
+	// recomputed here: a surface that re-derives precedence can disagree with
+	// the set the server is enforcing.
+	RuleSetDigest string                       `json:"rule_set_digest,omitempty"`
+	Applications  []guardrails.RuleApplication `json:"applications,omitempty"`
+	Conflicts     []guardrails.RuleConflict    `json:"conflicts,omitempty"`
+	Exceptions    []guardrails.Exception       `json:"exceptions,omitempty"`
+	Rules         []guardrails.PackRule        `json:"rules,omitempty"`
+	Attribution   map[string]policyAttribution `json:"attribution,omitempty"`
+	Error         string                       `json:"error,omitempty"`
 }
 
 // policyAttribution names the pack and rule that govern a tool. An enforcement
@@ -89,6 +97,15 @@ func (s *MCPServer) policyPackStatusSnapshot(err error) policyPackStatus {
 	// graph can disagree with the set the server is enforcing.
 	status.Dependencies = active.Dependencies()
 	status.Rules = active.Rules()
+	status.RuleSetDigest = active.RuleSetDigest()
+	// Applications always carries one row per effective rule id, so "no
+	// override happened" is visible as a row with weakened=false rather than as
+	// a missing field. Conflicts and exceptions are omitempty because their
+	// absence is the normal state of a single-pack tree; the rule-set digest
+	// still proves which set they were absent from.
+	status.Applications = active.Applications()
+	status.Conflicts = active.Conflicts()
+	status.Exceptions = active.Exceptions()
 
 	attribution := map[string]policyAttribution{}
 	for _, rule := range active.Rules() {

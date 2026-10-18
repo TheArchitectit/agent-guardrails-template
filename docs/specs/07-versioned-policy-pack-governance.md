@@ -5,7 +5,11 @@ schema-as-data, R07-5.8 CI verification) is implemented and **enforced in CI**, 
 2026-10-18 there is a **runtime consumer**: the server resolves the configured pack set at
 startup, exposes its effective digest through `guardrail://policy-packs`, and can attribute
 an enforcement decision to the exact pack rule that governs a tool (R07-4.4.1–R07-4.4.4).
-The rows that stay open are named below and none of them is reachability.
+**R07-4.2.1–R07-4.2.3 (precedence, deterministic composition, exception ledger) are
+implemented as of 2026-10-18** — declared tiers, a refusal to weaken a mandatory rule without
+a reviewed and unexpired exception, and composition that can only strengthen. What stays
+open is R07-4.3.4 (signatures) and R07-4.3.3/4.3.5 (remote acquisition), none of which is
+reachability.
 **Priority:** Important; prerequisite to distributing policy changes safely.
 **Related:** `docs/specs/guardrail-gaps-2026/02-semantic-content-filtering.md`,
 `04-multi-agent-safety-policies.md`, and `06-regulatory-compliance-mapping.md`.
@@ -208,13 +212,14 @@ missing/unreadable/unrecognised lock record fails rather than skipping.
 registers; a rule naming a nonexistent tool can never fire.
 - **Non-vacuity** — zero discovered packs, or zero known tools, is a FAILURE.
 
-**Evidence.** `scripts/test_check_policy_pack_lock.py` **26/26**, including the two vacuity
+**Evidence.** `scripts/test_check_policy_pack_lock.py` **39/39**, including the two vacuity
 cases that the old verifier failed (zero packs; unrecognised legacy lock shape), byte-drift
 and version-drift without re-lock, extra/stale lock entries, malformed `resolved_at`, unknown
 critical field, bad semver, path/name mismatch, blocking rule without evidence, unknown tool,
 duplicate rule id, non-`stop` `on_unknown`, empty non-seed pack, determinism across two
 resolutions, and — separately — that a workflow actually invokes the gate. Live on the tree:
-`POLICY PACK LOCK: OK` (1 pack, 4 rules, `effective_digest sha256:980f2d48…`). Neighbours
+`POLICY PACK LOCK: OK` (1 pack, 4 rules, `effective_digest sha256:5d3674c2…` — re-locked when the
+packs gained a declared `tier`, which is a content change and therefore a deliberate re-lock). Neighbours
 green: action pins 83, tool count 39/22/61, secret inventory 20/16, doc links 965/455, doc
 length 455/10 declared, `regression_check --all --pre-commit` exit 0.
 
@@ -245,8 +250,74 @@ cycle naming the closing path, incompatible version, six unusable range forms, s
 parity assertions, red-on-drift proven (disabling `check_dependency_graph` flips 6 cases; reverting `PACK_FIELDS`
 flips the parity test). A dependency graph that must include every pack would make a one-pack tree untestable, so the
 fixtures carry the edges the shipped tree does not.
-- **R07-4.2.1–R07-4.2.3** — no precedence engine and no exception ledger; there is nothing
-for a domain pack or overlay to weaken yet.
+- **R07-4.2.1–R07-4.2.3 are now IMPLEMENTED (2026-10-18).** Before this pass a pack carried
+an `enforcement` class and nothing else: there was no declared tier, so "core rules are
+mandatory by default" described a tree that could not express core-ness. Every pack was
+interchangeable, and a second pack declaring a core rule id could lower its severity or
+retarget its tool with nothing in the resolver positioned to notice — the exception ledger
+did not exist either, so a weakening had no reviewed form. The only outcomes were "not
+expressible" and "silent", and the first was false.
+  - **Tier is declared, then checked against the name.** Packs carry `tier` (`core` |
+    `domain` | `overlay`) and the value must equal the pack name's prefix, so a domain policy
+    cannot be filed as core (or the reverse) by moving a file; the precedence claim appears in
+    the diff instead of being inferred from a directory. An absent or unknown tier is
+    **refused** rather than defaulted — defaulting to core would grant override authority,
+    defaulting to overlay would accept an unchecked weakening.
+  - **Precedence follows the tier, never discovery order.** The effective declaration of a
+    rule id is the one from the highest tier that declares it. Two packs of **equal** tier
+    declaring one id are refused as ambiguous: with no deterministic winner, choosing by file
+    name would make the outcome depend on spelling. Strengthening a core rule needs no
+    exception — the requirement only restricts weakening, and a control that cannot be
+    strengthened is unusable in the only safe direction.
+  - **A weakening is a severity drop or a retargeted tool.** Both are refused without an
+    allowlisted exception; both name the rule, the two severities (or the two tools) and the
+    overriding pack, because "policy invalid" is not actionable. Retargeting counts at equal
+    severity: the core rule stops governing the tool it was written for.
+  - **Composition takes the stronger action, and there is no weaker branch.** Where more than
+    one effective rule governs a tool, the maximum enforcement wins and is written into the
+    attribution map; every collision is reported with winner and loser. Equal severities are
+    ordered by rule id so the *audit identity* is deterministic — not the action, which is
+    identical.
+  - **Every exception carries the six R07-4.2.3 facts plus a binding.** Rule, overriding pack,
+    scope, reason, approver, `expires` (RFC3339) and `resulting_rule_set_digest`. Validation is
+    three ordered passes so the message names the right failure: completeness/expiry, then the
+    digest binding, then **coverage in both directions** — a weakening with no exception (a
+    control silently shed) and an exception with no weakening (a permanent hole recorded as
+    diligence). An expired, stale, duplicated, incomplete or unused exception is refused. A
+    malformed ledger is an error, not an empty ledger: a typo must not silently re-permit a
+    weakening, nor silently drop a review that exists.
+  - **Granting an exception is necessarily two steps, and the tooling says so.**
+    `PolicyRuleSetDigest` computes the digest of a set whose ledger does not yet authorise
+    it, so an approver binds to a value produced by the resolver rather than a hand-computed
+    one that can never match. Whether that set is *activateable* stays a separate question
+    answered by `LoadPolicySet`. `LoadPolicySetAt` injects the clock so expiry is a proven
+    fact rather than a wait.
+  - **Reachable where an operator looks.** `guardrail://policy-packs` reports
+    `rule_set_digest`, `applications` (one row per effective rule id with `base_enforcement`,
+    `effective_enforcement`, `weakened`, `exception_scope`, `declared_by`), `conflicts` and
+    `exceptions` — read from the resolved snapshot, never re-derived in the handler, because a
+    surface that recomputes precedence can disagree with the set the server enforces.
+  - **Evidence.** `policy_precedence_test.go` 13 tests (thirteen cases incl. seven
+    missing-field subtests) driving the REAL loader over REAL packs and a REAL lock: weakening
+    refused, retargeting refused, strengthening allowed, equal-tier ambiguity refused,
+    tier/path disagreement refused, undeclared tier refused, stronger rule wins composition,
+    a complete exception allows and is recorded, expired refused, stale binding refused, unused
+    refused, incomplete refused for each of the seven fields, malformed ledger refused, and the
+    shipped tree resolving as a single core pack. Plus the request-path
+    `TestPolicyPackStatus_ReportsPrecedenceAndExceptions` reading the registered handler.
+    **Red-on-drift proven four ways** (weakening undetected; weaker rule winning a conflict;
+    expiry unchecked; digest binding unchecked), and the first is now a permanent
+    `mutationkill` case confirmed killing.
+  - **The shipped tree declares `tier: core`** and is re-locked; the gate's schema gained
+    `tier` with the same name-prefix rule, so the Go loader and the CI gate still accept
+    exactly the same packs. `SchemaParityTest` pins `packFields`/`ruleFields` on both sides.
+  - **Named limits, recorded rather than implied.** The exception approver is a recorded
+    identity, not an authenticated one — nothing verifies that `approver: roger` was written by
+    Roger, so the ledger's authority is repository review (a signed ledger is R07-4.3.4 work).
+    The `resulting_rule_set_digest` binds to the effective rule set, not to the pre-precedence
+    input set, so re-signing a pack without changing the resulting decisions does not
+    invalidate an exception. Nothing yet refuses a tool call for lack of a covering rule: the
+    four-laws rules stay advisory, which remains an owner decision.
 - **R07-4.3.4** — no signature verification and no trusted-key set.
 - **R07-4.3.5 / R07-4.3.3** — the lock records pinned-vs-verified state as `overlay_digest:
 none` and does not acquire remote packs; acquisition posture is moot until a remote source is

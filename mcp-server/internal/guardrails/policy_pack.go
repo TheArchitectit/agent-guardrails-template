@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 )
 
 // Spec 07 R07-4.4 — runtime activation and auditability of the resolved policy
@@ -53,8 +54,13 @@ type PackRule struct {
 // Pack is one parsed policy pack. Seed marks an intentionally empty pack, which
 // R07-4.2.4 permits but forbids from being presented as domain coverage.
 type Pack struct {
-	Name      string           `json:"pack"`
-	Version   string           `json:"version"`
+	Name    string `json:"pack"`
+	Version string `json:"version"`
+	// Tier is the declared precedence class: core, domain or overlay
+	// (Spec 07 R07-4.2.1). It is DECLARED rather than inferred from the path so
+	// a reviewer sees the precedence claim in the diff, and the declaration is
+	// then checked against the path so a domain policy cannot be filed as core.
+	Tier      string           `json:"tier"`
 	Seed      bool             `json:"seed"`
 	Rules     []PackRule       `json:"rules"`
 	DependsOn []PackDependency `json:"depends_on,omitempty"`
@@ -120,6 +126,13 @@ type ResolvedPolicySet struct {
 	ruleToPack      map[string]string
 	toolToRule      map[string]PackRule
 	edges           []PackEdge
+	// Spec 07 R07-4.2 — precedence, composition and the reviewed exceptions.
+	// The three are reported separately because "one pack won" and "an operator
+	// allowed a weakening" are different facts an audit has to tell apart.
+	applications []RuleApplication
+	conflicts    []RuleConflict
+	exceptions   []Exception
+	ruleSetID    string
 }
 
 // Active reports whether this snapshot came from a successful resolution.
@@ -162,6 +175,51 @@ func (r *ResolvedPolicySet) Rules() []PackRule {
 	out := make([]PackRule, len(r.rules))
 	copy(out, r.rules)
 	return out
+}
+
+// Applications reports how each rule id resolved across tiers (R07-4.2.1),
+// including which declarations were overridden and whether an exception was
+// needed. It is the precedence decision made observable: "core is mandatory"
+// with no way to see an override is a claim, not a control.
+func (r *ResolvedPolicySet) Applications() []RuleApplication {
+	if r == nil {
+		return nil
+	}
+	out := make([]RuleApplication, len(r.applications))
+	copy(out, r.applications)
+	return out
+}
+
+// Conflicts reports every per-tool rule collision the composition resolved and
+// which declaration won (R07-4.2.2). An empty result means no tool was governed
+// by more than one effective rule — an answer, not a skipped check.
+func (r *ResolvedPolicySet) Conflicts() []RuleConflict {
+	if r == nil {
+		return nil
+	}
+	out := make([]RuleConflict, len(r.conflicts))
+	copy(out, r.conflicts)
+	return out
+}
+
+// Exceptions reports the reviewed, unexpired exceptions in force (R07-4.2.3).
+func (r *ResolvedPolicySet) Exceptions() []Exception {
+	if r == nil {
+		return nil
+	}
+	out := make([]Exception, len(r.exceptions))
+	copy(out, r.exceptions)
+	return out
+}
+
+// RuleSetDigest is the identity of the effective rule set, which every
+// exception binds to. It is separate from EffectiveDigest: one identifies the
+// inputs (packs, versions, content), the other the resulting decisions.
+func (r *ResolvedPolicySet) RuleSetDigest() string {
+	if r == nil {
+		return ""
+	}
+	return r.ruleSetID
 }
 
 // Dependencies returns the resolved dependency graph in declaration order.
@@ -267,6 +325,14 @@ func (m *PolicyPackManager) ActivateFrom(dir string, knownTools map[string]bool)
 // exist" — the caller that has a registry passes a non-empty set and a
 // discovered tool missing from it fails.
 func LoadPolicySet(dir string, knownTools map[string]bool) (*ResolvedPolicySet, error) {
+	return LoadPolicySetAt(dir, knownTools, time.Now())
+}
+
+// LoadPolicySetAt is LoadPolicySet with an injected clock. Exception expiry is
+// a real decision that must be testable without waiting for a calendar, and a
+// test that cannot place the clock past an expiry cannot prove the expiry is
+// enforced.
+func LoadPolicySetAt(dir string, knownTools map[string]bool, now time.Time) (*ResolvedPolicySet, error) {
 	if strings.TrimSpace(dir) == "" {
 		return nil, fmt.Errorf("policy pack directory is not configured")
 	}
@@ -300,7 +366,6 @@ func LoadPolicySet(dir string, knownTools map[string]bool) (*ResolvedPolicySet, 
 		toolToRule:      map[string]PackRule{},
 	}
 	rows := make([]PackRecord, 0, len(paths))
-	seenRuleIDs := map[string]string{}
 	packsByName := make(map[string]*Pack, len(paths))
 	// Lock-record paths are repository-root relative ("policy-packs/core/x.pack.json")
 	// while the loader walks a pack directory ("core/x.pack.json"). Match on the
@@ -359,20 +424,10 @@ func LoadPolicySet(dir string, knownTools map[string]bool) (*ResolvedPolicySet, 
 		record.Digest = digest
 		rows = append(rows, record)
 
-		for _, rule := range pack.Rules {
-			if prior, dup := seenRuleIDs[rule.ID]; dup {
-				return nil, fmt.Errorf("duplicate rule id %q in %s and %s", rule.ID, prior, rel)
-			}
-			seenRuleIDs[rule.ID] = rel
-			set.rules = append(set.rules, rule)
-			// Record the declared PACK NAME, not the file path: a caller
-			// attributing a decision reads a policy identity, and a path is an
-			// artifact of how the tree is laid out on this host.
-			set.ruleToPack[rule.ID] = pack.Name
-			if rule.Tool != "" {
-				set.toolToRule[rule.Tool] = rule
-			}
-		}
+		// Rule ids are NOT accumulated here. The same id may legally appear in
+		// two tiers — that is what precedence exists to resolve — so the
+		// effective set is decided by resolvePolicyPrecedence below, which
+		// refuses an equal-tier duplicate and reports every override.
 		if _, dup := packsByName[pack.Name]; dup {
 			return nil, fmt.Errorf("two packs declare the same name %q; dependency edges would be ambiguous", pack.Name)
 		}
@@ -393,6 +448,31 @@ func LoadPolicySet(dir string, knownTools map[string]bool) (*ResolvedPolicySet, 
 	}
 	set.edges = edges
 
+	// Spec 07 R07-4.2 — precedence, composition and the exception ledger all
+	// run here, after the lock and the dependency graph, because they are
+	// decisions about a set that has already been proven to be the set on disk.
+	exceptions, excErr := loadExceptions(dir)
+	if excErr != nil {
+		return nil, excErr
+	}
+	precedence, precErr := resolvePolicyPrecedence(packsByName, exceptions, now)
+	if precErr != nil {
+		return nil, precErr
+	}
+	if validErr := validateExceptions(precedence, now); validErr != nil {
+		// The digest is named in the error because an exception has to bind to
+		// it: an operator who cannot see the value has to run the failing load
+		// again to learn what to write, and the value is already computed here.
+		return nil, fmt.Errorf("%w\nrule-set digest for a new exception: %s", validErr, precedence.Digest)
+	}
+	set.applications = precedence.Applications
+	set.rules = precedence.Rules
+	set.ruleToPack = precedence.RuleToPack
+	set.toolToRule = precedence.ToolToRule
+	set.conflicts = precedence.Conflicts
+	set.exceptions = precedence.Exceptions
+	set.ruleSetID = precedence.Digest
+
 	sort.Slice(rows, func(i, j int) bool { return rows[i].Path < rows[j].Path })
 	set.packs = rows
 
@@ -406,6 +486,61 @@ func LoadPolicySet(dir string, knownTools map[string]bool) (*ResolvedPolicySet, 
 	set.digest = effective
 
 	return set, nil
+}
+
+// PolicyRuleSetDigest resolves the packs under dir and returns the effective
+// rule-set digest without requiring the exception ledger to authorise anything.
+//
+// This exists because granting an exception is necessarily a two-step act: the
+// approver has to bind to the digest of the set they are approving, and that set
+// does not yet resolve (that is the point of the exception). Computing the
+// digest by hand would mean reimplementing precedence outside the resolver, and
+// a hand-computed digest that disagrees by one byte produces an exception that
+// can never be valid.
+//
+// It returns the digest only. Whether the resulting set is ACTIVATABLE is a
+// separate question answered by LoadPolicySet, and this function does not
+// answer it.
+func PolicyRuleSetDigest(dir string, knownTools map[string]bool) (string, error) {
+	if strings.TrimSpace(dir) == "" {
+		return "", fmt.Errorf("policy pack directory is not configured")
+	}
+	paths, err := discoverPackFiles(dir)
+	if err != nil {
+		return "", err
+	}
+	if len(paths) == 0 {
+		return "", fmt.Errorf("no *.pack.json files under %q; refusing an empty policy set", dir)
+	}
+	packsByName := map[string]*Pack{}
+	for _, path := range paths {
+		rel, relErr := filepath.Rel(dir, path)
+		if relErr != nil {
+			return "", fmt.Errorf("policy pack path %q: %w", path, relErr)
+		}
+		rel = filepath.ToSlash(rel)
+		raw, readErr := os.ReadFile(path)
+		if readErr != nil {
+			return "", fmt.Errorf("policy pack %q: %w", rel, readErr)
+		}
+		pack, parseErr := parsePack(rel, raw, knownTools)
+		if parseErr != nil {
+			return "", parseErr
+		}
+		if _, dup := packsByName[pack.Name]; dup {
+			return "", fmt.Errorf("two packs declare the same name %q; dependency edges would be ambiguous", pack.Name)
+		}
+		packsByName[pack.Name] = pack
+	}
+	exceptions, excErr := loadExceptions(dir)
+	if excErr != nil {
+		return "", excErr
+	}
+	resolved, resolveErr := resolvePolicyPrecedence(packsByName, exceptions, time.Now())
+	if resolveErr != nil {
+		return "", resolveErr
+	}
+	return resolved.Digest, nil
 }
 
 // matchLockKey resolves the lock-record key for a pack path relative to the
@@ -515,7 +650,7 @@ func readLockFile(path string) (*lockFile, error) {
 // packFields and ruleFields mirror the schema the CI gate enforces (R07-4.3.2).
 // They are duplicated rather than shared because the gate is a Python script;
 // the two are kept in step by the pack schema test.
-var packFields = map[string]bool{"pack": true, "version": true, "rules": true, "seed": true, "depends_on": true}
+var packFields = map[string]bool{"pack": true, "version": true, "tier": true, "rules": true, "seed": true, "depends_on": true}
 
 var ruleFields = map[string]bool{
 	"id": true, "law": true, "enforcement": true, "tool": true,
@@ -557,6 +692,18 @@ func parsePack(rel string, raw []byte, knownTools map[string]bool) (*Pack, error
 	}
 	if !semverPattern(pack.Version) {
 		return nil, fmt.Errorf("policy pack %q version %q is not MAJOR.MINOR.PATCH", rel, pack.Version)
+	}
+	// R07-4.2.1 — the tier is declared, and the declaration is checked against
+	// the name. A path prefix is a filing convention an author can get wrong
+	// silently; requiring both to agree means a pack cannot be promoted or
+	// demoted by moving a file, and a reviewer sees the precedence claim in the
+	// diff rather than inferring it from a directory.
+	if _, ok := tierRank[pack.Tier]; !ok {
+		return nil, fmt.Errorf("policy pack %q declares tier %q; want one of core, domain, overlay (R07-4.2.1)", rel, pack.Tier)
+	}
+	prefix := strings.SplitN(expected, "/", 2)[0]
+	if pack.Tier != prefix {
+		return nil, fmt.Errorf("policy pack %q declares tier %q but its path implies %q (R07-4.2.1)", rel, pack.Tier, prefix)
 	}
 	if len(pack.Rules) == 0 && !pack.Seed {
 		return nil, fmt.Errorf("policy pack %q has no rules and is not marked 'seed': true (R07-4.2.4)", rel)
