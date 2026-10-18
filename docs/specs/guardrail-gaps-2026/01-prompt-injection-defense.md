@@ -1,9 +1,14 @@
 # OpenSpec: Prompt Injection Defense
 
-> **This is a proposal, not a description of the system.** The library code
-> largely exists in `mcp-server/internal/guardrails/injection_detection*.go`
-> but is unreachable from any MCP tool — neither proposed tool exists, and
-> the pipeline is constructed with a no-op classifier. See
+> **Status: tools IMPLEMENTED 2026-10-18; detection is L1-only by default.**
+> Both tools proposed by this spec now exist and are dispatched:
+> `guardrail_detect_injection` and `guardrail_scan_text_batch`
+> (`mcp-server/internal/mcp/tools_guardrails.go`, dispatched from
+> `server.go`, registered by `guardrailsToolList()`). The shipped default
+> pipeline now compiles the built-in L1 pattern set, so a scan actually
+> evaluates input instead of returning `safe:true` vacuously. L2 perplexity
+> stays off by default, L3 remains a no-op classifier unless an Ollama
+> classifier is wired, and L4 is not implemented — see
 > [STATUS.md](STATUS.md) for the requirement-by-requirement position.
 
 **Gap:** Critical — No native defense against prompt injection attacks

@@ -112,6 +112,17 @@ func (e *Engine) SetClassifier(classifier InjectionClassifier) {
 	}
 }
 
+// SetInjectionAuditLogger replaces the sink that records injection decisions.
+// It exists so a deployment (or a test) can route the audit trail somewhere
+// other than the process logger without rebuilding the pipeline.
+func (e *Engine) SetInjectionAuditLogger(logger AuditLogger) {
+	if e.pipeline != nil {
+		e.pipeline.mu.Lock()
+		e.pipeline.auditLogger = logger
+		e.pipeline.mu.Unlock()
+	}
+}
+
 // AddContentFilterBackend adds a semantic classification backend.
 func (e *Engine) AddContentFilterBackend(backend SemanticClassifier) {
 	if e.filter != nil {
@@ -271,6 +282,25 @@ func (e *Engine) DetectInjection(ctx context.Context, text string, source Source
 		return InjectionResult{Safe: true, Decision: string(FailPolicyLogOnly)}
 	}
 	return e.pipeline.Detect(ctx, text, source)
+}
+
+// DetectInjectionBatch is a convenience method for injection-only batch
+// detection. An unconfigured pipeline reports each item as NOT evaluated
+// (safe=false, layer "none") rather than safe: an absent detector must never
+// present input as vetted.
+func (e *Engine) DetectInjectionBatch(ctx context.Context, items []BatchItem) BatchResult {
+	if e.pipeline == nil {
+		out := BatchResult{Results: make([]BatchItemResult, len(items))}
+		for i, item := range items {
+			out.Results[i] = BatchItemResult{
+				ID:     item.ID,
+				Safe:   false,
+				Reason: "injection detection not configured",
+			}
+		}
+		return out
+	}
+	return e.pipeline.DetectBatch(ctx, items)
 }
 
 // ClassifyContent is a convenience method for content-only classification.

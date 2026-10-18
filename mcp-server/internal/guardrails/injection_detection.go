@@ -12,6 +12,7 @@ package guardrails
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -99,6 +100,31 @@ type AuditEvent struct {
 	ToolCallID string   `json:"tool_call_id,omitempty"`
 }
 
+// auditAttribution carries the calling tool and request identity into an audit
+// event. Spec 01 declares SourceTool and ToolCallID on the event, but nothing
+// populated them, so an audit record could not be tied to the tool call that
+// produced it. Attribution travels on the context rather than the pipeline so
+// the pipeline stays safe for concurrent calls from different tools.
+type auditAttribution struct {
+	sourceTool string
+	toolCallID string
+}
+
+type auditAttributionKey struct{}
+
+// WithAuditAttribution returns a context carrying the tool identity that the
+// injection audit logger records. Empty values are ignored, so a caller that
+// has no tool context (library use) is unaffected.
+func WithAuditAttribution(ctx context.Context, sourceTool, toolCallID string) context.Context {
+	if sourceTool == "" && toolCallID == "" {
+		return ctx
+	}
+	return context.WithValue(ctx, auditAttributionKey{}, auditAttribution{
+		sourceTool: sourceTool,
+		toolCallID: toolCallID,
+	})
+}
+
 // InjectionClassifier defines the contract for L3 classifier backends.
 type InjectionClassifier interface {
 	Name() string
@@ -139,13 +165,21 @@ type PipelineConfig struct {
 }
 
 // DefaultPipelineConfig returns a safe default for the injection pipeline.
+//
+// L1 pattern matching is enabled AND carries the built-in pattern set. It is
+// not enough for L1 to be enabled: an enabled matcher with no patterns
+// compiles to an empty list, Match never fires, and Detect returns Safe=true
+// for text that was never evaluated. The default therefore seeds the patterns
+// declared by DefaultPatterns (Spec 01 Sec. 3.3 categories) so the shipped
+// configuration actually evaluates input.
 func DefaultPipelineConfig() PipelineConfig {
 	return PipelineConfig{
 		Enabled:    true,
 		FailPolicy: FailPolicyBlock,
 		Layers: LayersConfig{
 			PatternMatching: PatternMatchingConfig{
-				Enabled: true,
+				Enabled:        true,
+				CustomPatterns: DefaultPatternList(),
 			},
 			Perplexity: PerplexityConfig{
 				Enabled:   false,
@@ -163,6 +197,24 @@ func DefaultPipelineConfig() PipelineConfig {
 			SourceAPIResponse: FailPolicyBlock,
 		},
 	}
+}
+
+// DefaultPatternList returns the built-in injection patterns as a stable,
+// deterministically ordered slice. The order is sorted by category name so a
+// configuration diff is reproducible rather than map-iteration dependent.
+func DefaultPatternList() []string {
+	patterns := DefaultPatterns()
+	categories := make([]string, 0, len(patterns))
+	for category := range patterns {
+		categories = append(categories, category)
+	}
+	sort.Strings(categories)
+
+	out := make([]string, 0, len(patterns))
+	for _, category := range categories {
+		out = append(out, patterns[category])
+	}
+	return out
 }
 
 // LayersConfig configures individual detection layers.
@@ -361,10 +413,15 @@ func (p *Pipeline) ReloadPatterns() error {
 }
 
 func (p *Pipeline) logAudit(ctx context.Context, result InjectionResult, source Source) {
-	if p.auditLogger == nil {
+	// Read the sink under the lock: SetInjectionAuditLogger replaces it at
+	// runtime, and an unsynchronised read races that write.
+	p.mu.RLock()
+	logger := p.auditLogger
+	p.mu.RUnlock()
+	if logger == nil {
 		return
 	}
-	p.auditLogger.LogInjection(ctx, AuditEvent{
+	event := AuditEvent{
 		Event:      "injection_detected",
 		Timestamp:  result.ProcessedAt.Format(time.RFC3339),
 		Source:     string(source),
@@ -374,5 +431,10 @@ func (p *Pipeline) logAudit(ctx context.Context, result InjectionResult, source 
 		Categories: result.Categories,
 		TextHash:   result.TextHash,
 		Decision:   result.Decision,
-	})
+	}
+	if attr, ok := ctx.Value(auditAttributionKey{}).(auditAttribution); ok {
+		event.SourceTool = attr.sourceTool
+		event.ToolCallID = attr.toolCallID
+	}
+	logger.LogInjection(ctx, event)
 }

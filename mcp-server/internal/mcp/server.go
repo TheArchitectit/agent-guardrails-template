@@ -424,6 +424,10 @@ func (s *MCPServer) dispatchToolCall(ctx context.Context, name string, args map[
 		return s.handleClassifyContent(ctx, args)
 	case "guardrail_check_policy":
 		return s.handleCheckPolicy(ctx, args)
+	case "guardrail_detect_injection":
+		return s.handleDetectInjection(ctx, args)
+	case "guardrail_scan_text_batch":
+		return s.handleScanTextBatch(ctx, args)
 	// Webhook notification tools
 	case "configure_webhook":
 		return s.handleConfigureWebhook(ctx, args)

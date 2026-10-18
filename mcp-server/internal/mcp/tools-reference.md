@@ -10,15 +10,17 @@ An earlier version of this document described `guardrail_detect_injection`,
 `guardrail_check_provenance`, `guardrail_generate_compliance_report`,
 `guardrail_check_compliance` and `guardrail_collect_evidence`.
 
-None of those names appear in any `.go` file in this repository, and none is
+At the time, none of those names appeared in any `.go` file and none was
 registered in `toolList()` (`tools_registry.go`) or dispatched from
-`server.go`. The library code behind some of them does exist but is not
-exposed — for example the injection-detection pipeline in
-`internal/guardrails/injection_detection.go` and the sandbox in
-`internal/guardrails/sandbox.go` are fully built libraries with no MCP tool
-in front of them. The "Error Cases" section was likewise invented: the real
-handlers return `{"error": "..."}` payloads, not the symbolic codes it
-listed.
+`server.go`.
+
+**Update (Spec 01 gap, 2026-10-18):** two of the thirteen now exist for real.
+`guardrail_detect_injection` and `guardrail_scan_text_batch` are registered in
+`guardrailsToolList()`, dispatched from the `server.go` switch, and backed by
+the `internal/guardrails` injection pipeline (L1 pattern matching). The other
+eleven remain absent from the request path. The list above is therefore no
+longer uniformly false — verify each name with the commands below rather than
+trusting either the old list or this note.
 
 Because this file sat inside the Go package, it read as authoritative to
 anyone working in `mcp-server/` — including coding agents. It has been

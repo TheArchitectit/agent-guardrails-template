@@ -1,7 +1,8 @@
 # Guardrail Gaps 2026 — Spec vs Shipped Code
 
 **Status: reconciliation, 2026-10-03; wave-0 release-gating fixes reconciled
-2026-10-09.** This page supersedes the `Status: Draft` labels on the six specs.
+2026-10-09; Spec 01 injection tools implemented 2026-10-18.** This page
+supersedes the `Status: Draft` labels on the six specs.
 
 The six specs in this directory are **proposals written before the reboot**,
 not descriptions of the system. Since then a Go rewrite implemented much of
@@ -10,14 +11,15 @@ what actually exists and what can actually be called.
 
 ## The headline finding
 
-**Of the 13 MCP tools these specs propose, exactly 2 exist.** Verified by
-grepping every `.go` file in the repository — the other 11 names appear
-nowhere outside the specs themselves.
+**Of the 15 MCP tools these specs propose or name, exactly 4 exist.** Verified
+by grepping every `.go` file in the repository. As of 2026-10-18 that count
+includes the two Spec 01 injection tools, which were added in this pass — the
+other 11 names still appear nowhere outside the specs themselves.
 
 | Proposed tool | Spec | Exists? |
 |---------------|------|---------|
-| `guardrail_detect_injection` | 01 | **No** |
-| `guardrail_scan_text_batch` | 01 | **No** |
+| `guardrail_detect_injection` | 01 | **Yes (2026-10-18)** |
+| `guardrail_scan_text_batch` | 01 | **Yes (2026-10-18)** |
 | `guardrail_sandbox_execute` | 03 | **No** |
 | `guardrail_sandbox_config` | 03 | **No** |
 | `guardrail_validate_agent_output` | 04 | **No** |
@@ -35,22 +37,31 @@ nowhere outside the specs themselves.
 ## The second finding: "library exists" ≠ "shipped"
 
 Several subsystems are fully written, well-tested, and **unreachable from
-any MCP tool**. Across the whole `internal/mcp` package only two methods are
-ever called on the guardrails engine:
+any MCP tool**. As of 2026-10-18 the `internal/mcp` package calls exactly five
+methods on the guardrails engine:
 
 ```
-tools_guardrails.go:77   s.guardrailsEngine.ClassifyContent(...)
-tools_guardrails.go:107  s.guardrailsEngine.ClassifyContent(...)
-tools_guardrails.go:112  s.guardrailsEngine.CheckPolicy(...)
+tools_guardrails.go:136  s.guardrailsEngine.ClassifyContent(...)      // classify_content
+tools_guardrails.go:168  s.guardrailsEngine.ClassifyContent(...)      // check_policy, pre-check
+tools_guardrails.go:173  s.guardrailsEngine.CheckPolicy(...)          // check_policy
+tools_guardrails.go:239  s.guardrailsEngine.DetectInjection(...)      // detect_injection (new)
+tools_guardrails.go:325  s.guardrailsEngine.DetectInjectionBatch(...) // scan_text_batch (new)
 ```
 
-So the injection pipeline, the sandbox manager, the provenance tracker, the
-multi-agent safety chains and the compliance mapper are all constructed at
-startup and then never called. Worse, the engine itself only exists when
-`OLLAMA_URL` is set (`cmd/server/main.go:151`); otherwise both content tools
-return `"guardrails engine not configured"`.
+The sandbox manager, the provenance tracker, the multi-agent safety chains and
+the compliance mapper remain constructed at startup and never called. The
+injection pipeline is no longer in that list: it now has two tools in front of
+it, and those tools are what this pass added.
 
-Honest status wording for these: **code complete, not wired to the request
+The engine is also no longer conditional. It was previously built only when
+`OLLAMA_URL` or `OPENAI_API_KEY` was set (`cmd/server/main.go`), so a
+deployment with no LLM had no injection detection at all and both content
+tools returned `"guardrails engine not configured"`. It is now constructed
+unconditionally; the semantic content-filter backends are still added only
+when configured, and with none configured that filter fails closed rather than
+reporting content safe.
+
+Honest status wording for the rest: **code complete, not wired to the request
 path.**
 
 ## Spec-by-spec
@@ -59,27 +70,34 @@ path.**
 
 | Requirement | Status |
 |-------------|--------|
-| `guardrail_detect_injection` tool | Not implemented |
-| `guardrail_scan_text_batch` tool | Not implemented (`DetectBatch` exists as a library method) |
-| L1 pattern matching | Implemented (`injection_detection_patterns.go`), unwired |
+| `guardrail_detect_injection` tool | **Implemented 2026-10-18** — registered in `guardrailsToolList()`, dispatched from `server.go`, handler `handleDetectInjection` |
+| `guardrail_scan_text_batch` tool | **Implemented 2026-10-18** — `handleScanTextBatch` drives `Engine.DetectInjectionBatch`; bounded to 256 items, rejects duplicate ids / missing text / unknown source rather than dropping an item |
+| L1 pattern matching | **Implemented and WIRED** — the shipped `DefaultPipelineConfig` now compiles the built-in `DefaultPatterns()` set; before this pass L1 was "enabled" with zero patterns compiled, so every scan returned `safe:true` without evaluating |
 | L2 perplexity | Partial — analyser exists, **disabled by default** |
-| L3 classifier backend | Dead — `NewEngine` wires `NoOpClassifier{}`, which always returns safe |
+| L3 classifier backend | Still `NoOpClassifier{}` by default (always returns safe); replaceable via `SetClassifier` |
 | L4 LLM self-check | Not implemented (config struct exists, never run) |
-| Config keys | **Shape mismatch** — shipped config is flat (`l1_enabled`, `l2_enabled`), spec describes a nested `layers:` block |
-| Blocklist files | `config/blocklists/` does not exist |
-| Audit trail | Partial — slog only; `SourceTool`/`ToolCallID` declared but never populated |
+| Config keys | **Shape mismatch** — shipped config is flat (`l1_enabled`, `l2_enabled`), spec describes a nested `layers:` block. Unchanged by this pass |
+| Blocklist files | `config/blocklists/` does not exist; `BlocklistPaths` is honoured when set but empty by default |
+| Audit trail | **SourceTool/ToolCallID now populated** — `WithAuditAttribution` carries the calling tool and the caller's provenance label onto the event; the text is recorded as a SHA-256 hash, never plaintext |
 
-`Engine.Evaluate`, the only caller of the pipeline, is called exclusively
-from tests.
+The engine is now constructed **unconditionally** in `cmd/server/main.go`. It
+was previously built only when `OLLAMA_URL` or `OPENAI_API_KEY` was set, which
+meant every deployment without an LLM had no injection detection at all — even
+though L1 needs no model. The optional semantic backends are still added only
+when configured; with none configured the content filter fails closed.
 
-**Wiring finding (2026-10-09, unresolved — needs a product decision, not a
-mechanical wire).** Confirmed by grep over non-test `.go`: `Engine.Evaluate`
-(`engine.go:159`) has **zero non-test callers**; the other `.Evaluate`
-references are unrelated (`PolicyEngine`, `Registry`, and the
-`bash`/`git`/`fileedit` slice evaluators). `NewEngine` is constructed only in
-`cmd/server/main.go:152`, and the engine reaches the MCP server only via
-`SetGuardrailsEngine` (`main.go:158`); the two shipped tools then call only
-`ClassifyContent`/`CheckPolicy`. Why this cannot be wired mechanically:
+`Engine.Evaluate`, the full pipeline entry point, is still called only from
+tests. The injection tools call `DetectInjection`/`DetectInjectionBatch`
+directly rather than routing through `Evaluate`, deliberately: `Evaluate` also
+*executes commands* through the SandboxManager when `input.Command` is set, so
+routing a text-classification tool through it would start process execution
+from the MCP path. That layering decision is unchanged and still open.
+
+**Wiring finding (2026-10-09; injection half RESOLVED 2026-10-18).**
+`Engine.Evaluate` — the *full* pipeline entry point — still has **zero
+non-test callers**; the other `.Evaluate` references are unrelated
+(`PolicyEngine`, `Registry`, and the `bash`/`git`/`fileedit` slice evaluators).
+That remains deliberate, not an oversight:
 1. **Cross-package integration.** `internal/mcp` never imports
    `internal/domain`; `Engine.Evaluate` also *executes commands* via the
    `SandboxManager` when `input.Command != ""` (real exec), so routing a
@@ -91,10 +109,15 @@ references are unrelated (`PolicyEngine`, `Registry`, and the
    `Evaluate` for a text-only tool would not run sandbox checks anyway.
 3. **Product decision.** Whether `guardrail_classify_content` should become a
    *full* pipeline evaluation (injection + provenance + sandbox) or stay a
-   content-only classifier is a contract change for an operator.
+   content-only classifier is a contract change for an operator. **Still open.**
 
-Until that decision the honest status is unchanged: **code complete, not
-wired to the request path.**
+**What changed:** the injection half did not need `Evaluate`. The engine
+exposes `DetectInjection`/`DetectInjectionBatch` — injection-only, no
+sandbox, no process execution — and the two Spec 01 tools call those directly.
+So the *detector* is now wired to the request path without crossing the
+layering boundary. The full-pipeline question in point 3 is unaffected and
+still needs an operator decision before `guardrail_classify_content` gains
+provenance/sandbox behaviour.
 
 ### 02 — Semantic content filtering
 

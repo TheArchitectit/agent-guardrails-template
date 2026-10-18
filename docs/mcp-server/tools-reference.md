@@ -68,6 +68,8 @@ and policy behaviour.
 | `guardrail_check_halt_conditions` | Does this need a human? | `session_token`, `context`, `task_id` |
 | `guardrail_record_halt` | Record a halt event | `session_token`, `halt_type`, `description`, `severity` |
 | `guardrail_acknowledge_halt` | Acknowledge and resume | `session_token`, `halt_id`, `resolution` |
+| `guardrail_detect_injection` | Prompt-injection scan (Spec 01) | `text`, `source`, `context` |
+| `guardrail_scan_text_batch` | Batch injection scan | `texts[]` |
 | `guardrail_classify_content` | S1–S15 taxonomy classification | `text`, `direction` |
 | `guardrail_check_policy` | Check against a named policy | `text`, `policy_id` |
 | `guardrail_install_skills` | Install skill configs | `action`, `platforms`, `mode`, `dry_run` |
