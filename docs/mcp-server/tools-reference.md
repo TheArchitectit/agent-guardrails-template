@@ -1,13 +1,17 @@
 # MCP Tools Reference
 
-The guardrails MCP server registers **37 core tools**, dispatched from the
-switch in `mcp-server/internal/mcp/server.go:163-270` and defined by
+The guardrails MCP server registers **39 core tools**, dispatched from the
+switch in `mcp-server/internal/mcp/server.go:352-468` and defined by
 `toolList()` in `tools_registry.go`.
 
-A further **21 tools** are registered only when their backing store is
-initialised — 6 vision, 5 webhook, 5 budget, 5 agent-lifecycle. So a
-deployment exposes between 37 and 58 tools depending on configuration; see
+A further **22 tools** are registered only when their backing store is
+initialised — 6 vision, 6 webhook, 5 budget, 5 agent-lifecycle. So a
+deployment exposes between 39 and 61 tools depending on configuration; see
 [Conditionally registered tools](tools/conditional-and-integrations.md).
+
+The counts above are checked against source by `scripts/check_tool_count.py`
+(F001) on every push, so a tool added to a registry fails CI until these
+numbers agree.
 
 This page is the index; the detail pages carry per-tool parameters, outputs
 and policy behaviour.

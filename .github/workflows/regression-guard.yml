@@ -73,6 +73,16 @@ jobs:
           python scripts/check_python_tests.py --repo .
           python scripts/test_check_python_tests.py
 
+      - name: Tool manifest counts (F001)
+        run: |
+          # F001: documented tool counts must equal the registries in source.
+          # The previous form of this gate matched one prose phrase; a doc
+          # rewrite made it match nothing and it exited 0 while the counts
+          # were wrong. This one counts from the Go registries and treats a
+          # claim site that stops matching as a FAILURE, not a skip.
+          python scripts/check_tool_count.py --repo .
+          python scripts/test_check_tool_count.py
+
       - name: Run Regression Check
         id: regression_check
         run: |

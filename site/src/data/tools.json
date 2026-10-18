@@ -1,5 +1,5 @@
 {
-  "count": 37,
+  "count": 39,
   "tools": [
     "guardrail_acknowledge_halt",
     "guardrail_advisor_list",
@@ -10,6 +10,7 @@
     "guardrail_check_uncertainty",
     "guardrail_classify_content",
     "guardrail_detect_feature_creep",
+    "guardrail_detect_injection",
     "guardrail_get_context",
     "guardrail_init_session",
     "guardrail_install_skills",
@@ -20,6 +21,7 @@
     "guardrail_record_file_read",
     "guardrail_record_halt",
     "guardrail_reset_attempts",
+    "guardrail_scan_text_batch",
     "guardrail_team_assign",
     "guardrail_team_config_get",
     "guardrail_team_config_update",

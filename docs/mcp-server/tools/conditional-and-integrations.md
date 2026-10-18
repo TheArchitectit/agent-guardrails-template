@@ -1,17 +1,17 @@
 # Conditionally Registered and Integration Tools
 
-21 tools registered **only when their backing store is initialised**. A
-default deployment exposes the 37 core tools; a fully wired deployment
-exposes 58. `toolList()` in `tools_registry.go` governs the gating.
+22 tools registered **only when their backing store is initialised**. A
+default deployment exposes the 39 core tools; a fully wired deployment
+exposes 61. `toolList()` in `tools_registry.go` governs the gating.
 
 | Group | Count | Registered when | Dispatch route |
 |-------|-------|-----------------|----------------|
 | Vision | 6 | `s.visionTools != nil` **and** `VISION_ENABLED=true` | Vision sub-router |
-| Webhooks | 5 | `s.webhookStore != nil` | Main switch, `server.go:239-248` |
-| Budgets | 5 | `s.budgetStore != nil` | Main switch, `server.go:250-259` |
-| Agent lifecycle | 5 | `s.agentStateStore != nil` | Main switch, `server.go:261-270` |
+| Webhooks | 6 | `s.webhookStore != nil` | Main switch, `server.go:432-443` |
+| Budgets | 5 | `s.budgetStore != nil` | Main switch, `server.go:445-454` |
+| Agent lifecycle | 5 | `s.agentStateStore != nil` | Main switch, `server.go:456-465` |
 
-All 21 are reachable — none are registered-but-dead.
+All 22 are reachable — none are registered-but-dead.
 
 > **Vision routing differs from everything else.** `setupHandlers`
 > (`server.go:147-152`) tries `s.visionTools.dispatch` *first* on every call
