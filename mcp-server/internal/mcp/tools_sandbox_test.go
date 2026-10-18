@@ -233,20 +233,28 @@ func TestSandboxExecuteRefusesWideningOverrides(t *testing.T) {
 		})
 	}
 
-	// Positive control: a NARROWING override is legal and must reach
-	// execution. Without this, the assertions above could pass against a tool
-	// that refused every override for the wrong reason.
+	// Positive control: a NARROWING override must get PAST the override layer.
+	// Without this, the assertions above could pass against a tool that refused
+	// every override for the wrong reason.
+	//
+	// It is asserted at the override layer, not at execution: on a host where
+	// namespace creation is unavailable the isolation floor now correctly
+	// refuses to run the command at all, so "did it execute?" is not a
+	// statement about the override. What must hold everywhere is that the
+	// narrowing value is accepted rather than refused.
+	if _, err := guardrails.NarrowLimits(base, guardrails.LimitOverrides{MaxMB: base.Memory.MaxMB - 1}); err != nil {
+		t.Fatalf("a narrowing override was refused by the limit layer: %v", err)
+	}
 	_, narrowed := callSandboxTool(t, s, "guardrail_sandbox_execute", map[string]any{
 		"command":         "true",
 		"tool_type":       "bash",
 		"resource_limits": map[string]any{"max_mb": base.Memory.MaxMB - 1},
 	})
-	if msg, _ := narrowed["error"].(string); strings.Contains(msg, "max_mb") {
-		t.Fatalf("a narrowing override was refused: %v", narrowed)
+	if msg, _ := narrowed["error"].(string); strings.Contains(msg, "exceeds") {
+		t.Fatalf("a narrowing override was refused by the handler: %v", narrowed)
 	}
-	if _, reached := narrowed["actual_isolation_level"]; !reached {
-		t.Fatalf("a narrowing override did not reach execution: %v", narrowed)
-	}
+	// Whether it then ran or was floored is environment-dependent and is
+	// asserted by TestSandboxExecuteFloorsAtL1 instead.
 }
 
 func TestEffectiveLevelRaisesButNeverLowers(t *testing.T) {
@@ -339,43 +347,100 @@ func TestSandboxToolsFailClosedWithoutEngine(t *testing.T) {
 	}
 }
 
-// TestSandboxIsolationFailureDoesNotExecuteOnHost is the load-bearing test.
+// TestSandboxNeverReportsLessThanThePolicyLevel is the load-bearing test, and
+// it is written as an INVARIANT rather than as a proof about one machine.
 //
-// In an environment where namespace setup is unavailable (no user namespaces,
-// no container runtime) the sandbox must fail closed, not fall back to running
-// the command on the host. The marker file is the proof: if the isolation
-// attempt degraded to host execution, the file exists.
+// The first version of this test touched a marker file and asserted its absence,
+// on the theory that host execution would create it. That premise was wrong and
+// CI proved it: L1 uses a PID/mount/net/uts namespace but shares the filesystem,
+// so the marker appears whether the command ran isolated or not. The test failed
+// on a runner that HAS user namespaces — not because isolation broke, but
+// because the assertion could not distinguish the two outcomes it claimed to.
 //
-// This runs the REAL L1 path through the REAL handler. Where the environment
-// supports unshare the command runs isolated and the marker also does not
-// exist — so the assertion holds either way, and the second half of the check
-// distinguishes the two outcomes rather than assuming one.
-func TestSandboxIsolationFailureDoesNotExecuteOnHost(t *testing.T) {
+// The property that actually matters is narrower and checkable everywhere: for a
+// tool whose policy declares L1, a successful result must never report a level
+// below L1. A result claiming L0 for such a tool means the command ran on the
+// host, whatever the filesystem looks like.
+func TestSandboxNeverReportsLessThanThePolicyLevel(t *testing.T) {
 	s := newSandboxServer(t)
 
-	dir := t.TempDir()
-	marker := filepath.Join(dir, "executed")
-
-	// The policy's writable set must contain the directory for the mount to be
-	// legal at L1; L1 does not enforce mounts, so this is about intent.
 	res, payload := callSandboxTool(t, s, "guardrail_sandbox_execute", map[string]any{
-		"command":   "touch " + marker,
+		"command":   "true",
 		"tool_type": "bash",
 	})
 
-	_, statErr := os.Stat(marker)
-	isolated := statErr != nil
+	level, _ := payload["actual_isolation_level"].(string)
+	t.Logf("sandbox outcome: isError=%v actual_level=%q error=%v",
+		res.IsError, level, payload["error"])
 
-	if !isolated {
-		t.Fatal("the command executed on the host outside the declared isolation")
+	if level != "" && guardrails.LevelRank(guardrails.SandboxLevel(level)) < guardrails.LevelRank(guardrails.LevelL1) {
+		t.Fatalf("result reports isolation %q for a policy that declares L1 — the command ran on the host", level)
 	}
+	// If it failed, it must have failed with an error rather than silently
+	// returning an empty shell of a result.
+	if res.IsError {
+		if msg, _ := payload["error"].(string); msg == "" {
+			t.Fatalf("failed sandbox execution carried no error: %v", payload)
+		}
+	}
+}
+
+// TestSandboxFallbackFloorIsEnforced is the security property, tested as the
+// PURE function that decides it, so it holds identically on a runner with user
+// namespaces and one without.
+//
+// The shipped fallback chain degrades L2 -> L1 -> L0 on setup errors, and L0 is
+// direct host execution. For guardrail_sandbox_execute that is a fail-open: an
+// environment without user namespaces would run the command on the host and hand
+// the caller a result. ExecuteWithFloor(L1) stops the chain instead.
+func TestSandboxFallbackFloorIsEnforced(t *testing.T) {
+	cases := []struct {
+		from, floor guardrails.SandboxLevel
+		want        bool
+	}{
+		// Falling from L1 to L0 crosses an L1 floor: refused.
+		{guardrails.LevelL1, guardrails.LevelL1, true},
+		// Falling from L2 to L1 does NOT cross an L1 floor: allowed.
+		{guardrails.LevelL2, guardrails.LevelL1, false},
+		// No floor: the historical behaviour is unchanged.
+		{guardrails.LevelL1, guardrails.LevelL0, false},
+		{guardrails.LevelL2, guardrails.LevelL0, false},
+		// An L2 floor refuses both rungs.
+		{guardrails.LevelL2, guardrails.LevelL2, true},
+		// L0 has no further fallback.
+		{guardrails.LevelL0, guardrails.LevelL1, false},
+	}
+	for _, tc := range cases {
+		if got := guardrails.WouldRunBelowFloor(tc.from, tc.floor); got != tc.want {
+			t.Errorf("WouldRunBelowFloor(%s, floor=%s) = %v, want %v", tc.from, tc.floor, got, tc.want)
+		}
+	}
+}
+
+// TestSandboxExecuteFloorsAtL1 proves the tool path actually passes the floor,
+// by driving the real handler in this environment. Where namespaces are
+// unavailable the call must fail rather than degrade; where they are available it
+// must succeed at L1 or better. Both are acceptable; L0 is not.
+func TestSandboxExecuteFloorsAtL1(t *testing.T) {
+	s := newSandboxServer(t)
+	res, payload := callSandboxTool(t, s, "guardrail_sandbox_execute", map[string]any{
+		"command":   "true",
+		"tool_type": "bash",
+	})
 
 	level, _ := payload["actual_isolation_level"].(string)
-	if !res.IsError && level == string(guardrails.LevelL0) {
-		t.Fatal("a successful result reported L0 for a tool whose policy declares L1")
+	if level == string(guardrails.LevelL0) {
+		t.Fatalf("command executed at L0 through a tool that must floor at L1: %v", payload)
 	}
-	t.Logf("sandbox outcome: isError=%v actual_level=%q violations=%v",
-		res.IsError, level, payload["sandbox_violations"])
+	if res.IsError {
+		// Acceptable only as a refusal: it must say so.
+		if msg, _ := payload["error"].(string); msg == "" {
+			t.Fatalf("failed execution had no error: %v", payload)
+		}
+		if level != "" {
+			t.Fatalf("refusal reported an isolation level, implying it ran: %v", payload)
+		}
+	}
 }
 
 func TestSortedPolicyNamesIsDeterministic(t *testing.T) {

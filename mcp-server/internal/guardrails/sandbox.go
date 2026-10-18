@@ -84,6 +84,33 @@ func isSetupError(err error) bool {
 	return false
 }
 
+// nextFallbackLevel returns the level the fallback chain would try after
+// failing at the given level, and whether a fallback exists at all.
+//
+// Pure and exported-by-test so the downgrade ladder can be asserted without
+// executing anything: the security property (never below L1 for an isolating
+// caller) must be provable on a runner that HAS user namespaces and on one
+// that does not, and a test that shells out proves a different thing on each.
+func nextFallbackLevel(from SandboxLevel) (SandboxLevel, bool) {
+	switch from {
+	case LevelL2:
+		return LevelL1, true
+	case LevelL1:
+		return LevelL0, true
+	}
+	return from, false
+}
+
+// WouldRunBelowFloor reports whether a setup failure at `from` would make the
+// chain execute below `floor`. True means the command would run on the host.
+func WouldRunBelowFloor(from, floor SandboxLevel) bool {
+	next, ok := nextFallbackLevel(from)
+	if !ok {
+		return false
+	}
+	return LevelRank(next) < LevelRank(floor)
+}
+
 // Execute runs the given command under the appropriate isolation level and
 // resource limits.
 //
@@ -99,6 +126,25 @@ func isSetupError(err error) bool {
 // was then denied (permission denied, exit 125/126 from a started container,
 // etc.) is treated as a security rejection and fails closed.
 func (m *SandboxManager) Execute(ctx context.Context, command string, level SandboxLevel, limits ResourceLimits) (*SandboxResult, error) {
+	return m.execute(ctx, command, level, limits, LevelL0)
+}
+
+// ExecuteWithFloor is Execute with a minimum isolation level that the fallback
+// chain may not go below.
+//
+// This is a security property, not a preference. The shipped fallback chain
+// downgrades L2 -> L1 -> L0 on setup errors, and L0 is direct host execution.
+// For the generic library that is arguably acceptable (a caller that asked for
+// L1 and got L0 is told so via ActualIsolationLvl). For a tool whose entire
+// purpose is isolation it is a fail-open: an environment without user
+// namespaces silently runs the command on the host, and the caller reads a
+// result rather than a refusal. Callers that must not reach the host pass a
+// floor of L1; below it the chain STOPS and returns the setup error.
+func (m *SandboxManager) ExecuteWithFloor(ctx context.Context, command string, level SandboxLevel, limits ResourceLimits, floor SandboxLevel) (*SandboxResult, error) {
+	return m.execute(ctx, command, level, limits, floor)
+}
+
+func (m *SandboxManager) execute(ctx context.Context, command string, level SandboxLevel, limits ResourceLimits, floor SandboxLevel) (*SandboxResult, error) {
 	start := time.Now()
 	var result *SandboxResult
 	var err error
@@ -149,17 +195,23 @@ func (m *SandboxManager) Execute(ctx context.Context, command string, level Sand
 			break
 		}
 
-		switch actualLevel {
-		case LevelL2:
-			m.logger.Warn("L2 container runtime unavailable, falling back to L1", "error", err)
-			actualLevel = LevelL1
-			continue
-		case LevelL1:
-			m.logger.Warn("L1 namespace setup unavailable, falling back to L0", "error", err)
-			actualLevel = LevelL0
-			continue
+		next, ok := nextFallbackLevel(actualLevel)
+		if !ok {
+			break
 		}
-		break
+		if LevelRank(next) < LevelRank(floor) {
+			// The fallback would cross the floor. Refusing here is the whole
+			// point: without it, an environment with no user namespaces runs
+			// the command directly on the host and hands the caller a result.
+			m.logger.Error("sandbox setup failed and the fallback would cross the isolation floor; refusing to execute",
+				"requested_level", level, "failed_level", actualLevel, "floor", floor, "error", err)
+			return nil, fmt.Errorf("%w: %s setup failed and falling back would run at %s, below the required floor %s: %v",
+				ErrSandboxViolation, actualLevel, next, floor, err)
+		}
+		m.logger.Warn("sandbox setup failed, falling back to a lower isolation level",
+			"from", actualLevel, "to", next, "error", err)
+		actualLevel = next
+		continue
 	}
 
 	if err != nil && result == nil {
@@ -234,7 +286,10 @@ func (m *SandboxManager) ExecuteFor(ctx context.Context, toolType, command strin
 			"requested_level", requestedLevel, "effective_level", effective)
 	}
 
-	return m.Execute(ctx, command, effective, limits)
+	// Floor of L1, for the same reason as ExecuteForLimits: this entry point is
+	// the policy-driven one, and a policy-driven call that silently reaches the
+	// host is the fail-open the policy table exists to prevent.
+	return m.ExecuteWithFloor(ctx, command, effective, limits, LevelL1)
 }
 
 // execL0 executes the command directly on the host.
@@ -313,7 +368,44 @@ func (m *SandboxManager) execL1(ctx context.Context, command string, limits Reso
 		ActualIsolationLvl: LevelL1,
 	}
 	m.detectViolations(result, LevelL1, limits, ctx, err)
+
+	// unshare failing to CREATE the namespace is a setup failure, not a denial
+	// of the command: the command never started. Without this, a host with
+	// user namespaces disabled produced exit 1 with unshare's own message on
+	// stderr, which isSetupError classified as "the command ran and was
+	// denied" — so the caller got a security-violation verdict about a command
+	// that had never executed, and the documented setup fallback never ran.
+	if err != nil && unshareSetupFailed(result.Stderr) {
+		return result, &sandboxSetupErr{msg: "unshare could not create the namespace: " + firstLine(result.Stderr)}
+	}
 	return result, err
+}
+
+// unshareSetupFailed reports whether stderr came from unshare itself rather
+// than from the command it was asked to run. unshare prefixes its own errors
+// with "unshare:", and the kernel's namespace-creation failures surface as
+// uid_map/gid_map writes or an explicit "Operation not permitted" from it.
+func unshareSetupFailed(stderr string) bool {
+	for _, line := range strings.Split(stderr, "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		if strings.HasPrefix(line, "unshare:") {
+			return true
+		}
+		if strings.Contains(line, "uid_map") || strings.Contains(line, "gid_map") {
+			return true
+		}
+	}
+	return false
+}
+
+func firstLine(s string) string {
+	if i := strings.IndexByte(s, '\n'); i >= 0 {
+		return strings.TrimSpace(s[:i])
+	}
+	return strings.TrimSpace(s)
 }
 
 // execL2 executes the command inside a rootless container.

@@ -303,5 +303,9 @@ func (m *SandboxManager) ExecuteForLimits(ctx context.Context, toolType, command
 			"tool_type", toolType, "policy_level", policyLevel,
 			"requested_level", requestedLevel, "effective_level", effective)
 	}
-	return m.Execute(ctx, command, effective, limits)
+	// Floor of L1: guardrail_sandbox_execute exists to isolate. The shipped
+	// fallback chain downgrades to L0 (direct host execution) on setup errors,
+	// which for this caller would be a silent fail-open — the command would run
+	// on the host and the caller would read a result instead of a refusal.
+	return m.ExecuteWithFloor(ctx, command, effective, limits, LevelL1)
 }

@@ -42,6 +42,10 @@ type sandboxResultEnvelope struct {
 	RequestedLevel     string   `json:"requested_level"`
 	ToolType           string   `json:"tool_type"`
 	ExecutionMs        int64    `json:"execution_ms"`
+	// Error carries the execution failure. Without it a failed run is
+	// distinguishable only by exit_code + stderr, and a caller that checks
+	// only for an "error" field would read a failed sandbox run as success.
+	Error string `json:"error,omitempty"`
 }
 
 func (s *MCPServer) sandboxTools() []mcp.Tool {
@@ -239,6 +243,9 @@ func (s *MCPServer) handleSandboxExecute(ctx context.Context, args map[string]an
 		RequestedLevel:     string(effective),
 		ToolType:           toolType,
 		ExecutionMs:        result.ExecutionTime.Milliseconds(),
+	}
+	if err != nil {
+		envelope.Error = err.Error()
 	}
 	// A violation is a security verdict, not a transport error, but it must
 	// not be readable as a pass by a caller that only inspects IsError.
