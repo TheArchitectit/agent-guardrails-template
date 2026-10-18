@@ -40,3 +40,15 @@ f4dd7838a98b467b1fd47be2b75f3a2259d55836:examples/regression-prevention/preventi
 94609ceb604d382c164f238b2ca1f22146451921:docs/sprints/SPRINT-A4-ci-security-gates.md:stripe-access-token:164
 94609ceb604d382c164f238b2ca1f22146451921:.gitleaksignore:stripe-access-token:23
 94609ceb604d382c164f238b2ca1f22146451921:.gitleaksignore:generic-api-key:27
+
+# --- Self-inflicted review artifacts (commit e3ff226) ---
+# The first revision of the team at-rest test embedded three freshly generated
+# 48-byte keys as Go string literals. gitleaks was right to flag them: a
+# random-looking string in source is indistinguishable from a leaked credential.
+# Key generation moved to testTeamKey() (fix-forward commit fe68b91), which
+# removes the literals from the tree. These fingerprints retire the historical
+# blob so only genuine findings stay visible. The values were minted in-session
+# as fixtures only and were never used as a credential anywhere.
+e3ff2267b9c18317bf41e4ad9bb6f58e752369f0:mcp-server/internal/config/team_encryption_test.go:generic-api-key:47
+e3ff2267b9c18317bf41e4ad9bb6f58e752369f0:mcp-server/internal/config/team_encryption_test.go:generic-api-key:59
+e3ff2267b9c18317bf41e4ad9bb6f58e752369f0:mcp-server/internal/config/team_encryption_test.go:generic-api-key:74
