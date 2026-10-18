@@ -35,6 +35,7 @@ type policyPackStatus struct {
 	EffectiveDigest string                       `json:"effective_digest,omitempty"`
 	ResolverVersion string                       `json:"resolver_version,omitempty"`
 	Packs           []guardrails.PackRecord      `json:"packs,omitempty"`
+	Dependencies    []guardrails.PackEdge        `json:"dependencies,omitempty"`
 	Rules           []guardrails.PackRule        `json:"rules,omitempty"`
 	Attribution     map[string]policyAttribution `json:"attribution,omitempty"`
 	Error           string                       `json:"error,omitempty"`
@@ -83,6 +84,10 @@ func (s *MCPServer) policyPackStatusSnapshot(err error) policyPackStatus {
 	status.EffectiveDigest = active.EffectiveDigest()
 	status.ResolverVersion = active.ResolverVersion()
 	status.Packs = active.Packs()
+	// The resolved dependency graph (R07-4.1.4) is reported from the snapshot
+	// resolution produced, never re-derived here: a surface that recomputes the
+	// graph can disagree with the set the server is enforcing.
+	status.Dependencies = active.Dependencies()
 	status.Rules = active.Rules()
 
 	attribution := map[string]policyAttribution{}

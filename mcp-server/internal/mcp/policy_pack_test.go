@@ -2,9 +2,12 @@ package mcp
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"testing"
 
@@ -188,6 +191,129 @@ func TestPolicyPackStatus_FailedCandidateIsReported(t *testing.T) {
 	}
 	if status.Error == "" {
 		t.Fatal("a failed status must carry the reason")
+	}
+}
+
+// TestPolicyPackStatus_ReportsResolvedDependencyGraph proves the dependency
+// edges resolution walked reach the MCP surface (R07-4.1.4 + R07-4.4.1).
+//
+// The checked-in tree is a single pack, so this drives a two-pack set with one
+// declared edge. Asserting only that the field exists would pass for a struct
+// field nothing populates — the "declared but unreachable" failure this program
+// keeps finding.
+func TestPolicyPackStatus_ReportsResolvedDependencyGraph(t *testing.T) {
+	dir := t.TempDir()
+	base := `{"pack":"core/base","version":"1.0.0","rules":[{"id":"B1","enforcement":"advisory","tool":"guardrail_validate_scope","on_unknown":"stop"}]}`
+	domain := `{"pack":"core/domain","version":"1.0.0","depends_on":[{"pack":"core/base","range":">=1.0.0"}],"rules":[{"id":"D1","enforcement":"advisory","tool":"guardrail_validate_commit","on_unknown":"stop"}]}`
+	writePackFixture(t, dir, "core/base", base)
+	writePackFixture(t, dir, "core/domain", domain)
+	writeLockFixture(t, dir)
+
+	s := &MCPServer{}
+	m := guardrails.NewPolicyPackManager()
+	if err := m.ActivateFrom(dir, s.RegisteredToolNames()); err != nil {
+		t.Fatalf("activate: %v", err)
+	}
+	s.SetPolicyPacks(m)
+
+	result, err := s.readPolicyPacksResource(context.Background(), "guardrail://policy-packs")
+	if err != nil {
+		t.Fatalf("read resource: %v", err)
+	}
+	content, ok := result.Contents[0].(mcp.TextResourceContents)
+	if !ok {
+		t.Fatalf("resource content is %T", result.Contents[0])
+	}
+	status := decodeStatus(t, content.Text)
+	if len(status.Dependencies) != 1 {
+		t.Fatalf("resource reported %d dependency edges, want 1: %+v", len(status.Dependencies), status.Dependencies)
+	}
+	edge := status.Dependencies[0]
+	if edge.From != "core/domain" || edge.To != "core/base" || edge.Range != ">=1.0.0" || edge.Version != "1.0.0" {
+		t.Fatalf("edge = %+v, want core/domain -> core/base ^>=1.0.0 at 1.0.0", edge)
+	}
+}
+
+// writePackFixture writes one pack file under dir/<name>.pack.json.
+func writePackFixture(t *testing.T, dir, name, body string) {
+	t.Helper()
+	path := filepath.Join(dir, name+".pack.json")
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	if err := os.WriteFile(path, []byte(body), 0o644); err != nil {
+		t.Fatalf("write pack: %v", err)
+	}
+}
+
+// writeLockFixture writes a LOCK.json in the canonical form the loader verifies:
+// a JSON array of [path, pack, version, digest, resolver_version, overlay_digest]
+// rows in path order, hashed with compact separators.
+func writeLockFixture(t *testing.T, dir string) {
+	t.Helper()
+	paths, err := filepath.Glob(filepath.Join(dir, "*.pack.json"))
+	if err != nil {
+		t.Fatalf("glob: %v", err)
+	}
+	nested, err := filepath.Glob(filepath.Join(dir, "*", "*.pack.json"))
+	if err != nil {
+		t.Fatalf("glob nested: %v", err)
+	}
+	paths = append(paths, nested...)
+	sort.Strings(paths)
+
+	type row struct{ key, pack, version, digest string }
+	rows := make([]row, 0, len(paths))
+	for _, p := range paths {
+		rel, err := filepath.Rel(dir, p)
+		if err != nil {
+			t.Fatalf("rel: %v", err)
+		}
+		rel = filepath.ToSlash(rel)
+		raw, err := os.ReadFile(p)
+		if err != nil {
+			t.Fatalf("read: %v", err)
+		}
+		var parsed struct {
+			Pack    string `json:"pack"`
+			Version string `json:"version"`
+		}
+		if err := json.Unmarshal(raw, &parsed); err != nil {
+			t.Fatalf("unmarshal: %v", err)
+		}
+		sum := sha256.Sum256(raw)
+		rows = append(rows, row{
+			key: rel, pack: parsed.Pack, version: parsed.Version,
+			digest: "sha256:" + hex.EncodeToString(sum[:]),
+		})
+	}
+
+	canonical := make([][]string, 0, len(rows))
+	packs := map[string]any{}
+	for _, r := range rows {
+		canonical = append(canonical, []string{r.key, r.pack, r.version, r.digest, "1", "none"})
+		packs[r.key] = map[string]any{
+			"pack": r.pack, "version": r.version, "digest": r.digest,
+			"resolver_version": "1", "overlay_digest": "none",
+			"resolved_at": "2026-10-18T00:00:00Z",
+		}
+	}
+	encoded, err := json.Marshal(canonical)
+	if err != nil {
+		t.Fatalf("marshal canonical: %v", err)
+	}
+	total := sha256.Sum256(encoded)
+	lock := map[string]any{
+		"resolver_version": "1",
+		"effective_digest": "sha256:" + hex.EncodeToString(total[:]),
+		"packs":            packs,
+	}
+	body, err := json.MarshalIndent(lock, "", "  ")
+	if err != nil {
+		t.Fatalf("marshal lock: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "LOCK.json"), body, 0o644); err != nil {
+		t.Fatalf("write lock: %v", err)
 	}
 }
 

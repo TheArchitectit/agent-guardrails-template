@@ -1,6 +1,6 @@
 # OpenSpec: Versioned Policy-Pack Governance
 
-**Status:** PARTIAL — the lock-record half (R07-4.1 identity/determinism, R07-4.3.2
+**Status:** PARTIAL — the lock-record half (R07-4.1 identity/determinism/dependencies, R07-4.3.2
 schema-as-data, R07-5.8 CI verification) is implemented and **enforced in CI**, and as of
 2026-10-18 there is a **runtime consumer**: the server resolves the configured pack set at
 startup, exposes its effective digest through `guardrail://policy-packs`, and can attribute
@@ -226,8 +226,25 @@ this is a deliberate one-time re-lock, not a silent break.
 
 **Still absent, and why this spec stays PARTIAL rather than CLOSED:**
 
-- **R07-4.1.4** — no inter-pack dependency graph or cycle detection: only one core pack
-ships and it declares no dependencies.
+- **R07-4.1.4 is now IMPLEMENTED (2026-10-18).** Packs declare `depends_on` entries
+(`{pack, range}`); resolution fails when a declared dependency is absent, when the resolved version is outside the
+declared range, or when the graph is cyclic — and every error names the dependency **path**
+(`core/domain -> core/base`, or `core/a -> core/b -> core/a`), because "resolution failed" is not actionable.
+Ranges are deliberately few: an exact `MAJOR.MINOR.PATCH`, or `>=`/`^`/`~` before one; empty, `*`, `latest` and
+anything else is refused rather than read as "any", since a constraint that silently widens accepts a breaking change
+with no review. Edges are **declared, never inferred** from rule or tool overlap — an inferred edge would change
+meaning whenever a rule moved. The walk runs in two places over the same rules: `resolveDependencies` in the runtime
+loader and `check_dependency_graph` in `scripts/check_policy_pack_lock.py`, whose accepted field sets are now pinned
+against the Go structs by `SchemaParityTest` — the Go source claimed a "pack schema test" kept the two in step and no
+such test existed, so the claim was made true rather than deleted. The checked-in tree remains a legal **one-node**
+graph (zero edges reported, `guardrails.PackEdge` list empty) and the same walk runs on it, so the check is not
+skipped because the tree is small. **Evidence:** 9 new Go tests (satisfied edge, absent dependency naming the path,
+cycle naming the closing path, incompatible version, six unusable range forms, self-dependency, zero-edge graph,
+`SatisfiesVersionRange` table) + the request-path test
+`TestPolicyPackStatus_ReportsResolvedDependencyGraph` reading `guardrail://policy-packs`; 10 new Python cases plus 4
+parity assertions, red-on-drift proven (disabling `check_dependency_graph` flips 6 cases; reverting `PACK_FIELDS`
+flips the parity test). A dependency graph that must include every pack would make a one-pack tree untestable, so the
+fixtures carry the edges the shipped tree does not.
 - **R07-4.2.1–R07-4.2.3** — no precedence engine and no exception ledger; there is nothing
 for a domain pack or overlay to weaken yet.
 - **R07-4.3.4** — no signature verification and no trusted-key set.

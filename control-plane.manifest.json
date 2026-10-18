@@ -9,7 +9,7 @@
     {
       "id": "policy-engine",
       "version": "1.2.0",
-      "digest": "sha256:8bc94052e3ac7cd9f80421d7466fbf97619edef169979f6df7ab7fd4a2c755bd",
+      "digest": "sha256:858af3293648638573998506f94a997b044ed1fc4d7a05783fd934699db710be",
       "source_paths": [
         "mcp-server/internal/guardrails/engine.go",
         "mcp-server/internal/guardrails/policy_pack.go"

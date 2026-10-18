@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 )
@@ -52,10 +53,42 @@ type PackRule struct {
 // Pack is one parsed policy pack. Seed marks an intentionally empty pack, which
 // R07-4.2.4 permits but forbids from being presented as domain coverage.
 type Pack struct {
-	Name    string     `json:"pack"`
-	Version string     `json:"version"`
-	Seed    bool       `json:"seed"`
-	Rules   []PackRule `json:"rules"`
+	Name      string           `json:"pack"`
+	Version   string           `json:"version"`
+	Seed      bool             `json:"seed"`
+	Rules     []PackRule       `json:"rules"`
+	DependsOn []PackDependency `json:"depends_on,omitempty"`
+}
+
+// PackDependency is one declared inter-pack dependency (Spec 07 R07-4.1.4).
+//
+// A pack states which other pack it needs and which versions of that pack it
+// accepts. Resolution fails when the dependency is absent, when its resolved
+// version is outside Range, or when the declared graph is cyclic — and every
+// error names the dependency path, because "resolution failed" without the path
+// is not a message an operator can act on.
+//
+// The edge is DECLARED in the pack, never inferred from rule or tool overlap: an
+// inferred edge would change meaning whenever a rule moved, so a policy set
+// could acquire a dependency without anyone reviewing one.
+type PackDependency struct {
+	// Pack is the declared pack name (e.g. "core/four-laws"), never a file path:
+	// the same identity the lock record and the diagnostic surface use.
+	Pack string `json:"pack"`
+	// Range constrains the dependency's declared version. The accepted forms are
+	// documented on satisfiesVersionRange; an unrecognised form is refused rather
+	// than read as "any", because a typo must not widen an accepted range.
+	Range string `json:"range"`
+}
+
+// PackEdge is one resolved dependency edge. It is reported on the diagnostic
+// surface so the graph an operator reads is the graph resolution actually
+// walked, not a restatement of the declarations.
+type PackEdge struct {
+	From    string `json:"from"`
+	To      string `json:"to"`
+	Range   string `json:"range"`
+	Version string `json:"version"`
 }
 
 // PackRecord is the lock-record entry for one pack, mirroring the field set the
@@ -86,6 +119,7 @@ type ResolvedPolicySet struct {
 	rules           []PackRule
 	ruleToPack      map[string]string
 	toolToRule      map[string]PackRule
+	edges           []PackEdge
 }
 
 // Active reports whether this snapshot came from a successful resolution.
@@ -127,6 +161,19 @@ func (r *ResolvedPolicySet) Rules() []PackRule {
 	}
 	out := make([]PackRule, len(r.rules))
 	copy(out, r.rules)
+	return out
+}
+
+// Dependencies returns the resolved dependency graph in declaration order.
+// An empty result means the set is a single node with no declared edges — the
+// truthful answer for a one-pack tree, and never a claim that edges were
+// impossible.
+func (r *ResolvedPolicySet) Dependencies() []PackEdge {
+	if r == nil {
+		return nil
+	}
+	out := make([]PackEdge, len(r.edges))
+	copy(out, r.edges)
 	return out
 }
 
@@ -254,6 +301,7 @@ func LoadPolicySet(dir string, knownTools map[string]bool) (*ResolvedPolicySet, 
 	}
 	rows := make([]PackRecord, 0, len(paths))
 	seenRuleIDs := map[string]string{}
+	packsByName := make(map[string]*Pack, len(paths))
 	// Lock-record paths are repository-root relative ("policy-packs/core/x.pack.json")
 	// while the loader walks a pack directory ("core/x.pack.json"). Match on the
 	// path suffix at a separator boundary and carry the RECORDED path forward, so
@@ -325,6 +373,10 @@ func LoadPolicySet(dir string, knownTools map[string]bool) (*ResolvedPolicySet, 
 				set.toolToRule[rule.Tool] = rule
 			}
 		}
+		if _, dup := packsByName[pack.Name]; dup {
+			return nil, fmt.Errorf("two packs declare the same name %q; dependency edges would be ambiguous", pack.Name)
+		}
+		packsByName[pack.Name] = pack
 	}
 
 	// Stale lock entries are a mismatch in the other direction: a record with no
@@ -334,6 +386,12 @@ func LoadPolicySet(dir string, knownTools map[string]bool) (*ResolvedPolicySet, 
 			return nil, fmt.Errorf("lock records %q but no such pack exists on disk", key)
 		}
 	}
+
+	edges, depErr := resolveDependencies(packsByName)
+	if depErr != nil {
+		return nil, depErr
+	}
+	set.edges = edges
 
 	sort.Slice(rows, func(i, j int) bool { return rows[i].Path < rows[j].Path })
 	set.packs = rows
@@ -457,7 +515,7 @@ func readLockFile(path string) (*lockFile, error) {
 // packFields and ruleFields mirror the schema the CI gate enforces (R07-4.3.2).
 // They are duplicated rather than shared because the gate is a Python script;
 // the two are kept in step by the pack schema test.
-var packFields = map[string]bool{"pack": true, "version": true, "rules": true, "seed": true}
+var packFields = map[string]bool{"pack": true, "version": true, "rules": true, "seed": true, "depends_on": true}
 
 var ruleFields = map[string]bool{
 	"id": true, "law": true, "enforcement": true, "tool": true,
@@ -528,6 +586,27 @@ func parsePack(rel string, raw []byte, knownTools map[string]bool) (*Pack, error
 		}
 	}
 
+	// R07-4.1.4 — declarations are validated here so a malformed edge never
+	// reaches graph resolution; existence, compatibility and cycles need the
+	// whole set and are checked in resolveDependencies.
+	seenDeps := map[string]bool{}
+	for i, dep := range pack.DependsOn {
+		at := fmt.Sprintf("policy pack %q depends_on[%d]", rel, i)
+		if strings.TrimSpace(dep.Pack) == "" {
+			return nil, fmt.Errorf("%s names no pack", at)
+		}
+		if dep.Pack == pack.Name {
+			return nil, fmt.Errorf("%s declares a dependency on itself (%q)", at, dep.Pack)
+		}
+		if seenDeps[dep.Pack] {
+			return nil, fmt.Errorf("%s declares dependency %q twice", at, dep.Pack)
+		}
+		seenDeps[dep.Pack] = true
+		if _, _, err := parseVersionRange(dep.Range); err != nil {
+			return nil, fmt.Errorf("%s on %q has an unusable range: %w", at, dep.Pack, err)
+		}
+	}
+
 	return &pack, nil
 }
 
@@ -548,4 +627,194 @@ func semverPattern(v string) bool {
 		}
 	}
 	return true
+}
+
+// semverParts splits a validated MAJOR.MINOR.PATCH into comparable integers.
+// semverPattern has already rejected anything else, so a parse failure here is
+// impossible and is reported rather than ignored.
+func semverParts(v string) ([3]int, error) {
+	var out [3]int
+	parts := strings.Split(v, ".")
+	if len(parts) != 3 {
+		return out, fmt.Errorf("%q is not MAJOR.MINOR.PATCH", v)
+	}
+	for i, part := range parts {
+		n, err := strconv.Atoi(part)
+		if err != nil {
+			return out, fmt.Errorf("%q is not numeric in %q", part, v)
+		}
+		out[i] = n
+	}
+	return out, nil
+}
+
+func compareSemver(a, b [3]int) int {
+	for i := 0; i < 3; i++ {
+		if a[i] != b[i] {
+			return a[i] - b[i]
+		}
+	}
+	return 0
+}
+
+// parseVersionRange validates a dependency range and returns its operator and
+// bound version. Syntax is checked separately from comparison so a malformed
+// range is refused at pack-parse time, before any target pack is known.
+func parseVersionRange(rng string) (string, [3]int, error) {
+	var zero [3]int
+	trimmed := strings.TrimSpace(rng)
+	if trimmed == "" {
+		return "", zero, fmt.Errorf("no version range declared (R07-4.1.4); write an exact version or >=/^/~ before it")
+	}
+	op := "="
+	spec := trimmed
+	for _, candidate := range []string{">=", "^", "~"} {
+		if strings.HasPrefix(trimmed, candidate) {
+			op = candidate
+			spec = strings.TrimSpace(strings.TrimPrefix(trimmed, candidate))
+			break
+		}
+	}
+	if !semverPattern(spec) {
+		return "", zero, fmt.Errorf("range %q is not an exact MAJOR.MINOR.PATCH or one of >=/^/~ followed by one", rng)
+	}
+	want, err := semverParts(spec)
+	if err != nil {
+		return "", zero, err
+	}
+	return op, want, nil
+}
+
+// satisfiesVersionRange reports whether version meets rng (Spec 07 R07-4.1.4).
+//
+// Accepted forms, deliberately few: an exact MAJOR.MINOR.PATCH, ">=X", "^X"
+// (same major, at least X) and "~X" (same major.minor, at least X). Anything
+// else — including "", "*" and "latest" — is an ERROR, not "any version": a
+// dependency whose constraint silently widens accepts a breaking change without
+// a review, which is the failure this spec exists to prevent.
+func satisfiesVersionRange(version, rng string) (bool, error) {
+	op, want, err := parseVersionRange(rng)
+	if err != nil {
+		return false, err
+	}
+	if !semverPattern(version) {
+		return false, fmt.Errorf("declared version %q is not MAJOR.MINOR.PATCH", version)
+	}
+	got, err := semverParts(version)
+	if err != nil {
+		return false, err
+	}
+	cmp := compareSemver(got, want)
+	switch op {
+	case "=":
+		return cmp == 0, nil
+	case ">=":
+		return cmp >= 0, nil
+	case "^":
+		return got[0] == want[0] && cmp >= 0, nil
+	case "~":
+		return got[0] == want[0] && got[1] == want[1] && cmp >= 0, nil
+	}
+	return false, fmt.Errorf("unreachable range operator %q", op)
+}
+
+// resolveDependencies validates the declared inter-pack graph (R07-4.1.4) and
+// returns its edges in deterministic order.
+//
+// Three failures, each naming the dependency PATH, because an operator cannot
+// act on "resolution failed":
+//   - a declared dependency is not in the resolved set;
+//   - the resolved version is outside the declared range;
+//   - the graph is cyclic (the cycle is printed as the path that closes it).
+//
+// A single-pack set with no declarations is a legal one-node graph, not a
+// skipped check: the same walk runs and finds nothing to reject.
+func resolveDependencies(packsByName map[string]*Pack) ([]PackEdge, error) {
+	names := make([]string, 0, len(packsByName))
+	for name := range packsByName {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+
+	var edges []PackEdge
+	for _, from := range names {
+		pack := packsByName[from]
+		for _, dep := range pack.DependsOn {
+			target, ok := packsByName[dep.Pack]
+			if !ok {
+				return nil, fmt.Errorf("policy pack %q depends on %q, which is not in the resolved set (dependency path: %s -> %s)",
+					from, dep.Pack, from, dep.Pack)
+			}
+			okVersion, err := satisfiesVersionRange(target.Version, dep.Range)
+			if err != nil {
+				return nil, fmt.Errorf("policy pack %q dependency %q: %w", from, dep.Pack, err)
+			}
+			if !okVersion {
+				return nil, fmt.Errorf("policy pack %q requires %q %s but the resolved set has %s (dependency path: %s -> %s)",
+					from, dep.Pack, dep.Range, target.Version, from, dep.Pack)
+			}
+			edges = append(edges, PackEdge{From: from, To: dep.Pack, Range: dep.Range, Version: target.Version})
+		}
+	}
+
+	if err := detectDependencyCycles(packsByName, names); err != nil {
+		return nil, err
+	}
+	return edges, nil
+}
+
+// detectDependencyCycles runs a depth-first walk with an explicit path stack so
+// a cycle error can print the path that closes it rather than naming two nodes.
+func detectDependencyCycles(packsByName map[string]*Pack, names []string) error {
+	const (
+		unvisited = 0
+		onPath    = 1
+		done      = 2
+	)
+	state := make(map[string]int, len(packsByName))
+	var stack []string
+
+	var walk func(name string) error
+	walk = func(name string) error {
+		switch state[name] {
+		case done:
+			return nil
+		case onPath:
+			// The cycle is the tail of the stack from name, closed by name.
+			start := 0
+			for i, node := range stack {
+				if node == name {
+					start = i
+					break
+				}
+			}
+			cycle := append(append([]string{}, stack[start:]...), name)
+			return fmt.Errorf("policy pack dependency cycle: %s", strings.Join(cycle, " -> "))
+		}
+		state[name] = onPath
+		stack = append(stack, name)
+
+		pack := packsByName[name]
+		if pack != nil {
+			for _, dep := range pack.DependsOn {
+				if _, ok := packsByName[dep.Pack]; !ok {
+					continue // already reported as an absent dependency
+				}
+				if err := walk(dep.Pack); err != nil {
+					return err
+				}
+			}
+		}
+
+		stack = stack[:len(stack)-1]
+		state[name] = done
+		return nil
+	}
+
+	for _, name := range names {
+		if err := walk(name); err != nil {
+			return err
+		}
+	}
+	return nil
 }

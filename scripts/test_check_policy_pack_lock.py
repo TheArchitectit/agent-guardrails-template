@@ -17,6 +17,7 @@ Or: python scripts/test_check_policy_pack_lock.py
 
 import json
 import os
+import re
 import shutil
 import sys
 import tempfile
@@ -270,6 +271,193 @@ class PolicyPackLockTest(unittest.TestCase):
         path.write_text(json.dumps(data, indent=2) + "\n")
         _, _, after = gate.resolve(self.fx.root, gate.discover_packs(self.fx.root), set(TOOLS))
         self.assertNotEqual(before, after)
+
+
+class SchemaParityTest(unittest.TestCase):
+    """The Go loader and this gate must accept the same pack schema.
+
+    `policy_pack.go` states that `packFields`/`ruleFields` mirror the schema the
+    CI gate enforces and that "the two are kept in step by the pack schema
+    test". No such test existed, so the claim was unbacked and the two lists
+    could drift: a field the server accepts and the gate rejects (or the reverse)
+    makes "the pack validates" mean two different things depending on who asks.
+    This is that test.
+    """
+
+    GO_SOURCE = REPO / "mcp-server/internal/guardrails/policy_pack.go"
+
+    def _go_set(self, var: str) -> set[str]:
+        text = self.GO_SOURCE.read_text(encoding="utf-8")
+        start = text.index(f"var {var} = map[string]bool{{")
+        end = text.index("}", start)
+        body = text[start:end]
+        return set(re.findall(r'"([^"]+)":\s*true', body))
+
+    def test_pack_fields_match(self):
+        self.assertEqual(self._go_set("packFields"), set(gate.PACK_FIELDS))
+
+    def test_rule_fields_match(self):
+        self.assertEqual(self._go_set("ruleFields"), set(gate.RULE_FIELDS))
+
+    def test_dependency_fields_match(self):
+        """`depends_on` entries are validated by both sides and must agree.
+
+        The Go side declares PackDependency's accepted keys as struct tags rather
+        than a map, so the comparable assertion is that every gate-accepted key
+        appears as a json tag on that struct, and no extra critical key is
+        accepted by Go alone.
+        """
+        text = self.GO_SOURCE.read_text(encoding="utf-8")
+        start = text.index("type PackDependency struct {")
+        end = text.index("\n}", start)
+        body = text[start:end]
+        go_tags = set(re.findall(r'json:"([a-z_]+)"', body))
+        self.assertEqual(go_tags, set(gate.DEP_FIELDS))
+
+    def test_parity_check_cannot_pass_vacuously(self):
+        """A rename that emptied either side must fail, not compare two voids."""
+        self.assertTrue(gate.PACK_FIELDS)
+        self.assertTrue(gate.RULE_FIELDS)
+        self.assertTrue(self._go_set("packFields"))
+        self.assertTrue(self._go_set("ruleFields"))
+
+
+class DependencyGraphTest(unittest.TestCase):
+    """Spec 07 R07-4.1.4 — a declared dependency graph that fails closed.
+
+    The checked-in tree is a single pack with no declarations, so the walk must
+    be proven non-vacuous by fixtures: each case below would pass silently if
+    the graph check were absent.
+    """
+
+    def setUp(self):
+        self.fx = None
+
+    def tearDown(self):
+        if self.fx:
+            self.fx.clean()
+
+    def _fixture(self, packs):
+        self.fx = _Fixture(packs)
+        return self.fx
+
+    def _rendered(self):
+        return [v.render() for v in self.fx.run()]
+
+    # --- a legal graph ------------------------------------------------------
+
+    def test_declared_single_dependency_passes(self):
+        fx = self._fixture({
+            "core/base": _pack(pack="core/base", version="1.0.0"),
+            "core/domain": _pack(pack="core/domain", version="1.0.0",
+                                 depends_on=[{"pack": "core/base", "range": ">=1.0.0"}]),
+        })
+        fx.relock()
+        self.assertEqual(self._rendered(), [])
+
+    def test_range_forms_are_honoured(self):
+        # The dependency resolves at 1.0.5: an exact pin to a different version
+        # must FAIL (that is what "exact" means), and each operator is checked at
+        # the boundary it claims.
+        for rng, ok in (("1.0.5", True), ("1.0.0", False), (">=1.0.0", True),
+                        (">=2.0.0", False), ("^1.0.0", True), ("^2.0.0", False),
+                        ("~1.0.0", True), ("~1.1.0", False)):
+            with self.subTest(rng=rng):
+                self.tearDown()
+                fx = self._fixture({
+                    "core/base": _pack(pack="core/base", version="1.0.5"),
+                    "core/domain": _pack(pack="core/domain", version="1.0.0",
+                                         depends_on=[{"pack": "core/base", "range": rng}]),
+                })
+                fx.relock()
+                rendered = self._rendered()
+                if ok:
+                    self.assertEqual(rendered, [], rng)
+                else:
+                    self.assertTrue(any("requires 'core/base'" in r for r in rendered), rendered)
+
+    # --- the three refusals -------------------------------------------------
+
+    def test_absent_dependency_fails_naming_the_path(self):
+        fx = self._fixture({
+            "core/domain": _pack(pack="core/domain", version="1.0.0",
+                                 depends_on=[{"pack": "core/missing", "range": ">=1.0.0"}]),
+        })
+        fx.relock()
+        rendered = self._rendered()
+        self.assertTrue(any("is not in the resolved set" in r for r in rendered), rendered)
+        self.assertTrue(any("core/domain -> core/missing" in r for r in rendered), rendered)
+
+    def test_cycle_fails_naming_the_closing_path(self):
+        fx = self._fixture({
+            "core/a": _pack(pack="core/a", version="1.0.0",
+                            depends_on=[{"pack": "core/b", "range": ">=1.0.0"}]),
+            "core/b": _pack(pack="core/b", version="1.0.0",
+                            depends_on=[{"pack": "core/a", "range": ">=1.0.0"}]),
+        })
+        fx.relock()
+        rendered = self._rendered()
+        self.assertTrue(any("dependency cycle" in r for r in rendered), rendered)
+        self.assertTrue(any("core/a -> core/b -> core/a" in r for r in rendered), rendered)
+
+    def test_self_dependency_is_refused(self):
+        fx = self._fixture({
+            "core/a": _pack(pack="core/a", version="1.0.0",
+                            depends_on=[{"pack": "core/a", "range": ">=1.0.0"}]),
+        })
+        fx.relock()
+        rendered = self._rendered()
+        self.assertTrue(any("depends on itself" in r for r in rendered), rendered)
+
+    # --- a range that constrains nothing ------------------------------------
+
+    def test_empty_and_wildcard_ranges_are_refused(self):
+        for rng in ("", "   ", "*", "latest"):
+            with self.subTest(rng=rng):
+                self.tearDown()
+                fx = self._fixture({
+                    "core/base": _pack(pack="core/base", version="1.0.0"),
+                    "core/domain": _pack(pack="core/domain", version="1.0.0",
+                                         depends_on=[{"pack": "core/base", "range": rng}]),
+                })
+                fx.relock()
+                rendered = self._rendered()
+                self.assertTrue(
+                    any("unusable range" in r or "no version range" in r for r in rendered),
+                    rendered,
+                )
+
+    def test_unknown_dependency_field_fails(self):
+        fx = self._fixture({
+            "core/base": _pack(pack="core/base", version="1.0.0"),
+            "core/domain": _pack(pack="core/domain", version="1.0.0",
+                                 depends_on=[{"pack": "core/base", "range": ">=1.0.0",
+                                              "url": "https://example.com/base.pack.json"}]),
+        })
+        fx.relock()
+        rendered = self._rendered()
+        self.assertTrue(any("unknown critical field 'url'" in r for r in rendered), rendered)
+
+    def test_duplicate_dependency_fails(self):
+        fx = self._fixture({
+            "core/base": _pack(pack="core/base", version="1.0.0"),
+            "core/domain": _pack(pack="core/domain", version="1.0.0",
+                                 depends_on=[{"pack": "core/base", "range": ">=1.0.0"},
+                                             {"pack": "core/base", "range": ">=1.0.0"}]),
+        })
+        fx.relock()
+        rendered = self._rendered()
+        self.assertTrue(any("duplicate dependency" in r for r in rendered), rendered)
+
+    def test_duplicate_pack_names_fail(self):
+        """Two files declaring one pack name make dependency edges ambiguous."""
+        fx = self._fixture({
+            "core/base": _pack(pack="core/base", version="1.0.0"),
+            "core/other": _pack(pack="core/base", version="1.0.0"),
+        })
+        fx.relock()
+        rendered = self._rendered()
+        self.assertTrue(any("already declares the name" in r for r in rendered), rendered)
 
 
 class WiringTest(unittest.TestCase):

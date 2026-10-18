@@ -275,6 +275,170 @@ func TestNilManagerIsNotConfigured(t *testing.T) {
 	}
 }
 
+// --- R07-4.1.4 dependency graph -------------------------------------------
+
+// TestLoadPolicySet_ResolvesDeclaredDependency is the positive case: a declared
+// edge that satisfies its range resolves, and the edge is reported on the
+// snapshot so the graph an operator reads is the one resolution walked.
+func TestLoadPolicySet_ResolvesDeclaredDependency(t *testing.T) {
+	dir := t.TempDir()
+	writePack(t, dir, "core/base", `{"pack":"core/base","version":"1.0.0","rules":[{"id":"B1","enforcement":"advisory","tool":"guardrail_alpha","on_unknown":"stop"}]}`)
+	writePack(t, dir, "core/domain", `{"pack":"core/domain","version":"1.0.0","depends_on":[{"pack":"core/base","range":">=1.0.0"}],"rules":[{"id":"D1","enforcement":"advisory","tool":"guardrail_beta","on_unknown":"stop"}]}`)
+	writeLockFor(t, dir, "")
+
+	set, err := LoadPolicySet(dir, nil)
+	if err != nil {
+		t.Fatalf("a satisfied dependency must resolve: %v", err)
+	}
+	edges := set.Dependencies()
+	if len(edges) != 1 {
+		t.Fatalf("resolved %d dependency edges, want 1", len(edges))
+	}
+	got := edges[0]
+	if got.From != "core/domain" || got.To != "core/base" || got.Version != "1.0.0" || got.Range != ">=1.0.0" {
+		t.Fatalf("edge = %+v, want core/domain -> core/base @1.0.0 within >=1.0.0", got)
+	}
+}
+
+// TestLoadPolicySet_AbsentDependencyNamesThePath: an edge to a pack that is not
+// in the set must fail and must say which edge, because "resolution failed" is
+// not actionable.
+func TestLoadPolicySet_AbsentDependencyNamesThePath(t *testing.T) {
+	dir := t.TempDir()
+	writePack(t, dir, "core/domain", `{"pack":"core/domain","version":"1.0.0","depends_on":[{"pack":"core/missing","range":">=1.0.0"}],"rules":[{"id":"D1","enforcement":"advisory","tool":"guardrail_alpha","on_unknown":"stop"}]}`)
+	writeLockFor(t, dir, "")
+
+	_, err := LoadPolicySet(dir, nil)
+	if err == nil {
+		t.Fatal("an absent declared dependency must be refused")
+	}
+	if !strings.Contains(err.Error(), "core/domain -> core/missing") {
+		t.Fatalf("error does not name the dependency path: %v", err)
+	}
+}
+
+// TestLoadPolicySet_DependencyCycleNamesTheClosingPath: A -> B -> A must fail
+// and must print the cycle, not merely two node names.
+func TestLoadPolicySet_DependencyCycleNamesTheClosingPath(t *testing.T) {
+	dir := t.TempDir()
+	writePack(t, dir, "core/a", `{"pack":"core/a","version":"1.0.0","depends_on":[{"pack":"core/b","range":">=1.0.0"}],"rules":[{"id":"A1","enforcement":"advisory","tool":"guardrail_alpha","on_unknown":"stop"}]}`)
+	writePack(t, dir, "core/b", `{"pack":"core/b","version":"1.0.0","depends_on":[{"pack":"core/a","range":">=1.0.0"}],"rules":[{"id":"B1","enforcement":"advisory","tool":"guardrail_beta","on_unknown":"stop"}]}`)
+	writeLockFor(t, dir, "")
+
+	_, err := LoadPolicySet(dir, nil)
+	if err == nil {
+		t.Fatal("a cyclic dependency graph must be refused")
+	}
+	if !strings.Contains(err.Error(), "cycle") || !strings.Contains(err.Error(), "core/a -> core/b -> core/a") {
+		t.Fatalf("error does not name the closing cycle: %v", err)
+	}
+}
+
+// TestLoadPolicySet_IncompatibleDependencyVersion: a resolved version outside
+// the declared range is refused. Both sides are named so the operator can see
+// whether the pack or the lock is wrong.
+func TestLoadPolicySet_IncompatibleDependencyVersion(t *testing.T) {
+	dir := t.TempDir()
+	writePack(t, dir, "core/base", `{"pack":"core/base","version":"1.0.0","rules":[{"id":"B1","enforcement":"advisory","tool":"guardrail_alpha","on_unknown":"stop"}]}`)
+	writePack(t, dir, "core/domain", `{"pack":"core/domain","version":"1.0.0","depends_on":[{"pack":"core/base","range":"^2.0.0"}],"rules":[{"id":"D1","enforcement":"advisory","tool":"guardrail_beta","on_unknown":"stop"}]}`)
+	writeLockFor(t, dir, "")
+
+	_, err := LoadPolicySet(dir, nil)
+	if err == nil {
+		t.Fatal("a dependency outside its declared range must be refused")
+	}
+	if !strings.Contains(err.Error(), "requires \"core/base\" ^2.0.0") || !strings.Contains(err.Error(), "1.0.0") {
+		t.Fatalf("error does not name both the range and the resolved version: %v", err)
+	}
+}
+
+// TestLoadPolicySet_RangeMustConstrainSomething pins the ranges that would
+// silently accept anything. A constraint an operator believes is pinned but
+// that matches every version is worse than no constraint at all.
+func TestLoadPolicySet_RangeMustConstrainSomething(t *testing.T) {
+	for _, rng := range []string{"", "   ", "*", "latest", ">=1", "^v1.0.0"} {
+		t.Run("range="+rng, func(t *testing.T) {
+			dir := t.TempDir()
+			writePack(t, dir, "core/base", `{"pack":"core/base","version":"1.0.0","rules":[{"id":"B1","enforcement":"advisory","tool":"guardrail_alpha","on_unknown":"stop"}]}`)
+			body := `{"pack":"core/domain","version":"1.0.0","depends_on":[{"pack":"core/base","range":"` + rng + `"}],"rules":[{"id":"D1","enforcement":"advisory","tool":"guardrail_beta","on_unknown":"stop"}]}`
+			writePack(t, dir, "core/domain", body)
+			writeLockFor(t, dir, "")
+			if _, err := LoadPolicySet(dir, nil); err == nil {
+				t.Fatalf("range %q must be refused as unusable", rng)
+			}
+		})
+	}
+}
+
+// TestLoadPolicySet_RefusesSelfDependency: a pack depending on itself is a
+// one-node cycle and is refused at parse time with a message that says so.
+func TestLoadPolicySet_RefusesSelfDependency(t *testing.T) {
+	dir := t.TempDir()
+	writePack(t, dir, "core/a", `{"pack":"core/a","version":"1.0.0","depends_on":[{"pack":"core/a","range":">=1.0.0"}],"rules":[{"id":"A1","enforcement":"advisory","tool":"guardrail_alpha","on_unknown":"stop"}]}`)
+	writeLockFor(t, dir, "")
+
+	_, err := LoadPolicySet(dir, nil)
+	if err == nil {
+		t.Fatal("a self-dependency must be refused")
+	}
+	if !strings.Contains(err.Error(), "itself") {
+		t.Fatalf("error does not name the self-dependency: %v", err)
+	}
+}
+
+// TestLoadPolicySet_NoDependenciesIsAZeroEdgeGraph: the checked-in single pack
+// is a legal one-node graph. Reporting zero edges is an answer, and the same
+// walk that refuses a cycle runs here — the check is not skipped because the
+// tree is small.
+func TestLoadPolicySet_NoDependenciesIsAZeroEdgeGraph(t *testing.T) {
+	set, err := LoadPolicySet(repoPackDir(t), knownToolsFor(t))
+	if err != nil {
+		t.Fatalf("load: %v", err)
+	}
+	if got := len(set.Dependencies()); got != 0 {
+		t.Fatalf("checked-in set reports %d edges, want 0", got)
+	}
+	if len(set.Packs()) == 0 {
+		t.Fatal("the assertion above would be vacuous over an empty set")
+	}
+}
+
+// TestSatisfiesVersionRange pins the accepted forms directly, so a future edit
+// that widens a range operator fails here rather than in production.
+func TestSatisfiesVersionRange(t *testing.T) {
+	cases := []struct {
+		version, rng string
+		want         bool
+		wantErr      bool
+	}{
+		{"1.0.0", "1.0.0", true, false},
+		{"1.0.1", "1.0.0", false, false},
+		{"1.0.1", ">=1.0.0", true, false},
+		{"2.0.0", "^1.0.0", false, false},
+		{"1.9.0", "^1.0.0", true, false},
+		{"1.1.0", "~1.0.0", false, false},
+		{"1.0.9", "~1.0.0", true, false},
+		{"1.0.0", "*", false, true},
+		{"1.0.0", "latest", false, true},
+		{"1.0.0", "", false, true},
+	}
+	for _, tc := range cases {
+		got, err := satisfiesVersionRange(tc.version, tc.rng)
+		if tc.wantErr {
+			if err == nil {
+				t.Fatalf("range %q must be refused", tc.rng)
+			}
+			continue
+		}
+		if err != nil {
+			t.Fatalf("range %q: unexpected error %v", tc.rng, err)
+		}
+		if got != tc.want {
+			t.Fatalf("satisfiesVersionRange(%q, %q) = %v, want %v", tc.version, tc.rng, got, tc.want)
+		}
+	}
+}
+
 // --- fixtures -------------------------------------------------------------
 
 func writePack(t *testing.T, dir, name, body string) {
