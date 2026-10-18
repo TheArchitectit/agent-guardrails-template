@@ -1,0 +1,55 @@
+{
+  "$comment": "Spec 19 R19-11 Markdown line-cap exemptions. Enforced by scripts/check_doc_length.py. Every entry MUST name a scope class (immutable-record | dated-snapshot) and a written reason. An entry naming a file that is gone, or that is no longer over 500 lines, is a VIOLATION — the list may not rot into a blanket. The release tree (docs outside archive/, mcp-server/, ide/, docs/designs/, docs/reboot/, docs/security/) is enforced with no exemptions.",
+  "exemptions": [
+    {
+      "path": "CHANGELOG.md",
+      "scope": "immutable-record",
+      "reason": "Append-only release history. Splitting it would break the record of what shipped in which release and every external link that cites a release entry."
+    },
+    {
+      "path": "docs/archive/plans/MCP_SERVER_PLAN.md",
+      "scope": "immutable-record",
+      "reason": "Archived implementation plan retained as the historical record of the original MCP server design; its length is part of the artifact."
+    },
+    {
+      "path": "docs/archive/reviews/PLATFORM_REVIEW_2026-06-14.md",
+      "scope": "dated-snapshot",
+      "reason": "Point-in-time platform review dated 2026-06-14. Rewriting its structure would falsify a review that was performed against that snapshot."
+    },
+    {
+      "path": "docs/archive/sprints/SPRINT_001_MCP_GAP_IMPLEMENTATION.md",
+      "scope": "immutable-record",
+      "reason": "Archived sprint record; the sprint's own narrative and evidence are preserved verbatim rather than reflowed after the fact."
+    },
+    {
+      "path": "docs/archive/sprints/SPRINT_002_WEB_UI_IMPLEMENTATION.md",
+      "scope": "immutable-record",
+      "reason": "Archived sprint record; the sprint's own narrative and evidence are preserved verbatim rather than reflowed after the fact."
+    },
+    {
+      "path": "docs/archive/sprints/SPRINT_003_DOCUMENTATION_PARITY.md",
+      "scope": "immutable-record",
+      "reason": "Archived sprint record; the sprint's own narrative and evidence are preserved verbatim rather than reflowed after the fact."
+    },
+    {
+      "path": "docs/archive/sprints/SPRINT_006_CUSTOM_ADVISOR_ROLES.md",
+      "scope": "immutable-record",
+      "reason": "Archived sprint record; the sprint's own narrative and evidence are preserved verbatim rather than reflowed after the fact."
+    },
+    {
+      "path": "docs/archive/sprints/SPRINT_TEMPLATE.md",
+      "scope": "immutable-record",
+      "reason": "Archived sprint template kept as the historical shape of the sprint records it produced; superseded templates are evidence, not live guidance."
+    },
+    {
+      "path": "docs/specs/guardrail-gaps-2026/AUDIT-2026-10-09.md",
+      "scope": "dated-snapshot",
+      "reason": "Dated gap audit (2026-10-09) whose per-file findings are cited individually by later specs; splitting it would invalidate those citations."
+    },
+    {
+      "path": "docs/superpowers/plans/2026-08-17-pi-bash-permission-ux.md",
+      "scope": "dated-snapshot",
+      "reason": "Dated design plan (2026-08-17) recorded as the plan of record for that change; its structure is part of the historical decision trail."
+    }
+  ]
+}

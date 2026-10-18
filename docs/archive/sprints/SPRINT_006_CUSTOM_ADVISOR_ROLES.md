@@ -45,7 +45,7 @@ The MCP server currently provides 27 tools and 14 resources, but there is **no m
 
 ## REFERENCE DOCUMENTATION
 
-**Comprehensive Advisor Roles Proposal:** See [docs/advisors/INDEX.md](../advisors/INDEX.md) for the full 9-advisor framework including:
+**Comprehensive Advisor Roles Proposal:** See [docs/advisors/INDEX.md](../../advisors/INDEX.md) for the full 9-advisor framework including:
 - Persona definitions for all 9 advisors
 - Enforcement levels (Block/Warn/Info)
 - Team consultation matrices

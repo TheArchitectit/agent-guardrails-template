@@ -29,7 +29,7 @@
 
 ### Guardrails Reference
 
-Full guardrails: [docs/AGENT_GUARDRAILS.md](../AGENT_GUARDRAILS.md)
+Full guardrails: [docs/AGENT_GUARDRAILS.md](../../getting-started/agent-guardrails.md)
 
 ---
 

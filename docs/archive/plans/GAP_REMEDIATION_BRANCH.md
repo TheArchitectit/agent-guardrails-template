@@ -16,8 +16,8 @@ A comprehensive gap analysis was conducted by a team of 4 analysts (per TEAM-007
 
 | Document | Description |
 |----------|-------------|
-| [docs/GAP_ANALYSIS_TEAM_REPORT.md](./docs/GAP_ANALYSIS_TEAM_REPORT.md) | Full gap analysis findings |
-| [docs/TEAM_TOOLS_GAP_REMEDIATION_PLAN.md](./docs/TEAM_TOOLS_GAP_REMEDIATION_PLAN.md) | Remediation plan with sprints |
+| [docs/GAP_ANALYSIS_TEAM_REPORT.md](../gap-analyses/GAP_ANALYSIS_TEAM_REPORT.md) | Full gap analysis findings |
+| [docs/TEAM_TOOLS_GAP_REMEDIATION_PLAN.md](../gap-analyses/TEAM_TOOLS_GAP_REMEDIATION_PLAN.md) | Remediation plan with sprints |
 
 ## Quick Links
 

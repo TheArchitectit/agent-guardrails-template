@@ -193,6 +193,8 @@ IDE Extensions
 
 See [TESTING_GUIDE.md](./testing-guide.md) for comprehensive testing documentation.
 
+FAQ and reference links for testers: [testing-guide-faq.md](./testing-guide-faq.md).
+
 ### Commands
 
 | IDE | Validate File | Validate Selection | Test Connection |

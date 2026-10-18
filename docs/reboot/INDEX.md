@@ -9,6 +9,7 @@ content taxonomy and L0–L2 sandbox isolation.
 | [01-site.md](01-site.md) | Design spec for the marketing/docs website |
 | [02-story.md](02-story.md) | Project story narrative — **draft, held for review** |
 | [03-features.md](03-features.md) | Feature breakdown across the reboot |
+| [03-features-part2.md](03-features-part2.md) | Feature breakdown, part 2: trust/supply chain, ecosystem, milestone view |
 | [04-stars.md](04-stars.md) | Star-history / roadmap narrative |
 | [FINDINGS.md](FINDINGS.md) | Findings that drove the reboot |
 | [F013-AUDIT.md](F013-AUDIT.md) | Audit for F013 |

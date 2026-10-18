@@ -1,57 +1,57 @@
 name: Documentation Standards Check
 
+# Spec 19 R19-11 requires the documentation gate to run on PR *and* on protected
+# push/release events. Before this change the workflow was PR-only and
+# path-filtered to `docs/**` and `*.md`, so a push to `main` never ran the
+# link check or the 500-line cap at all — and the tree carried 15 files over the
+# cap that had never once been measured. The push trigger below is deliberately
+# UNFILTERED: a path filter may not let a changed documentation dependency
+# escape validation (R19-14).
 on:
+  push:
+    branches: [main, master]
   pull_request:
-    paths:
-      - 'docs/**'
-      - '*.md'
-      - '.github/**/*.md'
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
   check-doc-length:
-    name: Check Document Length (500-line max)
+    name: Document line cap (500) and exemptions
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
-      - name: Check line counts
-        run: |
-          echo "Checking documentation files for 500-line limit..."
-          echo ""
+      # The cap is a Python gate, not an inline shell loop: it is fail-closed on
+      # an empty scan, requires a scope + written reason for every exemption,
+      # and rejects a stale exemption (a file that is exempt but no longer over
+      # the cap, or no longer exists). The inline loop it replaces could not tell
+      # "everything is within the cap" apart from "I found nothing".
+      - name: Markdown 500-line cap (Spec 19 R19-11)
+        run: python3 scripts/check_doc_length.py .
 
-          MAX_LINES=500
-          VIOLATIONS=""
+      # Red-on-drift control: the gate must be able to fail. Runs the gate's own
+      # mutation fixtures so a green result cannot come from an assertion that
+      # never executes.
+      - name: Line-cap gate self-test (red-on-drift)
+        run: python3 scripts/test_check_doc_length.py
 
-          # Find all markdown files
-          for file in $(find . -name "*.md" -type f | grep -v node_modules | grep -v .git); do
-            lines=$(wc -l < "$file")
+  check-broken-links:
+    name: Internal Markdown links
+    runs-on: ubuntu-latest
 
-            if [ "$lines" -gt "$MAX_LINES" ]; then
-              VIOLATIONS="$VIOLATIONS$file: $lines lines (over $MAX_LINES limit)"$'\n'
-              echo "FAIL: $file has $lines lines (max $MAX_LINES)"
-            else
-              echo "OK:   $file has $lines lines"
-            fi
-          done
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
-          echo ""
-
-          if [ -n "$VIOLATIONS" ]; then
-            echo "=========================================="
-            echo "VIOLATIONS FOUND:"
-            echo "$VIOLATIONS"
-            echo ""
-            echo "Please split documents exceeding $MAX_LINES lines."
-            echo "See docs/standards/MODULAR_DOCUMENTATION.md for guidance."
-            exit 1
-          else
-            echo "All documents are within the $MAX_LINES line limit."
-          fi
+      # scripts/check-doc-links.sh is the single source of truth: the CI job and
+      # the mutation-kill harness (internal/mutationkill) both invoke it, so the
+      # control they exercise is the same one that blocks a merge.
+      - name: Internal link check (Spec 19 R19-11)
+        run: bash scripts/check-doc-links.sh .
 
   check-required-sections:
     name: Check Required Sections
@@ -80,11 +80,6 @@ jobs:
               WARNINGS="$WARNINGS$file: Missing '## Overview' section"$'\n'
             fi
 
-            # Check for Quick Reference section (optional but recommended)
-            if ! grep -q "^## Quick Reference" "$file"; then
-              echo "NOTE: $file doesn't have '## Quick Reference' section (recommended)"
-            fi
-
             # Check for Last Updated
             if ! grep -q "Last Updated:" "$file"; then
               WARNINGS="$WARNINGS$file: Missing 'Last Updated:' footer"$'\n'
@@ -92,25 +87,11 @@ jobs:
           done
 
           if [ -n "$WARNINGS" ]; then
-            echo "=========================================="
-            echo "WARNINGS:"
+            echo "Advisory only (not a release gate):"
             echo "$WARNINGS"
-            echo ""
-            echo "Consider adding missing sections for consistency."
           else
             echo "All required sections present."
           fi
-
-  check-broken-links:
-    name: Check Internal Links
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-
-      - name: Check markdown links
-        run: bash scripts/check-doc-links.sh .
 
   check-trailing-whitespace:
     name: Check Formatting
@@ -122,15 +103,13 @@ jobs:
 
       - name: Check for trailing whitespace
         run: |
-          echo "Checking for trailing whitespace..."
+          echo "Checking for trailing whitespace (advisory only)..."
 
           FILES_WITH_TRAILING=$(find . -name "*.md" -type f | xargs grep -l " $" 2>/dev/null | grep -v node_modules || true)
 
           if [ -n "$FILES_WITH_TRAILING" ]; then
             echo "Files with trailing whitespace:"
             echo "$FILES_WITH_TRAILING"
-            echo ""
-            echo "Consider removing trailing whitespace for cleaner diffs."
           else
             echo "No trailing whitespace found."
           fi

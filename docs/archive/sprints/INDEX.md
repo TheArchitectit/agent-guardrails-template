@@ -42,11 +42,11 @@ Completed sprints older than 7 days are moved to `archive/`.
 
 | Document | Purpose |
 |----------|---------|
-| [AGENT_GUARDRAILS.md](../AGENT_GUARDRAILS.md) | Mandatory safety protocols |
-| [COMMIT_WORKFLOW.md](../workflows/COMMIT_WORKFLOW.md) | Commit after each to-do |
-| [MCP_CHECKPOINTING.md](../workflows/MCP_CHECKPOINTING.md) | Checkpoint integration |
-| [TESTING_VALIDATION.md](../workflows/TESTING_VALIDATION.md) | Validation procedures |
-| [DOCUMENTATION_UPDATES.md](../workflows/DOCUMENTATION_UPDATES.md) | Post-sprint updates |
+| [AGENT_GUARDRAILS.md](../../getting-started/agent-guardrails.md) | Mandatory safety protocols |
+| [COMMIT_WORKFLOW.md](../../workflows/commit-workflow.md) | Commit after each to-do |
+| [MCP_CHECKPOINTING.md](../../workflows/mcp-checkpointing.md) | Checkpoint integration |
+| [TESTING_VALIDATION.md](../../workflows/testing-validation.md) | Validation procedures |
+| [DOCUMENTATION_UPDATES.md](../../workflows/documentation-updates.md) | Post-sprint updates |
 
 ---
 

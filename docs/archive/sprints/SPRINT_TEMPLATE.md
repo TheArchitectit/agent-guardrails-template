@@ -26,7 +26,7 @@
 
 ### Guardrails Reference
 
-Full guardrails: [docs/AGENT_GUARDRAILS.md](../AGENT_GUARDRAILS.md)
+Full guardrails: [docs/AGENT_GUARDRAILS.md](../../getting-started/agent-guardrails.md)
 
 ### MCP Checkpoint (Optional)
 
@@ -35,7 +35,7 @@ If using MCP checkpointing, create checkpoint before starting:
 [MCP: create_checkpoint("sprint-YYYY-MM-DD-before-start")]
 ```
 
-See [MCP_CHECKPOINTING.md](../workflows/MCP_CHECKPOINTING.md) for details.
+See [MCP_CHECKPOINTING.md](../../workflows/mcp-checkpointing.md) for details.
 
 ---
 
@@ -154,7 +154,7 @@ TOOL: [Read | Edit | Bash | etc.]
 
 ### DONE: Commit and Report
 
-**COMMIT AFTER VALIDATION** (see [COMMIT_WORKFLOW.md](../workflows/COMMIT_WORKFLOW.md)):
+**COMMIT AFTER VALIDATION** (see [COMMIT_WORKFLOW.md](../../workflows/commit-workflow.md)):
 ```bash
 git add <modified-files>
 git commit -m "<type>(<scope>): <description>

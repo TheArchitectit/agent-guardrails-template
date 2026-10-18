@@ -292,8 +292,8 @@ Per TEAM-007, all sprints require 4-6 members:
 
 ### Documentation
 - [GAP_ANALYSIS_TEAM_REPORT.md](./GAP_ANALYSIS_TEAM_REPORT.md) - Full gap details
-- [TEAM_TOOLS.md](./TEAM_TOOLS.md) - Tool documentation
-- [TEAM_STRUCTURE.md](./TEAM_STRUCTURE.md) - Team structure rules
+- [TEAM_TOOLS.md](../../../docs/teams/team-tools.md) - Tool documentation
+- [TEAM_STRUCTURE.md](../../../docs/teams/team-structure.md) - Team structure rules
 
 ### Commands
 

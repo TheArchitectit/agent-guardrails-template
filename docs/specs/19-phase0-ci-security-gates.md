@@ -266,6 +266,73 @@ hard maximum of 500 lines per Markdown file. Path filtering may optimize work bu
 must not omit release-wide checks or permit a changed documentation dependency to
 escape validation. This spec itself MUST remain at or below 500 lines.
 
+**Status (2026-10-18). WIRED + EXERCISED — the gate had never run on push, and
+would have failed if it had.** Three independent defects, all fixed the cause:
+
+1. **It never ran on a protected push.** `documentation-check.yml` triggered on
+   `pull_request` only, path-filtered to `docs/**` and `*.md`. Every push to
+   `main` skipped the link check and the cap entirely; the last time the
+   workflow executed at all was a PR in 2026-08-23. The trigger is now
+   `push: [main, master]` **unfiltered** (plus PR and `workflow_dispatch`), so a
+   changed documentation dependency cannot escape validation (R19-14's rule).
+2. **The link checker was wrong in both directions.** It reported **51**
+   findings of which **31 were false positives**, and it exited `0` from a shell
+   pipeline that ended in `grep -c` — so the script that CI treats as the
+   blocking control did not fail on a broken link at all when invoked that way.
+   Three false-positive classes: a construct-level regex matched `[text](t.md)`
+   greedily across a line, so nested brackets in link *text* made the *text* the
+   reported target (`(see [secrets-management.md](secrets-management.md))`);
+   fenced code blocks and inline code spans were scanned, so a documented
+   example pattern `[.*](.*\.md)` was reported as a missing file; and a
+   fragment/query was not stripped before the existence test. Rewritten
+   fence-aware and inline-code-aware, extracting targets from the `](…)`
+   suffix, stripping `#`/`?`, and **fail-closed on an empty scan** (no Markdown
+   file, or zero resolved internal links, is a FAILURE — “I matched nothing” is
+   not “everything is correct”). It now resolves **961 internal links across
+   457 files**, and the 20 genuinely broken links are fixed: archived sprint
+   cross-references repointed to the live `docs/workflows/` and
+   `docs/getting-started/` paths, release-note `../CHANGELOG.md` and
+   `../mcp-server/API.md` corrected to `../../../` (the files sit three levels
+   deep in `docs/releases/archive/`), and two gap-analysis references pointed at
+   the `docs/teams/` documents that now carry that material.
+3. **The 500-line cap was a sentence, not a control.** It lived in
+   `docs/standards/modular-documentation.md` and as an inline shell loop in the
+   PR-only job; **15 tracked files were over it**. New
+   `scripts/check_doc_length.py` is the enforcement: it counts tracked Markdown,
+   fails every file over 500 lines unless declared, requires a **scope class**
+   (`immutable-record` | `dated-snapshot`) **and a written reason** on every
+   exemption, and fails a **stale** exemption (a file that is gone, or is now
+   within the cap) so the list cannot rot into a blanket. A missing manifest is
+   strict (everything enforced), never a silent skip. The five *live* docs over
+   the cap were split at section boundaries — `deployment-guide.md` (1049) into
+   guide + configuration + troubleshooting + operations; `03-features.md` (641)
+   into part 1 + trust/ecosystem part 2; `halt-conditions-design.md` (614) into
+   design + implementation notes; `ide/testing-guide.md` (504) and
+   `security-audit-config.md` (502) each into document + appendix. The remaining
+   **10** over-cap files are immutable records (the append-only `CHANGELOG.md`,
+   archived sprint records, dated audits and plans) and are declared in
+   `.guardrails/doc-length-exemptions.json` with a scope and a reason each —
+   exempted from *the cap*, never from *the gate*.
+
+**Evidence.** `scripts/test_check_doc_length.py` — **11/11** red-on-drift cases
+(over-limit without exemption fails; at-cap 500 passes; declared exemption
+passes; stale exemption fails; exemption for a deleted file fails; missing
+reason fails; bogus scope fails; duplicate fails; empty scan fails;
+unreadable manifest fails; missing manifest is strict). Link checker mutation
+contract re-verified against the same fixture the mutation-kill harness uses
+(`internal/mutationkill` `TestDocsGateCatchesBrokenInternalLink`): clean tree
+exit 0, injected `./missing.md` exit 1. Both new steps run in
+`documentation-check.yml` on push and PR; `python3 scripts/test_check_doc_length.py`
+is the red-on-drift companion the harness requires.
+
+**No gate weakened.** The workflow gained an unfiltered push trigger and two
+blocking steps; the advisory sections job was de-escalated from a silent pass to
+an explicitly labelled advisory (it never failed the build and never could).
+Named limits: reference-style link definitions (`[id]: path.md`), angle-bracket
+destinations containing spaces, and HTML `<a href>` are not parsed by the link
+checker — none occur in the tree today; the cap counts bytes-to-newline like
+`wc -l`.
+
 ### R19-12 — Nonzero test floor and classification
 
 A checked-in module/package inventory MUST declare each required package,

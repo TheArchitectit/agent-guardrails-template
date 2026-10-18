@@ -302,4 +302,4 @@ Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
 
 - **Repository:** https://github.com/TheArchitectit/agent-guardrails-template
 - **Release:** https://github.com/TheArchitectit/agent-guardrails-template/releases/tag/v1.9.0
-- **Changelog:** [CHANGELOG.md](../CHANGELOG.md)
+- **Changelog:** [CHANGELOG.md(../../../CHANGELOG.md)

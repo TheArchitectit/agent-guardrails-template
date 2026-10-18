@@ -193,5 +193,5 @@ Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
 
 - **Release:** https://github.com/TheArchitectit/agent-guardrails-template/releases/tag/v1.9.5
 - **Branch:** https://github.com/TheArchitectit/agent-guardrails-template/tree/mcpserver-impl
-- **Documentation:** [API.md](../mcp-server/API.md)
-- **Changelog:** [CHANGELOG.md](../CHANGELOG.md)
+- **Documentation:** [API.md(../../../mcp-server/api.md)
+- **Changelog:** [CHANGELOG.md(../../../CHANGELOG.md)
