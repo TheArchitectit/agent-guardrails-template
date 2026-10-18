@@ -255,6 +255,20 @@ type Config struct {
 	// restart. Pointing it at a file makes a reviewed promotion hold.
 	ControlPlaneStateFile string `env:"CONTROL_PLANE_STATE_FILE"`
 
+	// Control-plane evidence retention (Spec 08 R08-4.3.6). R08-4.3.6
+	// requires retention, signing, access control and deletion to be
+	// CONFIGURABLE and auditable. All three settings are therefore explicit:
+	// an unset directory means no store (nothing is retained), and a configured
+	// directory without a retention window is a hard error rather than an
+	// implicit "keep forever", because "forever" is a policy nobody chose and
+	// an unbounded store on a production box is a disk dependency nobody sized.
+	ControlPlaneEvidenceDir string `env:"CONTROL_PLANE_EVIDENCE_DIR"`
+	// ControlPlaneEvidenceRetention is how long one retained bundle is kept.
+	ControlPlaneEvidenceRetention time.Duration `env:"CONTROL_PLANE_EVIDENCE_RETENTION"`
+	// ControlPlaneEvidenceMaxRecords bounds the store by count. Zero means the
+	// count bound is not configured (time alone still bounds the store).
+	ControlPlaneEvidenceMaxRecords int `env:"CONTROL_PLANE_EVIDENCE_MAX_RECORDS"`
+
 	// Production Mode Indicator
 	ProductionMode bool `env:"PRODUCTION_MODE" envDefault:"false"`
 }
@@ -348,6 +362,14 @@ func (c *Config) Validate() error {
 	// carry an explicit no-proxy-route attestation. A misconfigured debug
 	// endpoint fails startup rather than serving an administrative surface.
 	if err := c.ValidateDebugEndpoint(); err != nil {
+		return err
+	}
+
+	// Validate the control-plane evidence retention posture (Spec 08
+	// R08-4.3.6): a configured store needs a positive window and, outside
+	// `local`, a signing identity, so a retained record is bounded and
+	// verifiable rather than implied.
+	if err := c.ValidateCompositionEvidenceRetention(); err != nil {
 		return err
 	}
 

@@ -877,3 +877,28 @@ jobs:
         run: |
           cd mcp-server
           go test ./internal/mcp -run 'TestToolSchemaHandlerConformance' -count=1 -v
+
+  # Spec 08 R08-4.3.6 — evidence retention, signing, access control and
+  # auditable deletion. Named as its own row so a retention regression fails CI
+  # with the requirement label instead of being buried inside `go test ./...`.
+  # The row runs both halves in one invocation: the store's own acceptance suite
+  # (round-trip, tamper refusal, retention sweep, count bound, audited erase,
+  # promotion retention, divergent runs of one evaluation) and the config gate
+  # that fails startup when the configured posture cannot meet the requirement.
+  security-matrix-controlplane-evidence-retention:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Set up Go
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version: '1.25'
+          cache-dependency-path: mcp-server/go.sum
+
+      - name: Control-plane evidence retention row
+        run: |
+          cd mcp-server
+          go test ./internal/controlplane -run 'TestEvidenceStore|TestNewEvidenceStore|TestStoredRecord|TestPromoteRetainsItsAcceptanceEvidence|TestPromoteStatesWhenEvidenceIsNotRetained' -count=1 -v
+          go test ./internal/config -run 'TestValidateAcceptsAnUnconfiguredEvidenceStore|TestValidateRefusesRetentionWithNoStore|TestValidateRefusesAStoreWithNoRetentionWindow|TestValidateEvidenceRetentionBounds|TestValidateEvidenceRetentionCouplesSigningToProfile|TestValidateCouplesEvidenceRetentionToStartup' -count=1 -v
+          go test ./internal/mcp -run 'TestControlPlaneResourceReportsEvidenceRetention|TestControlPlaneResourceOmitsRetentionWhenUnconfigured' -count=1 -v

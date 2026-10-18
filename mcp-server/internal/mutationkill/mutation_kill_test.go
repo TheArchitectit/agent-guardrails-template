@@ -755,6 +755,28 @@ func (s *MCPServer) authorizeToolCallDisabled(ctx context.Context, name string, 
 		testRegex: "^TestWriteRegistryFileRefusesInvalidSet$",
 	},
 	{
+		// Spec 08 R08-4.3.6: a retained record must be verified before it is
+		// returned. The mutation drops the detached-signature check, so an
+		// edited bundle reads back as evidence.
+		name:      "controlplane-retained-evidence-signature-not-verified",
+		file:      "internal/controlplane/evidencestore.go",
+		old:       "\tif err := evidence.VerifyDetached(s.publicKey(), rec.Purpose, payload, rec.Signature); err != nil {\n\t\treturn nil, fmt.Errorf(\"evidence record %q is unverified: %w\", recordDigest, err)\n\t}",
+		new:       "\t_ = payload // mutation: skip signature verification",
+		pkg:       "./internal/controlplane",
+		testRegex: "^TestEvidenceStoreRefusesATamperedRecord$",
+	},
+	{
+		// Spec 08 R08-4.3.6: retention must actually delete past the window.
+		// The mutation makes the sweep stop before removing anything, so the
+		// store grows without bound while reporting a configured window.
+		name:      "controlplane-evidence-retention-never-sweeps",
+		file:      "internal/controlplane/evidencestore.go",
+		old:       "\t\tif age <= s.cfg.Retention {\n\t\t\tbreak\n\t\t}",
+		new:       "\t\tif true { // mutation: retention never fires\n\t\t\tbreak\n\t\t}",
+		pkg:       "./internal/controlplane",
+		testRegex: "^TestEvidenceStoreSweepDeletesPastRetentionAndAudits$",
+	},
+	{
 		// Spec 08 R08-4.3.3: evidence must not carry secret values. The
 		// mutation removes redaction entirely, leaving only the length bound.
 		name:      "controlplane-evidence-redaction-disabled",

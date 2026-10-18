@@ -68,6 +68,24 @@ type controlPlaneStatus struct {
 	// restore the prior composition and must not present itself as serving a
 	// verified one.
 	GovernanceBlocked []string `json:"governance_blocked,omitempty"`
+	// Evidence describes the retention posture (Spec 08 R08-4.3.6). It is
+	// reported next to the verdict because "an evaluation ran" and "the
+	// evaluation was kept" are different facts, and a reader must not infer the
+	// second from the first.
+	Evidence *evidenceRetention `json:"evidence_retention,omitempty"`
+}
+
+// evidenceRetention is the retention posture as a client reads it. It carries
+// no bundle content and no path beyond the configured directory, which is
+// operational detail rather than a secret.
+type evidenceRetention struct {
+	Configured    bool   `json:"configured"`
+	Retention     string `json:"retention,omitempty"`
+	MaxRecords    int    `json:"max_records,omitempty"`
+	KeyID         string `json:"key_id,omitempty"`
+	RecordCount   int    `json:"record_count,omitempty"`
+	Unverified    int    `json:"unverified,omitempty"`
+	LastSweepLogs string `json:"note,omitempty"`
 }
 
 // SetControlPlane attaches a resolved manifest. It is called once at startup so
@@ -253,7 +271,34 @@ func (s *MCPServer) controlPlaneStatusSnapshot(ctx context.Context) controlPlane
 	st.Components = bundle.Components
 	st.Unmet = bundle.Unmet
 	st.PolicyDigest = bundle.PolicyDigest
+	st.Evidence = s.evidenceRetentionSnapshot()
 	return st
+}
+
+// evidenceRetentionSnapshot reports the retention posture without changing it.
+//
+// The diagnostic read is deliberately NOT the place a bundle gets stored: a GET
+// must not write to disk, or polling a status endpoint would fill the store with
+// identical records and the retention window would measure poll frequency
+// instead of evaluations. What the read reports is the CONFIGURED policy and
+// the size of what is already retained.
+func (s *MCPServer) evidenceRetentionSnapshot() *evidenceRetention {
+	if s.evidenceStore == nil {
+		return nil
+	}
+	out := &evidenceRetention{
+		Configured: true,
+		Retention:  s.evidenceStore.Retention(),
+		MaxRecords: s.evidenceStore.MaxRecords(),
+		KeyID:      s.evidenceStore.SignerKeyID(),
+	}
+	summary := s.evidenceStore.Summary()
+	out.RecordCount = summary.Records
+	out.Unverified = summary.Unverified
+	if summary.Errors > 0 {
+		out.LastSweepLogs = fmt.Sprintf("%d unreadable record(s) present", summary.Errors)
+	}
+	return out
 }
 
 // ControlPlaneReadiness measures the composition for the readiness surface

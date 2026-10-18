@@ -10,18 +10,34 @@ package mcp
 
 import (
 	"context"
+	"crypto/ed25519"
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/mark3labs/mcp-go/mcp"
 
 	"github.com/thearchitectit/guardrail-mcp/internal/controlplane"
+	"github.com/thearchitectit/guardrail-mcp/internal/evidence"
 	"github.com/thearchitectit/guardrail-mcp/internal/guardrails"
 )
+
+// evidenceTestSigner builds a deterministic identity from a low-entropy seed, so
+// the fixture file carries no credential-shaped literal.
+func evidenceTestSigner(t *testing.T) *evidence.Instance {
+	t.Helper()
+	seed := sha256.Sum256([]byte("mcp control-plane retention test fixture seed"))
+	inst, err := evidence.NewInstance("guardrail-test", ed25519.NewKeyFromSeed(seed[:]))
+	if err != nil {
+		t.Fatalf("build instance: %v", err)
+	}
+	return inst
+}
 
 var errFixture = errors.New("manifest does not resolve (fixture)")
 
@@ -272,5 +288,81 @@ func TestResourceMatrixCoversEveryRegisteredResource(t *testing.T) {
 		if _, known := classifyResource(spec.uri); !known {
 			t.Errorf("registered resource %q has no permission row", spec.uri)
 		}
+	}
+}
+
+// Spec 08 R08-4.3.6 — the retention posture is reported where a client already
+// reads the composition.
+//
+// The requirement is that retention be CONFIGURABLE and auditable. A configured
+// store that no surface mentions is a policy an operator cannot discover, so
+// this drives the real resource handler and asserts the posture it reports. It
+// also asserts the read does NOT write: a GET that stored a bundle would make
+// the retention window measure polling frequency instead of evaluations.
+func TestControlPlaneResourceReportsEvidenceRetention(t *testing.T) {
+	dir := t.TempDir()
+	store, err := controlplane.NewEvidenceStore(controlplane.StoreConfig{
+		Dir:        dir,
+		Retention:  48 * time.Hour,
+		MaxRecords: 50,
+		Signer:     evidenceTestSigner(t),
+		Audit:      func(controlplane.Event) {},
+	})
+	if err != nil {
+		t.Fatalf("NewEvidenceStore: %v", err)
+	}
+
+	server := &MCPServer{exercise: &exerciseCounters{}, guardrailsEngine: guardrails.NewEngine(nil, nil)}
+	server.SetControlPlane(loadCheckedInManifest(t), "control-plane.manifest.json")
+	server.SetEvidenceStore(store)
+
+	result, err := server.readControlPlaneResource(context.Background(), "guardrail://control-plane")
+	if err != nil {
+		t.Fatalf("read: %v", err)
+	}
+	content := result.Contents[0].(mcp.TextResourceContents)
+	var status controlPlaneStatus
+	if err := json.Unmarshal([]byte(content.Text), &status); err != nil {
+		t.Fatalf("status is not valid JSON: %v", err)
+	}
+	if status.Evidence == nil {
+		t.Fatalf("status reports no retention posture with a store configured: %s", content.Text)
+	}
+	if !status.Evidence.Configured {
+		t.Fatal("a configured store reported configured=false")
+	}
+	if status.Evidence.Retention != "48h0m0s" {
+		t.Fatalf("reported retention = %q, want 48h0m0s", status.Evidence.Retention)
+	}
+	if status.Evidence.MaxRecords != 50 {
+		t.Fatalf("reported max_records = %d, want 50", status.Evidence.MaxRecords)
+	}
+	if status.Evidence.KeyID == "" {
+		t.Fatal("reported key_id is empty; the posture must name the identity records verify under")
+	}
+
+	// The diagnostic read must not have written anything.
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatalf("read store dir: %v", err)
+	}
+	if len(entries) != 0 {
+		t.Fatalf("a diagnostic GET wrote %d file(s) into the evidence store", len(entries))
+	}
+}
+
+// With no store configured the field is absent rather than a reassuring empty
+// posture: "not configured" and "configured and empty" are different answers.
+func TestControlPlaneResourceOmitsRetentionWhenUnconfigured(t *testing.T) {
+	server := &MCPServer{exercise: &exerciseCounters{}, guardrailsEngine: guardrails.NewEngine(nil, nil)}
+	server.SetControlPlane(loadCheckedInManifest(t), "control-plane.manifest.json")
+
+	result, err := server.readControlPlaneResource(context.Background(), "guardrail://control-plane")
+	if err != nil {
+		t.Fatalf("read: %v", err)
+	}
+	content := result.Contents[0].(mcp.TextResourceContents)
+	if strings.Contains(content.Text, "evidence_retention") {
+		t.Fatalf("unconfigured store still reported a retention posture:\n%s", content.Text)
 	}
 }

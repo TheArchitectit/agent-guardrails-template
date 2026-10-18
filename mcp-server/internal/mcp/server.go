@@ -109,6 +109,30 @@ type MCPServer struct {
 	// object readiness consults for a latched rollback failure, so a process
 	// that could not restore a prior composition cannot report itself ready.
 	governance *controlplane.Governance
+
+	// evidenceStore retains evaluation bundles under a configured policy
+	// (Spec 08 R08-4.3.6). When nil, nothing is retained and the diagnostic
+	// reports not_configured rather than implying a history it does not have.
+	evidenceStore *controlplane.EvidenceStore
+}
+
+// SetEvidenceStore installs the retention store (Spec 08 R08-4.3.6) so the
+// request path can report what is retained and an operator can read a record
+// through the MCP surface rather than by finding a file.
+func (s *MCPServer) SetEvidenceStore(store *controlplane.EvidenceStore) {
+	s.evidenceStore = store
+}
+
+// EvidenceStore exposes the retention store for the same purpose.
+func (s *MCPServer) EvidenceStore() *controlplane.EvidenceStore {
+	return s.evidenceStore
+}
+
+// AuditLogger exposes the audit logger so a subsystem that produced an auditable
+// event outside the tool path (the evidence store's retention sweep) can record
+// it with the same sink the request path uses, instead of a second log.
+func (s *MCPServer) AuditLogger() *audit.Logger {
+	return s.audit
 }
 
 // SetCredentialRegistry installs the process-wide credential registry so the

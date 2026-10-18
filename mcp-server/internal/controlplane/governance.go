@@ -132,6 +132,12 @@ type Governance struct {
 	// path is the state file, empty for an in-memory governance (tests, and a
 	// deployment that asks for no persistence).
 	path string
+	// evidence retains the acceptance bundle a promotion was granted on
+	// (Spec 08 R08-4.3.6). Nil means no store is configured: the promotion
+	// record still names the bundle by evaluation id and digest, but the bytes
+	// are not retained on this host, and the record says so rather than
+	// implying they are.
+	evidence *EvidenceStore
 	// clock is injectable for deterministic records.
 	clock func() time.Time
 }
@@ -169,6 +175,25 @@ func OpenGovernance(manifestPath, statePath string) (*Governance, error) {
 		return nil, err
 	}
 	return OpenGovernanceWithManifest(m, statePath)
+}
+
+// SetEvidenceStore attaches the retention store (Spec 08 R08-4.3.6). It is
+// installed after construction because retention is a deployment choice: a
+// process that configured no store still promotes, and its promotion record
+// states that the acceptance bytes were not retained rather than implying they
+// were.
+func (g *Governance) SetEvidenceStore(s *EvidenceStore) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	g.evidence = s
+}
+
+// EvidenceStore exposes the attached store. A nil result means retention is not
+// configured, which is reported rather than hidden.
+func (g *Governance) EvidenceStore() *EvidenceStore {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	return g.evidence
 }
 
 // OpenGovernanceWithManifest opens governance over an already-resolved
@@ -392,6 +417,24 @@ func (g *Governance) Promote(req PromotionRequest) error {
 			req.Acceptance.Profile, g.active.manifest.Profile)
 	}
 
+	// R08-4.3.6: retain the evidence this promotion rests on BEFORE the posture
+	// changes. A promotion whose acceptance bundle was not kept is a mode with a
+	// stated justification nobody can re-examine, and retaining it after the
+	// switch would leave a window where the deployment blocks on evidence that
+	// would be lost by a crash.
+	retention := "retention=not_configured"
+	if g.evidence != nil {
+		path, err := g.evidence.Append(req.Acceptance)
+		if err != nil {
+			// A configured store that cannot retain the bundle is a failure, not
+			// a warning: the promotion is exactly the action that must be
+			// evidenced, and proceeding would produce a blocking mode whose
+			// acceptance evidence exists only in the caller's memory.
+			return fmt.Errorf("retain acceptance evidence for promotion: %w", err)
+		}
+		retention = "retention=stored:" + path
+	}
+
 	g.state.ObserveOnly = false
 	g.state.ProfileVersion = req.ProfileVersion
 	g.state.Records = append(g.state.Records, Record{
@@ -403,11 +446,13 @@ func (g *Governance) Promote(req PromotionRequest) error {
 		ReviewRef:      req.ReviewRef,
 		ApprovedBy:     req.ApprovedBy,
 		// The evidence this promotion rests on, by identity rather than by a
-		// claim that it was green.
+		// claim that it was green — plus whether the bytes were retained, so a
+		// reader never has to guess which it is.
 		Changes: []string{
 			"evaluation=" + req.Acceptance.EvaluationID,
 			"bundle_digest=" + req.Acceptance.Digest,
 			"verdict=" + string(req.Acceptance.Verdict),
+			"evidence_" + retention,
 		},
 	})
 	return g.persistLocked()

@@ -3,9 +3,12 @@
 **Status:** PARTIAL — see Sec. 9 for exactly what is implemented, reachable and
 measured, and what remains. The composition core (manifest resolution,
 integration-state measurement, evidence bundle, derived verdict, replay
-comparison, readiness) exists and is reachable, and staged adoption/promotion,
-rollback-as-a-unit and the root-change audit record landed 2026-10-18.
-Evidence persistence and trust-label propagation do not exist.
+comparison, readiness) exists and is reachable; staged adoption/promotion,
+rollback-as-a-unit and the root-change audit record landed 2026-10-18; evidence
+persistence, retention, signing, access control and auditable deletion (R08-4.3.6)
+landed 2026-10-18 as a running store, not a library. **Still open:** the
+per-profile requirement set (R08-4.1.5) and trust-label propagation
+(R08-4.5.3/4.5.4).
 **Priority:** Important; begin after the capability specs identify stable
 interfaces and acceptance tests.
 **Related:** `docs/specs/guardrail-gaps-2026/STATUS.md`,
@@ -411,9 +414,72 @@ harness.
   harness (103s, all cases). Note the spec-18 check list is **unchanged** — the
   composition is a separate field, because a spec-08 requirement must not
   silently rewrite a spec-18 contract.
-- **No evidence persistence, retention, signing or deletion policy (R08-4.3.6).**
-  A bundle is produced and returned; there is no store, no retention window and
-  no access control on stored evidence.
+- **Evidence persistence, retention, signing, access control and auditable
+  deletion — IMPLEMENTED (R08-4.3.6).** "Evidence retention, signing, access
+  control, and deletion policy MUST be configurable and auditable": until this
+  pass a bundle was produced, returned and gone, so a deployment could not answer
+  months later what its composition had proved.
+  `internal/controlplane/evidencestore.go` is one store with four rules:
+  - **Configurable means explicit.** `CONTROL_PLANE_EVIDENCE_DIR` without
+    `CONTROL_PLANE_EVIDENCE_RETENTION` is a startup error
+    (`Config.ValidateCompositionEvidenceRetention`, called from `Config.Validate`):
+    an implicit "keep forever" is a policy nobody chose, and an unbounded store is
+    an unsized disk dependency. A window with **no** directory is refused too, or
+    an operator would believe evidence is kept because the window was set. The
+    window is capped at two years (longer is a duration typo); `MAX_RECORDS` is an
+    optional second bound, floored at ten.
+  - **Signed means verifiable.** Each record carries a detached Ed25519
+    signature over the exact stored structure (bundle + key id + purpose +
+    `stored_at`) under purpose `controlplane.evidence.record.v1`, domain-separated
+    from the envelope domain so neither signature replays as the other. A record
+    that does not verify is an **error, not a flagged return** — a flag makes
+    every caller responsible for checking it, and the one that forgets is the one
+    whose report is wrong.
+  - **Access control reuses the principal model (Spec 16 R16-04) at ADMIN
+    class.** Reading or listing retained evidence requires `admin:manage` through
+    the same `auth.Decide` the tool and resource paths use; a read-class credential
+    allowed to read `guardrail://control-plane` is refused — a bundle names every
+    check and why a control blocked.
+  - **Deletion is audited or it does not happen.** Retention removal, the count
+    bound and explicit erase each record the evaluation id, reason and age; an
+    empty erase reason is refused — an unexplainable deletion is not auditable.
+  **Two decisions the requirement forced:**
+  - **Records are keyed by CONTENT digest, not evaluation id.** Two runs of one
+    subject share an evaluation id — that is what makes replay comparison
+    meaningful — and can still differ: a check that failed on one run and passed
+    on the next is exactly the history retention exists to preserve. Keying by
+    evaluation id would let the second run silently overwrite the first. The
+    "most recent run" read is named `ReadLatestFor`; there is no implicit pick.
+  - **The sweep is a running loop, not a callable.** `Sweep()` existed only in
+    tests until it was wired at startup (`StartRetentionLoop`, hourly, first
+    sweep immediately): a configurable, auditable policy that nothing applies is
+    the built-but-unreachable class this spec is about. A daily sweep would also
+    be wrong — a time window trimmed once a day can be exceeded by a day.
+
+  **Reachable where a client looks:** `guardrail://control-plane` reports
+  `evidence_retention` (`configured`, `retention`, `max_records`, `key_id`,
+  `record_count`, `unverified`), **absent** when no store is configured — "not
+  configured" and "configured and empty" are different answers. The diagnostic
+  read never writes: a GET that stored a bundle would make the window measure
+  polling frequency instead of evaluations (asserted). A promotion **retains the
+  acceptance bundle it was granted on** before the posture changes and records
+  `retention=stored:<path>` or `retention=not_configured`; a configured store
+  that cannot retain it **fails the promotion**.
+
+  **Evidence:** `evidencestore_test.go` (12 cases over the real store and real
+  `Evaluate` bundles: 0600 round-trip, ADMIN-only read/list, tamper refusal where
+  the tamper **also recomputes the content digest** so the signature is the only
+  thing that can catch it, digest mismatch, sweep with deletion audit and a
+  converging second sweep, count bound, audited erase with a required reason,
+  promotion retention, divergent runs of one evaluation, startup sweep) +
+  `controlplane_evidence_test.go` (6 cases through real `Config.Validate`) + 2
+  request-path cases driving the real handler. **Red-on-drift proven twice via
+  permanent `mutationkill` cases, both confirmed killing:** dropping the
+  signature check flips `TestEvidenceStoreRefusesATamperedRecord`; never firing
+  the sweep flips `TestEvidenceStoreSweepDeletesPastRetentionAndAudits`. The
+  first tamper attempt was caught by the digest check and the mutation
+  **survived** — the test was strengthened rather than recorded as a kill that
+  proved nothing.
 - **Trust labels are declared, not propagated (R08-4.5.3/4.5.4).** The manifest
   carries a tier and the resolver enforces the ordering rule, but component
   output is not tagged with its origin trust label at evaluation time, and the

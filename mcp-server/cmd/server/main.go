@@ -369,6 +369,45 @@ func main() {
 		mcpSrv.SetEvidenceSigner(signer, cfg.EvidenceAudience)
 		slog.Info("Outbound evidence signing enabled (Spec 15 gr-xp-02)",
 			"producer_id", signer.ProducerID(), "audience", cfg.EvidenceAudience, "key_id", signer.KeyID())
+
+		// Spec 08 R08-4.3.6: retain the acceptance evidence a promotion rests
+		// on. Validate already refused a configured store with no window or,
+		// outside `local`, no signing identity, so a failure here is a real
+		// filesystem or policy problem and stops startup: a store that silently
+		// did not open would promote a deployment whose evidence exists only in
+		// the caller's memory.
+		if cfg.ControlPlaneEvidenceDir != "" && mcpSrv.Governance() != nil {
+			store, err := controlplane.NewEvidenceStore(controlplane.StoreConfig{
+				Dir:        cfg.ControlPlaneEvidenceDir,
+				Retention:  cfg.ControlPlaneEvidenceRetention,
+				MaxRecords: cfg.ControlPlaneEvidenceMaxRecords,
+				Signer:     signer,
+				Audit: func(ev controlplane.Event) {
+					slog.Info("control-plane evidence store",
+						"action", ev.Action,
+						"evaluation_id", ev.EvaluationID,
+						"reason", ev.Reason,
+						"age", ev.Age,
+					)
+					if mcpSrv.AuditLogger() != nil {
+						mcpSrv.AuditLogger().LogConfigChange(context.Background(), auth.Caller{
+							PrincipalID: "system", CredentialID: "control-plane", Role: auth.RoleAdministrator,
+						}, "guardrail://control-plane/evidence", ev.Action)
+					}
+				},
+			})
+			if err != nil {
+				slog.Error("control-plane evidence store is unusable; refusing to start", "error", err)
+				os.Exit(1)
+			}
+			mcpSrv.Governance().SetEvidenceStore(store)
+			mcpSrv.SetEvidenceStore(store)
+			slog.Info("control-plane evidence retention enabled (Spec 08 R08-4.3.6)",
+				"dir", cfg.ControlPlaneEvidenceDir,
+				"retention", cfg.ControlPlaneEvidenceRetention.String(),
+				"max_records", cfg.ControlPlaneEvidenceMaxRecords,
+				"key_id", store.SignerKeyID())
+		}
 	} else {
 		slog.Warn("EVIDENCE_PRIVATE_KEY is not set; MCP verdicts carry no signed provenance (permitted for the local profile only)")
 	}
@@ -448,6 +487,18 @@ func main() {
 			slog.Warn("credential registry reload failed; previous validated snapshot remains in force", "error", err)
 		})
 		slog.Info("Credential registry reload loop started", "interval", auth.RevocationReloadInterval, "bound", auth.RevocationPropagationBound)
+	}
+
+	// Retention sweep loop (Spec 08 R08-4.3.6). A configured window that nothing
+	// applies is a policy nobody enforces, so the store trims immediately and
+	// then on an interval until shutdown. Written as a loop rather than a
+	// startup call because a process that runs for weeks would otherwise keep
+	// every record it ever produced while reporting a 48h window.
+	if store := mcpSrv.EvidenceStore(); store != nil {
+		store.StartRetentionLoop(ctx, controlplane.RetentionSweepInterval)
+		slog.Info("control-plane evidence retention sweep started",
+			"interval", controlplane.RetentionSweepInterval.String(),
+			"retention", store.Retention())
 	}
 
 	// Lifecycle gate (Spec 18 Sec. 5.2 / R18-12): readiness stays non-ready until
