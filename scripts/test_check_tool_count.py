@@ -41,6 +41,18 @@ func (s *MCPServer) guardrailsToolList() []mcp.Tool {
 	return []mcp.Tool{}
 }
 '''
+# Spec 05 tools are appended by guardrailsToolList() with no backing store, so
+# they are core. The fixture must contain this registry for the same reason the
+# real tree must: a core registry that is missing from a tree is a gate
+# FAILURE, not a skip (that is the vacuous-scope rule this gate exists to
+# enforce). This file is empty of declarations here on purpose — it proves the
+# gate tolerates a registry that currently declares nothing, while still
+# requiring the registry to EXIST.
+CORE_INDIRECT = '''package mcp
+func (s *MCPServer) indirectInjectionTools() []mcp.Tool {
+	return []mcp.Tool{}
+}
+'''
 VISION = '''package mcp
 func (vt *VisionToolSet) visionToolList() []mcp.Tool {
 	return []mcp.Tool{{Name: "vision_one"}, {Name: "vision_two"}}
@@ -107,6 +119,7 @@ def _build(root: Path) -> None:
     _write(root, f"{mcp}/tools_core_list.go", CORE_LIST)
     _write(root, f"{mcp}/tools_core_list_extended.go", CORE_EXT)
     _write(root, f"{mcp}/tools_guardrails.go", CORE_GUARD)
+    _write(root, f"{mcp}/tools_indirect_injection.go", CORE_INDIRECT)
     _write(root, f"{mcp}/vision_tools.go", VISION)
     _write(root, f"{mcp}/tools_notifications.go", WEBHOOK)
     _write(root, f"{mcp}/tools_budget.go", BUDGET)
