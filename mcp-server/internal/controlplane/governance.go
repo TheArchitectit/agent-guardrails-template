@@ -604,8 +604,79 @@ func RequiresReview(prior, next *Manifest) []string {
 			add("component %q added (mandatory=%t, trust=%s)", id, nw.Mandatory, nw.TrustTier)
 		}
 	}
+
+	// The profile requirement set is a governed root too (R08-4.1.5 +
+	// R08-4.4.3). It decides what evidence counts, so quietly lowering a floor
+	// from `exercised` to `reachable`, or deleting the requirement that a
+	// mandatory control be proven, changes the strength of every future
+	// evaluation without touching a component. A diff that only walked
+	// components would report "no change" for exactly that edit.
+	oldReqs, newReqs := reqIndex(prior), reqIndex(next)
+	for _, id := range sortedKeys(oldReqs) {
+		if _, ok := newReqs[id]; !ok {
+			add("requirement %q removed", id)
+		}
+	}
+	for _, id := range sortedKeys(newReqs) {
+		if _, ok := oldReqs[id]; !ok {
+			add("requirement %q added", id)
+		}
+	}
+	for _, id := range sortedKeys(oldReqs) {
+		old, ok := oldReqs[id]
+		if !ok {
+			continue
+		}
+		nw, present := newReqs[id]
+		if !present {
+			continue
+		}
+		if old.Description != nw.Description {
+			add("requirement %q description changed", id)
+		}
+		oldFloors, newFloors := floorIndex(old), floorIndex(nw)
+		for _, cid := range sortedKeys(oldFloors) {
+			if got, ok := newFloors[cid]; !ok {
+				add("requirement %q no longer requires component %q (was floor %s)", id, cid, oldFloors[cid])
+			} else if got != oldFloors[cid] {
+				add("requirement %q component %q floor: %s -> %s", id, cid, oldFloors[cid], got)
+			}
+		}
+		for _, cid := range sortedKeys(newFloors) {
+			if _, ok := oldFloors[cid]; !ok {
+				add("requirement %q now requires component %q at floor %s", id, cid, newFloors[cid])
+			}
+		}
+		if strings.Join(sortedCopy(old.RequiredChecks), ",") != strings.Join(sortedCopy(nw.RequiredChecks), ",") {
+			add("requirement %q required_checks: [%s] -> [%s]", id,
+				strings.Join(sortedCopy(old.RequiredChecks), ","),
+				strings.Join(sortedCopy(nw.RequiredChecks), ","))
+		}
+		if old.minimumPassing() != nw.minimumPassing() {
+			add("requirement %q minimum_passing_checks: %d -> %d", id, old.minimumPassing(), nw.minimumPassing())
+		}
+	}
+
 	sort.Strings(changes)
 	return changes
+}
+
+// reqIndex maps requirement id to requirement.
+func reqIndex(m *Manifest) map[string]Requirement {
+	out := make(map[string]Requirement, len(m.Requirements))
+	for _, r := range m.Requirements {
+		out[r.ID] = r
+	}
+	return out
+}
+
+// floorIndex maps component id to the floor one requirement holds it to.
+func floorIndex(r Requirement) map[string]EvidenceFloor {
+	out := make(map[string]EvidenceFloor, len(r.RequiredComponents))
+	for _, cr := range r.RequiredComponents {
+		out[cr.ID] = cr.MinimumState
+	}
+	return out
 }
 
 // persistLocked writes the state file. It is called with mu held.

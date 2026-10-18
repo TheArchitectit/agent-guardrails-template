@@ -786,6 +786,29 @@ func (s *MCPServer) authorizeToolCallDisabled(ctx context.Context, name string, 
 		pkg:       "./internal/controlplane",
 		testRegex: "^TestBundleCarriesNoCredentialMaterial$",
 	},
+	{
+		// Spec 08 R08-4.1.5: a profile must state required checks and minimum
+		// evidence, not merely a list of installed components. The mutation
+		// restores the pre-change behaviour — an empty requirement set resolves
+		// cleanly — so a manifest that constrains nothing loads and evaluates.
+		name:      "controlplane-requirement-set-may-be-empty",
+		file:      "internal/controlplane/manifest.go",
+		old:       "\t\treturn errors.New(\"manifest declares no profile requirements; a profile must state required checks and minimum evidence (R08-4.1.5)\")",
+		new:       "\t\treturn nil // mutation: a profile with no obligations resolves",
+		pkg:       "./internal/controlplane",
+		testRegex: "^TestManifestWithoutRequirementsIsRefused$",
+	},
+	{
+		// Spec 08 R08-4.1.5: an unmet requirement must prevent `pass`. The
+		// mutation marks every requirement met, so a composition that failed its
+		// own declared floor still reports success.
+		name:      "controlplane-requirement-always-met",
+		file:      "internal/controlplane/evaluate.go",
+		old:       "\t\tres.Met = len(res.Unmet) == 0",
+		new:       "\t\tres.Met = true // mutation: a requirement is met whatever it measured",
+		pkg:       "./internal/controlplane",
+		testRegex: "^TestUnmetRequirementPreventsPass$",
+	},
 }
 
 // findModuleRoot walks up from the test working directory to the directory

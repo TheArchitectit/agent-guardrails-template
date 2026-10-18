@@ -50,6 +50,22 @@ func testManifest(t *testing.T, mutate func(*Manifest)) *Manifest {
 				Rationale:   "untrusted content is scanned before use",
 			},
 		},
+		Requirements: []Requirement{
+			{
+				ID:          "policy-evidence",
+				Description: "the policy engine must be reachable so a decision can be attributed to a policy identity",
+				RequiredComponents: []ComponentRequirement{
+					{ID: "policy-engine", MinimumState: FloorReachable},
+				},
+			},
+			{
+				ID:          "injection-evidence",
+				Description: "the detector must be reachable before its verdict can be trusted",
+				RequiredComponents: []ComponentRequirement{
+					{ID: "injection-detector", MinimumState: FloorReachable},
+				},
+			},
+		},
 	}
 	if mutate != nil {
 		mutate(m)
@@ -286,7 +302,18 @@ func TestAdoptRequiresReviewForGovernedRootChange(t *testing.T) {
 		{
 			name: "component removed",
 			mutate: func(m *Manifest) {
+				// Dropping a component means dropping the requirement that names
+				// it: a requirement for an undeclared component cannot resolve, so
+				// a manifest cannot claim a control it no longer declares. Both
+				// removals are governed-root changes and both must be reported.
 				m.Components = m.Components[:1]
+				kept := m.Requirements[:0]
+				for _, r := range m.Requirements {
+					if r.ID != "injection-evidence" {
+						kept = append(kept, r)
+					}
+				}
+				m.Requirements = kept
 			},
 			want: "removed",
 		},

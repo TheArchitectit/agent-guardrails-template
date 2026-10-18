@@ -172,10 +172,27 @@ type Bundle struct {
 	ObserveOnly bool             `json:"observe_only"`
 	Checks      []CheckRecord    `json:"checks"`
 	Components  []ComponentState `json:"components"`
+	// Requirements records the profile obligations of R08-4.1.5 and whether
+	// this run satisfied them. It is reported next to the components because
+	// "the components are present" and "the profile's obligations are met"
+	// are different claims, and the first has never implied the second.
+	Requirements []RequirementResult `json:"requirements,omitempty"`
 	// Unmet names what prevented a pass, in a fixed order.
 	Unmet []string `json:"unmet,omitempty"`
 	// Digest is the digest of this bundle's content, computed after the fact.
 	Digest string `json:"digest"`
+}
+
+// RequirementResult is one profile obligation, evaluated against this run.
+//
+// `Met` is derived from the measured states and check outcomes; nothing assigns
+// it. `Unmet` carries the specific shortfall rather than a bare boolean, because
+// "requirement r1 not met" sends an operator to read the code.
+type RequirementResult struct {
+	ID       string   `json:"id"`
+	Met      bool     `json:"met"`
+	Unmet    []string `json:"unmet,omitempty"`
+	Required []string `json:"required,omitempty"`
 }
 
 // ComponentState is the measured state of one component in the report.
@@ -339,6 +356,7 @@ func Evaluate(req EvaluateRequest) (*Bundle, error) {
 	})
 
 	b.EndedAt = clock().UTC()
+	b.Requirements = evaluateRequirements(req.Manifest, b)
 	b.Verdict, b.Unmet = deriveVerdict(req.Manifest, b)
 	b.EvaluationID = b.computeID()
 	b.Digest = b.computeDigest()
@@ -397,6 +415,24 @@ func deriveVerdict(m *Manifest, b *Bundle) (Verdict, []string) {
 		}
 	}
 
+	// Profile obligations (R08-4.1.5). A requirement the profile declared and
+	// this run did not satisfy is a failure to evidence, not a detail: the
+	// requirement set exists precisely so a profile cannot pass on the strength
+	// of its component list.
+	for _, r := range b.Requirements {
+		if r.Met {
+			continue
+		}
+		unmet = append(unmet, fmt.Sprintf("profile requirement %q not met: %s", r.ID, strings.Join(r.Unmet, "; ")))
+		// A named check that never ran is a wiring defect, not a refusal, so it
+		// is reported as `failed` rather than as an unmet obligation.
+		for _, u := range r.Unmet {
+			if strings.Contains(u, "did not run") {
+				failed = true
+			}
+		}
+	}
+
 	sort.Strings(unmet)
 
 	switch {
@@ -411,6 +447,88 @@ func deriveVerdict(m *Manifest, b *Bundle) (Verdict, []string) {
 		// which is a different answer from "failed" and must not read as one.
 		return VerdictIncomplete, unmet
 	}
+}
+
+// evaluateRequirements checks every declared obligation against the measured
+// states and check outcomes of this run (R08-4.1.5).
+//
+// Three rules keep it honest:
+//   - a component is measured against the floor the MANIFEST declared, never
+//     against the strongest state the process happens to have;
+//   - a required check that produced no record is `did not run`, which is a
+//     different answer from `ran and failed`;
+//   - a check that ran and did not `pass` never counts toward the passing
+//     floor, whatever its reason code.
+func evaluateRequirements(m *Manifest, b *Bundle) []RequirementResult {
+	if m == nil || b == nil {
+		return nil
+	}
+	out := make([]RequirementResult, 0, len(m.Requirements))
+	for _, r := range m.Requirements {
+		res := RequirementResult{ID: r.ID}
+
+		for _, cr := range r.RequiredComponents {
+			res.Required = append(res.Required, cr.ID)
+			state := stateOf(b.Components, cr.ID)
+			if state == StateFailed {
+				res.Unmet = append(res.Unmet, fmt.Sprintf("component %q failed", cr.ID))
+				continue
+			}
+			if !state.Valid() {
+				res.Unmet = append(res.Unmet, fmt.Sprintf("component %q has no measured state", cr.ID))
+				continue
+			}
+			if state.rank() < cr.MinimumState.rank() {
+				res.Unmet = append(res.Unmet,
+					fmt.Sprintf("component %q is %s, below the %s floor", cr.ID, state, cr.MinimumState))
+			}
+		}
+
+		passed := 0
+		var nonPassing []string
+		for _, cid := range r.RequiredChecks {
+			res.Required = append(res.Required, cid)
+			rec, found := checkRecord(b.Checks, cid)
+			switch {
+			case !found:
+				// A named check with no record means the wiring layer never
+				// supplied it. That is a defect in the composition, not a
+				// refusal, so it fails the requirement outright — a floor on
+				// passing checks cannot be met by a check that does not exist.
+				res.Unmet = append(res.Unmet, fmt.Sprintf("check %q did not run", cid))
+			case rec.Outcome == OutcomePass:
+				passed++
+			default:
+				// A check that ran and did not pass is recorded, but it is the
+				// requirement's declared PASSING FLOOR that decides whether the
+				// obligation is met. Hard-failing on any non-pass would make
+				// minimum_passing_checks meaningless — a floor exists precisely
+				// so a profile can tolerate some inconclusive checks.
+				nonPassing = append(nonPassing, fmt.Sprintf("check %q was %s", cid, rec.Outcome))
+			}
+		}
+		if need := r.minimumPassing(); len(r.RequiredChecks) > 0 && passed < need {
+			res.Unmet = append(res.Unmet, nonPassing...)
+			res.Unmet = append(res.Unmet,
+				fmt.Sprintf("%d of the required %d check(s) passed", passed, need))
+		}
+
+		res.Met = len(res.Unmet) == 0
+		out = append(out, res)
+	}
+	sort.SliceStable(out, func(i, j int) bool { return out[i].ID < out[j].ID })
+	return out
+}
+
+// checkRecord finds one check record by id. Ids are unique within a bundle
+// because Evaluate refuses a duplicate, so a first match is the answer.
+func checkRecord(records []CheckRecord, checkID string) (CheckRecord, bool) {
+	for _, r := range records {
+		if r.CheckID == checkID {
+			return r, true
+		}
+	}
+	return CheckRecord{}, false
 }
 
 func stateOf(states []ComponentState, id string) IntegrationState {

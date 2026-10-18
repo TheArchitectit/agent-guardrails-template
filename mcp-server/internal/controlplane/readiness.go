@@ -1,5 +1,7 @@
 package controlplane
 
+import "strings"
+
 // Readiness: the per-mandatory-component decision of Spec 08 R08-4.2.4.
 //
 // The requirement is narrow and easy to satisfy vacuously:
@@ -158,6 +160,18 @@ func (b *Bundle) Readiness() Readiness {
 		allAvailable = false
 		out.Unmet = append(out.Unmet,
 			"mandatory check "+c.CheckID+" on "+c.ComponentID+" was "+string(c.Outcome))
+	}
+
+	// Profile obligations (R08-4.1.5) gate readiness too. The evaluator derives
+	// the verdict from them, so a readiness answer that ignored them could say
+	// `ready` about the same process the bundle calls `incomplete`. Readiness
+	// and evidence must not disagree about one instance.
+	for _, r := range b.Requirements {
+		if r.Met {
+			continue
+		}
+		allAvailable = false
+		out.Unmet = append(out.Unmet, "profile requirement "+r.ID+" not met: "+strings.Join(r.Unmet, "; "))
 	}
 
 	switch {

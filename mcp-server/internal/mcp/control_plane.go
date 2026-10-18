@@ -55,6 +55,12 @@ type controlPlaneStatus struct {
 	Components []controlplane.ComponentState `json:"components,omitempty"`
 	// Unmet names what prevented a pass.
 	Unmet []string `json:"unmet,omitempty"`
+	// Requirements reports the profile obligations of R08-4.1.5 and whether
+	// this run satisfied them. It is reported next to the components because
+	// "the components are present" and "the profile's obligations are met"
+	// are different claims, and a client that sees only the first cannot tell
+	// a composition from a proven one.
+	Requirements []controlplane.RequirementResult `json:"requirements,omitempty"`
 	// Error is the resolution failure for a configured-but-broken manifest.
 	Error string `json:"error,omitempty"`
 	// Mode is the governance posture: observe_only or blocking (Spec 08
@@ -270,6 +276,7 @@ func (s *MCPServer) controlPlaneStatusSnapshot(ctx context.Context) controlPlane
 	st.ObserveOnly = bundle.ObserveOnly
 	st.Components = bundle.Components
 	st.Unmet = bundle.Unmet
+	st.Requirements = bundle.Requirements
 	st.PolicyDigest = bundle.PolicyDigest
 	st.Evidence = s.evidenceRetentionSnapshot()
 	return st

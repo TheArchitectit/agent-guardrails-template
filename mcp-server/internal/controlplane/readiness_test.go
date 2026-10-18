@@ -197,6 +197,15 @@ func TestReadinessAgreesWithEvaluation(t *testing.T) {
 				Rationale: "mandatory detector",
 			},
 		},
+		Requirements: []Requirement{
+			{
+				ID:          "injection-evidence",
+				Description: "the detector must be reachable before its verdict can be trusted",
+				RequiredComponents: []ComponentRequirement{
+					{ID: "injection-detector", MinimumState: FloorReachable},
+				},
+			},
+		},
 	}
 	clock := func() time.Time { return time.Date(2026, 10, 18, 0, 0, 0, 0, time.UTC) }
 

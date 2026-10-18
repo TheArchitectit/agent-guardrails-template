@@ -107,6 +107,90 @@ type Component struct {
 	Rationale string `json:"rationale"`
 }
 
+// EvidenceFloor is the weakest integration state a profile accepts as
+// evidence for one component (R08-4.1.5).
+//
+// Only two values are legal, and the exclusion is the point of the requirement:
+// `declared`, `installed` and `initialized` are all statements that the code is
+// present, which is exactly what "merely a list of installed components" means.
+// A profile may declare that it accepts a control it can REACH, or demand one it
+// has SEEN run. It may not declare presence as its own evidence, and it may not
+// declare `failed` as a floor, because a floor is the weakest acceptable answer
+// rather than a description of one.
+type EvidenceFloor string
+
+const (
+	// FloorReachable accepts a component whose entry point a request can reach,
+	// even if nothing has invoked it yet. A freshly started instance is
+	// legitimately in this state, so a profile that demanded `exercised` from
+	// every component could never be satisfied at boot.
+	FloorReachable EvidenceFloor = "reachable"
+	// FloorExercised demands an observed invocation. It is the floor for a
+	// control whose whole purpose is to run.
+	FloorExercised EvidenceFloor = "exercised"
+)
+
+// rank orders the floors so a measured state can be compared against one.
+// An unknown floor ranks 0 so a typo fails closed instead of passing.
+func (f EvidenceFloor) rank() int {
+	switch f {
+	case FloorReachable:
+		return 4 // StateReachable
+	case FloorExercised:
+		return 5 // StateExercised
+	}
+	return 0
+}
+
+// Valid reports whether the floor is one the resolver understands.
+func (f EvidenceFloor) Valid() bool { return f.rank() > 0 }
+
+// ComponentRequirement binds one component to the evidence floor its profile
+// accepts. Naming a floor per component is what turns "mandatory" from a label
+// into an obligation somebody can fail.
+type ComponentRequirement struct {
+	ID string `json:"id"`
+	// MinimumState is the weakest IntegrationState that satisfies this entry.
+	MinimumState EvidenceFloor `json:"minimum_state"`
+}
+
+// Requirement is one profile-level obligation (R08-4.1.5). A manifest that
+// declares only components says what is composed; a requirement says what the
+// profile must be able to PROVE before the composition counts as evidence.
+//
+// A requirement must name at least one check or one component. A requirement
+// that names neither is decoration, and is refused at resolve time.
+type Requirement struct {
+	// ID is the stable requirement identifier.
+	ID string `json:"id"`
+	// Description states, in one sentence, what this requirement exists to
+	// prove. It is required so a future requirement cannot be added without a
+	// stated purpose.
+	Description string `json:"description"`
+	// RequiredComponents are the components this requirement needs evidence
+	// from, each with the floor it accepts.
+	RequiredComponents []ComponentRequirement `json:"required_components,omitempty"`
+	// RequiredChecks are the check IDs that must have run for this requirement
+	// to be evidenced. A named check that never ran is `not_run` — a distinct
+	// answer from "ran and failed", because one is a wiring defect and the
+	// other is a refusal.
+	RequiredChecks []string `json:"required_checks,omitempty"`
+	// MinimumPassingChecks is the floor on how many of RequiredChecks must
+	// report `pass`. Absent means all of them. An explicit value below 1 or
+	// above the number of required checks is refused: the first would let a
+	// requirement be met by nothing, the second could never be met.
+	MinimumPassingChecks *int `json:"minimum_passing_checks,omitempty"`
+}
+
+// minimumPassing is the effective floor: all required checks unless the
+// manifest says otherwise.
+func (r Requirement) minimumPassing() int {
+	if r.MinimumPassingChecks == nil {
+		return len(r.RequiredChecks)
+	}
+	return *r.MinimumPassingChecks
+}
+
 // Manifest is the declared composition for one evaluation profile.
 type Manifest struct {
 	// Version is the manifest revision, not a component version.
@@ -122,6 +206,11 @@ type Manifest struct {
 	SupportedInterfaces []string `json:"supported_interfaces"`
 	// Components are the declared units.
 	Components []Component `json:"components"`
+	// Requirements are the profile's evidence obligations (R08-4.1.5). They
+	// are declared here, next to the components, because a profile that
+	// declares components and no obligations is the exact shape the
+	// requirement forbids.
+	Requirements []Requirement `json:"requirements"`
 }
 
 var (
@@ -241,6 +330,10 @@ func (m *Manifest) Resolve() error {
 		byID[c.ID] = c
 	}
 
+	if err := m.resolveRequirements(byID); err != nil {
+		return err
+	}
+
 	// Dependency checks need the full set, so they run in a second pass.
 	for _, c := range m.Components {
 		seen := make(map[string]bool, len(c.DependsOn))
@@ -274,6 +367,118 @@ func (m *Manifest) Resolve() error {
 	}
 
 	return checkAcyclic(m.Components, byID)
+}
+
+// resolveRequirements validates the profile requirement set (R08-4.1.5).
+//
+// The failure this must exclude is a requirement set that looks like an
+// obligation and cannot fail: an empty list, a requirement naming nothing, a
+// floor of `installed`, a check that does not exist, or one component required
+// twice with two different floors. Each of those would produce a profile that
+// reports `pass` while proving nothing, which is the vacuity class this package
+// exists to remove.
+func (m *Manifest) resolveRequirements(byID map[string]Component) error {
+	if len(m.Requirements) == 0 {
+		// R08-4.1.5: a profile that lists components and no obligations is
+		// precisely "merely a list of installed components". Refusing the
+		// manifest is the only way the requirement is enforced rather than
+		// described.
+		return errors.New("manifest declares no profile requirements; a profile must state required checks and minimum evidence (R08-4.1.5)")
+	}
+
+	seenReq := make(map[string]bool, len(m.Requirements))
+	// requiredFloor records the floor each component is held to across the
+	// whole requirement set, so two requirements cannot ask for contradictory
+	// evidence from one component.
+	requiredFloor := make(map[string]EvidenceFloor, len(m.Components))
+
+	for _, r := range m.Requirements {
+		if !idRe.MatchString(r.ID) {
+			return fmt.Errorf("requirement id %q is not a stable lowercase identifier", r.ID)
+		}
+		if seenReq[r.ID] {
+			return fmt.Errorf("requirement %q is declared twice", r.ID)
+		}
+		seenReq[r.ID] = true
+		if strings.TrimSpace(r.Description) == "" {
+			return fmt.Errorf("requirement %q declares no description", r.ID)
+		}
+		if len(r.RequiredComponents) == 0 && len(r.RequiredChecks) == 0 {
+			return fmt.Errorf("requirement %q requires no component and no check, so nothing could ever fail it", r.ID)
+		}
+
+		seenComp := make(map[string]bool, len(r.RequiredComponents))
+		for _, cr := range r.RequiredComponents {
+			if seenComp[cr.ID] {
+				return fmt.Errorf("requirement %q lists component %q twice", r.ID, cr.ID)
+			}
+			seenComp[cr.ID] = true
+			if _, ok := byID[cr.ID]; !ok {
+				// A requirement naming an undeclared component can never be
+				// evidenced, so it would silently cap the profile at `incomplete`.
+				return fmt.Errorf("requirement %q requires component %q, which the manifest does not declare", r.ID, cr.ID)
+			}
+			if !cr.MinimumState.Valid() {
+				// R08-4.1.5 is about MINIMUM EVIDENCE. `declared`, `installed`
+				// and `initialized` describe presence, so accepting them here
+				// would restate the component list instead of constraining it.
+				return fmt.Errorf("requirement %q sets component %q minimum_state=%q; a minimum evidence floor must be %q or %q",
+					r.ID, cr.ID, cr.MinimumState, FloorReachable, FloorExercised)
+			}
+			if prior, ok := requiredFloor[cr.ID]; ok && prior != cr.MinimumState {
+				return fmt.Errorf("component %q is required at %q by one requirement and %q by %q; one component has one floor",
+					cr.ID, prior, cr.MinimumState, r.ID)
+			}
+			requiredFloor[cr.ID] = cr.MinimumState
+		}
+
+		seenCheck := make(map[string]bool, len(r.RequiredChecks))
+		for _, cid := range r.RequiredChecks {
+			if strings.TrimSpace(cid) == "" {
+				return fmt.Errorf("requirement %q names an empty check id", r.ID)
+			}
+			if seenCheck[cid] {
+				return fmt.Errorf("requirement %q lists check %q twice", r.ID, cid)
+			}
+			seenCheck[cid] = true
+		}
+
+		if r.MinimumPassingChecks != nil {
+			if len(r.RequiredChecks) == 0 {
+				return fmt.Errorf("requirement %q sets minimum_passing_checks without naming any check", r.ID)
+			}
+			if *r.MinimumPassingChecks < 1 || *r.MinimumPassingChecks > len(r.RequiredChecks) {
+				return fmt.Errorf("requirement %q sets minimum_passing_checks=%d over %d named check(s); the floor must be between 1 and the number named",
+					r.ID, *r.MinimumPassingChecks, len(r.RequiredChecks))
+			}
+		}
+	}
+
+	// A mandatory component with no requirement anywhere is a control the
+	// profile claims to need and never asks evidence for. It would report
+	// `mandatory` in the bundle and constrain nothing.
+	for _, c := range m.Components {
+		if !c.Mandatory {
+			continue
+		}
+		if _, ok := requiredFloor[c.ID]; !ok {
+			return fmt.Errorf("mandatory component %q is required by no profile requirement; a mandatory control with no evidence obligation constrains nothing", c.ID)
+		}
+	}
+
+	return nil
+}
+
+// RequirementFloor returns the floor one component is held to, if any.
+func (m *Manifest) RequirementFloor(componentID string) (EvidenceFloor, bool) {
+	for _, r := range m.Requirements {
+		for _, cr := range r.RequiredComponents {
+			if cr.ID == componentID {
+				return cr.MinimumState, true
+			}
+		}
+	}
+	return "", false
 }
 
 // checkAcyclic rejects a dependency cycle. A cycle is not merely untidy: it
@@ -341,6 +546,7 @@ func (m *Manifest) Digest() string {
 		PolicyDigest        string               `json:"policy_digest"`
 		SupportedInterfaces []string             `json:"supported_interfaces"`
 		Components          []canonicalComponent `json:"components"`
+		Requirements        []Requirement        `json:"requirements"`
 	}
 
 	comps := make([]canonicalComponent, 0, len(m.Components))
@@ -371,12 +577,27 @@ func (m *Manifest) Digest() string {
 	sortedIfaces := append([]string(nil), m.SupportedInterfaces...)
 	sort.Strings(sortedIfaces)
 
+	// Requirements are sorted by id and their inner lists by value, so a
+	// manifest declaring the same obligations in a different order is the
+	// same manifest. Order carries no meaning here; membership does.
+	reqs := make([]Requirement, 0, len(m.Requirements))
+	for _, r := range m.Requirements {
+		c := r
+		c.RequiredComponents = append([]ComponentRequirement(nil), r.RequiredComponents...)
+		sort.Slice(c.RequiredComponents, func(i, j int) bool { return c.RequiredComponents[i].ID < c.RequiredComponents[j].ID })
+		c.RequiredChecks = append([]string(nil), r.RequiredChecks...)
+		sort.Strings(c.RequiredChecks)
+		reqs = append(reqs, c)
+	}
+	sort.Slice(reqs, func(i, j int) bool { return reqs[i].ID < reqs[j].ID })
+
 	payload, err := json.Marshal(canonical{
 		Version:             m.Version,
 		Profile:             m.Profile,
 		PolicyDigest:        m.PolicyDigest,
 		SupportedInterfaces: sortedIfaces,
 		Components:          comps,
+		Requirements:        reqs,
 	})
 	if err != nil {
 		// Marshalling a struct of strings cannot fail; returning a stable

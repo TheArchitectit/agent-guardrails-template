@@ -96,5 +96,31 @@
       ],
       "rationale": "Durability depends on a configured store; a local deployment with no store reports reachable, not exercised, and that absence is reported rather than assumed."
     }
+  ],
+  "requirements": [
+    {
+      "id": "policy-identity",
+      "description": "A decision must be attributable to a policy identity the process is actually running, so the engine must be reachable.",
+      "required_components": [
+        {
+          "id": "policy-engine",
+          "minimum_state": "reachable"
+        }
+      ]
+    },
+    {
+      "id": "injection-proof",
+      "description": "The mandatory detector must be reachable AND must flag a canonical injection when probed; a detector that answers safe is absent, whatever its configuration says.",
+      "required_components": [
+        {
+          "id": "injection-detector",
+          "minimum_state": "reachable"
+        }
+      ],
+      "required_checks": [
+        "canonical-injection-detected"
+      ],
+      "minimum_passing_checks": 1
+    }
   ]
 }

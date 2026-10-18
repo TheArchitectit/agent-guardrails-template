@@ -6,9 +6,8 @@ integration-state measurement, evidence bundle, derived verdict, replay
 comparison, readiness) exists and is reachable; staged adoption/promotion,
 rollback-as-a-unit and the root-change audit record landed 2026-10-18; evidence
 persistence, retention, signing, access control and auditable deletion (R08-4.3.6)
-landed 2026-10-18 as a running store, not a library. **Still open:** the
-per-profile requirement set (R08-4.1.5) and trust-label propagation
-(R08-4.5.3/4.5.4).
+landed 2026-10-18 as a running store, not a library. **Still open:** trust-label
+propagation (R08-4.5.3/4.5.4) — the last row in this spec.
 **Priority:** Important; begin after the capability specs identify stable
 interfaces and acceptance tests.
 **Related:** `docs/specs/guardrail-gaps-2026/STATUS.md`,
@@ -299,10 +298,19 @@ harness.
 
 **Still OPEN, and the spec does not claim otherwise:**
 
-- **No evaluation-profile requirement set (R08-4.1.5).** The manifest declares
-  components; it does not declare "required checks and minimum evidence per
-  profile". The profile field is recorded and reported, but nothing enforces a
-  per-profile requirement list yet.
+- **Profile requirement set IMPLEMENTED 2026-10-18 `main` (R08-4.1.5).** The
+  manifest declared components and nothing else, so no manifest could say what
+  evidence its profile accepts — every obligation a reader inferred from prose
+  was unenforceable. Now `requirements` is a required part of the manifest:
+  each entry binds components to a floor (`reachable` or `exercised` only —
+  `declared`/`installed`/`initialized` are refused because they restate the
+  component list) and/or names checks with an optional passing floor. Each
+  requirement is measured against its declared floor, never the strongest state
+  available; a named check with no record is `did not run` and fails it; unmet
+  requirements prevent `pass` and make readiness `not_ready`. The set is also a
+  **governed root**: lowering a floor or deleting a requirement needs a review,
+  because it changes what every future evaluation counts as proof. Detail and
+  the three mutation kills live in `08-implementation-notes.md`.
 - **Staged promotion, rollback and the root-change audit record IMPLEMENTED
   2026-10-18 `main` (R08-4.4.2–R08-4.4.4).** Before this pass `Bundle.Enforce()`
   refused an observe-only bundle, so a label could not be bypassed by a caller
@@ -347,32 +355,27 @@ harness.
     memory (observe-only after every start). A state file naming a different
     composition does **not** transfer the promotion — it is downgraded to
     observe-only and the non-transfer is recorded. A malformed or empty state
-    file is an error at load, not a silent fallback to observe-only: the two are
-    different answers and only one is safe to guess.
+    file is an error at load, not a silent fallback: only one of those two
+    answers is safe to guess.
   - **One active-manifest source.** `MCPServer.activeManifest()` prefers the
     governed manifest, so an adopted candidate is what the resource and the
-    readiness probe evaluate; before this the resource kept reading the
-    startup copy and an adoption would have changed nothing anyone could see.
+    readiness probe evaluate; before this the resource read the startup copy,
+    so an adoption changed nothing anyone could see.
 
-  **Evidence:** `internal/controlplane/governance_test.go` (18 cases, including
-  a real reopen across a restart, a state file at 0600, the non-transfer, and
-  the in-place-mutation rollback) + `internal/mcp/control_plane_governance_test.go`
-  (4 request-path cases driving the real handler and the real readiness path).
-  **Red-on-drift proven three ways**, each PASS→FAIL then restored: dropping
-  the review requirement in `Adopt` flips
-  `TestAdoptRequiresReviewForGovernedRootChange`; trusting the recorded digest
-  instead of recomputing flips
-  `TestRollbackDetectsInPlaceMutationOfThePriorUnit` (now a permanent
-  `mutationkill` case, `controlplane-rollback-trusts-recorded-digest`, confirmed
-  killing in the harness); allowing an observe-only bundle to promote flips
-  `TestPromoteRefusesObserveOnlyAcceptance`.
+  **Evidence:** `governance_test.go` (18 cases incl. a real reopen across a
+  restart, a 0600 state file, the non-transfer, and the in-place-mutation
+  rollback) + `control_plane_governance_test.go` (4 request-path cases driving
+  the real handler and readiness path). **Red-on-drift proven three ways**, each
+  PASS→FAIL then restored: dropping the review requirement in `Adopt`;
+  trusting the recorded digest instead of recomputing it (now a permanent
+  `mutationkill` case, confirmed killing); allowing an observe-only bundle to
+  promote.
 - **R08-4.2.4 IMPLEMENTED 2026-10-18 `main` (this pass).** `/health/ready`
   reported the Spec 18 ordered checks and nothing about the composition, so a
-  deployment whose mandatory injection detector was merely `installed` —
-  present in the process, no proven entry point — answered **200** and stayed
-  in rotation while the control it claimed could not run. That is the exact
-  failure this spec exists to prevent, reported by the one endpoint
-  orchestrators actually route on.
+  deployment whose mandatory injection detector was merely `installed`
+  answered **200** and stayed in rotation while the control it claimed could
+  not run — the exact failure this spec exists to prevent, on the one endpoint
+  orchestrators route on.
 
   New `controlplane.Bundle.Readiness()` derives the decision from the bundle
   the resource already reports, so readiness and `guardrail://control-plane`
@@ -402,18 +405,15 @@ harness.
   Spec 18 decision byte-identical; a declared composition that failed to
   resolve is `not_ready` with the reason, never an absence.
 
-  **Evidence:** `internal/controlplane/readiness_test.go` (10 cases over the
-  real `Bundle.Readiness()`) + 4 request-path cases driving the real
+  **Evidence:** `readiness_test.go` (10 cases over the real
+  `Bundle.Readiness()`) + 4 request-path cases driving the real
   `ReadinessEvaluator` and the real handler. **Red-on-drift proven twice:**
-  presence counted as availability flips two cases PASS→FAIL
-  (`TestReadinessMandatoryInstalledIsNotAvailable`,
-  `TestReadinessMandatoryInitializedIsNotAvailable`); dropping the mandatory-check
-  guard flips `TestReadinessMandatoryCheckFailureBlocks`. The first is now a
-  permanent `mutationkill` case
-  (`controlplane-readiness-presence-as-availability`), confirmed killing in the
-  harness (103s, all cases). Note the spec-18 check list is **unchanged** — the
-  composition is a separate field, because a spec-08 requirement must not
-  silently rewrite a spec-18 contract.
+  presence counted as availability flips two cases PASS→FAIL; dropping the
+  mandatory-check guard flips a third. The first is now a permanent
+  `mutationkill` case (`controlplane-readiness-presence-as-availability`),
+  confirmed killing in the harness (103s, all cases). Note the spec-18 check
+  list is **unchanged** — the composition is a separate field, because a spec-08
+  requirement must not silently rewrite a spec-18 contract.
 - **Evidence persistence, retention, signing, access control and auditable
   deletion — IMPLEMENTED (R08-4.3.6).** "Evidence retention, signing, access
   control, and deletion policy MUST be configurable and auditable": until this

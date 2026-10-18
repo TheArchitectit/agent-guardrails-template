@@ -58,6 +58,22 @@ func validManifest() *Manifest {
 				Rationale:   "notifications are optional for the local profile",
 			},
 		},
+		Requirements: []Requirement{
+			{
+				ID:          "policy-evidence",
+				Description: "the policy engine must be reachable so a decision can be attributed to a policy identity",
+				RequiredComponents: []ComponentRequirement{
+					{ID: "policy-engine", MinimumState: FloorReachable},
+				},
+			},
+			{
+				ID:          "injection-evidence",
+				Description: "the mandatory detector must be reachable before it can be trusted to scan",
+				RequiredComponents: []ComponentRequirement{
+					{ID: "injection-detector", MinimumState: FloorReachable},
+				},
+			},
+		},
 	}
 }
 

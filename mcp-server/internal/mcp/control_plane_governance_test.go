@@ -66,11 +66,17 @@ func TestResourceReportsGovernanceMode(t *testing.T) {
 	}
 
 	clock := func() time.Time { return time.Date(2026, 10, 18, 16, 0, 0, 0, time.UTC) }
+	// The acceptance bundle is built with the server's OWN live checks. A
+	// bundle with no checks would leave any requirement that names one
+	// unevidenced — which is correct behaviour, and it is what makes this a
+	// realistic promotion rather than a fixture that passes by carrying
+	// nothing to prove.
 	bundle, err := controlplane.Evaluate(controlplane.EvaluateRequest{
 		Manifest: m,
 		Observer: controlplane.ObserverFunc(func(c controlplane.Component) controlplane.Observation {
 			return controlplane.Observation{ComponentID: c.ID, State: controlplane.StateExercised}
 		}),
+		Checks:        server.controlPlaneChecks(),
 		SubjectDigest: m.Digest(),
 		Clock:         clock,
 	})
