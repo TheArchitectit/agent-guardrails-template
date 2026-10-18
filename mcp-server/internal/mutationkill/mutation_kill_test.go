@@ -682,6 +682,25 @@ func (s *MCPServer) authorizeToolCallDisabled(ctx context.Context, name string, 
 		pkg:       "./internal/auth",
 		testRegex: "^TestRegistryRequiresExpiry$",
 	},
+	{
+		// Spec 01: the injection tools were registered, dispatched and
+		// advertised while absent from the authorization action table, so the
+		// deny-by-default classifier refused every call. Dropping the two
+		// entries reintroduces that defect; the registry/action-table agreement
+		// suite must kill it.
+		name: "injection-tools-unclassified-in-action-table",
+		file: "internal/auth/authz.go",
+		old: `
+	// Spec 01 injection tools are read-class: they analyse text and return a
+	// verdict with no side effect, like their content-tool siblings above.
+	// Classifying them is what makes them callable at all — an unclassified
+	// tool is denied by ClassifyMCPTool before any handler runs.
+	"guardrail_detect_injection":   ActionRead,
+	"guardrail_scan_text_batch":    ActionRead,`,
+		new:       ``,
+		pkg:       "./internal/mcp",
+		testRegex: "^TestEveryRegisteredToolHasActionClass$",
+	},
 }
 
 // findModuleRoot walks up from the test working directory to the directory

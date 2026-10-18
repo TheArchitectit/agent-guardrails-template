@@ -273,6 +273,12 @@ var mcpToolActions = map[string]ActionKind{
 	"guardrail_advisor_query":      ActionRead,
 	"guardrail_check_policy":       ActionRead,
 	"guardrail_classify_content":   ActionRead,
+	// Spec 01 injection tools are read-class: they analyse text and return a
+	// verdict with no side effect, like their content-tool siblings above.
+	// Classifying them is what makes them callable at all — an unclassified
+	// tool is denied by ClassifyMCPTool before any handler runs.
+	"guardrail_detect_injection":   ActionRead,
+	"guardrail_scan_text_batch":    ActionRead,
 	"list_webhooks":                ActionRead,
 	"get_webhook_deliveries":       ActionRead,
 	"get_budget_status":            ActionRead,
