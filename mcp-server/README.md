@@ -258,7 +258,7 @@ No session ID required. Each request is independent and self-contained.
 - `POST /ide/validate/file` - Validate file content
 - `POST /ide/validate/selection` - Validate code selection
 - `GET /ide/rules` - Get active rules for project
-- `GET /ide/quick-reference` - Get quick reference documentation
+- `GET /ide/quick-reference` - Get quick reference documentation. This is a **web route, not an MCP resource**: the quick-reference card is not exposed over `resources/list`.
 
 ## Security Features
 
@@ -315,16 +315,17 @@ Use the `tools/list` method over `/mcp` for the full list with schemas.
 
 ### MCP Resources
 
-11 resources exposed via `resources/list`:
+13 resources exposed via `resources/list`:
 
 - `guardrail://agent-guardrails` - Core guardrail rules
 - `guardrail://four-laws` - The Four Laws of Agent Safety
 - `guardrail://halt-conditions` - When to stop and ask
-- `guardrail://quick-reference` - Quick reference card
 - `guardrail://git-safety` - Git safety rules
 - `guardrail://standards`, `guardrail://workflows` - Standards and workflow docs
 - `guardrail://config`, `guardrail://stats` - Server configuration and stats
 - `guardrail://advisors`, `guardrail://pre-work-check`, `guardrail://test-prod-separation`
+- `guardrail://policy-packs` - Active policy-pack set, effective digest and rule attribution
+- `guardrail://control-plane` - Measured component states and derived composition verdict
 
 ### Connecting to MCP Server
 

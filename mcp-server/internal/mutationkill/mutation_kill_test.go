@@ -701,6 +701,28 @@ func (s *MCPServer) authorizeToolCallDisabled(ctx context.Context, name string, 
 		pkg:       "./internal/mcp",
 		testRegex: "^TestEveryRegisteredToolHasActionClass$",
 	},
+	{
+		// Spec 08 R08-4.2.5: a status report must not claim an unexercised
+		// component is active protection. The mutation makes `active` true for
+		// every component regardless of measured state — the exact
+		// overstatement the requirement forbids.
+		name:      "controlplane-active-claim-ignores-state",
+		file:      "internal/controlplane/evaluate.go",
+		old:       "cs.Active = cs.State == StateExercised",
+		new:       "cs.Active = true // mutation: claim activity regardless of state",
+		pkg:       "./internal/controlplane",
+		testRegex: "^TestInstalledIsNotReachableIsNotExercised$",
+	},
+	{
+		// Spec 08 R08-4.3.3: evidence must not carry secret values. The
+		// mutation removes redaction entirely, leaving only the length bound.
+		name:      "controlplane-evidence-redaction-disabled",
+		file:      "internal/controlplane/redact.go",
+		old:       "func RedactDetail(detail string) string {",
+		new:       "func RedactDetail(detail string) string {\n\treturn BoundDetail(detail) // mutation: no redaction",
+		pkg:       "./internal/controlplane",
+		testRegex: "^TestBundleCarriesNoCredentialMaterial$",
+	},
 }
 
 // findModuleRoot walks up from the test working directory to the directory

@@ -55,6 +55,11 @@ type PublicConfig struct {
 	// secret material, and it is reported so an operator can confirm which
 	// policy set the process is meant to enforce.
 	PolicyPacksDir string `json:"policy_packs_dir,omitempty"`
+
+	// ControlPlaneManifest is the configured composition manifest path. It is a
+	// path, not secret material, and it is reported so an operator can confirm
+	// which composition the process evaluates against.
+	ControlPlaneManifest string `json:"control_plane_manifest,omitempty"`
 }
 
 // PublicView returns the reviewed non-secret projection of this Config.
@@ -108,5 +113,7 @@ func (c *Config) PublicView() PublicConfig {
 		ProductionMode: c.ProductionMode,
 
 		PolicyPacksDir: c.PolicyPacksDir,
+
+		ControlPlaneManifest: c.ControlPlaneManifest,
 	}
 }

@@ -121,6 +121,15 @@ func (s *MCPServer) resourceSpecs() []resourceSpec {
 			name:    "Active Policy Pack Set",
 			handler: s.adaptResource(s.readPolicyPacksResource),
 		},
+		{
+			// Spec 08 R08-4.2.5: the composition report must not claim an
+			// unwired library is active protection. Reports the measured state
+			// of every declared component and the derived verdict, or an
+			// explicit not_configured / failed.
+			uri:     "guardrail://control-plane",
+			name:    "Control-Plane Composition and Evidence",
+			handler: s.adaptResource(s.readControlPlaneResource),
+		},
 	}
 }
 

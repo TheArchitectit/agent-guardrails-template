@@ -20,6 +20,7 @@ import (
 	"github.com/thearchitectit/guardrail-mcp/internal/budget"
 	"github.com/thearchitectit/guardrail-mcp/internal/cache"
 	"github.com/thearchitectit/guardrail-mcp/internal/config"
+	"github.com/thearchitectit/guardrail-mcp/internal/controlplane"
 	"github.com/thearchitectit/guardrail-mcp/internal/database"
 	"github.com/thearchitectit/guardrail-mcp/internal/evidence"
 	"github.com/thearchitectit/guardrail-mcp/internal/guardrails"
@@ -87,6 +88,20 @@ type MCPServer struct {
 	// server is not enforcing a pack, and guardrail://policy-packs reports
 	// "not_configured" rather than an empty-but-active policy set.
 	policyPacks *guardrails.PolicyPackManager
+
+	// exercise counts observed invocations per control-plane component
+	// (Spec 08 R08-4.2.1). It is what separates `reachable` from `exercised`:
+	// wiring proves a request COULD reach a control, only a counter proves one
+	// did. A nil counter reports every component unexercised rather than
+	// assuming the wiring was used.
+	exercise *exerciseCounters
+
+	// controlPlane is the resolved composition manifest (Spec 08 R08-4.1).
+	// When nil, guardrail://control-plane reports not_configured; when
+	// controlPlaneErr is set, it reports the resolution failure instead.
+	controlPlane     *controlplane.Manifest
+	controlPlanePath string
+	controlPlaneErr  error
 }
 
 // SetCredentialRegistry installs the process-wide credential registry so the
@@ -147,6 +162,11 @@ func NewMCPServer(cfg *config.Config, db *database.DB, cacheClient *cache.Client
 		sessions:             make(map[string]*models.Session),
 		productionCodeStore:  database.NewProductionCodeStore(db),
 		fixVerificationStore: database.NewFixVerificationStore(db),
+		// Spec 08 R08-4.2.1: the observe layer needs somewhere to record that
+		// a control was actually invoked. Initialized here so every server,
+		// including one built in a test, has a counter rather than a nil that
+		// silently reports everything unexercised.
+		exercise: &exerciseCounters{},
 	}
 
 	// Initialize vision tools if configured. The fallback provider credential is
@@ -408,6 +428,12 @@ func (s *MCPServer) mcpAuditDecision(ctx context.Context, caller auth.Caller, ac
 // dispatchToolCall routes a tool invocation to its handler. Split from
 // handleToolCall so the approved-field logging wraps every outcome path.
 func (s *MCPServer) dispatchToolCall(ctx context.Context, name string, args map[string]interface{}) (*mcp.CallToolResult, error) {
+	// Spec 08 R08-4.2.1: record the observation BEFORE dispatch. A tool that
+	// was routed here reached the control it is mapped to, whether or not its
+	// handler then succeeded — "exercised" claims the control was invoked, not
+	// that the invocation passed.
+	s.recordExercise(name)
+
 	switch name {
 	case "guardrail_init_session":
 		return s.handleInitSession(ctx, args)

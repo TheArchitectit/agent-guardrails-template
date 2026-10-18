@@ -29,6 +29,18 @@ jobs:
           python scripts/check_action_pins.py --repo .
           python scripts/test_check_action_pins.py
 
+      - name: MCP resource claims (Spec 16 R16-01 / Spec 08 R08-4.2.5)
+        run: |
+          # Two independent assertions: the documented resource COUNT must match
+          # the declared registry, and every guardrail:// URI the README lists as
+          # an MCP resource must actually be registered. On 2026-10-18 the README
+          # advertised 11 resources (live: 12 at the time) and named
+          # guardrail://quick-reference, which is a web route, not a resource.
+          # The tool-count gate could not see either fault: it counts tools and
+          # compares numbers only.
+          python scripts/check_resource_claims.py --repo .
+          python scripts/test_check_resource_claims.py
+
       - name: Image-digest pinning (Spec 19 R19-15 / Spec 17 R17-11)
         run: |
           # A floating image tag silently changes what runs in production;

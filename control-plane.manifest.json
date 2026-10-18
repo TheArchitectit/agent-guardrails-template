@@ -1,0 +1,100 @@
+{
+  "version": "2026.10.18",
+  "profile": "local",
+  "policy_digest": "sha256:980f2d482b331f9e7dd436747e2aad242b3ae625aa641aebe966fa517ee0c260",
+  "supported_interfaces": [
+    "controlplane.component/v1"
+  ],
+  "components": [
+    {
+      "id": "policy-engine",
+      "version": "1.2.0",
+      "digest": "sha256:8bc94052e3ac7cd9f80421d7466fbf97619edef169979f6df7ab7fd4a2c755bd",
+      "source_paths": [
+        "mcp-server/internal/guardrails/engine.go",
+        "mcp-server/internal/guardrails/policy_pack.go"
+      ],
+      "owner": "guardrails",
+      "interface": "controlplane.component/v1",
+      "trust_tier": "trusted",
+      "mandatory": true,
+      "signals": [
+        "policy_queries_total"
+      ],
+      "rationale": "A request cannot be judged without a policy identity; this component is mandatory for the local profile."
+    },
+    {
+      "id": "injection-detector",
+      "version": "1.4.2",
+      "digest": "sha256:9ac0db7c3459eacee471c638ee11d9d716edf827d8c807be8ba10bdf1b73e613",
+      "source_paths": [
+        "mcp-server/internal/guardrails/injection_detection.go",
+        "mcp-server/internal/guardrails/injection_detection_patterns.go"
+      ],
+      "owner": "guardrails",
+      "interface": "controlplane.component/v1",
+      "trust_tier": "trusted",
+      "depends_on": [
+        "policy-engine"
+      ],
+      "mandatory": true,
+      "signals": [
+        "injection_scans_total"
+      ],
+      "rationale": "Prompt-injection detection is the mandatory check this profile exists to enforce; a deployment that never scans must not report a pass."
+    },
+    {
+      "id": "content-filter",
+      "version": "1.1.0",
+      "digest": "sha256:6afcc8c88627d7c6232d0c0184b7156eb310d2f3f8b637f927086d5f1f732e46",
+      "source_paths": [
+        "mcp-server/internal/guardrails/content_filter.go",
+        "mcp-server/internal/guardrails/content_filter_backends.go"
+      ],
+      "owner": "guardrails",
+      "interface": "controlplane.component/v1",
+      "trust_tier": "trusted",
+      "depends_on": [
+        "policy-engine"
+      ],
+      "mandatory": false,
+      "signals": [
+        "content_classifications_total"
+      ],
+      "rationale": "Semantic classification needs a model backend; absent in many deployments, so it is optional and fails closed rather than blocking the profile."
+    },
+    {
+      "id": "sandbox-isolation",
+      "version": "1.0.0",
+      "digest": "sha256:473869b041072dbb7bc8e5a1070e7e4da8cada26a102e4838804b8e3f94323f0",
+      "source_paths": [
+        "mcp-server/internal/guardrails/sandbox.go",
+        "mcp-server/internal/guardrails/sandbox_policy.go"
+      ],
+      "owner": "guardrails",
+      "interface": "controlplane.component/v1",
+      "trust_tier": "trusted",
+      "mandatory": false,
+      "signals": [
+        "sandbox_executions_total"
+      ],
+      "rationale": "Isolation depends on host facilities (unshare/podman); optional for local, and never a host-execution path when present."
+    },
+    {
+      "id": "audit-trail",
+      "version": "1.0.0",
+      "digest": "sha256:4bb84d1921506b771f0d519f4497e058b03ea933c887c61663fccb11c5af181a",
+      "source_paths": [
+        "mcp-server/internal/audit/logger.go"
+      ],
+      "owner": "guardrails",
+      "interface": "controlplane.component/v1",
+      "trust_tier": "trusted",
+      "mandatory": false,
+      "signals": [
+        "audit_events_total"
+      ],
+      "rationale": "Durability depends on a configured store; a local deployment with no store reports reachable, not exercised, and that absence is reported rather than assumed."
+    }
+  ]
+}

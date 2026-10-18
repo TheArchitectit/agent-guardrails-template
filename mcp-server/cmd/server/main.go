@@ -19,6 +19,7 @@ import (
 	"github.com/thearchitectit/guardrail-mcp/internal/auth"
 	"github.com/thearchitectit/guardrail-mcp/internal/cache"
 	"github.com/thearchitectit/guardrail-mcp/internal/config"
+	"github.com/thearchitectit/guardrail-mcp/internal/controlplane"
 	"github.com/thearchitectit/guardrail-mcp/internal/database"
 	"github.com/thearchitectit/guardrail-mcp/internal/evidence"
 	"github.com/thearchitectit/guardrail-mcp/internal/guardrails"
@@ -269,6 +270,33 @@ func main() {
 		}
 	} else {
 		slog.Info("POLICY_PACKS_DIR is not set; no policy pack is enforced (guardrail://policy-packs reports not_configured)")
+	}
+
+	// Control-plane composition (Spec 08 R08-4.1). The manifest declares which
+	// components this deployment claims to compose; it declares NO state, so
+	// loading it cannot make anything look active. A manifest that fails to
+	// resolve is reported through guardrail://control-plane as "failed" rather
+	// than treated as "not configured" — the two are different conditions and an
+	// operator needs to tell them apart. This is not fatal for the same reason
+	// the policy pack is not: a manifest typo must not be an outage.
+	if cfg.ControlPlaneManifest != "" {
+		manifest, err := controlplane.LoadManifest(cfg.ControlPlaneManifest)
+		if err != nil {
+			slog.Error("control-plane manifest failed to resolve; nothing is composed under it",
+				"path", cfg.ControlPlaneManifest, "error", err)
+			mcpSrv.SetControlPlaneError(cfg.ControlPlaneManifest, err)
+		} else {
+			mcpSrv.SetControlPlane(manifest, cfg.ControlPlaneManifest)
+			slog.Info("control-plane composition resolved",
+				"path", cfg.ControlPlaneManifest,
+				"manifest_digest", manifest.Digest(),
+				"profile", manifest.Profile,
+				"components", len(manifest.Components),
+				"mandatory", len(manifest.MandatoryIDs()),
+			)
+		}
+	} else {
+		slog.Info("CONTROL_PLANE_MANIFEST is not set; no composition is evaluated (guardrail://control-plane reports not_configured)")
 	}
 
 	// Outbound evidence identity (Spec 15 gr-xp-02). The instance key is

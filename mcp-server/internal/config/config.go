@@ -242,6 +242,12 @@ type Config struct {
 	// redirect or path named inside a policy document is followed (R07-4.3.3).
 	PolicyPacksDir string `env:"POLICY_PACKS_DIR"`
 
+	// ControlPlaneManifest names the component-composition manifest the control
+	// plane evaluates against (Spec 08 R08-4.1). Unset means no manifest is
+	// configured: guardrail://control-plane then reports "not_configured"
+	// rather than an empty composition that trivially passes.
+	ControlPlaneManifest string `env:"CONTROL_PLANE_MANIFEST"`
+
 	// Production Mode Indicator
 	ProductionMode bool `env:"PRODUCTION_MODE" envDefault:"false"`
 }

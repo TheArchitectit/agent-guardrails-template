@@ -209,6 +209,101 @@ these criteria are proposals, not passing tests.
 | Private `guardrails-control-plane` repo | Prior art for one-way composition and pinned components; its claims are not assumed implemented here |
 | Private DevGate OpenSpecs | Game-quality gates remain out of scope for this guardrail control-plane proposal |
 
-**Implementation status:** proposal only. No manifest resolver, integration-
-state model, evidence bundle, replay system, staged promotion flow, or
-control-plane readiness evaluator is implemented in this repository.
+## 9. Implementation status — 2026-10-18
+
+**PARTIAL. The composition core is implemented and reachable; the governance
+half is not.**
+
+Implemented (R08-4.1, R08-4.2, R08-4.3, R08-4.5.1/4.5.2, acceptance criteria
+2, 3, 4, 5, 6, 7):
+
+- `mcp-server/internal/controlplane` is the composition core: a manifest resolver
+  that refuses an untrustworthy graph, a measured integration-state model, an
+  evidence bundle and a derived verdict, and a replay comparison.
+- **The manifest declares identity and dependency only — never state.** State is
+  measured against live objects, so a manifest edit cannot make an unexercised
+  control look active.
+- **Resolution refuses, before anything starts:** duplicate IDs, missing
+  dependencies, dependency cycles, self-dependency, unknown interface versions,
+  mutable version refs (`latest`, a branch name), short/absent digests, unknown
+  trust tiers, a component with no runtime signal, and a component whose
+  `source_paths` are empty. It also refuses a **mandatory component depending on
+  an optional one** (a mandatory control resting on an optional input degrades
+  silently the moment that input is absent) and a **lower-trust component
+  supplying a higher-trust one** (R08-4.5.2).
+- **`installed` != `reachable` != `exercised`, enforced by measurement.** A
+  per-component exercise counter is incremented at the single dispatch entry
+  point, so wiring proves reachability and only an observed invocation proves
+  exercise. `ComponentState.Active` is true only for `exercised`; it is the only
+  field a status page may use to claim a protection is in force (R08-4.2.5).
+- **The verdict is derived, never assigned.** A mandatory component that is not
+  exercised, or a mandatory check that is `block`, `error`, `skipped` or
+  `inconclusive`, prevents a `pass`. `block` / `failed` / `incomplete` are kept
+  distinct because they call for different action (R08-4.3.4).
+- **Evidence redaction is enforced on the one caller-supplied field.** Every
+  free-form `Detail` passes `RedactDetail`, which removes credential *shapes*
+  (bearer/basic tokens, prefixed API keys, URL userinfo, `NAME=value` secret
+  assignments, PEM blocks, JWTs) and bounds the string. The bundle's typed fields
+  cannot carry a secret by construction (R08-4.3.3).
+- **Replay is compared, not assumed** (R08-4.3.5): a changed component version,
+  manifest digest, policy digest, subject digest, evaluator version or check
+  outcome marks the replay non-equivalent and names each difference.
+- **Observe-only cannot satisfy a blocking gate.** `Bundle.Enforce()` refuses an
+  observe-only bundle and any non-pass verdict, so the label cannot be bypassed
+  by a caller that forgets to check it (R08-4.4.1).
+- **Reachable over the real MCP surface:** `guardrail://control-plane` reports
+  `not_configured` / `failed` / `evaluated` with the measured per-component
+  states, the derived verdict and the unmet reasons. It is registered in the
+  R16-01 permission matrix, so it passes the same per-resource authorization as
+  every other resource rather than bypassing it by being new.
+- **`CONTROL_PLANE_MANIFEST` is the single acquisition point.** Unset means no
+  composition is evaluated and the resource says so; a manifest that fails to
+  resolve is reported `failed` with its reason, never as "not configured".
+- **The checked-in manifest is verified against the tree.** `control-plane.manifest.json`
+  declares `source_paths` per component and `controlplane.SourceDigest` is the
+  single digest implementation; the test suite recomputes every digest, so a
+  manifest cannot describe code that is not in the tree.
+
+Evidence: `internal/controlplane` (manifest refusal matrix, state model,
+verdict derivation, redaction, replay, stability) + `internal/mcp/control_plane_test.go`
+driving the real resource handler, the real permission matrix and the real
+dispatch counter. **Red-on-drift proven three ways, each PASS->FAIL then
+restored:** `active` forced true (killed by three tests), unexercised states
+counted as proven, and redaction disabled. Two of these are now permanent cases
+in `internal/mutationkill` (`controlplane-active-claim-ignores-state`,
+`controlplane-evidence-redaction-disabled`), both confirmed killing in the
+harness.
+
+**Still OPEN, and the spec does not claim otherwise:**
+
+- **No evaluation-profile requirement set (R08-4.1.5).** The manifest declares
+  components; it does not declare "required checks and minimum evidence per
+  profile". The profile field is recorded and reported, but nothing enforces a
+  per-profile requirement list yet.
+- **No staged promotion flow (R08-4.4.2-4.4.4).** Observe-only is labelled and
+  cannot gate, but promotion to blocking, rollback-as-a-unit, and the audit record
+  for policy-root/trust-root changes are not implemented.
+- **No evidence persistence, retention, signing or deletion policy (R08-4.3.6).**
+  A bundle is produced and returned; there is no store, no retention window and
+  no access control on stored evidence.
+- **No control-plane readiness endpoint (R08-4.2.4).** `/health/ready` reports the
+  Spec 18 ordered checks; it does not yet report per-mandatory-component state
+  from this manifest.
+- **Trust labels are declared, not propagated (R08-4.5.3/4.5.4).** The manifest
+  carries a tier and the resolver enforces the ordering rule, but component
+  output is not tagged with its origin trust label at evaluation time, and the
+  digest of every policy input used is not recorded per evaluation beyond the
+  single policy digest.
+
+**Corrected in the same pass (live defects, found by building this):** the
+client-facing `mcp-server/README.md` advertised the resource set as **11**
+resources and listed `guardrail://quick-reference`, which is a web route
+(`GET /ide/quick-reference`), not an MCP resource; `docs/status.md` repeated the
+stale **12**. Both are corrected to the live **13** (12 + `guardrail://control-plane`),
+and the phantom is now named as a web route in the web-routes section. **The
+gate that should have caught this did not exist** — `check_tool_count.py` counts
+tools and compares numbers only, so a wrong URI with the right count is invisible
+to it. New `scripts/check_resource_claims.py` asserts both the count **and** that
+every documented `guardrail://` URI is registered (and that every registered one
+is documented), with `scripts/test_check_resource_claims.py` proving red-on-drift
+on the two faults the repository actually had; wired into `regression-guard.yml`.
