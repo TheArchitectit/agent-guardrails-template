@@ -286,6 +286,11 @@ var mcpToolActions = map[string]ActionKind{
 	"get_budget_history":           ActionRead,
 	"get_agent_state":              ActionRead,
 	"list_agent_sessions":          ActionRead,
+	// Vision read surface: get_report reads a persisted report and
+	// check_health probes the backends. Neither writes. The four mutating
+	// vision tools are classified below.
+	"vision_get_report":   ActionRead,
+	"vision_check_health": ActionRead,
 
 	// validate
 	"guardrail_validate_bash":               ActionValidate,
@@ -326,6 +331,21 @@ var mcpToolActions = map[string]ActionKind{
 	"create_agent_session":            ActionMutate,
 	"transition_agent_state":          ActionMutate,
 
+	// Vision mutate surface. Each of these persists state: analyze_screenshot
+	// creates a review row and iterations, iterate_review adds a round,
+	// guardrail_check captures then reviews, capture_screenshot drives the
+	// running renderer. Classifying them read-only would hand a reader
+	// credential a write path.
+	"vision_capture_screenshot": ActionMutate,
+	"vision_analyze_screenshot": ActionMutate,
+	"vision_iterate_review":     ActionMutate,
+	"vision_guardrail_check":    ActionMutate,
+
+	// Spec 17 R17-10: rotating a webhook signing key re-keys every delivery to
+	// that receiver and, with cutover=true, invalidates the outgoing key
+	// immediately. It belongs with the other webhook mutations.
+	"rotate_webhook_key": ActionMutate,
+
 	// admin (destructive / security-sensitive)
 	"guardrail_project_delete": ActionAdmin,
 	"force_agent_state":        ActionAdmin,
@@ -336,6 +356,10 @@ var mcpToolActions = map[string]ActionKind{
 var SensitiveMCPTools = map[string]bool{
 	"guardrail_project_delete": true,
 	"force_agent_state":        true,
+	// R17-10: a rotation is security-sensitive - it re-keys every delivery to
+	// the receiver and can invalidate the outgoing key on cutover, so it takes
+	// the same audit-before-effect path as a delete.
+	"rotate_webhook_key":           true,
 	"guardrail_team_config_update": true,
 	"guardrail_team_assign":       true,
 	"guardrail_team_remove":       true,

@@ -21,6 +21,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/mark3labs/mcp-go/mcp"
+
 	"github.com/thearchitectit/guardrail-mcp/internal/auth"
 	"github.com/thearchitectit/guardrail-mcp/internal/config"
 	"github.com/thearchitectit/guardrail-mcp/internal/guardrails"
@@ -29,6 +31,15 @@ import (
 // TestEveryRegisteredToolHasActionClass is the structural half: a tool that is
 // advertised by toolList() but absent from the authorization action table can
 // never be called by any credential, so the two lists must agree.
+//
+// It enumerates EVERY registry, not just what a bare server advertises. The
+// original version called toolList() on an empty MCPServer, which returns the
+// 39 unconditional tools and silently omits vision/webhook/budget/lifecycle —
+// the registries are appended only when their store fields are non-nil. That
+// blindness was measured: the guard saw 39 of 61, and seven conditional tools
+// (six vision + rotate_webhook_key) sat unclassified while it reported green.
+// A guard whose scope is "whatever a zero-value struct happens to include"
+// cannot see the registries most likely to be forgotten.
 func TestEveryRegisteredToolHasActionClass(t *testing.T) {
 	s := &MCPServer{}
 	tools := s.toolList()
@@ -36,10 +47,38 @@ func TestEveryRegisteredToolHasActionClass(t *testing.T) {
 		t.Fatal("toolList() returned nothing; the check would be vacuous")
 	}
 
-	var missing []string
+	// Every conditional registry, reached directly. These list functions are
+	// static (they do not read their store), so a zero-value server is enough
+	// to enumerate the names the server can advertise once wired.
+	conditional := [][]mcp.Tool{
+		s.notificationToolList(),
+		s.budgetToolList(),
+		s.lifecycleToolList(),
+		(&VisionToolSet{enabled: true}).visionToolList(),
+	}
+
+	all := make([]string, 0, len(tools)+32)
 	for _, tool := range tools {
-		if _, ok := auth.MCPToolAction(tool.Name); !ok {
-			missing = append(missing, tool.Name)
+		all = append(all, tool.Name)
+	}
+	for _, group := range conditional {
+		for _, tool := range group {
+			all = append(all, tool.Name)
+		}
+	}
+
+	// Non-vacuity for the conditional half: if the registries returned nothing
+	// the enumeration would silently shrink back to the bare set and the guard
+	// would pass for the wrong reason.
+	if len(all) <= len(tools) {
+		t.Fatalf("conditional registries contributed no tools (%d total = %d bare); "+
+			"the guard would be blind again", len(all), len(tools))
+	}
+
+	var missing []string
+	for _, name := range all {
+		if _, ok := auth.MCPToolAction(name); !ok {
+			missing = append(missing, name)
 		}
 	}
 	if len(missing) > 0 {
@@ -47,10 +86,22 @@ func TestEveryRegisteredToolHasActionClass(t *testing.T) {
 			len(missing), missing)
 	}
 
-	// Positive control: the check above is only meaningful if the table really
-	// is consulted, and a sibling read tool is classified.
-	if kind, ok := auth.MCPToolAction("guardrail_classify_content"); !ok || kind != auth.ActionRead {
-		t.Fatalf("positive control: guardrail_classify_content should be ActionRead, got %q ok=%v", kind, ok)
+	// Positive controls, one per registry family, so the check above is only
+	// meaningful if the table really is consulted across all of them.
+	for _, tc := range []struct {
+		name string
+		want auth.ActionKind
+	}{
+		{"guardrail_classify_content", auth.ActionRead},
+		{"vision_get_report", auth.ActionRead},
+		{"vision_analyze_screenshot", auth.ActionMutate},
+		{"rotate_webhook_key", auth.ActionMutate},
+		{"force_agent_state", auth.ActionAdmin},
+	} {
+		if kind, ok := auth.MCPToolAction(tc.name); !ok || kind != tc.want {
+			t.Fatalf("positive control: %s should be %q, got %q ok=%v",
+				tc.name, tc.want, kind, ok)
+		}
 	}
 }
 
