@@ -41,9 +41,15 @@ func TestRedactDetailRemovesCredentialShapes(t *testing.T) {
 			keep:  []string{"db.internal", "postgres://"},
 		},
 		{
+			// The value is deliberately LOW entropy. A realistic-looking hex
+			// literal here is indistinguishable from a real credential to a
+			// secret scanner, and the first version of this fixture turned
+			// Secret Validation red (gitleaks generic-api-key, entropy 4.0).
+			// The rule under test keys on the SHAPE `NAME=value`, not on the
+			// value's randomness, so a placeholder exercises it exactly.
 			name:  "env style assignment",
-			in:    "config rejected WEBHOOK_ENCRYPTION_KEY=9f8e7d6c5b4a39281706f5e4d3c2b1a0",
-			avoid: []string{"9f8e7d6c5b4a39281706f5e4d3c2b1a0"},
+			in:    "config rejected WEBHOOK_ENCRYPTION_KEY=placeholder-not-a-real-key",
+			avoid: []string{"placeholder-not-a-real-key"},
 			keep:  []string{"WEBHOOK_ENCRYPTION_KEY"},
 		},
 		{
