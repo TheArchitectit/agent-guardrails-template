@@ -1,6 +1,8 @@
 package config
 
 import (
+	"crypto/rand"
+	"encoding/base64"
 	"os"
 	"strings"
 	"testing"
@@ -13,6 +15,19 @@ import (
 // plaintext. The wiring now exists; these cases pin the posture so the gate
 // cannot drift into either extreme — refusing to start an existing deployment,
 // or silently accepting a key too weak to mean anything.
+
+// testTeamKey returns a freshly generated key with enough entropy to clear the
+// production floor. It is generated rather than written as a literal on
+// purpose: a high-entropy string in source is indistinguishable from a leaked
+// credential, and the repository's own secret scanner correctly refuses it.
+func testTeamKey(t *testing.T) string {
+	t.Helper()
+	buf := make([]byte, 48)
+	if _, err := rand.Read(buf); err != nil {
+		t.Fatalf("generate test key: %v", err)
+	}
+	return base64.RawURLEncoding.EncodeToString(buf)
+}
 
 func TestValidateTeamEncryption_AbsentKeyIsNotAFailure(t *testing.T) {
 	// The key is optional at the load boundary by decision: requiring it would
@@ -44,7 +59,7 @@ func TestValidateTeamEncryption_RejectsWeakKey(t *testing.T) {
 func TestValidateTeamEncryption_AcceptsStrongKey(t *testing.T) {
 	cfg := &Config{
 		DeploymentProfile: "production",
-		TeamEncryptionKey: "4XqKYPfOAuNhZHkLilY4SrK80msDeMv1J2MKWbKiWM8ubjZp9e0tMOJzTAKwBnQp",
+		TeamEncryptionKey: testTeamKey(t),
 	}
 	if err := cfg.ValidateTeamEncryption(); err != nil {
 		t.Fatalf("a strong key must pass: %v", err)
@@ -56,14 +71,15 @@ func TestValidateTeamEncryption_AcceptsStrongKey(t *testing.T) {
 // wiring rather than the docs: the file variant must be a recognized source.
 func TestTeamEncryptionKeyAcceptsFileSource(t *testing.T) {
 	dir := t.TempDir()
-	path := writeSecretFile(t, dir, "team.key", "4XqKYPfOAuNhZHkLilY4SrK80msDeMv1J2MKWbKiWM8ubjZp9e0tMOJzTAKwBnQp")
+	key := testTeamKey(t)
+	path := writeSecretFile(t, dir, "team.key", key)
 
 	cfg := &Config{TeamEncryptionKeyFile: path}
 	if err := cfg.ResolveSecretSources(); err != nil {
 		t.Fatalf("ResolveSecretSources: %v", err)
 	}
-	if cfg.TeamEncryptionKey != "4XqKYPfOAuNhZHkLilY4SrK80msDeMv1J2MKWbKiWM8ubjZp9e0tMOJzTAKwBnQp" {
-		t.Fatalf("TEAM_ENCRYPTION_KEY_FILE did not populate the key, got %q", cfg.TeamEncryptionKey)
+	if cfg.TeamEncryptionKey != key {
+		t.Fatalf("TEAM_ENCRYPTION_KEY_FILE did not populate the key")
 	}
 }
 
@@ -71,7 +87,7 @@ func TestTeamEncryptionKeyAcceptsFileSource(t *testing.T) {
 // other secret file (R17-06).
 func TestTeamEncryptionKeyFileRejectsLooseMode(t *testing.T) {
 	dir := t.TempDir()
-	path := writeSecretFile(t, dir, "team-loose.key", "4XqKYPfOAuNhZHkLilY4SrK80msDeMv1J2MKWbKiWM8ubjZp9e0tMOJzTAKwBnQp")
+	path := writeSecretFile(t, dir, "team-loose.key", testTeamKey(t))
 	if err := os.Chmod(path, 0o644); err != nil {
 		t.Fatalf("chmod: %v", err)
 	}
