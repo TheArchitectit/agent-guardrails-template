@@ -62,6 +62,12 @@ CORE_REGISTRIES = (
     # "core=39" and exited 0 while toolList() advertised 42, which is the
     # vacuous-scope failure this gate exists to prevent.
     "tools_indirect_injection.go",
+    # Spec 04 multi-agent tools. Registered unconditionally by toolList(), so
+    # core by the same rule as Spec 05's file. This entry is not cosmetic: when
+    # the file was added WITHOUT it the gate printed core=42 and exited 0 while
+    # toolList() advertised 45 — the identical vacuous-scope failure as the
+    # prose rewrite, recurring through a new file rather than a doc edit.
+    "tools_multi_agent.go",
 )
 
 # Conditional groups, keyed by the label used in the docs.

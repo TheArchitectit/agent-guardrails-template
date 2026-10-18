@@ -233,6 +233,19 @@ func (cf *ContentFilter) Stop() {
 	}
 }
 
+// BackendCount reports how many semantic backends are configured.
+//
+// Callers need this to distinguish "the classifier examined the text and found
+// a problem" from "there was no classifier". Classify() fails closed in both
+// cases (Spec 02, P5/D-18), which is correct for a filter asked a direct
+// question, but a caller composing a safety chain must be able to say that the
+// content layer did not run rather than report every output as harmful.
+func (cf *ContentFilter) BackendCount() int {
+	cf.mu.RLock()
+	defer cf.mu.RUnlock()
+	return len(cf.backends)
+}
+
 // AddContentFilterBackend appends a semantic classification backend. Adding a
 // backend changes which classification results are produced, so the cache is
 // invalidated to avoid serving stale results.

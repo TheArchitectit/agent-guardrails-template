@@ -223,6 +223,22 @@ func main() {
 	}
 	mcpSrv.SetGuardrailsEngine(engine)
 
+	// Multi-agent safety chains (Spec 04). Built from the SAME engine, so an
+	// agent-output validation runs the injection pipeline and content filter
+	// the rest of the server uses; a registry built from a second engine would
+	// let two detectors disagree about the same text. Scope patterns come from
+	// the deployment: an agent's declared scope is a property of the work, not
+	// of the binary.
+	multiAgentRegistry, err := guardrails.NewMultiAgentRegistry(engine, splitScopePatterns(os.Getenv("MULTI_AGENT_SCOPE_PATTERNS")))
+	if err != nil {
+		// Not fatal: the three tools then fail closed with "not configured"
+		// rather than reporting a chain that never ran as passed.
+		slog.Error("multi-agent safety chains unavailable", "error", err)
+	} else {
+		mcpSrv.SetMultiAgentRegistry(multiAgentRegistry)
+		slog.Info("multi-agent safety chains initialized", "chains", multiAgentRegistry.Chains())
+	}
+
 	// Outbound evidence identity (Spec 15 gr-xp-02). The instance key is
 	// deployment-supplied, because a key minted at startup would present a new
 	// identity on every restart and no peer could hold a trust record for it.
@@ -446,6 +462,25 @@ func runHealthCheck(timeout time.Duration) error {
 // naming the value (Spec 17 R17-08). The distinction matters operationally: a
 // file-sourced key is the production posture, an inline one is the migration
 // path R17-06 restricts.
+// splitScopePatterns parses MULTI_AGENT_SCOPE_PATTERNS into the forbidden
+// actions the Four Laws scope check enforces.
+//
+// Comma-separated because the value is a flat list of short action names, not a
+// document. Blank entries are returned as-is on purpose: the validator refuses
+// them at construction (an empty pattern matches every output), which surfaces
+// a malformed deployment at startup instead of at the first agent call.
+func splitScopePatterns(raw string) []string {
+	if strings.TrimSpace(raw) == "" {
+		return nil
+	}
+	parts := strings.Split(raw, ",")
+	out := make([]string, 0, len(parts))
+	for _, p := range parts {
+		out = append(out, strings.TrimSpace(p))
+	}
+	return out
+}
+
 func teamKeySource(cfg *config.Config) string {
 	if strings.TrimSpace(cfg.TeamEncryptionKeyFile) != "" {
 		return "file"

@@ -295,7 +295,7 @@ The MCP server implements the Model Context Protocol for AI assistant integratio
 
 ### MCP Tools
 
-The server registers 42 `guardrail_*` tools. The core validation set:
+The server registers 45 `guardrail_*` tools. The core validation set:
 
 - `guardrail_init_session` - Initialize a validation session for a project
 - `guardrail_validate_bash` - Validate bash commands against forbidden patterns

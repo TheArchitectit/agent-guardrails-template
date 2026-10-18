@@ -40,7 +40,11 @@ type MCPServer struct {
 	audit             *audit.Logger
 	validator         *validation.ValidationEngine
 	config            *config.Config
-	guardrailsEngine  *guardrails.Engine
+	guardrailsEngine *guardrails.Engine
+	// multiAgent holds the Spec 04 safety chains. It is nil unless a registry
+	// was built from a live engine at startup; a nil registry makes the three
+	// agent tools fail closed rather than report an unrun chain as passed.
+	multiAgent *guardrails.MultiAgentRegistry
 	version           string
 	visionTools       *VisionToolSet
 	webhookStore      *database.WebhookStore
@@ -184,6 +188,12 @@ func (s *MCPServer) VisionTools() *VisionToolSet {
 // are registered regardless, but return a "not configured" error until set.
 func (s *MCPServer) SetGuardrailsEngine(engine *guardrails.Engine) {
 	s.guardrailsEngine = engine
+}
+
+// SetMultiAgentRegistry attaches the Spec 04 safety-chain registry. Without it
+// the three multi-agent tools answer "not configured" and never claim a pass.
+func (s *MCPServer) SetMultiAgentRegistry(registry *guardrails.MultiAgentRegistry) {
+	s.multiAgent = registry
 }
 
 // Start starts the MCP server on the given address.
@@ -479,6 +489,13 @@ func (s *MCPServer) dispatchToolCall(ctx context.Context, name string, args map[
 		return s.handleMarkProvenance(ctx, args)
 	case "guardrail_check_provenance":
 		return s.handleCheckProvenance(ctx, args)
+	// Multi-agent safety policies (Spec 04)
+	case "guardrail_validate_agent_output":
+		return s.handleValidateAgentOutput(ctx, args)
+	case "guardrail_check_agent_constraints":
+		return s.handleCheckAgentConstraints(ctx, args)
+	case "guardrail_resolve_conflicts":
+		return s.handleResolveConflicts(ctx, args)
 	// Webhook notification tools
 	case "configure_webhook":
 		return s.handleConfigureWebhook(ctx, args)

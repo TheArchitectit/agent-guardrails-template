@@ -23,9 +23,9 @@ the specs themselves.
 | `guardrail_scan_text_batch` | 01 | **Yes (2026-10-18)** |
 | `guardrail_sandbox_execute` | 03 | **No** |
 | `guardrail_sandbox_config` | 03 | **No** |
-| `guardrail_validate_agent_output` | 04 | **No** |
-| `guardrail_check_agent_constraints` | 04 | **No** |
-| `guardrail_resolve_conflicts` | 04 | **No** |
+| `guardrail_validate_agent_output` | 04 | **Yes (2026-10-18)** |
+| `guardrail_check_agent_constraints` | 04 | **Yes (2026-10-18)** |
+| `guardrail_resolve_conflicts` | 04 | **Yes (2026-10-18)** |
 | `guardrail_scan_external_content` | 05 | **Yes (2026-10-18)** |
 | `guardrail_mark_provenance` | 05 | **Yes (2026-10-18)** |
 | `guardrail_check_provenance` | 05 | **Yes (2026-10-18)** |
@@ -51,10 +51,10 @@ handleScanExternalContent  ScanExternalContent(...)    // scan_external_content
 handleCheckProvenance      LookupProvenance(...)       // check_provenance
 ```
 
-The sandbox manager, the multi-agent safety chains and the compliance mapper
-remain constructed at startup and never called. Two subsystems left that list
-in this pass: the injection pipeline (two Spec 01 tools) and the provenance
-tracker (three Spec 05 tools). Note what the tracker wiring required — the
+The sandbox manager and the compliance mapper remain constructed at startup
+and never called. Three subsystems have left that list: the injection pipeline
+(two Spec 01 tools), the provenance tracker (three Spec 05 tools) and the
+multi-agent safety chains (three Spec 04 tools). Note what the tracker wiring required — the
 Spec 05 tools call `ScanExternalContent`, not `Evaluate`, because `Evaluate`
 executes commands through the sandbox manager when `input.Command` is set, and
 routing a content-scan tool through it would start process execution from the
@@ -172,17 +172,30 @@ fail-closed behaviour and the spec text is wrong. Sec. 4.3 should be amended.
 
 | Requirement | Status |
 |-------------|--------|
-| 3 proposed tools | Not implemented |
-| Safety chain engine | Implemented, unwired (`NewSafetyChain` called only from tests) |
-| Validators `injection_defense` / `content_filter` / `four_laws_check` | Implemented, unwired |
-| `code_review_agent` validator | Not implemented |
-| Conflict strategies | Implemented, unwired; named `escalate`, spec says `human_escalate` |
-| Config keys (`safety_chains`, `agent_registry`, …) | Not implemented — no loader, zero occurrences in any `.go` file |
+| 3 proposed tools | **Implemented 2026-10-18** — registered, dispatched, read-class |
+| Safety chain engine | **Wired 2026-10-18** — `MultiAgentRegistry` built from the live engine at startup |
+| Validators `injection_defense` / `content_filter` / `four_laws_check` | **Wired** — bound to the same engine the rest of the server uses |
+| `code_review_agent` validator | Not implemented (needs an LLM review backend — owner call) |
+| Conflict strategies | **Wired**; shipped name is `escalate` (spec's `human_escalate` maps to it) |
+| Config keys as YAML (`safety_chains`, `agent_registry`, …) | Not implemented — the registry ships built-in chains instead; no YAML loader |
+| Law-2 keyword false positive | **Fixed 2026-10-18** — quoted/mentioned occurrences no longer fail |
 
-**Bug worth noting:** the `four_laws_check` Law-2 scope check
-(`multi_agent_validators.go:172`) flags a violation when output *contains* a
-declared scope keyword — so merely mentioning a scope word fails the check.
-That is not "output exceeds scope" and will misfire on compliant output.
+**Law 2 was a false-positive generator, and wiring it would have shipped the
+bug.** The check failed any output that merely *contained* a configured scope
+keyword, so a runbook line, a quoted policy, or the prohibition itself
+("never run delete-db") was reported as a scope violation. It now treats an
+occurrence as discussion when it is quoted or introduced by a mention marker
+(`never`, `documented`, `forbidden`, `the word`, …), and still fails an
+unqualified occurrence. Named limit: this is a heuristic over prose, not a
+parser — a real directive quoted as an example passes Law 2.
+
+**An absent classifier is now reported as absent.** A chain step whose backend
+is not configured (Spec 02 with no `OLLAMA_URL`/`OPENAI_API_KEY`) used to fail
+closed, which is right for a direct classification question and wrong as a
+chain step: it labelled benign output "Content blocked: SYSTEM". The step now
+returns an `UnavailableError`; the chain records it in `UnavailableSteps`, keeps
+running its remaining detectors, and reports `decision: incomplete` — never
+`passed`. "Every step passed" and "one step never ran" are different answers.
 
 ### 05 — Indirect prompt injection
 
@@ -276,7 +289,7 @@ status vocabulary).
 | 12-3.3.1 wildcard CORS accepted in production | **FIXED** | `d90cf52` | `config.go:302-306` rejects `*` when `ProductionMode`; reached at startup via `config.Load()`→`Validate()` (`main.go:65`, `config.go:161`) |
 | 12-3.6 `X-XSS-Protection` header emitted | **FIXED** | `d90cf52` | `web/server.go:330` no longer emits it (CSP + `nosniff` + `DENY` retained, `:327-329`) |
 | 06 compliance scoring restates the DB as a measurement | **UNIMPLEMENTED** (labelled, not fixed) | `beb8c02` | `compliance.go:54,104-107,136,225-250`; see gap 06 above |
-| 01/03/04/06 libraries unreachable from the request path | **OPEN** (documented) | `f85aa67` | gaps 01 and 05 are now wired (see above); sandbox 03, multi-agent 04 and compliance 06 remain unreachable |
+| 01/03/04/06 libraries unreachable from the request path | **PARTIAL** — 01, 04, 05 wired | `f85aa67` + 2026-10-18 | gaps 01, 04 and 05 are wired (see above); sandbox 03 and compliance 06 remain unreachable |
 
 Exact tests re-run green on 2026-10-10 against this tree (HEAD `f85aa67`):
 `TestHandleClassifyContent_NoEngine_FailClosed`,
@@ -291,7 +304,7 @@ Exact tests re-run green on 2026-10-10 against this tree (HEAD `f85aa67`):
   (`16-R16-02` / `19-R19-06`). Not weakened, not skipped.
 - `/metrics` remains public (`web/server.go:145`; `middleware.go:38,293`) — needs
   the operator (Roger); binding it to auth changes the scrape contract.
-- Guardrail capabilities unwired from the request path (`03/04/06`; `09-P2`). Gaps `01` and `05` are wired as of 2026-10-18.
+- Guardrail capabilities unwired from the request path (`03`/`06`; `09-P2`). Gaps `01`, `04` and `05` are wired as of 2026-10-18.
 - Specs `07`/`08`/`15` and the optional OAP checker (`14`) remain ABSENT /
   proposal-only.
 

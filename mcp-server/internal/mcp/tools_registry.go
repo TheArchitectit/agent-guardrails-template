@@ -16,6 +16,12 @@ func (s *MCPServer) toolList() []mcp.Tool {
 	// not-configured result until the guardrails engine is set).
 	tools = append(tools, s.guardrailsToolList()...)
 
+	// Multi-agent safety tools (Spec 04). Registered unconditionally for the
+	// same reason: a tool that disappears when its backend is missing cannot
+	// tell a caller "not configured" — it tells them "this server has no such
+	// capability", and the absence is invisible to tools/list diffs.
+	tools = append(tools, s.multiAgentTools()...)
+
 	if s.visionTools != nil {
 		tools = append(tools, s.visionTools.visionToolList()...)
 	}

@@ -377,7 +377,11 @@ func MCPToolAction(name string) (ActionKind, bool) {
 	// Spec 05 tools live in their own table so the audited mcpToolActions
 	// alignment group (and the mutation fixture anchored to it) stays
 	// byte-identical when a new tool is classified.
-	k, ok := indirectInjectionToolActions[name]
+	if k, ok := indirectInjectionToolActions[name]; ok {
+		return k, true
+	}
+	// Spec 04 multi-agent tools, same reasoning.
+	k, ok := multiAgentToolActions[name]
 	return k, ok
 }
 

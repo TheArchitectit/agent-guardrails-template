@@ -182,6 +182,17 @@ func (e *Engine) SetInjectionAuditLogger(logger AuditLogger) {
 	}
 }
 
+// ContentFilterBackendCount reports how many semantic backends the content
+// filter has. Zero means the Spec 02 layer cannot evaluate anything: a direct
+// classification fails closed, and a composed safety chain reports the layer
+// as unavailable instead of attributing a block to content that was never read.
+func (e *Engine) ContentFilterBackendCount() int {
+	if e.filter == nil {
+		return 0
+	}
+	return e.filter.BackendCount()
+}
+
 // AddContentFilterBackend adds a semantic classification backend.
 func (e *Engine) AddContentFilterBackend(backend SemanticClassifier) {
 	if e.filter != nil {

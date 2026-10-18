@@ -53,6 +53,17 @@ func (s *MCPServer) indirectInjectionTools() []mcp.Tool {
 	return []mcp.Tool{}
 }
 '''
+# Spec 04 tools are also registered unconditionally by toolList(), so they are
+# core, and the fixture must contain the registry for the same reason Spec 05's
+# file is here: a core registry missing from a tree is a FAILURE, not a skip.
+# This is not hypothetical — adding tools_multi_agent.go to the real tree
+# without adding it to CORE_REGISTRIES made the gate print core=42 and exit 0
+# while toolList() advertised 45.
+CORE_MULTI = '''package mcp
+func (s *MCPServer) multiAgentTools() []mcp.Tool {
+	return []mcp.Tool{}
+}
+'''
 VISION = '''package mcp
 func (vt *VisionToolSet) visionToolList() []mcp.Tool {
 	return []mcp.Tool{{Name: "vision_one"}, {Name: "vision_two"}}
@@ -120,6 +131,7 @@ def _build(root: Path) -> None:
     _write(root, f"{mcp}/tools_core_list_extended.go", CORE_EXT)
     _write(root, f"{mcp}/tools_guardrails.go", CORE_GUARD)
     _write(root, f"{mcp}/tools_indirect_injection.go", CORE_INDIRECT)
+    _write(root, f"{mcp}/tools_multi_agent.go", CORE_MULTI)
     _write(root, f"{mcp}/vision_tools.go", VISION)
     _write(root, f"{mcp}/tools_notifications.go", WEBHOOK)
     _write(root, f"{mcp}/tools_budget.go", BUDGET)

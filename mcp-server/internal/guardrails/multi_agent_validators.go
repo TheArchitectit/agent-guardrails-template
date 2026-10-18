@@ -111,6 +111,84 @@ func NewFourLawsValidator(scopePatterns []string) *FourLawsValidator {
 	return &FourLawsValidator{scopePatterns: scopePatterns}
 }
 
+// NewFourLawsValidatorChecked creates a Four Laws validator, refusing a scope
+// list that cannot be enforced.
+//
+// An empty or whitespace-only pattern is not a harmless entry:
+// strings.Contains(text, "") is always true, so one blank entry turns the Law-2
+// check into "fail every output". A validator that cannot be configured is
+// reported at construction rather than at the first agent call.
+func NewFourLawsValidatorChecked(scopePatterns []string) (*FourLawsValidator, error) {
+	for i, p := range scopePatterns {
+		if strings.TrimSpace(p) == "" {
+			return nil, fmt.Errorf("scope pattern %d is empty; an empty pattern matches every output", i)
+		}
+	}
+	return &FourLawsValidator{scopePatterns: scopePatterns}, nil
+}
+
+// mentionMarkers are words that turn an occurrence of a forbidden token into a
+// discussion of it. They exist because Law 2 shipped a false-positive
+// generator: the check flagged an output for merely CONTAINING a configured
+// scope keyword, so a runbook entry, a policy quote, or an explicit prohibition
+// ("never run delete-db") failed as if the agent had performed the action.
+// Spec 04 records that as a bug to fix before wiring the chain.
+var mentionMarkers = []string{
+	"mention", "mentions", "mentioned",
+	"document", "documents", "documented",
+	"describe", "describes", "described", "description",
+	"forbid", "forbids", "forbidden", "prohibit", "prohibits", "prohibited",
+	"never", "avoid", "avoids", "do not", "don't", "does not", "doesn't",
+	"example", "e.g.", "such as", "named", "called", "the word", "the token",
+}
+
+// isMention reports whether the match at [start,end) is a discussion of the
+// pattern rather than an instruction to perform it.
+//
+// Two contexts are recognised: the occurrence is quoted, or a mention marker
+// appears shortly before it. The window is deliberately small (40 bytes) so a
+// genuine directive elsewhere in a long output is not excused by a stray
+// "never" at the top of the document.
+//
+// Named limit: this is a heuristic over prose, not a parser. An output that
+// embeds a real directive inside a quotation ("the log said: run X") is treated
+// as a mention and passes Law 2. That is the correct trade for a check whose
+// previous behaviour failed compliant output, and it is stated rather than
+// implied.
+func isMention(norm string, start, end int) bool {
+	if quotedAt(norm, start, end) {
+		return true
+	}
+	windowStart := start - 40
+	if windowStart < 0 {
+		windowStart = 0
+	}
+	window := strings.ToLower(norm[windowStart:start])
+	for _, marker := range mentionMarkers {
+		if strings.Contains(window, marker) {
+			return true
+		}
+	}
+	return false
+}
+
+// quotedAt reports whether the span is enclosed by a matching quote character
+// that opens before it and closes after it.
+func quotedAt(s string, start, end int) bool {
+	for _, q := range []string{`"`, "'", "`"} {
+		open := strings.LastIndex(s[:start], q)
+		if open < 0 {
+			continue
+		}
+		// An odd number of the quote character before the span means the span
+		// sits inside a quoted region; a closing quote after it confirms.
+		if strings.Count(s[:start], q)%2 == 1 && strings.Contains(s[end:], q) {
+			return true
+		}
+	}
+	return false
+}
+
 func normalizeWhitespace(s string) string {
 	zeroWidth := regexp.MustCompile(`[\x{200B}\x{200C}\x{200D}\x{2060}\x{FEFF}\x{00AD}]`)
 	s = zeroWidth.ReplaceAllString(s, "")
@@ -169,14 +247,30 @@ func (v *FourLawsValidator) Validate(ctx context.Context, input ValidatorInput) 
 				}, nil
 			}
 		} else {
+			// A scope pattern is a forbidden action, not a forbidden word. The
+			// shipped check failed any output CONTAINING the token, so a
+			// runbook entry, a quoted policy, or the prohibition itself
+			// ("never run delete-db") was reported as a violation. Occurrences
+			// that are quoted or introduced by a mention marker are treated as
+			// discussion; anything else still fails.
 			for _, pattern := range v.scopePatterns {
-				if strings.Contains(lowerNorm, strings.ToLower(pattern)) {
-					return &ValidatorResult{
-						Passed:     false,
-						Reason:     fmt.Sprintf("Law 2 violation: output exceeds declared scope (%s)", pattern),
-						Violations: []string{"scope_violation"},
-						Confidence: 0.9,
-					}, nil
+				needle := strings.ToLower(pattern)
+				searchFrom := 0
+				for {
+					idx := strings.Index(lowerNorm[searchFrom:], needle)
+					if idx < 0 {
+						break
+					}
+					start := searchFrom + idx
+					if !isMention(norm, start, start+len(needle)) {
+						return &ValidatorResult{
+							Passed:     false,
+							Reason:     fmt.Sprintf("Law 2 violation: output exceeds declared scope (%s)", pattern),
+							Violations: []string{"scope_violation"},
+							Confidence: 0.9,
+						}, nil
+					}
+					searchFrom = start + len(needle)
 				}
 			}
 		}

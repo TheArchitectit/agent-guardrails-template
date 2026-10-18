@@ -15,6 +15,7 @@ package guardrails
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"time"
@@ -39,6 +40,11 @@ const (
 	ConflictEscalate     ConflictStrategy = "escalate"
 )
 
+// DecisionIncomplete is reported when at least one configured step could not
+// run. Distinct from allow and block: the output was not fully validated, and
+// a caller must decide whether a partial chain is acceptable for its purpose.
+const DecisionIncomplete = "incomplete"
+
 // StepResult captures the outcome of a single validator in a safety chain.
 type StepResult struct {
 	Step       int      `json:"step"`
@@ -58,7 +64,14 @@ type ChainResult struct {
 	Decision      string       `json:"decision"`
 	Steps         []StepResult `json:"steps"`
 	Violations    []string     `json:"violations,omitempty"`
-	AuditEntry    *AuditEntry  `json:"-"`
+	// UnavailableSteps names configured checks that could NOT run, with the
+	// reason. It exists because "passed" alone cannot distinguish "every
+	// detector examined this output" from "the content classifier was never
+	// configured, so that step did not exist": the Spec 01 L3 defect, in the
+	// chain instead of the pipeline. A chain that silently drops a step it
+	// cannot run is reporting on a shorter chain than its name implies.
+	UnavailableSteps []string    `json:"unavailable_steps,omitempty"`
+	AuditEntry       *AuditEntry `json:"-"`
 }
 
 // AuditEntry is a structured audit log entry for agent chain validation.
@@ -113,6 +126,22 @@ type SafetyChainDefinition struct {
 	Description string          `yaml:"description"`
 	Steps       []ChainStep     `yaml:"steps"`
 	OnFailure   OnFailureAction `yaml:"on_failure"`
+}
+
+// UnavailableError reports that a configured validator could not run at all —
+// no model backend, no engine, an unloadable corpus. It is distinct from a
+// validation failure because the two must not be reported as one thing: an
+// output that failed a check is harmful, while an output whose check did not
+// exist has not been examined. Collapsing them either blocks benign content
+// (the Spec 02 filter's own fail-closed posture, correct for a direct question
+// but wrong as a chain step) or silently reports a shorter chain as complete.
+type UnavailableError struct {
+	Validator string
+	Reason    string
+}
+
+func (e *UnavailableError) Error() string {
+	return fmt.Sprintf("validator %q unavailable: %s", e.Validator, e.Reason)
 }
 
 // SafetyChain orchestrates ordered validator execution.
@@ -173,11 +202,11 @@ func (sc *SafetyChain) Execute(ctx context.Context, agentID, output, context str
 
 		start := time.Now()
 		vResult, err := validator.Validate(ctx, ValidatorInput{
-			AgentID:        agentID,
-			Output:         output,
-			ChainID:        sc.chainDef.ID,
-			Context:        context,
-			Direction:      DirectionOutput,
+			AgentID:       agentID,
+			Output:        output,
+			ChainID:       sc.chainDef.ID,
+			Context:       context,
+			Direction:     DirectionOutput,
 			InheritedFrom: parentAgentID,
 		})
 		latency := time.Since(start).Milliseconds()
@@ -188,6 +217,17 @@ func (sc *SafetyChain) Execute(ctx context.Context, agentID, output, context str
 			LatencyMs: latency,
 		}
 
+		var unavailable *UnavailableError
+		if err != nil && errors.As(err, &unavailable) {
+			// The step did not run. It is not a pass and it is not a
+			// violation: it is recorded as unavailable, the reason is carried,
+			// and the chain continues so the remaining detectors still run.
+			stepResult.Passed = false
+			stepResult.Reason = unavailable.Error()
+			result.UnavailableSteps = append(result.UnavailableSteps, stepResult.Reason)
+			result.Steps = append(result.Steps, stepResult)
+			continue
+		}
 		if err != nil {
 			stepResult.Passed = false
 			stepResult.Reason = fmt.Sprintf("validator error: %v", err)
@@ -227,7 +267,16 @@ func (sc *SafetyChain) Execute(ctx context.Context, agentID, output, context str
 		}
 	}
 
-	if result.Passed {
+	// A chain is "passed" only when every step it names actually ran and
+	// passed. An unavailable step leaves Passed as it was for the steps that
+	// did run, so a caller reading only Passed would see a pass for a shorter
+	// chain than the one it asked for — the exact vacuity this file's
+	// UnavailableSteps exists to prevent. The decision is named "incomplete"
+	// rather than reuse an allow/block word: it is neither.
+	if result.Passed && len(result.UnavailableSteps) > 0 {
+		result.Passed = false
+		result.Decision = DecisionIncomplete
+	} else if result.Passed {
 		result.Decision = string(ActionAllow)
 	}
 
