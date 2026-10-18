@@ -1,8 +1,8 @@
 # Conditionally Registered and Integration Tools
 
 22 tools registered **only when their backing store is initialised**. A
-default deployment exposes the 39 core tools; a fully wired deployment
-exposes 61. `toolList()` in `tools_registry.go` governs the gating.
+default deployment exposes the 42 core tools; a fully wired deployment
+exposes 64. `toolList()` in `tools_registry.go` governs the gating.
 
 | Group | Count | Registered when | Dispatch route |
 |-------|-------|-----------------|----------------|

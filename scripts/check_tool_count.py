@@ -55,6 +55,13 @@ CORE_REGISTRIES = (
     "tools_core_list.go",
     "tools_core_list_extended.go",
     "tools_guardrails.go",
+    # Spec 05 indirect-injection tools. They are appended by
+    # guardrailsToolList() with no backing store, so they are always
+    # advertised — and therefore core. Listing the file here is what keeps the
+    # gate honest: when it was added without this entry the gate still printed
+    # "core=39" and exited 0 while toolList() advertised 42, which is the
+    # vacuous-scope failure this gate exists to prevent.
+    "tools_indirect_injection.go",
 )
 
 # Conditional groups, keyed by the label used in the docs.

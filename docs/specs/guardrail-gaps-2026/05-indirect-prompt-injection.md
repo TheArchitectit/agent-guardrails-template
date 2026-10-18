@@ -1,6 +1,6 @@
 # OpenSpec: Indirect Prompt Injection Handling
 
-> **The most completely built of the six — and still unreachable.** Config keys and the sanitisation pipeline shipped, but the tracker is only called from code that no tool reaches. See [STATUS.md](STATUS.md).
+> **Wired 2026-10-18.** Config keys, trust table and sanitisation shipped long ago, but the tracker was reachable only from `Engine.Evaluate`, which no tool calls — and the one injection scan in the tree ran on **raw** text, so a single zero-width character inside a keyword defeated L1. All three tools now exist and route through `Engine.ScanExternalContent`, which sanitises and decodes **before** scanning. See [STATUS.md](STATUS.md).
 
 **Gap:** Important — No protection against malicious file contents that override safety instructions
 **Priority:** 🟡 Important (Phase 2)

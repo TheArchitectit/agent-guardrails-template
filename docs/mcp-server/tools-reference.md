@@ -1,12 +1,12 @@
 # MCP Tools Reference
 
-The guardrails MCP server registers **39 core tools**, dispatched from the
+The guardrails MCP server registers **42 core tools**, dispatched from the
 switch in `mcp-server/internal/mcp/server.go:352-468` and defined by
 `toolList()` in `tools_registry.go`.
 
 A further **22 tools** are registered only when their backing store is
 initialised — 6 vision, 6 webhook, 5 budget, 5 agent-lifecycle. So a
-deployment exposes between 39 and 61 tools depending on configuration; see
+deployment exposes between 42 and 64 tools depending on configuration; see
 [Conditionally registered tools](tools/conditional-and-integrations.md).
 
 The counts above are checked against source by `scripts/check_tool_count.py`
@@ -76,6 +76,9 @@ and policy behaviour.
 | `guardrail_scan_text_batch` | Batch injection scan | `texts[]` |
 | `guardrail_classify_content` | S1–S15 taxonomy classification | `text`, `direction` |
 | `guardrail_check_policy` | Check against a named policy | `text`, `policy_id` |
+| `guardrail_scan_external_content` | Indirect-injection scan of file/API content (Spec 05) | `content`, `source_type`, `source_path`, `agent_id` |
+| `guardrail_mark_provenance` | Wrap content in trusted/untrusted markers | `content`, `provenance_id` |
+| `guardrail_check_provenance` | Look up a recorded provenance verdict | `content_id` |
 | `guardrail_install_skills` | Install skill configs | `action`, `platforms`, `mode`, `dry_run` |
 
 ### Teams and advisors

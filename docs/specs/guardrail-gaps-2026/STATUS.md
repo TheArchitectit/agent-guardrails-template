@@ -1,8 +1,8 @@
 # Guardrail Gaps 2026 — Spec vs Shipped Code
 
 **Status: reconciliation, 2026-10-03; wave-0 release-gating fixes reconciled
-2026-10-09; Spec 01 injection tools implemented 2026-10-18.** This page
-supersedes the `Status: Draft` labels on the six specs.
+2026-10-09; Spec 01 injection tools and Spec 05 provenance tools implemented
+2026-10-18.** This page supersedes the `Status: Draft` labels on the six specs.
 
 The six specs in this directory are **proposals written before the reboot**,
 not descriptions of the system. Since then a Go rewrite implemented much of
@@ -11,10 +11,11 @@ what actually exists and what can actually be called.
 
 ## The headline finding
 
-**Of the 15 MCP tools these specs propose or name, exactly 4 exist.** Verified
+**Of the 15 MCP tools these specs propose or name, exactly 7 exist.** Verified
 by grepping every `.go` file in the repository. As of 2026-10-18 that count
-includes the two Spec 01 injection tools, which were added in this pass — the
-other 11 names still appear nowhere outside the specs themselves.
+includes the two Spec 01 injection tools and the three Spec 05 provenance
+tools, all added in this pass — the other 8 names still appear nowhere outside
+the specs themselves.
 
 | Proposed tool | Spec | Exists? |
 |---------------|------|---------|
@@ -25,9 +26,9 @@ other 11 names still appear nowhere outside the specs themselves.
 | `guardrail_validate_agent_output` | 04 | **No** |
 | `guardrail_check_agent_constraints` | 04 | **No** |
 | `guardrail_resolve_conflicts` | 04 | **No** |
-| `guardrail_scan_external_content` | 05 | **No** |
-| `guardrail_mark_provenance` | 05 | **No** |
-| `guardrail_check_provenance` | 05 | **No** |
+| `guardrail_scan_external_content` | 05 | **Yes (2026-10-18)** |
+| `guardrail_mark_provenance` | 05 | **Yes (2026-10-18)** |
+| `guardrail_check_provenance` | 05 | **Yes (2026-10-18)** |
 | `guardrail_generate_compliance_report` | 06 | **No** |
 | `guardrail_check_compliance` | 06 | **No** |
 | `guardrail_collect_evidence` | 06 | **No** |
@@ -37,21 +38,27 @@ other 11 names still appear nowhere outside the specs themselves.
 ## The second finding: "library exists" ≠ "shipped"
 
 Several subsystems are fully written, well-tested, and **unreachable from
-any MCP tool**. As of 2026-10-18 the `internal/mcp` package calls exactly five
-methods on the guardrails engine:
+any MCP tool**. As of 2026-10-18 the `internal/mcp` package calls these
+methods on the guardrails engine (line numbers move; the names do not):
 
 ```
-tools_guardrails.go:136  s.guardrailsEngine.ClassifyContent(...)      // classify_content
-tools_guardrails.go:168  s.guardrailsEngine.ClassifyContent(...)      // check_policy, pre-check
-tools_guardrails.go:173  s.guardrailsEngine.CheckPolicy(...)          // check_policy
-tools_guardrails.go:239  s.guardrailsEngine.DetectInjection(...)      // detect_injection (new)
-tools_guardrails.go:325  s.guardrailsEngine.DetectInjectionBatch(...) // scan_text_batch (new)
+handleClassifyContent      ClassifyContent(...)        // classify_content
+handleCheckPolicy          ClassifyContent(...)        // check_policy pre-check
+handleCheckPolicy          CheckPolicy(...)            // check_policy
+handleDetectInjection      DetectInjection(...)        // detect_injection
+handleScanTextBatch        DetectInjectionBatch(...)   // scan_text_batch
+handleScanExternalContent  ScanExternalContent(...)    // scan_external_content
+handleCheckProvenance      LookupProvenance(...)       // check_provenance
 ```
 
-The sandbox manager, the provenance tracker, the multi-agent safety chains and
-the compliance mapper remain constructed at startup and never called. The
-injection pipeline is no longer in that list: it now has two tools in front of
-it, and those tools are what this pass added.
+The sandbox manager, the multi-agent safety chains and the compliance mapper
+remain constructed at startup and never called. Two subsystems left that list
+in this pass: the injection pipeline (two Spec 01 tools) and the provenance
+tracker (three Spec 05 tools). Note what the tracker wiring required — the
+Spec 05 tools call `ScanExternalContent`, not `Evaluate`, because `Evaluate`
+executes commands through the sandbox manager when `input.Command` is set, and
+routing a content-scan tool through it would start process execution from the
+MCP path.
 
 The engine is also no longer conditional. It was previously built only when
 `OLLAMA_URL` or `OPENAI_API_KEY` was set (`cmd/server/main.go`), so a
@@ -179,19 +186,42 @@ That is not "output exceeds scope" and will misfire on compliant output.
 
 ### 05 — Indirect prompt injection
 
-The most completely built of the six, and still unreachable.
+The most completely built of the six, and as of 2026-10-18 also **wired**.
 
 | Requirement | Status |
 |-------------|--------|
-| 3 proposed tools | Not implemented |
+| 3 proposed tools | **Implemented 2026-10-18** |
 | Config keys (`source_trust_policies`, `untrusted_overrides`) | **Implemented**, including the spec's trust table |
-| Sanitization / base64 / ROT13 / URL decoding | Implemented, unwired |
-| Provenance marker wrapping | Implemented, unwired |
-| Redis cache | Deviates — implemented as in-memory (`engine.go:87`) |
+| Sanitization / base64 / ROT13 / URL decoding | Implemented, **now applied before the scan** |
+| Provenance marker wrapping | Implemented, **now reachable via `guardrail_mark_provenance`** |
+| Redis cache | Deviates — implemented as in-memory (`provenance_cache.go`) |
 
-The tracker *is* constructed and *is* called from `engine.go:175` with real
-trust-based gating — but only from `Engine.Evaluate`, which nothing outside
-tests calls.
+**The defect this pass fixed was an ordering defect, and it made the whole
+feature cosmetic.** `DecodeObfuscation`/`SanitizeContent` existed and worked;
+they simply ran *after* anything that could act on their output. The only
+injection scan in the tree took RAW text, so L1's literal regexes were trivially
+evaded: `"Ig\u200bnore all previous instructions"` inserts one zero-width
+character and `ignore\s+` no longer matches. The sanitiser was a function
+nobody called with the scan's input.
+
+`Engine.ScanExternalContent` now runs the pipeline in the order the spec
+describes: sanitise → decode labelled obfuscation → resolve the source trust
+policy → scan **the sanitised text** → return the sanitised text the agent
+should consume. The trust decision still governs whether a deep scan happens
+(the spec's `action: allow` for trusted sources), but sanitisation is
+unconditional: invisible characters are never meaningful in trusted prose
+either.
+
+**A second, narrower defect found in the existing sanitiser.** `hasBase64Marker`
+accepted `base64: <payload>` as an encoded string, and `tryBase64Decode` then
+tried to decode the *entire* string including the label — which cannot succeed.
+The marker announced "I am encoded" and the decoder could never agree, so the
+base64 branch was unreachable for exactly the inputs that declared themselves
+encoded. Fixed by extracting the payload from its label first (`base64Payload`:
+prefix label, `data:` URI, `;base64,` suffix).
+
+The tracker is constructed at startup and now reachable three ways from the
+request path.
 
 **`guardrail_record_file_read` / `guardrail_verify_file_read` are not this
 spec's provenance tools.** They are session-token-gated file-read
@@ -246,7 +276,7 @@ status vocabulary).
 | 12-3.3.1 wildcard CORS accepted in production | **FIXED** | `d90cf52` | `config.go:302-306` rejects `*` when `ProductionMode`; reached at startup via `config.Load()`→`Validate()` (`main.go:65`, `config.go:161`) |
 | 12-3.6 `X-XSS-Protection` header emitted | **FIXED** | `d90cf52` | `web/server.go:330` no longer emits it (CSP + `nosniff` + `DENY` retained, `:327-329`) |
 | 06 compliance scoring restates the DB as a measurement | **UNIMPLEMENTED** (labelled, not fixed) | `beb8c02` | `compliance.go:54,104-107,136,225-250`; see gap 06 above |
-| 01/03/04/05 libraries unreachable from the request path | **OPEN** (documented) | `f85aa67` | see gap 01 wiring finding above |
+| 01/03/04/06 libraries unreachable from the request path | **OPEN** (documented) | `f85aa67` | gaps 01 and 05 are now wired (see above); sandbox 03, multi-agent 04 and compliance 06 remain unreachable |
 
 Exact tests re-run green on 2026-10-10 against this tree (HEAD `f85aa67`):
 `TestHandleClassifyContent_NoEngine_FailClosed`,
@@ -261,7 +291,7 @@ Exact tests re-run green on 2026-10-10 against this tree (HEAD `f85aa67`):
   (`16-R16-02` / `19-R19-06`). Not weakened, not skipped.
 - `/metrics` remains public (`web/server.go:145`; `middleware.go:38,293`) — needs
   the operator (Roger); binding it to auth changes the scrape contract.
-- Guardrail capabilities unwired from the request path (`01/03/04/05/06`; `09-P2`).
+- Guardrail capabilities unwired from the request path (`03/04/06`; `09-P2`). Gaps `01` and `05` are wired as of 2026-10-18.
 - Specs `07`/`08`/`15` and the optional OAP checker (`14`) remain ABSENT /
   proposal-only.
 

@@ -22,19 +22,19 @@ const (
 
 // Provenance tracks the origin and trust level of a piece of content.
 type Provenance struct {
-	Source      string           `json:"source"`       // e.g., "file", "api", "user", "tool_output", "system"
-	SourcePath  string           `json:"source_path"`  // e.g., file path, API URL
-	TrustLevel  SourceTrustLevel `json:"trust_level"`  // trusted, untrusted, unknown
-	ReadBy      string           `json:"read_by"`      // agent ID that read this content
-	Timestamp   time.Time        `json:"timestamp"`    // when it was read
-	Hash        string           `json:"hash"`         // content hash for dedup/cache
+	Source     string           `json:"source"`      // e.g., "file", "api", "user", "tool_output", "system"
+	SourcePath string           `json:"source_path"` // e.g., file path, API URL
+	TrustLevel SourceTrustLevel `json:"trust_level"` // trusted, untrusted, unknown
+	ReadBy     string           `json:"read_by"`     // agent ID that read this content
+	Timestamp  time.Time        `json:"timestamp"`   // when it was read
+	Hash       string           `json:"hash"`        // content hash for dedup/cache
 }
 
 // TrustPolicy defines how to treat content from a specific source pattern.
 type TrustPolicy struct {
-	SourcePattern string          `yaml:"source_pattern"`
+	SourcePattern string           `yaml:"source_pattern"`
 	TrustLevel    SourceTrustLevel `yaml:"trust_level"`
-	Action        Action          `yaml:"action"`
+	Action        Action           `yaml:"action"`
 }
 
 // ProvenanceTracker manages the provenance of content entering the agent's context.
@@ -249,12 +249,12 @@ func SanitizeContent(content string) string {
 
 	for _, r := range runes {
 		if (r >= 0x200B && r <= 0x200F) ||
-		   (r >= 0x2028 && r <= 0x2029) ||
-		   (r >= 0x2060 && r <= 0x2064) ||
-		   (r >= 0x202A && r <= 0x202E) ||
-		   (r >= 0x2066 && r <= 0x2069) ||
-		   (r == 0xFEFF) || (r == 0x00AD) ||
-		   (r == 0x061C) || (r == 0x034F) {
+			(r >= 0x2028 && r <= 0x2029) ||
+			(r >= 0x2060 && r <= 0x2064) ||
+			(r >= 0x202A && r <= 0x202E) ||
+			(r >= 0x2066 && r <= 0x2069) ||
+			(r == 0xFEFF) || (r == 0x00AD) ||
+			(r == 0x061C) || (r == 0x034F) {
 			continue
 		}
 		result = append(result, r)
@@ -309,9 +309,21 @@ func hasBase64Marker(content string) bool {
 }
 
 // tryBase64Decode attempts to decode base64 content.
+//
+// The payload is extracted from its label first. This is not cosmetic: a
+// labelled string is the ONLY case hasBase64Marker accepts, and the previous
+// implementation then decoded the whole string — label included — so
+// "base64: SWdub3Jl…" never decoded and a labelled payload was scanned as
+// literal base64 text. The marker said "I am encoded" and the decoder could
+// never agree, which made DecodeObfuscation's base64 branch unreachable for
+// exactly the inputs that announced themselves.
 func tryBase64Decode(content string) (string, bool) {
-	// Try decoding the entire content
-	if decoded, err := base64.StdEncoding.DecodeString(content); err == nil {
+	payload, ok := base64Payload(content)
+	if !ok {
+		return content, false
+	}
+	// Try decoding as standard base64
+	if decoded, err := base64.StdEncoding.DecodeString(payload); err == nil {
 		result := string(decoded)
 		// Only accept if decoded result is printable text
 		if isPrintableText(result) {
@@ -319,13 +331,47 @@ func tryBase64Decode(content string) (string, bool) {
 		}
 	}
 	// Try with URL-safe base64
-	if decoded, err := base64.URLEncoding.DecodeString(content); err == nil {
+	if decoded, err := base64.URLEncoding.DecodeString(payload); err == nil {
 		result := string(decoded)
 		if isPrintableText(result) {
 			return result, true
 		}
 	}
 	return content, false
+}
+
+// base64Payload returns the encoded portion of a labelled string, and whether
+// the input carried a recognisable label at all.
+//
+// Recognised forms:
+//
+//	"base64:<payload>"                      (prefix label)
+//	"data:<media-type>[;base64],<payload>"  (data URI)
+//	"<payload>;base64,"                     (suffix marker inside a data URI)
+//
+// An unlabelled string is NOT decoded by guesswork; see hasBase64Marker.
+func base64Payload(content string) (string, bool) {
+	lower := strings.ToLower(content)
+
+	// data URI: everything after the first comma.
+	if strings.HasPrefix(lower, "data:") {
+		if i := strings.Index(content, ","); i >= 0 {
+			return strings.TrimSpace(content[i+1:]), true
+		}
+		return "", false
+	}
+
+	// prefix label: "base64:<payload>"
+	if idx := strings.Index(lower, "base64:"); idx >= 0 {
+		return strings.TrimSpace(content[idx+len("base64:"):]), true
+	}
+
+	// trailing ";base64," marker
+	if idx := strings.Index(lower, ";base64,"); idx >= 0 {
+		return strings.TrimSpace(content[idx+len(";base64,"):]), true
+	}
+
+	return "", false
 }
 
 // isPrintableText checks if a string is mostly printable characters.
@@ -345,10 +391,13 @@ func isPrintableText(s string) bool {
 
 // looksLikeROT13 checks if content might be ROT13-encoded using two signals:
 // (1) a high proportion of known rotated English words (gur→the, naq→and,
-//     gung→that, jvgu→with, sbk→fox, etc.), which letter-frequency analysis
-//     misses because ROT13 preserves letter frequencies; and
+//
+//	gung→that, jvgu→with, sbk→fox, etc.), which letter-frequency analysis
+//	misses because ROT13 preserves letter frequencies; and
+//
 // (2) improved bigram frequency after ROT13 decoding, a structural check that
-//     resists single-letter-frequency games. Either signal alone is enough.
+//
+//	resists single-letter-frequency games. Either signal alone is enough.
 func looksLikeROT13(content string) bool {
 	if len(content) < 10 {
 		return false

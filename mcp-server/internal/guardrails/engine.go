@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"sync"
 	"time"
 )
 
@@ -55,6 +56,13 @@ type Engine struct {
 	tracker  *ProvenanceTracker
 	sandbox  *SandboxManager
 	logger   *slog.Logger
+
+	// provRecords records every external-content scan so a caller can look a
+	// verdict back up by provenance id (Spec 05 Sec. 3.1
+	// guardrail_check_provenance). Lazily created: an Engine built as a struct
+	// literal must still record rather than panic on a nil registry.
+	provMu      sync.Mutex
+	provRecords *provenanceRegistry
 }
 
 // NewEngine creates an Engine from the given configuration.
@@ -97,6 +105,14 @@ func NewEngine(config *EngineConfig, logger *slog.Logger) *Engine {
 
 	// Initialize sandbox manager
 	e.sandbox = NewSandboxManager(&config.Sandbox, logger)
+
+	// Initialize the provenance verdict registry. TTL follows the provenance
+	// cache window so a lookup and a cache entry expire together.
+	provTTL := time.Hour
+	if config.Provenance != nil {
+		provTTL = config.Provenance.CacheDuration()
+	}
+	e.provRecords = newProvenanceRegistry(provTTL)
 
 	logger.Info("guardrails engine initialized",
 		"injection_enabled", config.Injection.Enabled,

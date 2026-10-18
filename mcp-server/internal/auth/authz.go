@@ -371,7 +371,13 @@ var SensitiveMCPTools = map[string]bool{
 
 // MCPToolAction returns the action class for a tool name. Unknown tools deny.
 func MCPToolAction(name string) (ActionKind, bool) {
-	k, ok := mcpToolActions[name]
+	if k, ok := mcpToolActions[name]; ok {
+		return k, true
+	}
+	// Spec 05 tools live in their own table so the audited mcpToolActions
+	// alignment group (and the mutation fixture anchored to it) stays
+	// byte-identical when a new tool is classified.
+	k, ok := indirectInjectionToolActions[name]
 	return k, ok
 }
 

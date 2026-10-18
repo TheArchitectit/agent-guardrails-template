@@ -12,9 +12,10 @@ import (
 )
 
 // guardrailsToolList returns the guardrail tools defined by Spec 01 Sec. 3.1
-// (injection detection) and Spec 02 Sec. 3.1 (semantic content filtering).
+// (injection detection), Spec 02 Sec. 3.1 (semantic content filtering) and
+// Spec 05 Sec. 3.1 (indirect prompt injection / provenance).
 func (s *MCPServer) guardrailsToolList() []mcp.Tool {
-	return []mcp.Tool{
+	tools := []mcp.Tool{
 		{
 			Name:        "guardrail_detect_injection",
 			Description: "Scan text for prompt injection attempts and return the verdict, the layer that decided it, and the matched categories",
@@ -109,6 +110,10 @@ func (s *MCPServer) guardrailsToolList() []mcp.Tool {
 			},
 		},
 	}
+	// Spec 05 tools are appended here rather than in a conditional group: they
+	// read only process-local state and need no backing store, so every
+	// deployment must see them.
+	return append(tools, s.indirectInjectionTools()...)
 }
 
 // handleClassifyContent implements the guardrail_classify_content tool:

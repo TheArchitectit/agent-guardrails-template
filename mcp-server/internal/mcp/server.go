@@ -472,6 +472,13 @@ func (s *MCPServer) dispatchToolCall(ctx context.Context, name string, args map[
 		return s.handleDetectInjection(ctx, args)
 	case "guardrail_scan_text_batch":
 		return s.handleScanTextBatch(ctx, args)
+	// Indirect prompt injection (Spec 05)
+	case "guardrail_scan_external_content":
+		return s.handleScanExternalContent(ctx, args)
+	case "guardrail_mark_provenance":
+		return s.handleMarkProvenance(ctx, args)
+	case "guardrail_check_provenance":
+		return s.handleCheckProvenance(ctx, args)
 	// Webhook notification tools
 	case "configure_webhook":
 		return s.handleConfigureWebhook(ctx, args)
