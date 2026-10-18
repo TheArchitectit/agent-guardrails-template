@@ -1,9 +1,11 @@
 # OpenSpec 16: Authentication, authorization, and evidence remediation
 
-**Status:** Proposed; NOT implemented. Source snapshot: `178d076` (re-verify against
-HEAD before implementation). This is a remediation plan and release gate, not a
-claim that Spec 11, 12, 14, or 15 has shipped. Owner approval is required for the
-permission matrix, public routes, lifecycle bounds, and cross-product rollout.
+**Status:** PARTIAL — Gates 1 and 2 exercised; Gate 3 partially exercised (see
+§6 Implementation status, 2026-10-18). Source snapshot: `178d076`; every claim
+below has been re-verified against the live tree and the stale ones are marked.
+This remains a release gate, not a claim that Spec 11, 12, 14, or 15 has
+shipped. Owner approval is still required for the permission matrix, public
+routes, lifecycle bounds, and cross-product rollout.
 **Related:** [AUTH-01](AUTH-01-mcp-endpoint-auth.md) (shipped bearer gate),
 [11](11-authorization-scopes-and-roles.md) (proposed intersection),
 [12](12-web-exposure-boundary.md) (proposed exposure registry),
@@ -279,7 +281,102 @@ tests, not a runtime permissive fallback.
   to the last known-good *restrictive* snapshot; otherwise stop protected
   traffic. A green UCS03 build alone cannot approve the cutover.
 
-## 5. Migration and rollback
+## 5. Implementation status (2026-10-18)
+
+Ledger of what is enforced in the tree versus still absent. This section exists
+because the header above said "NOT implemented" long after most of it was, and
+because the program's recurring defect is a requirement described as satisfied
+while nothing exercises it.
+
+### Gate 1 — exercised
+
+| Req | State | Mechanism / evidence |
+|---|---|---|
+| R16-01 resource inventory | EXERCISED | `internal/mcp/resource_policy.go` declares one row per registered `guardrail://` URI; `scripts/check_resource_claims.py` asserts the documented count AND that every documented URI is registered (and vice versa) — a right count with a phantom URI is now a failure |
+| R16-02 secret-scan reconciliation | EXERCISED | Secret Validation workflow is a required check; `.gitleaksignore` entries are commit-scoped, and every fix-forward in this program has removed the fixture value rather than adding an allowlist row |
+| R16-03 registry fail-closed | EXERCISED | `TestRegistryConfiguredInvalidDeniesAllProtectedTraffic`, `TestStreamableHTTPConfiguredBrokenRegistryDeniesAll` |
+| R16-04 resource confidentiality + authorization | EXERCISED | `guardrail://config` serves a reviewed projection; every resource read passes the R16-01 matrix and `auth.Decide` before the handler runs; `resource_policy_test.go` drives the real StreamableHTTP endpoint |
+| R16-05 argument privacy | EXERCISED | `TestArgumentPrivacy`, `TestSecretLeakRedactionAcrossRealPaths` |
+
+### Gate 2 — exercised
+
+| Req | State | Mechanism / evidence |
+|---|---|---|
+| R16-06 principal + intersection | EXERCISED | `TestDecideScopeRoleResourceIntersection`, `TestAuthzScopeRoleResourceMatrix`, `TestStreamableHTTPToolsCallAuthorizesAndDenies` |
+| R16-07 legacy containment / exposure | EXERCISED | `internal/web/exposure.go` is the single ordered rule table both middlewares classify with; `TestAPIKeyAuth_LegacyAcceptanceRemovalSwitch` |
+| R16-08 decision/effect audit | EXERCISED (both transports) | web: `TestAuthzAdminMutationFailsClosedWithoutAudit`; MCP: `r16_08_audit_durability_test.go` drives the real StreamableHTTP tools/call path and asserts the project file survives a blocked delete and that the record carries principal, opaque credential ID, action, outcome and reason — never a raw key |
+
+### Gate 3 — partially exercised
+
+| Req | State | Mechanism / evidence |
+|---|---|---|
+| R16-09 revocation propagation | EXERCISED | one process-wide registry, `StartReloadLoop` at 15s inside the published 60s bound; `TestSharedRegistryRevocationPropagatesInProcess` drives both surfaces against ONE registry |
+| R16-09 verifier-key rotation + operator audit | EXERCISED | `RotateVerifierKey` with a bounded ≤24h overlap; `rotation_audit.go` emits one opaque event per applied change and nothing for a no-op; `security-matrix-rotation-audit` |
+| R16-09 validity bound | EXERCISED | `MaxCredentialValidity` = 90 days enforced inside `buildSnapshot`, so every load path (initial, reload, rotation) fails closed on a missing/over-long window |
+| **R16-09 issuance** | **NOW IMPLEMENTED — was ABSENT** | see below |
+
+**R16-09 issuance (2026-10-18).** The requirement names "approved key
+generation, issuance, distinct principal assignment, expiry, overlap/rotation,
+revocation" and warns *"Do not claim a lifecycle API exists until one is
+implemented and protected."* Four of the six existed. **Issuance did not:**
+`Digest()` had exactly one non-test caller (`Resolve`), so minting a credential
+meant computing an HMAC by hand and hand-writing registry JSON that the loader
+might then reject at startup — fail-closed, but only after deployment.
+
+Now: `internal/auth/issuance.go` (`GenerateCredentialSecret` 256-bit,
+`IssueRecord`, `LoadRegistryFile`, `WriteRegistryFile`, `RevokeInFile`) and the
+operator CLI `cmd/credctl` (`issue` / `revoke` / `list`). Design points that
+are requirements, not conveniences:
+
+- **One validation implementation.** Issuance calls `New()` → `buildSnapshot`,
+the same code the server uses, so `credctl` cannot author a file the server
+rejects, and cannot author one weaker than the server accepts. `WriteRegistryFile`
+validates the WHOLE set before touching the file, so an append can never replace
+a live registry with something unloadable.
+- **The secret is never in argv and never printed.** It is written to a new
+0600 file (O_EXCL, no overwrite) after the registry write is durable; an argv
+secret would land in `/proc/<pid>/cmdline`, `docker inspect` and shell history
+(R17-08). The verifier key likewise comes from a 0600 file or the environment,
+never a flag value.
+- **Refusals are intent errors, not strength errors.** An unknown role, a scope
+outside the published catalog, an empty scope list, a duplicate credential id,
+and a non-positive or >90-day validity are all refused — each would otherwise
+mint a credential that resolves and then denies every call, which its holder
+reads as a broken deployment rather than a policy decision.
+- **Atomic, symlink-safe, no partial state.** Serialize → temp file in the same
+directory → chmod 0600 → fsync → rename; a symlink target is refused; an empty
+registry is refused because the loader treats empty as "not configured" and
+falls back to the legacy surface.
+- **Revocation is attributable.** `revoked: true` in the file plus the existing
+reload loop denies within the published 60s; an unknown credential id is an
+error, so a revocation typo is never reported as success.
+
+Evidence: `internal/auth/issuance_test.go` 10 tests driving the REAL issuer
+against the REAL loader (`LoadFromSources`) — an issued record resolves to its
+intended principal and role; the serialized record carries the verifier and not
+the secret; the written file is 0600 and byte-loadable by the server path;
+revocation denies inside the bound while an unrelated credential survives.
+**Red-on-drift proven three ways**, each PASS→FAIL then restored: removing the
+whole-set validation; allowing an empty set; removing the role-catalog check.
+CI row `security-matrix-credential-issuance` runs the suite plus a build of
+`credctl` that fails if the binary accepts an invocation with no verifier key or
+exposes a secret-bearing argv flag. Live operator run verified: issue → 0600
+registry + 0600 secret, secret absent from stdout, `list` shows `active`, `revoke`
+→ `revoked`, duplicate id refused with exit 1.
+
+**Still absent in Gate 3 (named, not implied):** cross-process revocation for a
+multi-instance deployment is not proven (single-process reload only); a
+"bounded documented legacy mode" exit date is an operator decision, not code;
+Windows ACL equivalence is documented but not observed by any check.
+
+### Gate 4 — unmet by design
+
+R16-10 (bilateral Spec 15 contract) needs a second consumer; Spec 15's sending
+half landed (`main@58ceb6c4`) and its receiving half has no submitter.
+R16-11 (Spec 14 checker) needs a real consumer and host readiness evidence.
+Neither is advertised as enforced.
+
+## 6. Migration and rollback
 
 1. Record current clients, public consumers, config sources, and tool/resource
    permissions. Owner signs the matrix and bounds; provision separate scoped
@@ -300,7 +397,7 @@ tests, not a runtime permissive fallback.
    stale receipts. Retire deprecated trust roots and old keys after the agreed
    overlap, preserving tested revocation and replay bounds.
 
-## 6. Implementation note — R16-01 resource matrix + R16-04 per-resource authorization (2026-10-16)
+## 7. Implementation note — R16-01 resource matrix + R16-04 per-resource authorization (2026-10-16)
 
 **Landed on `main`** (strict FF, no force, no PR) via
 `forge/gr-spec16-resource-matrix`. Two named rows of Gate 0/Gate 1 are now

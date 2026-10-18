@@ -767,6 +767,50 @@ jobs:
           cd mcp-server
           go test ./internal/auth -run 'TestRegistryRequiresExpiry|TestRegistryRejectsOverLongValidity|TestRegistryValidityWindowMeasuredFromIssuedAt|TestRegistryValidityBoundAppliesToReloadAndRotate|TestMaxCredentialValidityPublished' -count=1 -v
 
+  # Spec 16 Sec. 4 R16-09: the credential lifecycle must define "approved key
+  # generation, issuance, distinct principal assignment, expiry, overlap/
+  # rotation, revocation" and must not claim a lifecycle API until one exists.
+  # The registry could resolve, reload, rotate and revoke; nothing could ISSUE —
+  # Digest() had one non-test caller (Resolve), so minting a credential meant
+  # computing an HMAC by hand and hand-writing registry JSON the loader might
+  # then reject at startup. This row drives the REAL issuer against the REAL
+  # loader (LoadFromSources, the server's own entry point): an issued record
+  # resolves to its principal, carries only the verifier, refuses an unknown
+  # role / out-of-catalogue scope / unbounded validity, writes 0600 atomically,
+  # refuses to write a set the loader would reject, and revokes to denial
+  # inside the published 60s bound.
+  security-matrix-credential-issuance:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Set up Go
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version: '1.25'
+          cache-dependency-path: mcp-server/go.sum
+
+      - name: Credential issuance and authoring row
+        run: |
+          cd mcp-server
+          go test ./internal/auth -run 'TestIssuedCredentialResolvesThroughTheRealRegistry|TestIssuedRecordCarriesNoSecret|TestIssueRefusesUnknownRoleAndEmptyScopes|TestIssueRefusesInvalidValidity|TestGenerateCredentialSecretIsRandomAndSized|TestRegistryFileRoundTripIsServerLoadable|TestWriteRegistryFileRefusesInvalidSet|TestWriteRegistryFileRefusesSymlink|TestRevokeInFileDeniesOnReload|TestLoadRegistryFileRefusesLooseMode' -count=1 -v
+
+      - name: credctl builds and refuses a secret on argv
+        run: |
+          cd mcp-server
+          go build ./cmd/credctl
+          # No verifier key configured: the command must fail loudly rather than
+          # mint anything against an empty key.
+          if ./credctl list --registry /nonexistent.json; then
+            echo "credctl accepted an invocation with no verifier key" >&2
+            exit 1
+          fi
+          # An argv password flag must not exist at all (Spec 17 R17-08).
+          if ./credctl issue --help 2>&1 | grep -qE '\-\-(secret|password|key)[ =]'; then
+            echo "credctl exposes a secret-bearing argv flag" >&2
+            exit 1
+          fi
+
   # R19-04: mutation-kill control. Copies the module to a scratch directory,
   # confirms the real negative suite PASSES, injects a deterministic bypass
   # (webhook SSRF guard always permits; webhook egress policy always permits;
@@ -780,7 +824,8 @@ jobs:
   # permits; the secret-source requirement always satisfied; the debug-endpoint
   # posture gate always permits; the verifier-key entropy floor removed; the
   # ingress-posture gate always permits; the credential validity bound removed;
-  # the MCP required-audit gate removed),
+  # the credential issuance path writes an unvalidated registry; the MCP
+  # required-audit gate removed),
   # and
   # requires
   # the SAME suite to FAIL —

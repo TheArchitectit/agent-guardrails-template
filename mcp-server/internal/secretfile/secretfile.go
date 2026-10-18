@@ -53,3 +53,41 @@ func Read(path string) ([]byte, error) {
 	}
 	return os.ReadFile(path)
 }
+
+// Write creates a NEW secret file with the restricted mode. It is the issuer
+// side of the same rule Read enforces: a secret this package writes is always
+// 0600 from the moment it exists, and an existing file is never overwritten —
+// the credential a file already holds must not be silently replaced by a
+// second issuance.
+//
+// The file is written before rename, so a reader either sees the complete
+// value or no file at all; a partial secret is never observable.
+func Write(path string, data []byte) error {
+	if _, err := os.Lstat(path); err == nil {
+		return fmt.Errorf("secret destination already exists; refusing to overwrite")
+	} else if !os.IsNotExist(err) {
+		return fmt.Errorf("secret destination could not be inspected: %w", err)
+	}
+
+	// O_EXCL closes the race between the Lstat above and the create: two
+	// issuers writing the same path cannot both succeed.
+	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, Mode)
+	if err != nil {
+		return fmt.Errorf("secret destination could not be created: %w", err)
+	}
+	if _, err := f.Write(data); err != nil {
+		f.Close()
+		_ = os.Remove(path)
+		return fmt.Errorf("secret file write failed: %w", err)
+	}
+	if err := f.Sync(); err != nil {
+		f.Close()
+		_ = os.Remove(path)
+		return fmt.Errorf("secret file sync failed: %w", err)
+	}
+	if err := f.Close(); err != nil {
+		_ = os.Remove(path)
+		return fmt.Errorf("secret file close failed: %w", err)
+	}
+	return nil
+}

@@ -726,6 +726,19 @@ func (s *MCPServer) authorizeToolCallDisabled(ctx context.Context, name string, 
 		testRegex: "^TestReadinessMandatoryInstalledIsNotAvailable$",
 	},
 	{
+		// Spec 16 Sec. 4 R16-09: issuance must not author a registry the server
+		// would reject. WriteRegistryFile validates the WHOLE set through the
+		// same buildSnapshot the loader runs, so an append can never replace a
+		// live registry with something unloadable. The mutation drops that
+		// validation and writes whatever it was handed.
+		name:      "credential-issuance-writes-unvalidated-registry",
+		file:      "internal/auth/issuance.go",
+		old:       "\tif _, err := New(verifierKey, records); err != nil {\n\t\treturn err\n\t}\n\n\tbody, err := json.MarshalIndent(records, \"\", \"  \")",
+		new:       "\tbody, err := json.MarshalIndent(records, \"\", \"  \")",
+		pkg:       "./internal/auth",
+		testRegex: "^TestWriteRegistryFileRefusesInvalidSet$",
+	},
+	{
 		// Spec 08 R08-4.3.3: evidence must not carry secret values. The
 		// mutation removes redaction entirely, leaving only the length bound.
 		name:      "controlplane-evidence-redaction-disabled",
