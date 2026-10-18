@@ -234,6 +234,14 @@ type Config struct {
 	// a legacy key is refused on both transports regardless of registry state.
 	LegacyAcceptanceUntil string `env:"LEGACY_ACCEPTANCE_UNTIL"`
 
+	// PolicyPacksDir names the policy-pack directory the running server
+	// resolves and enforces (Spec 07 R07-4.4). Unset means no pack is
+	// configured: the server is not enforcing one and guardrail://policy-packs
+	// reports "not_configured" rather than an empty-but-active policy set.
+	// Acquisition is explicit — only this configured path is ever read; no URL,
+	// redirect or path named inside a policy document is followed (R07-4.3.3).
+	PolicyPacksDir string `env:"POLICY_PACKS_DIR"`
+
 	// Production Mode Indicator
 	ProductionMode bool `env:"PRODUCTION_MODE" envDefault:"false"`
 }

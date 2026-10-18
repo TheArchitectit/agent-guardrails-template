@@ -113,6 +113,14 @@ func (s *MCPServer) resourceSpecs() []resourceSpec {
 			name:    "Available Advisors",
 			handler: s.adaptResource(s.readAvailableAdvisorsResource),
 		},
+		{
+			// Spec 07 R07-4.4.1: the active policy set and its effective digest
+			// must be readable. Reports "not_configured" when no pack directory
+			// was supplied — an absence, never an empty-but-active policy.
+			uri:     "guardrail://policy-packs",
+			name:    "Active Policy Pack Set",
+			handler: s.adaptResource(s.readPolicyPacksResource),
+		},
 	}
 }
 

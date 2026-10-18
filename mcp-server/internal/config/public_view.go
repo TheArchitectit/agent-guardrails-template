@@ -50,6 +50,11 @@ type PublicConfig struct {
 	CircuitBreakerInterval         time.Duration `json:"circuit_breaker_interval"`
 
 	ProductionMode bool `json:"production_mode"`
+
+	// PolicyPacksDir is the configured pack directory. It is a path, not
+	// secret material, and it is reported so an operator can confirm which
+	// policy set the process is meant to enforce.
+	PolicyPacksDir string `json:"policy_packs_dir,omitempty"`
 }
 
 // PublicView returns the reviewed non-secret projection of this Config.
@@ -101,5 +106,7 @@ func (c *Config) PublicView() PublicConfig {
 		CircuitBreakerInterval:         c.CircuitBreakerInterval,
 
 		ProductionMode: c.ProductionMode,
+
+		PolicyPacksDir: c.PolicyPacksDir,
 	}
 }

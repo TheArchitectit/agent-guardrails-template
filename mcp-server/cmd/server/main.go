@@ -239,6 +239,38 @@ func main() {
 		slog.Info("multi-agent safety chains initialized", "chains", multiAgentRegistry.Chains())
 	}
 
+	// Runtime policy-pack consumer (Spec 07 R07-4.4). The CI gate proves the
+	// checked-in lock record is honest; it cannot make the running server obey
+	// the pack. Before this block there was no runtime consumer at all: the
+	// engine resolved policy from its own rule set, the effective digest was
+	// exposed nowhere, and no enforcement decision was attributable to a pack
+	// rule. Activation is candidate-first and atomic — a set that fails to
+	// resolve or validate leaves the process reporting "not configured" rather
+	// than silently serving an empty-but-active policy.
+	if cfg.PolicyPacksDir != "" {
+		policyPacks := guardrails.NewPolicyPackManager()
+		if err := policyPacks.ActivateFrom(cfg.PolicyPacksDir, mcpSrv.RegisteredToolNames()); err != nil {
+			// Not fatal: refusing to start would make a policy typo an outage.
+			// The server keeps running with no active pack, and the diagnostic
+			// resource reports "failed" with the reason so the gap is visible
+			// instead of looking like an enforced policy.
+			slog.Error("policy pack set failed to resolve; no pack is active", "dir", cfg.PolicyPacksDir, "error", err)
+			mcpSrv.SetPolicyPacks(policyPacks)
+		} else {
+			mcpSrv.SetPolicyPacks(policyPacks)
+			active := policyPacks.Active()
+			slog.Info("active policy set",
+				"dir", cfg.PolicyPacksDir,
+				"effective_digest", active.EffectiveDigest(),
+				"resolver_version", active.ResolverVersion(),
+				"packs", len(active.Packs()),
+				"rules", len(active.Rules()),
+			)
+		}
+	} else {
+		slog.Info("POLICY_PACKS_DIR is not set; no policy pack is enforced (guardrail://policy-packs reports not_configured)")
+	}
+
 	// Outbound evidence identity (Spec 15 gr-xp-02). The instance key is
 	// deployment-supplied, because a key minted at startup would present a new
 	// identity on every restart and no peer could hold a trust record for it.

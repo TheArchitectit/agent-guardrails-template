@@ -1,9 +1,11 @@
 # OpenSpec: Versioned Policy-Pack Governance
 
 **Status:** PARTIAL — the lock-record half (R07-4.1 identity/determinism, R07-4.3.2
-schema-as-data, R07-5.8 CI verification) is implemented and **enforced in CI** as of
-2026-10-18. No runtime policy-pack loader or consumer is implemented: no engine
-resolves a pack set at startup, so R07-4.4 stays absent.
+schema-as-data, R07-5.8 CI verification) is implemented and **enforced in CI**, and as of
+2026-10-18 there is a **runtime consumer**: the server resolves the configured pack set at
+startup, exposes its effective digest through `guardrail://policy-packs`, and can attribute
+an enforcement decision to the exact pack rule that governs a tool (R07-4.4.1–R07-4.4.4).
+The rows that stay open are named below and none of them is reachability.
 **Priority:** Important; prerequisite to distributing policy changes safely.
 **Related:** `docs/specs/guardrail-gaps-2026/02-semantic-content-filtering.md`,
 `04-multi-agent-safety-policies.md`, and `06-regulatory-compliance-mapping.md`.
@@ -232,10 +234,24 @@ for a domain pack or overlay to weaken yet.
 - **R07-4.3.5 / R07-4.3.3** — the lock records pinned-vs-verified state as `overlay_digest:
 none` and does not acquire remote packs; acquisition posture is moot until a remote source is
 chosen.
-- **R07-4.4.1–R07-4.4.4** — **no runtime consumer.** The engine does not load packs at
-startup, exposes no effective-digest diagnostic, and no enforcement decision is attributable
-to a pack rule. The verifier proves the *record* is honest; it does not make the running
-server obey the pack. `internal/mcp` still resolves policy from its own configured rule set.
+- **R07-4.4 is now IMPLEMENTED (2026-10-18).** `mcp-server/internal/guardrails/policy_pack.go`
+is the consumer: `LoadPolicySet` resolves a configured pack directory, re-derives the
+effective digest with the **same canonical form** the CI gate uses (so the runtime and the
+gate cannot disagree about which set they are looking at), and refuses: a missing lock
+record, a content digest that changed without a re-lock, a lock entry with no pack, an empty
+pack set, an empty non-seed pack, a non-`stop` `on_unknown`, an unknown critical field, and a
+rule naming a tool the server does not register. `PolicyPackManager.ActivateFrom` is
+candidate-first and atomic — a failed candidate leaves the previously active set in force
+(R07-4.4.2), never "no policy". `guardrail://policy-packs` reports `not_configured` /
+`active` / `failed` with the digest, packs, rules and per-tool attribution, so an absence
+never reads as an empty-but-active policy (R07-4.4.1). Resolution and enforcement stay
+separate operations: nothing in the loader enforces anything (R07-4.4.4), and attribution is
+a lookup the enforcement path performs (R07-4.4.3). Pack text is decoded as inert data and
+never executed (R07-4.3.1 / acceptance 5).
+- **R07-4.4 named limit, stated rather than implied:** the server *reports* attribution; it
+  does not yet *refuse* a tool call for lack of a covering rule. Making the four-laws rules
+  blocking for their named tools is a behavioural change to the tool surface and stays an
+  owner decision, not a silent narrowing of what the software does.
 
 **Owner decisions still open (Sec. 7):** the authoritative core-pack source and release
 process, whether signature verification is required, overlay permissions and exception

@@ -56,6 +56,8 @@ var resourcePolicy = []resourcePolicyRow{
 		Rationale: "Static policy documentation."},
 	{URI: "guardrail://advisors", Kind: auth.ActionRead,
 		Rationale: "Advisor catalog; no secret material."},
+	{URI: "guardrail://policy-packs", Kind: auth.ActionRead,
+		Rationale: "Resolved policy-set identity, digests and rule ids (Spec 07 R07-4.4.1); inert data, no secret material."},
 }
 
 // errResourcePermissionDenied is the stable, non-leaking denial returned to a

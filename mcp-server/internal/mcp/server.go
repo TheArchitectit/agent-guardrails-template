@@ -32,19 +32,19 @@ import (
 
 // MCPServer handles MCP protocol requests
 type MCPServer struct {
-	mcpServer         *server.MCPServer
-	httpServer        *server.StreamableHTTPServer
-	rawServer         *http.Server
-	db                *database.DB
-	cache             *cache.Client
-	audit             *audit.Logger
-	validator         *validation.ValidationEngine
-	config            *config.Config
+	mcpServer        *server.MCPServer
+	httpServer       *server.StreamableHTTPServer
+	rawServer        *http.Server
+	db               *database.DB
+	cache            *cache.Client
+	audit            *audit.Logger
+	validator        *validation.ValidationEngine
+	config           *config.Config
 	guardrailsEngine *guardrails.Engine
 	// multiAgent holds the Spec 04 safety chains. It is nil unless a registry
 	// was built from a live engine at startup; a nil registry makes the three
 	// agent tools fail closed rather than report an unrun chain as passed.
-	multiAgent *guardrails.MultiAgentRegistry
+	multiAgent        *guardrails.MultiAgentRegistry
 	version           string
 	visionTools       *VisionToolSet
 	webhookStore      *database.WebhookStore
@@ -82,6 +82,11 @@ type MCPServer struct {
 	evidenceSigner *evidence.Instance
 	// evidenceAudience is the peer this instance addresses artifacts to.
 	evidenceAudience string
+
+	// policyPacks is the Spec 07 runtime policy-pack consumer. When nil the
+	// server is not enforcing a pack, and guardrail://policy-packs reports
+	// "not_configured" rather than an empty-but-active policy set.
+	policyPacks *guardrails.PolicyPackManager
 }
 
 // SetCredentialRegistry installs the process-wide credential registry so the
