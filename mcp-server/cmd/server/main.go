@@ -194,6 +194,28 @@ func main() {
 		}
 		engine.AddContentFilterBackend(guardrails.NewLlamaGuardBackend(model, ollamaURL))
 		slog.Info("Guardrails engine initialized", "backend", "llama-guard", "model", model)
+
+		// Attach the SAME Ollama deployment as the L3 injection classifier.
+		// Before this, NewOllamaClassifier had no caller anywhere in the tree:
+		// L3 was unreachable in every deployment, and the pipeline fell back to
+		// a no-op backend that answered "safe" for text it never evaluated.
+		// The content filter and the classifier now share one configured
+		// backend instead of the classifier being dead code.
+		classifierCfg := guardrails.ClassifierConfig{
+			Enabled:   true,
+			Backend:   "llama-guard",
+			ModelPath: model,
+			Endpoint:  ollamaURL,
+			Threshold: 0.7,
+		}
+		if err := engine.EnableInjectionClassifier(
+			guardrails.NewOllamaClassifier(classifierCfg, slog.Default()), classifierCfg); err != nil {
+			// Not fatal: L1 still runs and the result reports L3 as absent,
+			// which is honest. Log loudly because the operator asked for it.
+			slog.Error("failed to enable L3 injection classifier", "error", err)
+		} else {
+			slog.Info("Injection L3 classifier enabled", "backend", "ollama", "model", model)
+		}
 	}
 	if cfg.OpenAIAPIKey != "" {
 		engine.AddContentFilterBackend(guardrails.NewOpenAIModerationBackend(cfg.OpenAIAPIKey))

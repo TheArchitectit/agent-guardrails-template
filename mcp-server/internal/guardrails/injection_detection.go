@@ -61,14 +61,20 @@ const (
 
 // InjectionResult is the output of the injection detection pipeline.
 type InjectionResult struct {
-	Safe        bool      `json:"safe"`
-	Confidence  float64   `json:"confidence"`
-	Layer       string    `json:"layer"`
-	Reason      string    `json:"reason,omitempty"`
-	Categories  []string  `json:"categories,omitempty"`
-	TextHash    string    `json:"text_hash"`
-	Decision    string    `json:"decision"`
-	ProcessedAt time.Time `json:"processed_at"`
+	Safe       bool     `json:"safe"`
+	Confidence float64  `json:"confidence"`
+	Layer      string   `json:"layer"`
+	Reason     string   `json:"reason,omitempty"`
+	Categories []string `json:"categories,omitempty"`
+	// LayersEvaluated names the layers that actually examined the text. It
+	// exists because "safe" alone cannot tell a caller whether the semantic
+	// layer ran or was simply absent: a deployment with L1 only and one with
+	// L1+L3 both returned Safe=true, and nothing in the result distinguished
+	// them (Spec 01).
+	LayersEvaluated []string  `json:"layers_evaluated,omitempty"`
+	TextHash        string    `json:"text_hash"`
+	Decision       string    `json:"decision"`
+	ProcessedAt    time.Time `json:"processed_at"`
 }
 
 // BatchResult is the output of batch scanning.
@@ -138,7 +144,14 @@ type ClassifierBackend interface {
 }
 
 // ClassifierConfig holds configuration for classifier backends.
+//
+// Enabled is the L3 gate and it is explicit. The layer used to run
+// unconditionally against a NoOpClassifier, so every result looked like a
+// three-layer scan while the semantic layer answered "safe" for text it never
+// evaluated. An explicit switch makes "L3 did not run" representable, which is
+// what the result now reports.
 type ClassifierConfig struct {
+	Enabled   bool          `yaml:"enabled" json:"enabled"`
 	Backend   string        `yaml:"backend" json:"backend"`
 	ModelPath string        `yaml:"model_path" json:"model_path"`
 	Threshold float64       `yaml:"threshold" json:"threshold"`
@@ -270,6 +283,15 @@ func NewPipeline(config PipelineConfig, classifier InjectionClassifier, auditLog
 		p.perplexity = NewPerplexityAnalyzer(config.Layers.Perplexity)
 	}
 
+	// L4 has no implementation: LayerLLMSelfCheck is declared and the config
+	// struct carries llm_self_check, but no code path ever assigns the layer,
+	// so enabling it changed nothing and the pipeline still reported a
+	// complete scan. Refuse at construction rather than accept a switch that
+	// does nothing (Spec 01 L4; P5/D-18 fail-closed).
+	if config.Layers.LLMSelfCheck.Enabled {
+		return nil, fmt.Errorf("L4 LLM self-check is enabled in configuration but has no implementation; refusing to construct a pipeline that would silently skip it (Spec 01)")
+	}
+
 	return p, nil
 }
 
@@ -295,6 +317,9 @@ func (p *Pipeline) Detect(ctx context.Context, text string, source Source) Injec
 	// L1: Pattern Matching
 	if p.patterns != nil {
 		match, categories, err := p.patterns.Match(ctx, text)
+		if err == nil {
+			result.LayersEvaluated = append(result.LayersEvaluated, string(LayerPatternMatching))
+		}
 		if err == nil && match {
 			result.Safe = false
 			result.Confidence = 0.95
@@ -310,6 +335,7 @@ func (p *Pipeline) Detect(ctx context.Context, text string, source Source) Injec
 	// L2: Perplexity Analysis
 	if p.perplexity != nil {
 		score, anomaly := p.perplexity.Analyze(ctx, text)
+		result.LayersEvaluated = append(result.LayersEvaluated, string(LayerPerplexity))
 		if anomaly {
 			result.Safe = false
 			result.Confidence = score
@@ -321,9 +347,16 @@ func (p *Pipeline) Detect(ctx context.Context, text string, source Source) Injec
 		}
 	}
 
-	// L3: Classifier Model
+	// L3: Classifier Model. The classifier is nil when the layer is not
+	// enabled, so "no semantic coverage" is visible in LayersEvaluated rather
+	// than masked by a backend that always answers safe. Availability is NOT
+	// probed here: that would be a network round trip on every scan. A backend
+	// that is unreachable errors on Classify and fails closed below.
 	if p.classifier != nil {
 		safe, confidence, categories, err := p.classifier.Classify(ctx, text)
+		if err == nil {
+			result.LayersEvaluated = append(result.LayersEvaluated, string(LayerClassifier))
+		}
 		if err != nil {
 			result.Safe = false
 			result.Confidence = 1.0

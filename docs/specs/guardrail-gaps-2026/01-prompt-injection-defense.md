@@ -7,9 +7,14 @@
 > `server.go`, registered by `guardrailsToolList()`). The shipped default
 > pipeline now compiles the built-in L1 pattern set, so a scan actually
 > evaluates input instead of returning `safe:true` vacuously. L2 perplexity
-> stays off by default, L3 remains a no-op classifier unless an Ollama
-> classifier is wired, and L4 is not implemented — see
-> [STATUS.md](STATUS.md) for the requirement-by-requirement position.
+> stays off by default. **L3 is now wired (2026-10-18):** the pipeline is no
+> longer built around a `NoOpClassifier` that answered "safe" for text it
+> never evaluated, `Engine.EnableInjectionClassifier` attaches a real backend
+> and its switch together, and `cmd/server/main.go` enables the Ollama
+> classifier when `OLLAMA_URL` is set. A result now names the layers that
+> actually ran in `layers_evaluated`. **L4 is still not implemented** but now
+> **refuses at construction** instead of silently doing nothing when enabled.
+> See [STATUS.md](STATUS.md) for the requirement-by-requirement position.
 >
 > **Authority-wiring defect found and fixed the same day.** Registering and
 > dispatching a tool is not the same as making it callable. Neither tool had an
@@ -238,27 +243,18 @@ requirement actually stands.
 | 3.1 | `guardrail_scan_text_batch` | **Not implemented** (library only) | `DetectBatch` exists at `injection_detection.go:317` with no tool |
 | 2.2 | L1 pattern matching | Built, **unwired** | `injection_detection_patterns.go:20`; reached only via `Engine.Evaluate`, which has no non-test caller |
 | 2.2 | L2 perplexity | Partial — **disabled by default** | `injection_detection.go:150-153` |
-| 2.2 | L3 classifier | Effectively dead | `engine.go:75` wires `NoOpClassifier{}` (always returns safe); `NewOllamaClassifier` and `SetClassifier` have zero callers |
-| 2.2 | L4 LLM self-check | **Not implemented** | config struct exists (`injection_detection.go:190-194`); `Pipeline` has no field for it and `Detect` never runs it |
-| 3.2 | Config keys | **Shape mismatch** | shipped `InjectionConfig` is flat (`l1_enabled`, `l2_enabled`, …); the nested `layers:` form is never YAML-loaded (`LoadInjectionConfigFromYAML` has zero callers) |
-| 3.2 | Blocklist files | **Not implemented** | `config/blocklists/` does not exist |
-| 4.x | Hot reload | Library only | `BlocklistManager` (`injection_config.go:92`), no callers |
+| 2.2 | L3 classifier | **Wired 2026-10-18** — the pipeline used to be constructed with `NoOpClassifier{}`, so L3 “ran” on every input and answered `safe` for text it never evaluated, while `NewOllamaClassifier` and `SetClassifier` had zero callers (L3 was unreachable in every deployment). The pipeline is now built with a **nil** classifier unless a backend is attached; `Engine.EnableInjectionClassifier` attaches the backend and the config switch together; `cmd/server/main.go` enables the real `OllamaClassifier` when `OLLAMA_URL` is set, sharing the deployment already used for the content filter. `InjectionResult.LayersEvaluated` now names the layers that actually ran, so “L1 only” is visible to a caller instead of implied. An unreachable backend errors on `Classify` and **fails closed** (no per-scan health probe). Pinned by `injection_l3_wiring_test.go` (7 cases). |
+| 2.2 | L4 LLM self-check | **Refused rather than silently skipped** — config struct and `llm_self_check` existed, but no code path ever assigned `LayerLLMSelfCheck`, so enabling it changed nothing while the scan still looked complete. `NewPipeline` now **refuses to construct** when `LLMSelfCheck.Enabled` is set, naming Spec 01. Still not implemented; the switch is no longer a lie. |
+| 3.2 | Config keys | **Projection implemented 2026-10-18; server wiring still open** — `InjectionConfig` (flat `l1_enabled`/`l2_enabled`/`l3_enabled`, blocklists, custom patterns, source policies) had **nothing that converted it**, so the entire surface was inert. New `InjectionConfig.ToPipelineConfig()` projects every operator-visible field onto the nested `PipelineConfig`, with a built-in-pattern fallback when L1 is enabled with no patterns, pinned by 3 tests that drive a real pipeline. **Still open:** `cmd/server/main.go` builds `NewEngine(nil, …)` and never loads a config file, so `LoadInjectionConfigFromYAML` still has zero non-test callers — a deployment still cannot supply these settings by file. |
+| 3.2 | Blocklist files | `config/blocklists/` still does not exist. `BlocklistPaths` is honoured by the projection and by `PatternMatcher` when set, but no corpus ships. |
+| 4.x | Hot reload | `BlocklistManager` (`injection_config.go`) still has no non-test caller. `Pipeline.ReloadPatterns` exists and is reachable, but nothing calls it on a file change. |
 | 4.x | Audit trail | Partial | slog only; `SourceTool`/`ToolCallID` declared but never populated; no PostgreSQL trail |
 
-**Net position.** The detection layer described in Sec. 2 is a complete library
-with no request-path integration and a classifier that always answers "safe".
-Nothing in this spec is active protection today.
+**Net position.** L1 is active, wired and evaluated; L3 is now reachable and reports its own absence; L4 refuses instead of pretending. The library-to-request-path gap that made the whole Sec. 2 design inert is closed for L3 and for the tool surface. What remains open is deployment configuration (no config file is read at startup), the blocklist corpus, hot reload, and the acceptance-criteria harness.
 
-**Blocking decisions before this spec can proceed:**
+**Blocking decisions still open:**
 
-1. **Wire or retire.** `Engine.Evaluate` is the only path that would reach the
-   pipeline. Either give it a caller in the request path or delete the
-   library so it stops reading as shipped capability.
-2. **Choose the config shape** — flat (what ships) or nested `layers:` (what
-   Sec. 3.2 specifies). One of the two is wrong.
-3. **Source the blocklist corpus.** Sec. 3.2 assumes pattern files that do not
-   exist; someone must decide where they come from and who maintains them.
-4. **Acceptance criteria in Sec. 5 are untestable as written.** The latency
-   budgets have no benchmark (only `BenchmarkPerplexityAnalyzer` exists), and
-   the adversarial suites have no harness. Each needs a reproducible command
-   before any box can be honestly checked.
+1. ~~**Wire or retire.**~~ **Resolved 2026-10-18 for the injection path** — the two tools are dispatched and L3 is attached at startup. `Engine.Evaluate` (the full multi-subsystem path) still has no non-test caller; that is a separate composition decision.
+2. ~~**Choose the config shape.**~~ **Resolved 2026-10-18:** flat stays the operator-facing shape; `ToPipelineConfig` is the single conversion into the nested pipeline config. The remaining half is loading a file at startup.
+3. **Source the blocklist corpus.** Sec. 3.2 assumes pattern files that do not exist; someone must decide where they come from and who maintains them.
+4. **Acceptance criteria in Sec. 5 are untestable as written.** The latency budgets have no benchmark (only `BenchmarkPerplexityAnalyzer` exists), and the adversarial suites have no harness. Each needs a reproducible command before any box can be honestly checked.

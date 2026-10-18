@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"maps"
 	"os"
+	"sort"
 	"sync"
 
 	"github.com/dlclark/regexp2"
@@ -76,6 +77,79 @@ func (c *InjectionConfig) SourcePolicy(source string) string {
 		return p
 	}
 	return c.FailPolicy
+}
+
+// ToPipelineConfig projects this YAML/env-shaped configuration onto the
+// nested PipelineConfig the pipeline actually reads.
+//
+// This conversion is the defect this method fixes: InjectionConfig existed with
+// an l1_enabled/l2_enabled/l3_enabled surface, a classifier_backend, blocklist
+// paths and custom patterns, and NOTHING converted it. The server built its
+// pipeline from DefaultPipelineConfig() and never loaded an InjectionConfig at
+// all, so an operator who set l3_enabled: false (or supplied extra patterns, or
+// pointed at a blocklist) changed nothing — the settings were inert prose in a
+// struct. A test now drives this conversion so the two shapes cannot drift
+// again.
+func (c *InjectionConfig) ToPipelineConfig() PipelineConfig {
+	if c == nil {
+		return DefaultPipelineConfig()
+	}
+
+	patterns := make([]string, 0, len(c.CustomPatterns)+len(c.L1Patterns))
+	// Order the map-derived patterns deterministically so a config diff is
+	// reproducible; append operator-supplied custom patterns after.
+	categories := make([]string, 0, len(c.L1Patterns))
+	for category := range c.L1Patterns {
+		categories = append(categories, category)
+	}
+	sort.Strings(categories)
+	for _, category := range categories {
+		patterns = append(patterns, c.L1Patterns[category])
+	}
+	patterns = append(patterns, c.CustomPatterns...)
+
+	// An enabled L1 with no patterns is a matcher that can never fire. Fall
+	// back to the built-in set rather than shipping a vacuous layer.
+	if c.L1Enabled && len(patterns) == 0 {
+		patterns = DefaultPatternList()
+	}
+
+	sourcePolicies := make(map[Source]FailPolicy, len(c.SourcePolicies))
+	for source, policy := range c.SourcePolicies {
+		sourcePolicies[Source(source)] = FailPolicy(policy)
+	}
+
+	cfg := PipelineConfig{
+		Enabled:    c.Enabled,
+		FailPolicy: FailPolicy(c.FailPolicy),
+		Layers: LayersConfig{
+			PatternMatching: PatternMatchingConfig{
+				Enabled:        c.L1Enabled,
+				BlocklistPaths: c.BlocklistPaths,
+				CustomPatterns: patterns,
+			},
+			Perplexity: PerplexityConfig{
+				Enabled:   c.L2Enabled,
+				Threshold: c.PerplexityThreshold,
+			},
+			Classifier: ClassifierConfig{
+				Enabled:   c.L3Enabled,
+				Backend:   c.ClassifierBackend,
+				ModelPath: c.ClassifierModelPath,
+				Threshold: c.ClassifierThreshold,
+			},
+			LLMSelfCheck: LLMSelfCheckConfig{
+				Enabled:   c.L4Enabled,
+				Model:     c.LLMSelfCheckModel,
+				Threshold: c.LLMSelfCheckThreshold,
+			},
+		},
+		SourcePolicies: sourcePolicies,
+	}
+	if cfg.FailPolicy == "" {
+		cfg.FailPolicy = FailPolicyBlock
+	}
+	return cfg
 }
 
 // BlocklistManager handles loading and hot-reloading of blocklist files.

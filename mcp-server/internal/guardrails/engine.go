@@ -71,10 +71,14 @@ func NewEngine(config *EngineConfig, logger *slog.Logger) *Engine {
 		logger: logger,
 	}
 
-	// Initialize injection detection pipeline with NoOp classifier
-	pipeline, err := NewPipeline(config.Injection, &NoOpClassifier{}, &defaultAuditLogger{logger: logger})
+	// Initialize injection detection pipeline. L3 is nil unless a deployment
+	// supplies a real backend: the pipeline used to be constructed with a
+	// NoOpClassifier, so L3 ran on every input and answered "safe" for text it
+	// never evaluated. An absent semantic backend must be an absent layer, not
+	// a passing one (Spec 01; P5/D-18).
+	pipeline, err := NewPipeline(config.Injection, nil, &defaultAuditLogger{logger: logger})
 	if err != nil {
-		logger.Warn("failed to init injection pipeline", "error", err)
+		logger.Error("failed to init injection pipeline", "error", err)
 	} else {
 		e.pipeline = pipeline
 	}
@@ -110,6 +114,45 @@ func (e *Engine) SetClassifier(classifier InjectionClassifier) {
 		e.pipeline.classifier = classifier
 		e.pipeline.mu.Unlock()
 	}
+}
+
+// EnableInjectionClassifier attaches the L3 semantic backend and marks the
+// layer enabled in the pipeline configuration.
+//
+// It exists so a deployment can turn L3 on without reaching into pipeline
+// internals, and so the switch and the backend cannot disagree: the previous
+// shape had a config flag with no effect and a backend with no config.
+func (e *Engine) EnableInjectionClassifier(classifier InjectionClassifier, cfg ClassifierConfig) error {
+	if classifier == nil {
+		return fmt.Errorf("cannot enable the L3 classifier without a backend")
+	}
+	if e.pipeline == nil {
+		return fmt.Errorf("cannot enable the L3 classifier: injection pipeline is not initialized")
+	}
+	if cfg.Threshold <= 0 || cfg.Threshold > 1 {
+		return fmt.Errorf("classifier threshold must be in (0,1], got %.2f", cfg.Threshold)
+	}
+
+	e.pipeline.mu.Lock()
+	e.pipeline.classifier = classifier
+	e.pipeline.config.Layers.Classifier = cfg
+	e.pipeline.mu.Unlock()
+
+	if e.config != nil {
+		e.config.Injection.Layers.Classifier = cfg
+	}
+	return nil
+}
+
+// InjectionClassifierConfigured reports whether a semantic L3 backend is
+// attached. Callers use it to state coverage rather than assume it.
+func (e *Engine) InjectionClassifierConfigured() bool {
+	if e.pipeline == nil {
+		return false
+	}
+	e.pipeline.mu.RLock()
+	defer e.pipeline.mu.RUnlock()
+	return e.pipeline.classifier != nil
 }
 
 // SetInjectionAuditLogger replaces the sink that records injection decisions.
