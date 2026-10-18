@@ -88,6 +88,12 @@ type MCPServer struct {
 	// server is not enforcing a pack, and guardrail://policy-packs reports
 	// "not_configured" rather than an empty-but-active policy set.
 	policyPacks *guardrails.PolicyPackManager
+	// policyPacksErr records a pack set that FAILED to resolve at startup (a
+	// lock mismatch, or an unusable trusted key set when verification is
+	// enabled). Without it the diagnostic could only distinguish "no manager"
+	// from "inactive manager", so an operator saw "failed: no policy set has
+	// been activated" for a set that was rejected for a specific reason.
+	policyPacksErr error
 
 	// exercise counts observed invocations per control-plane component
 	// (Spec 08 R08-4.2.1). It is what separates `reachable` from `exercised`:

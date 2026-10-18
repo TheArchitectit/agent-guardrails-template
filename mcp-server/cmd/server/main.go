@@ -250,7 +250,30 @@ func main() {
 	// than silently serving an empty-but-active policy.
 	if cfg.PolicyPacksDir != "" {
 		policyPacks := guardrails.NewPolicyPackManager()
-		if err := policyPacks.ActivateFrom(cfg.PolicyPacksDir, mcpSrv.RegisteredToolNames()); err != nil {
+
+		// Spec 07 R07-4.3.4 — signature verification is enabled by CONFIGURING a
+		// trusted key set, and the set is read out of band from a restricted
+		// file. A configured but unreadable, malformed, empty or expired set is
+		// a hard startup error: continuing would either skip verification
+		// silently (turning an enabled control off) or fail every pack and look
+		// like the packs were unsigned.
+		activate := policyPacks.ActivateFrom
+		if cfg.PolicyPackTrustedKeysFile != "" {
+			trusted, terr := guardrails.LoadTrustedKeySet(cfg.PolicyPackTrustedKeysFile)
+			if terr != nil {
+				slog.Error("policy pack trusted key set is unusable; refusing to verify packs",
+					"path", cfg.PolicyPackTrustedKeysFile, "error", terr)
+				mcpSrv.SetPolicyPacksError(fmt.Errorf("policy pack trusted key set: %w", terr))
+				goto policyPacksDone
+			}
+			slog.Info("policy pack signature verification enabled",
+				"trusted_keys", trusted.Len(), "key_ids", trusted.KeyIDs())
+			activate = func(dir string, known map[string]bool) error {
+				return policyPacks.ActivateFromVerified(dir, known, trusted)
+			}
+		}
+
+		if err := activate(cfg.PolicyPacksDir, mcpSrv.RegisteredToolNames()); err != nil {
 			// Not fatal: refusing to start would make a policy typo an outage.
 			// The server keeps running with no active pack, and the diagnostic
 			// resource reports "failed" with the reason so the gap is visible
@@ -271,6 +294,7 @@ func main() {
 	} else {
 		slog.Info("POLICY_PACKS_DIR is not set; no policy pack is enforced (guardrail://policy-packs reports not_configured)")
 	}
+policyPacksDone:
 
 	// Control-plane composition (Spec 08 R08-4.1). The manifest declares which
 	// components this deployment claims to compose; it declares NO state, so

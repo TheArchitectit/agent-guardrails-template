@@ -45,8 +45,16 @@ type policyPackStatus struct {
 	Conflicts     []guardrails.RuleConflict    `json:"conflicts,omitempty"`
 	Exceptions    []guardrails.Exception       `json:"exceptions,omitempty"`
 	Rules         []guardrails.PackRule        `json:"rules,omitempty"`
-	Attribution   map[string]policyAttribution `json:"attribution,omitempty"`
-	Error         string                       `json:"error,omitempty"`
+	// Spec 07 R07-4.3.5 — one provenance row per pack: verified, pinned or
+	// locally_modified. It is a separate field from the pack records because
+	// "the digest matched" and "a trusted key vouched for these bytes" are
+	// different facts and must not collapse into one.
+	Trust []guardrails.PackTrust `json:"trust,omitempty"`
+	// SignatureVerification reports whether a trusted key set was configured,
+	// so `pinned` is not misread as "this deployment has no signature feature".
+	SignatureVerification bool                         `json:"signature_verification"`
+	Attribution           map[string]policyAttribution `json:"attribution,omitempty"`
+	Error                 string                       `json:"error,omitempty"`
 }
 
 // policyAttribution names the pack and rule that govern a tool. An enforcement
@@ -63,10 +71,22 @@ type policyAttribution struct {
 // it never reads as an active policy set with no rules.
 func (s *MCPServer) SetPolicyPacks(m *guardrails.PolicyPackManager) {
 	s.policyPacks = m
+	s.policyPacksErr = nil
+}
+
+// SetPolicyPacksError records a configured pack set that did not resolve, so
+// guardrail://policy-packs reports "failed" WITH the reason instead of an
+// inactive manager. The two are different conditions: one means nothing was
+// configured, the other means something was rejected.
+func (s *MCPServer) SetPolicyPacksError(err error) {
+	s.policyPacksErr = err
 }
 
 // policyPackStatusSnapshot builds the diagnostic payload from the live manager.
 func (s *MCPServer) policyPackStatusSnapshot(err error) policyPackStatus {
+	if err == nil {
+		err = s.policyPacksErr
+	}
 	if s.policyPacks == nil {
 		status := policyPackStatus{Status: "not_configured"}
 		if err != nil {
@@ -97,6 +117,8 @@ func (s *MCPServer) policyPackStatusSnapshot(err error) policyPackStatus {
 	// graph can disagree with the set the server is enforcing.
 	status.Dependencies = active.Dependencies()
 	status.Rules = active.Rules()
+	status.Trust = active.TrustStates()
+	status.SignatureVerification = s.policyPacks.VerificationEnabled()
 	status.RuleSetDigest = active.RuleSetDigest()
 	// Applications always carries one row per effective rule id, so "no
 	// override happened" is visible as a row with weakened=false rather than as

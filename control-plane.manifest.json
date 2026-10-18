@@ -9,11 +9,12 @@
     {
       "id": "policy-engine",
       "version": "1.2.0",
-      "digest": "sha256:3c2c7c95d0914a6f84b20c2e02b0faffc88c8b1e27c1e24f2d1a863249880eef",
+      "digest": "sha256:6142d9fdf5ec473b14657ca6eaccd048c40fdd6f9ce0a18a350327ae6e467eed",
       "source_paths": [
         "mcp-server/internal/guardrails/engine.go",
         "mcp-server/internal/guardrails/policy_pack.go",
-        "mcp-server/internal/guardrails/policy_precedence.go"
+        "mcp-server/internal/guardrails/policy_precedence.go",
+        "mcp-server/internal/guardrails/policy_signature.go"
       ],
       "owner": "guardrails",
       "interface": "controlplane.component/v1",

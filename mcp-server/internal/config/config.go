@@ -242,6 +242,21 @@ type Config struct {
 	// redirect or path named inside a policy document is followed (R07-4.3.3).
 	PolicyPacksDir string `env:"POLICY_PACKS_DIR"`
 
+	// PolicyPackTrustedKeysFile names the OUT-OF-BAND trusted key set used to
+	// verify policy-pack signatures (Spec 07 R07-4.3.4). It is a separate file
+	// from the packs on purpose: a key that travels with the artifact it
+	// verifies proves only that one party could write both.
+	//
+	// Configured means verification is ENABLED: every pack must carry a valid
+	// signature from a key in this set, and a failure blocks resolution. Unset
+	// means lock-only provenance, which the diagnostic reports as `pinned` —
+	// never as verified.
+	//
+	// The file holds public keys, not secrets, but it is read with the same
+	// restricted-file rule as a secret (owner-only): whoever can write it can
+	// author policy.
+	PolicyPackTrustedKeysFile string `env:"POLICY_PACK_TRUSTED_KEYS_FILE"`
+
 	// ControlPlaneManifest names the component-composition manifest the control
 	// plane evaluates against (Spec 08 R08-4.1). Unset means no manifest is
 	// configured: guardrail://control-plane then reports "not_configured"

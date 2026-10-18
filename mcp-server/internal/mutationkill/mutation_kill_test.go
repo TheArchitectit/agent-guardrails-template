@@ -834,6 +834,23 @@ func (s *MCPServer) authorizeToolCallDisabled(ctx context.Context, name string, 
 		pkg:       "./internal/controlplane",
 		testRegex: "^TestProvenanceMismatchIsFailedNotIncomplete$",
 	},
+	{
+		// Spec 07 R07-4.3.4 — with a trusted key set configured, an unsigned
+		// pack MUST block resolution. The mutation makes verification quietly
+		// optional: the pack is reported `pinned` and resolution succeeds. That
+		// is the failure mode this requirement exists for — an enabled control
+		// that silently does nothing looks exactly like a deployment with no
+		// signed packs.
+		name: "policy-pack-unsigned-allowed-when-verification-enabled",
+		file: "internal/guardrails/policy_signature.go",
+		old: "\t\ttrust.State = TrustLocallyModified\n" +
+			"\t\treturn trust, fmt.Errorf(\"policy pack %q has no signature but signature verification is enabled (R07-4.3.4); state=%s\",\n" +
+			"\t\t\trel, TrustLocallyModified)",
+		new: "\t\ttrust.State = TrustPinned\n" +
+			"\t\t_ = rel // mutation: verification enabled but an unsigned pack is accepted",
+		pkg:       "./internal/guardrails",
+		testRegex: "^TestVerificationEnabledRefusesUnsignedPack$",
+	},
 }
 
 // findModuleRoot walks up from the test working directory to the directory

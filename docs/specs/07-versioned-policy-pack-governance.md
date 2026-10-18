@@ -7,9 +7,12 @@ startup, exposes its effective digest through `guardrail://policy-packs`, and ca
 an enforcement decision to the exact pack rule that governs a tool (R07-4.4.1–R07-4.4.4).
 **R07-4.2.1–R07-4.2.3 (precedence, deterministic composition, exception ledger) are
 implemented as of 2026-10-18** — declared tiers, a refusal to weaken a mandatory rule without
-a reviewed and unexpired exception, and composition that can only strengthen. What stays
-open is R07-4.3.4 (signatures) and R07-4.3.3/4.3.5 (remote acquisition), none of which is
-reachability.
+a reviewed and unexpired exception, and composition that can only strengthen. **R07-4.3.4
+(signature verification + out-of-band key set) and R07-4.3.5 (verified / pinned /
+locally-modified, never conflated) are implemented as of the same date**, reachable through
+`guardrail://policy-packs`. What stays open is R07-4.3.3 — remote acquisition, which is moot
+until an authoritative remote source is chosen — plus the named limits recorded below. None
+of the remainder is a missing code path.
 **Priority:** Important; prerequisite to distributing policy changes safely.
 **Related:** `docs/specs/guardrail-gaps-2026/02-semantic-content-filtering.md`,
 `04-multi-agent-safety-policies.md`, and `06-regulatory-compliance-mapping.md`.
@@ -318,10 +321,34 @@ expressible" and "silent", and the first was false.
     input set, so re-signing a pack without changing the resulting decisions does not
     invalidate an exception. Nothing yet refuses a tool call for lack of a covering rule: the
     four-laws rules stay advisory, which remains an owner decision.
-- **R07-4.3.4** — no signature verification and no trusted-key set.
-- **R07-4.3.5 / R07-4.3.3** — the lock records pinned-vs-verified state as `overlay_digest:
-none` and does not acquire remote packs; acquisition posture is moot until a remote source is
-chosen.
+- **R07-4.3.4 is now IMPLEMENTED (2026-10-18).** `mcp-server/internal/guardrails/policy_signature.go`
+verifies detached Ed25519 signatures over each pack's exact bytes. The trusted-key set is read
+**out of band** from `POLICY_PACK_TRUSTED_KEYS_FILE` — never from the pack, the signature file or
+the lock — because a key that travels with the artifact it verifies proves only that one party
+could write both. Configuring the file **enables** verification: with it set, a pack with no
+signature, an unknown key id, a malformed signature or one that does not match the bytes is a
+**resolution error**, and a failed candidate leaves the prior active set in force. The key set
+itself fails closed — empty set, duplicate key, a declared `key_id` that disagrees with its own
+public key, a past `expires`, and a group/world-readable file are all refused. Signing is a
+separate operator tool (`SignPolicyPack`), deliberately **not** used at startup: a process that
+can sign its own policy can re-author it. **A valid signature is not approval** — a signed pack
+that weakens a core rule still requires a reviewed exception, and a test asserts exactly that,
+because wiring trust into the approval path would have made signature verification an
+authorization grant (gr-xp-03).
+- **R07-4.3.5 is now IMPLEMENTED (2026-10-18).** Every resolved pack reports one of three
+mutually exclusive states: `verified` (signature checked against the out-of-band set), `pinned`
+(bytes match the reviewed lock, no signature verified) and `locally_modified` (bytes are not the
+bytes attestation covers). The state is decided at resolution time and carried on the snapshot;
+`guardrail://policy-packs` reports it per pack plus a `signature_verification` flag, so `pinned`
+cannot be misread as "this deployment has no such feature". Two conflation traps are closed
+deliberately: a pack carrying a signature that was **never checked** reports `pinned` and names
+**no key id** (an unverified key id is an identity claim), and a missing trust row is not
+possible — every pack gets a row, so absence cannot read as "nothing to report". Provenance is
+also why `overlay_digest: none` was the wrong place for this fact: one field was carrying both
+"no overlay" and "not verified".
+- **R07-4.3.3** — acquisition is still local-only: the server reads exactly the configured
+directory and follows no URL, redirect or path named inside a policy document. Remote acquisition
+remains unimplemented and is moot until an authoritative remote source is chosen (owner).
 - **R07-4.4 is now IMPLEMENTED (2026-10-18).** `mcp-server/internal/guardrails/policy_pack.go`
 is the consumer: `LoadPolicySet` resolves a configured pack directory, re-derives the
 effective digest with the **same canonical form** the CI gate uses (so the runtime and the

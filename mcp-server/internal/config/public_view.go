@@ -56,6 +56,12 @@ type PublicConfig struct {
 	// policy set the process is meant to enforce.
 	PolicyPacksDir string `json:"policy_packs_dir,omitempty"`
 
+	// PolicyPackVerification reports whether pack signature verification is
+	// enabled. It is a boolean, not the key path: an operator needs to know the
+	// mode; the trusted key set is configured elsewhere and is not surfaced in
+	// a public projection.
+	PolicyPackVerification bool `json:"policy_pack_signature_verification"`
+
 	// ControlPlaneManifest is the configured composition manifest path. It is a
 	// path, not secret material, and it is reported so an operator can confirm
 	// which composition the process evaluates against.
@@ -112,7 +118,8 @@ func (c *Config) PublicView() PublicConfig {
 
 		ProductionMode: c.ProductionMode,
 
-		PolicyPacksDir: c.PolicyPacksDir,
+		PolicyPacksDir:         c.PolicyPacksDir,
+		PolicyPackVerification: c.PolicyPackTrustedKeysFile != "",
 
 		ControlPlaneManifest: c.ControlPlaneManifest,
 	}

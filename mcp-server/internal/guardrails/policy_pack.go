@@ -133,6 +133,10 @@ type ResolvedPolicySet struct {
 	conflicts    []RuleConflict
 	exceptions   []Exception
 	ruleSetID    string
+	// Spec 07 R07-4.3.4 / R07-4.3.5 — the provenance of each pack, reported as
+	// three mutually exclusive states so "verified", "pinned" and "locally
+	// modified" cannot be read as one another.
+	trust []PackTrust
 }
 
 // Active reports whether this snapshot came from a successful resolution.
@@ -235,6 +239,36 @@ func (r *ResolvedPolicySet) Dependencies() []PackEdge {
 	return out
 }
 
+// TrustStates reports one provenance row per resolved pack (R07-4.3.5).
+//
+// A row is always present for every pack, so an operator reads "pinned" for an
+// unsigned pack rather than reading a missing field as "nothing to check". The
+// state is decided at resolution time, not inferred by the reporter: a surface
+// that re-derives trust can disagree with the set the server is enforcing.
+func (r *ResolvedPolicySet) TrustStates() []PackTrust {
+	if r == nil {
+		return nil
+	}
+	out := make([]PackTrust, len(r.trust))
+	copy(out, r.trust)
+	return out
+}
+
+// TrustStateFor returns the recorded provenance state for one pack path, and
+// ok=false when the path is not in the active set (never "pinned" by default —
+// an unknown path is an unknown, not a weaker verified).
+func (r *ResolvedPolicySet) TrustStateFor(path string) (TrustState, bool) {
+	if r == nil {
+		return "", false
+	}
+	for _, t := range r.trust {
+		if t.Path == path {
+			return t.State, true
+		}
+	}
+	return "", false
+}
+
 // Attribution reports the pack digest and rule ID that govern a tool, so an
 // enforcement decision can name what produced it (R07-4.4.3). ok=false means
 // the tool is not covered by the active policy set — which is an answer, not an
@@ -265,6 +299,11 @@ type PolicyPackManager struct {
 	mu     sync.RWMutex
 	active *ResolvedPolicySet
 	source string
+	// verification records that the ACTIVE set was resolved with signature
+	// verification enabled, so the diagnostic reports the mode the running set
+	// was actually resolved under rather than what the process would do on the
+	// next activation.
+	verification bool
 }
 
 // NewPolicyPackManager returns a manager with no active set. An operator
@@ -301,16 +340,42 @@ func (m *PolicyPackManager) Active() *ResolvedPolicySet {
 // active set exactly as it was (R07-4.4.2). There is no path where a failed
 // update clears the active policy — that would turn a typo into "no policy".
 func (m *PolicyPackManager) ActivateFrom(dir string, knownTools map[string]bool) error {
+	return m.activateFrom(dir, knownTools, nil)
+}
+
+// VerificationEnabled reports whether the active set was resolved with
+// signature verification enabled. A nil manager, or one that never activated,
+// reports false: "not verified" is the only truthful answer for a set that
+// does not exist, and it is the weaker claim, never the stronger.
+func (m *PolicyPackManager) VerificationEnabled() bool {
+	if m == nil {
+		return false
+	}
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.verification
+}
+
+// ActivateFromVerified is ActivateFrom with signature verification enabled
+// against an out-of-band trusted key set (Spec 07 R07-4.3.4). A candidate that
+// fails verification is refused exactly like one that fails the lock, and the
+// previously active set stays in force.
+func (m *PolicyPackManager) ActivateFromVerified(dir string, knownTools map[string]bool, set *TrustedKeySet) error {
+	return m.activateFrom(dir, knownTools, set)
+}
+
+func (m *PolicyPackManager) activateFrom(dir string, knownTools map[string]bool, set *TrustedKeySet) error {
 	if m == nil {
 		return fmt.Errorf("policy pack manager is nil")
 	}
-	candidate, err := LoadPolicySet(dir, knownTools)
+	candidate, err := loadPolicySet(dir, knownTools, time.Now(), set)
 	if err != nil {
 		return err
 	}
 	m.mu.Lock()
 	m.active = candidate
 	m.source = dir
+	m.verification = set != nil
 	m.mu.Unlock()
 	return nil
 }
@@ -328,11 +393,28 @@ func LoadPolicySet(dir string, knownTools map[string]bool) (*ResolvedPolicySet, 
 	return LoadPolicySetAt(dir, knownTools, time.Now())
 }
 
+// LoadPolicySetVerified is LoadPolicySet with signature verification enabled
+// against an out-of-band trusted key set (Spec 07 R07-4.3.4).
+//
+// It is a separate entry point rather than another parameter on LoadPolicySet
+// so the two modes are visible at every call site: a caller that passes nil
+// here is explicitly saying "lock-only provenance", which is reported as
+// `pinned`, not as verified.
+func LoadPolicySetVerified(dir string, knownTools map[string]bool, set *TrustedKeySet) (*ResolvedPolicySet, error) {
+	return loadPolicySet(dir, knownTools, time.Now(), set)
+}
+
 // LoadPolicySetAt is LoadPolicySet with an injected clock. Exception expiry is
 // a real decision that must be testable without waiting for a calendar, and a
 // test that cannot place the clock past an expiry cannot prove the expiry is
 // enforced.
 func LoadPolicySetAt(dir string, knownTools map[string]bool, now time.Time) (*ResolvedPolicySet, error) {
+	return loadPolicySet(dir, knownTools, now, nil)
+}
+
+// loadPolicySet is the single resolution path. trust nil means lock-only
+// provenance; a non-nil (possibly empty) set means verification is enabled.
+func loadPolicySet(dir string, knownTools map[string]bool, now time.Time, trustKeys *TrustedKeySet) (*ResolvedPolicySet, error) {
 	if strings.TrimSpace(dir) == "" {
 		return nil, fmt.Errorf("policy pack directory is not configured")
 	}
@@ -366,6 +448,7 @@ func LoadPolicySetAt(dir string, knownTools map[string]bool, now time.Time) (*Re
 		toolToRule:      map[string]PackRule{},
 	}
 	rows := make([]PackRecord, 0, len(paths))
+	trustRows := make([]PackTrust, 0, len(paths))
 	packsByName := make(map[string]*Pack, len(paths))
 	// Lock-record paths are repository-root relative ("policy-packs/core/x.pack.json")
 	// while the loader walks a pack directory ("core/x.pack.json"). Match on the
@@ -424,6 +507,16 @@ func LoadPolicySetAt(dir string, knownTools map[string]bool, now time.Time) (*Re
 		record.Digest = digest
 		rows = append(rows, record)
 
+		// R07-4.3.4 / R07-4.3.5 — provenance is decided per pack, from bytes
+		// that have already been proven to match the lock. A signature failure
+		// blocks resolution here rather than being reported later, because a
+		// set that half-verifies cannot state its own provenance.
+		trustRow, trustErr := verifyPackTrust(path, rel, raw, trustKeys)
+		if trustErr != nil {
+			return nil, trustErr
+		}
+		trustRows = append(trustRows, trustRow)
+
 		// Rule ids are NOT accumulated here. The same id may legally appear in
 		// two tiers — that is what precedence exists to resolve — so the
 		// effective set is decided by resolvePolicyPrecedence below, which
@@ -475,6 +568,8 @@ func LoadPolicySetAt(dir string, knownTools map[string]bool, now time.Time) (*Re
 
 	sort.Slice(rows, func(i, j int) bool { return rows[i].Path < rows[j].Path })
 	set.packs = rows
+	sort.Slice(trustRows, func(i, j int) bool { return trustRows[i].Path < trustRows[j].Path })
+	set.trust = trustRows
 
 	effective, err := effectiveDigest(rows)
 	if err != nil {
