@@ -55,6 +55,12 @@ func (c *Config) secretSources() []secretSource {
 		{name: "DB_PASSWORD", value: &c.DBPassword, file: &c.DBPasswordFile},
 		{name: "REDIS_PASSWORD", value: &c.RedisPassword, file: &c.RedisPasswordFile},
 		{name: "WEBHOOK_ENCRYPTION_KEY", value: &c.WebhookEncryptionKey, file: &c.WebhookEncryptionKeyFile, optional: true},
+		// The team-at-rest key is optional at the load boundary (team data is an
+		// optional feature and `local` may run unsealed), but it accepts a
+		// read-only secret file so a file-only deployment does not need
+		// environment injection for it — the last secret R17-06 named that had
+		// no file source.
+		{name: "TEAM_ENCRYPTION_KEY", value: &c.TeamEncryptionKey, file: &c.TeamEncryptionKeyFile, optional: true},
 		// R17-06 names both provider keys explicitly. They are optional at the
 		// load boundary (the vision fallback and the OpenAI moderation backend
 		// are optional and fail closed when unconfigured), but each accepts a

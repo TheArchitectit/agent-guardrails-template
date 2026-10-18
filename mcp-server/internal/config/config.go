@@ -130,6 +130,17 @@ type Config struct {
 	WebhookEncryptionKey     string `env:"WEBHOOK_ENCRYPTION_KEY"`
 	WebhookEncryptionKeyFile string `env:"WEBHOOK_ENCRYPTION_KEY_FILE"`
 
+	// TeamEncryptionKey seals team data at rest (SEC-007 / Spec 17 R17-06).
+	// Team assignments persist as JSON under `.teams/`, and the assignee names
+	// are exactly the personal data R17-06 requires not to sit in plaintext.
+	// The key was documented in the secret inventory but nothing ever
+	// constructed the manager it configures, so this field is the wiring that
+	// makes the documented control real. Optional (`local` may run without it),
+	// and it accepts a read-only secret file (TEAM_ENCRYPTION_KEY_FILE), which
+	// closes the last environment-only secret R17-06 named.
+	TeamEncryptionKey     string `env:"TEAM_ENCRYPTION_KEY"`
+	TeamEncryptionKeyFile string `env:"TEAM_ENCRYPTION_KEY_FILE"`
+
 	// Provider secrets for the optional guardrail backends. R17-06 names both
 	// explicitly as first-choice file-sourced production secrets. Neither is
 	// required at the load boundary (the backends are optional and fail closed
@@ -421,6 +432,13 @@ func (c *Config) Validate() error {
 		return err
 	}
 
+	// Require team assignments to be encrypted at rest outside the local
+	// boundary (SEC-007 / Spec 17 R17-06). The key was documented and unused,
+	// so this gate is what makes the documented control enforceable.
+	if err := c.ValidateTeamEncryption(); err != nil {
+		return err
+	}
+
 	// Validate the trusted-proxy stance (Spec 12 Sec. 3.4). Every entry must be a
 	// valid IP or CIDR: a malformed entry is a configuration error, not a
 	// silent narrowing to "trust nothing".
@@ -704,6 +722,8 @@ func (c *Config) Masked() *Config {
 	masked.CredentialVerifierKeyFile = "***"
 	masked.WebhookEncryptionKey = "***"
 	masked.WebhookEncryptionKeyFile = "***"
+	masked.TeamEncryptionKey = "***"
+	masked.TeamEncryptionKeyFile = "***"
 	masked.FallbackAPIKey = "***"
 	masked.FallbackAPIKeyFile = "***"
 	masked.OpenAIAPIKey = "***"

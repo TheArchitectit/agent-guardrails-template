@@ -37,7 +37,7 @@ func (s *MCPServer) handleTeamInit(ctx context.Context, args map[string]any) (*m
 	}
 
 	// Use Go implementation instead of Python
-	mgr, err := team.NewManager(projectName, team.WithTestMode(true))
+	mgr, err := s.newTeamManager(projectName, team.WithTestMode(true))
 	if err != nil {
 		metrics.RecordTeamToolError("team_init", "go_error")
 		metrics.RecordTeamToolCall("team_init", false)
@@ -106,7 +106,7 @@ func (s *MCPServer) handleTeamList(ctx context.Context, args map[string]any) (*m
 	}
 
 	// Use Go implementation
-	mgr, err := team.NewManager(projectName, team.WithTestMode(true))
+	mgr, err := s.newTeamManager(projectName, team.WithTestMode(true))
 	if err != nil {
 		metrics.RecordTeamToolError("team_list", "go_error")
 		metrics.RecordTeamToolCall("team_list", false)
@@ -256,7 +256,7 @@ func (s *MCPServer) handleTeamAssign(ctx context.Context, args map[string]any) (
 	}
 
 	// Use Go implementation
-	mgr, err := team.NewManager(projectName, team.WithTestMode(true))
+	mgr, err := s.newTeamManager(projectName, team.WithTestMode(true))
 	if err != nil {
 		metrics.RecordTeamToolError("team_assign", "go_error")
 		metrics.RecordTeamToolCall("team_assign", false)
@@ -358,7 +358,7 @@ func (s *MCPServer) handleTeamUnassign(ctx context.Context, args map[string]any)
 	}
 
 	// Use Go implementation
-	mgr, err := team.NewManager(projectName, team.WithTestMode(true))
+	mgr, err := s.newTeamManager(projectName, team.WithTestMode(true))
 	if err != nil {
 		metrics.RecordTeamToolError("team_unassign", "go_error")
 		metrics.RecordTeamToolCall("team_unassign", false)

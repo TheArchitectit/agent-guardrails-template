@@ -38,7 +38,7 @@ func (s *MCPServer) handleTeamStatus(ctx context.Context, args map[string]any) (
 	}
 
 	// Use Go implementation
-	mgr, err := team.NewManager(projectName, team.WithTestMode(true))
+	mgr, err := s.newTeamManager(projectName, team.WithTestMode(true))
 	if err != nil {
 		metrics.RecordTeamToolError("team_status", "go_error")
 		metrics.RecordTeamToolCall("team_status", false)
@@ -258,7 +258,7 @@ func (s *MCPServer) handleTeamSizeValidate(ctx context.Context, args map[string]
 	}
 
 	// Use Go implementation
-	mgr, err := team.NewManager(projectName)
+	mgr, err := s.newTeamManager(projectName)
 	if err != nil {
 		metrics.RecordTeamToolError("team_size_validate", "go_error")
 		metrics.RecordTeamToolCall("team_size_validate", false)
@@ -406,7 +406,7 @@ func (s *MCPServer) handleTeamStart(ctx context.Context, args map[string]any) (*
 	}
 
 	// Use Go implementation
-	mgr, err := team.NewManager(projectName, team.WithTestMode(true))
+	mgr, err := s.newTeamManager(projectName, team.WithTestMode(true))
 	if err != nil {
 		metrics.RecordTeamToolError("team_start", "go_error")
 		metrics.RecordTeamToolCall("team_start", false)

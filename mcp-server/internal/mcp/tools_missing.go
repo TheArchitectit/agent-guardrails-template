@@ -54,7 +54,7 @@ func (s *MCPServer) handleTeamConfigGet(ctx context.Context, args map[string]int
 
 	teamName, _ := args["team_name"].(string)
 
-	mgr, err := team.NewManager(projectName, team.WithTestMode(true))
+	mgr, err := s.newTeamManager(projectName, team.WithTestMode(true))
 	if err != nil {
 		metrics.RecordTeamToolError("team_config_get", "go_error")
 		metrics.RecordTeamToolCall("team_config_get", false)
@@ -136,7 +136,7 @@ func (s *MCPServer) handleTeamConfigUpdate(ctx context.Context, args map[string]
 		}, nil
 	}
 
-	mgr, err := team.NewManager(projectName, team.WithTestMode(true))
+	mgr, err := s.newTeamManager(projectName, team.WithTestMode(true))
 	if err != nil {
 		metrics.RecordTeamToolError("team_config_update", "go_error")
 		metrics.RecordTeamToolCall("team_config_update", false)
@@ -270,7 +270,7 @@ func (s *MCPServer) handleTeamRemove(ctx context.Context, args map[string]interf
 		confirmed = conf
 	}
 
-	mgr, err := team.NewManager(projectName, team.WithTestMode(true))
+	mgr, err := s.newTeamManager(projectName, team.WithTestMode(true))
 	if err != nil {
 		metrics.RecordTeamToolError("team_remove", "go_error")
 		metrics.RecordTeamToolCall("team_remove", false)

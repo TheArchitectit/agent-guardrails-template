@@ -9,7 +9,6 @@ import (
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/thearchitectit/guardrail-mcp/internal/metrics"
-	"github.com/thearchitectit/guardrail-mcp/internal/team"
 )
 
 func (s *MCPServer) handleTeamDelete(ctx context.Context, args map[string]any) (*mcp.CallToolResult, error) {
@@ -63,7 +62,7 @@ func (s *MCPServer) handleTeamDelete(ctx context.Context, args map[string]any) (
 	}
 
 	// Use Go implementation
-	mgr, err := team.NewManager(projectName)
+	mgr, err := s.newTeamManager(projectName)
 	if err != nil {
 		metrics.RecordTeamToolError("team_delete", "go_error")
 		metrics.RecordTeamToolCall("team_delete", false)
@@ -132,7 +131,7 @@ func (s *MCPServer) handleProjectDelete(ctx context.Context, args map[string]any
 	}
 
 	// Use Go implementation
-	mgr, err := team.NewManager(projectName)
+	mgr, err := s.newTeamManager(projectName)
 	if err != nil {
 		metrics.RecordTeamToolError("project_delete", "go_error")
 		metrics.RecordTeamToolCall("project_delete", false)
@@ -190,7 +189,7 @@ func (s *MCPServer) handleTeamHealth(ctx context.Context, args map[string]any) (
 	}
 
 	// Use Go implementation
-	mgr, err := team.NewManager(projectName)
+	mgr, err := s.newTeamManager(projectName)
 	if err != nil {
 		// For health check, we still want to report status even if project doesn't exist
 		health := map[string]any{

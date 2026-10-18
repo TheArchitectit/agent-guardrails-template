@@ -25,31 +25,37 @@ import (
 	"github.com/thearchitectit/guardrail-mcp/internal/metrics"
 	"github.com/thearchitectit/guardrail-mcp/internal/models"
 	"github.com/thearchitectit/guardrail-mcp/internal/notifications"
+	"github.com/thearchitectit/guardrail-mcp/internal/team"
 	"github.com/thearchitectit/guardrail-mcp/internal/validation"
 )
 
 // MCPServer handles MCP protocol requests
 type MCPServer struct {
-	mcpServer            *server.MCPServer
-	httpServer           *server.StreamableHTTPServer
-	rawServer            *http.Server
-	db                   *database.DB
-	cache                *cache.Client
-	audit                *audit.Logger
-	validator            *validation.ValidationEngine
-	config               *config.Config
-	guardrailsEngine     *guardrails.Engine
-	version              string
-	visionTools          *VisionToolSet
-	webhookStore         *database.WebhookStore
-	webhookDispatcher    *notifications.Dispatcher
-	budgetStore          *database.BudgetStore
-	budgetGovernor       *budget.Governor
-	agentStateStore      *database.AgentStateStore
-	fileReadStore        *database.FileReadStore
-	taskAttemptStore     *database.TaskAttemptStore
-	haltEventStore       *database.HaltEventStore
-	uncertaintyStore     *database.UncertaintyStore
+	mcpServer         *server.MCPServer
+	httpServer        *server.StreamableHTTPServer
+	rawServer         *http.Server
+	db                *database.DB
+	cache             *cache.Client
+	audit             *audit.Logger
+	validator         *validation.ValidationEngine
+	config            *config.Config
+	guardrailsEngine  *guardrails.Engine
+	version           string
+	visionTools       *VisionToolSet
+	webhookStore      *database.WebhookStore
+	webhookDispatcher *notifications.Dispatcher
+	budgetStore       *database.BudgetStore
+	budgetGovernor    *budget.Governor
+	agentStateStore   *database.AgentStateStore
+	fileReadStore     *database.FileReadStore
+	taskAttemptStore  *database.TaskAttemptStore
+	haltEventStore    *database.HaltEventStore
+	uncertaintyStore  *database.UncertaintyStore
+	// teamEncryption seals team data at rest (SEC-007 / Spec 17 R17-06). It is
+	// built once at startup from the resolved config, so the per-request team
+	// managers share one key and a key that cannot be used is reported at
+	// construction rather than on the first save.
+	teamEncryption       *team.EncryptionManager
 	sessions             map[string]*models.Session
 	sessionsMu           sync.RWMutex
 	productionCodeStore  *database.ProductionCodeStore
@@ -128,6 +134,24 @@ func NewMCPServer(cfg *config.Config, db *database.DB, cacheClient *cache.Client
 
 	s.setupHandlers()
 	return s
+}
+
+// SetTeamEncryption installs the at-rest key manager for team data
+// (SEC-007 / Spec 17 R17-06). Callers that construct an MCPServer directly in
+// tests may omit it; the team manager then runs unsealed, which is the same
+// posture as a `local` deployment with no key configured.
+func (s *MCPServer) SetTeamEncryption(em *team.EncryptionManager) {
+	s.teamEncryption = em
+}
+
+// newTeamManager builds a team manager with the process-wide at-rest key
+// already applied. Every team tool goes through here so no handler can forget
+// the encryption option and silently write plaintext.
+func (s *MCPServer) newTeamManager(projectName string, opts ...team.ManagerOption) (*team.Manager, error) {
+	base := make([]team.ManagerOption, 0, len(opts)+1)
+	base = append(base, team.WithEncryptionManager(s.teamEncryption))
+	base = append(base, opts...)
+	return team.NewManager(projectName, base...)
 }
 
 // VisionTools returns the vision tool set if enabled, or nil.

@@ -55,6 +55,13 @@ type Manager struct {
 	lockPath    string
 	teams       map[int]Team
 	mu          sync.RWMutex
+
+	// encryption seals team data at rest (SEC-007 / Spec 17 R17-06). A disabled
+	// manager (no key configured) writes plaintext and reads plaintext only;
+	// a sealed value read without a key is an error, never returned as if it
+	// were the assignee name.
+	encryption    *EncryptionManager
+	encryptionKey string
 }
 
 // ManagerOption configures the Manager
@@ -75,6 +82,25 @@ func WithTestMode(enabled bool) ManagerOption {
 	}
 }
 
+// WithEncryptionKey configures the key that seals team data at rest
+// (TEAM_ENCRYPTION_KEY, SEC-007 / Spec 17 R17-06). An empty key leaves the
+// manager unsealed, which is the documented `local` posture. A key that cannot
+// be used fails NewManager rather than producing a manager that silently
+// protects nothing.
+func WithEncryptionKey(key string) ManagerOption {
+	return func(m *Manager) {
+		m.encryptionKey = key
+	}
+}
+
+// WithEncryptionManager installs a process-wide encryption manager so key
+// resolution happens once at startup instead of per request.
+func WithEncryptionManager(em *EncryptionManager) ManagerOption {
+	return func(m *Manager) {
+		m.encryption = em
+	}
+}
+
 // NewManager creates a new team manager
 func NewManager(projectName string, opts ...ManagerOption) (*Manager, error) {
 	if err := ValidateProjectName(projectName); err != nil {
@@ -89,6 +115,17 @@ func NewManager(projectName string, opts ...ManagerOption) (*Manager, error) {
 
 	for _, opt := range opts {
 		opt(m)
+	}
+
+	// Resolve the at-rest key once, here, so every save/load path in this
+	// process uses the same manager and an unusable key stops the manager at
+	// construction rather than on the first write.
+	if m.encryption == nil {
+		em, err := NewEncryptionManager(m.encryptionKey)
+		if err != nil {
+			return nil, err
+		}
+		m.encryption = em
 	}
 
 	// Validate and set paths
@@ -150,7 +187,11 @@ func (m *Manager) Load() error {
 
 	m.teams = make(map[int]Team)
 	for _, team := range projectData.Teams {
-		m.teams[team.ID] = team
+		opened, err := m.encryption.openTeam(team)
+		if err != nil {
+			return fmt.Errorf("failed to open team %d: %w", team.ID, err)
+		}
+		m.teams[opened.ID] = opened
 	}
 
 	return nil
@@ -166,7 +207,11 @@ func (m *Manager) save() error {
 	}
 
 	for _, team := range m.teams {
-		projectData.Teams = append(projectData.Teams, team)
+		sealed, err := m.encryption.sealTeam(team)
+		if err != nil {
+			return err
+		}
+		projectData.Teams = append(projectData.Teams, sealed)
 	}
 
 	data, err := json.MarshalIndent(projectData, "", "  ")
@@ -174,10 +219,16 @@ func (m *Manager) save() error {
 		return fmt.Errorf("failed to marshal config: %w", err)
 	}
 
-	// Atomic write: write to temp file, then rename
+	// Atomic write: write to temp file, then rename. Team data carries personal
+	// names, so the file is owner-only (R17-06); 0644 left every local account
+	// able to read the assignments.
 	tempPath := m.configPath + ".tmp"
-	if err := os.WriteFile(tempPath, data, 0644); err != nil {
+	if err := os.WriteFile(tempPath, data, 0o600); err != nil {
 		return fmt.Errorf("failed to write temp file: %w", err)
+	}
+	if err := os.Chmod(tempPath, 0o600); err != nil {
+		os.Remove(tempPath)
+		return fmt.Errorf("failed to restrict temp file mode: %w", err)
 	}
 
 	if err := os.Rename(tempPath, m.configPath); err != nil {

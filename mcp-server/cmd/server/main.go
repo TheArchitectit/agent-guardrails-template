@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/signal"
 	"runtime"
+	"strings"
 	"syscall"
 	"time"
 
@@ -23,6 +24,7 @@ import (
 	mcpServer "github.com/thearchitectit/guardrail-mcp/internal/mcp"
 	"github.com/thearchitectit/guardrail-mcp/internal/notifications"
 	"github.com/thearchitectit/guardrail-mcp/internal/secretbox"
+	"github.com/thearchitectit/guardrail-mcp/internal/team"
 	"github.com/thearchitectit/guardrail-mcp/internal/validation"
 	"github.com/thearchitectit/guardrail-mcp/internal/web"
 )
@@ -148,6 +150,26 @@ func main() {
 	// Create MCP server
 	haltEventStore := database.NewHaltEventStore(db)
 	mcpSrv := mcpServer.NewMCPServer(cfg, db, redisClient, auditLogger, validationEngine, fileReadStore, taskAttemptStore, haltEventStore)
+
+	// Team data at rest (SEC-007 / Spec 17 R17-06). The key was documented in the
+	// secret inventory and the encryption manager existed, but nothing ever
+	// constructed it: team assignment JSON was written plaintext at 0644 while
+	// the inventory claimed an AES-GCM key protected it. Build it here, once, and
+	// stop at startup if a configured key cannot be used rather than writing
+	// plaintext after logging a warning nobody reads.
+	teamEncryption, err := team.NewEncryptionManager(cfg.TeamEncryptionKey)
+	if err != nil {
+		slog.Error("team encryption key is unusable", "error", err)
+		os.Exit(3)
+	}
+	mcpSrv.SetTeamEncryption(teamEncryption)
+	if teamEncryption.Enabled() {
+		slog.Info("team data encrypted at rest", "key_source", teamKeySource(cfg))
+	} else {
+		slog.Warn("team data is NOT encrypted at rest: TEAM_ENCRYPTION_KEY is unset",
+			"profile", cfg.DeploymentProfile,
+			"detail", "assignments are written as plaintext JSON; set TEAM_ENCRYPTION_KEY (or TEAM_ENCRYPTION_KEY_FILE) to seal them")
+	}
 
 	// Share the process-wide credential registry with the MCP surface so a
 	// revocation reloaded in place denies both surfaces (Spec 16 R16-09). A
@@ -370,6 +392,17 @@ func runHealthCheck(timeout time.Duration) error {
 	}
 
 	return nil
+}
+
+// teamKeySource reports where the team at-rest key came from, without ever
+// naming the value (Spec 17 R17-08). The distinction matters operationally: a
+// file-sourced key is the production posture, an inline one is the migration
+// path R17-06 restricts.
+func teamKeySource(cfg *config.Config) string {
+	if strings.TrimSpace(cfg.TeamEncryptionKeyFile) != "" {
+		return "file"
+	}
+	return "environment"
 }
 
 // startPProfServer starts the pprof debugging server on the declared

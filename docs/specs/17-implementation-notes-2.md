@@ -235,9 +235,9 @@ doc lag. An inventory that can silently fall out of date is not an inventory.
 secret with the six R17-10 fields and **no values**, and it records the honest
 gaps rather than implying coverage that does not exist:
 
-- `TEAM_ENCRYPTION_KEY`, `FALLBACK_API_KEY` and `OPENAI_API_KEY` are
-  **environment-only** today — R17-06's file-source rule is not yet applied to
-  them (the R17-06 residual), so their Source cell says so.
+- No secret is environment-only: `TEAM_ENCRYPTION_KEY`, `FALLBACK_API_KEY`
+  and `OPENAI_API_KEY` all accept a read-only secret file, closing the R17-06
+  file-source residual named in earlier revisions of this note.
 - `WEBHOOK_HMAC_SECRET` persists as the `secret_hmac` column of
   `webhook_configs`; encrypted-at-rest storage remains an open R17-06 item and
   the row does not claim otherwise.
@@ -492,7 +492,8 @@ so an unset provider key never fails startup; inline environment material still
 wins. The resolved values are consumed, not merely accepted: the vision tool set
 takes the resolved key (`NewVisionToolSet(cfg.FallbackAPIKey)`) and
 `cmd/server/main.go` registers the OpenAI moderation backend when configured.
-Evidence `TestProviderKeysAcceptFileSources`; CI row
-`security-matrix-secret-sources` extended; mutation-kill case
-`provider-secret-file-source-ignored` (30/30). `TEAM_ENCRYPTION_KEY` stays the
-last environment-only secret (named limit).
+Evidence `TestProviderKeysAcceptFileSources`; CI row `security-matrix-secret-sources` extended; mutation-kill case
+`provider-secret-file-source-ignored` (30/30). `TEAM_ENCRYPTION_KEY` gained a
+file source on 2026-10-18, so no R17-06-named secret is environment-only. It
+also fixed a documented-but-unused control: team data was plaintext at 0644 with
+fail-open error paths; it is now sealed at startup, 0600, and fails closed.
