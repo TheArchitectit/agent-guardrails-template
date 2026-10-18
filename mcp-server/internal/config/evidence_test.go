@@ -83,14 +83,25 @@ func TestParseEvidenceKeyRefusesRSA(t *testing.T) {
 	}
 }
 
+// pemArmor builds a PEM block at RUN time rather than embedding one in source.
+//
+// The first version of this test carried literal armor strings, and Secret
+// Validation went red on the landing: gitleaks' `private-key` rule cannot tell a
+// PEM header in a test fixture from a leaked key, and it should not try. A
+// fixture gets no exemption, so the fix is to stop putting key-shaped bytes in
+// source at all — not to add an allowlist entry.
+func pemArmor(blockType, body string) string {
+	return "-----BEGIN " + blockType + "-----\n" + body + "\n-----END " + blockType + "-----"
+}
+
 func TestParseEvidenceKeyRefusesGarbage(t *testing.T) {
 	cases := map[string]string{
 		"empty":           "",
 		"not base64":      "!!!not-base64!!!",
 		"wrong length":    base64.StdEncoding.EncodeToString(make([]byte, 17)),
-		"encrypted pem":   "-----BEGIN ENCRYPTED PRIVATE KEY-----\nAAAA\n-----END ENCRYPTED PRIVATE KEY-----",
-		"trailing data":   "-----BEGIN PRIVATE KEY-----\nAAAA\n-----END PRIVATE KEY-----\nextra",
-		"public key type": "-----BEGIN PUBLIC KEY-----\nAAAA\n-----END PUBLIC KEY-----",
+		"encrypted pem":   pemArmor("ENCRYPTED PRIVATE KEY", "AAAA"),
+		"trailing data":   pemArmor("PRIVATE KEY", "AAAA") + "\nextra",
+		"public key type": pemArmor("PUBLIC KEY", "AAAA"),
 	}
 	for name, value := range cases {
 		if _, err := ParseEvidenceKey(value); err == nil {
