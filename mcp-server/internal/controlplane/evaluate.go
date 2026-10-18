@@ -177,6 +177,25 @@ type Bundle struct {
 	// "the components are present" and "the profile's obligations are met"
 	// are different claims, and the first has never implied the second.
 	Requirements []RequirementResult `json:"requirements,omitempty"`
+	// PolicyInputs records the policy inputs this evaluation actually used,
+	// each with its source, version and content digest (R08-4.5.4). The section
+	// is absent when the caller declared none, which is a different fact from
+	// "the inputs matched" and must not read as one.
+	PolicyInputs []PolicyInput `json:"policy_inputs,omitempty"`
+	// Provenance reports whether the declared inputs were verified against the
+	// manifest's policy digest. `not_declared` is honest rather than green.
+	Provenance ProvenanceStatus `json:"provenance"`
+	// ProvenanceReason names what failed when provenance was not recorded.
+	ProvenanceReason string `json:"provenance_reason,omitempty"`
+	// Recommendations records component-provided suggestions and what the
+	// evaluator did with them (R08-4.5.3). `Applied` is always false: a
+	// recommendation is data for a decision, never an instruction, so there is
+	// no path from this field to a change.
+	Recommendations []RecommendationRecord `json:"recommendations,omitempty"`
+	// RecommendationProblems names each recommendation that overstepped or
+	// could not be attributed. It is not serialized: it is input to the verdict
+	// derivation, and the refusals themselves are already in Recommendations.
+	RecommendationProblems []string `json:"-"`
 	// Unmet names what prevented a pass, in a fixed order.
 	Unmet []string `json:"unmet,omitempty"`
 	// Digest is the digest of this bundle's content, computed after the fact.
@@ -232,6 +251,13 @@ type EvaluateRequest struct {
 	Observer      Observer
 	Checks        []Check
 	SubjectDigest string
+	// PolicyInputs are the policy inputs this evaluation used, with the lock
+	// columns needed to recompute their identity. Supplying none is legal and
+	// is reported as `not_declared`.
+	PolicyInputs []PolicyInput
+	// Recommendations are suggestions supplied by components. They are
+	// recorded and evaluated for overreach; they are never executed.
+	Recommendations []Recommendation
 	// ObserveOnly produces a non-blocking report that is labelled as such
 	// (R08-4.4.1). It does not weaken the checks; it changes the label.
 	ObserveOnly bool
@@ -355,6 +381,25 @@ func Evaluate(req EvaluateRequest) (*Bundle, error) {
 		return b.Checks[i].CheckID < b.Checks[j].CheckID
 	})
 
+	// 3. Policy-input provenance (R08-4.5.4). Malformed input is refused here
+	// rather than recorded: an input with no digest or an unknown label cannot
+	// be weighed, and defaulting it would let a typo change the meaning of the
+	// evidence.
+	inputs, inputProblems := validatePolicyInputs(req.PolicyInputs)
+	if len(inputProblems) > 0 {
+		return nil, fmt.Errorf("policy inputs are not usable: %s", strings.Join(inputProblems, "; "))
+	}
+	b.PolicyInputs = inputs
+	b.Provenance, _, b.ProvenanceReason = verifyProvenance(req.Manifest.PolicyDigest, inputs)
+
+	// 4. Recommendation overreach (R08-4.5.2 / R08-4.5.3). The problems are
+	// recorded on the bundle and turned into unmet reasons by deriveVerdict,
+	// which owns the verdict: appending them here would be overwritten one
+	// line later.
+	recs, recProblems := evaluateRecommendations(req.Manifest, req.Recommendations)
+	b.Recommendations = recs
+	b.RecommendationProblems = recProblems
+
 	b.EndedAt = clock().UTC()
 	b.Requirements = evaluateRequirements(req.Manifest, b)
 	b.Verdict, b.Unmet = deriveVerdict(req.Manifest, b)
@@ -434,6 +479,31 @@ func deriveVerdict(m *Manifest, b *Bundle) (Verdict, []string) {
 	}
 
 	sort.Strings(unmet)
+
+	// Policy-input provenance (R08-4.5.4). A mismatch means the process is
+	// running a policy set it did not declare, which is a broken deployment
+	// rather than an unmeasured one — so it is `failed`, not `incomplete`.
+	// `not_declared` is NOT a failure: declaring no policy input is a legal
+	// configuration, and treating it as a defect would push callers to declare
+	// inputs they do not have. It is reported, not enforced.
+	if b.Provenance == ProvenanceMismatch {
+		failed = true
+		unmet = append(unmet, "policy provenance mismatch: "+b.ProvenanceReason)
+	}
+	if b.Provenance == ProvenanceUnverifiable {
+		// Nothing was proven either way. That is the definition of incomplete.
+		unmet = append(unmet, "policy provenance unverifiable: "+b.ProvenanceReason)
+	}
+
+	// Recommendation overreach (R08-4.5.2). A component that asked to change a
+	// governed root is a finding about that component; the evaluation is not
+	// clean, so it cannot be `pass`. It is `failed` because the component is
+	// misbehaving, not because evidence is missing.
+	if len(b.RecommendationProblems) > 0 {
+		failed = true
+		unmet = append(unmet, b.RecommendationProblems...)
+		sort.Strings(unmet)
+	}
 
 	switch {
 	case len(unmet) == 0:
@@ -626,6 +696,26 @@ func CompareReplay(stored, fresh *Bundle) ReplayComparison {
 	}
 	if stored.PolicyDigest != fresh.PolicyDigest {
 		add("policy digest changed: %s -> %s", stored.PolicyDigest, fresh.PolicyDigest)
+	}
+	// Policy inputs are compared as a set, by id, because a replay that used a
+	// different pack set under the same declared digest is not the same
+	// evaluation — and comparing only the declared digest cannot catch it
+	// (R08-4.5.4).
+	storedInputs, freshInputs := policyInputFingerprints(stored.PolicyInputs), policyInputFingerprints(fresh.PolicyInputs)
+	for _, id := range sortedInputIDs(storedInputs, freshInputs) {
+		s, inStored := storedInputs[id]
+		f, inFresh := freshInputs[id]
+		switch {
+		case inStored && !inFresh:
+			add("policy input %q was used by the stored evaluation and is absent from the replay", id)
+		case !inStored && inFresh:
+			add("policy input %q is used by the replay and was absent from the stored evaluation", id)
+		case s != f:
+			add("policy input %q changed: %s -> %s", id, s, f)
+		}
+	}
+	if stored.Provenance != fresh.Provenance {
+		add("policy provenance changed: %s -> %s", stored.Provenance, fresh.Provenance)
 	}
 	if stored.SubjectDigest != fresh.SubjectDigest {
 		add("subject digest changed: %s -> %s", stored.SubjectDigest, fresh.SubjectDigest)

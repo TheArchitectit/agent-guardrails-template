@@ -4,10 +4,11 @@
 measured, and what remains. The composition core (manifest resolution,
 integration-state measurement, evidence bundle, derived verdict, replay
 comparison, readiness) exists and is reachable; staged adoption/promotion,
-rollback-as-a-unit and the root-change audit record landed 2026-10-18; evidence
-persistence, retention, signing, access control and auditable deletion (R08-4.3.6)
-landed 2026-10-18 as a running store, not a library. **Still open:** trust-label
-propagation (R08-4.5.3/4.5.4) — the last row in this spec.
+rollback-as-a-unit, the root-change audit record, evidence retention/signing and
+trust-label propagation landed 2026-10-18. **No row in this spec remains OPEN:**
+what is left is the recorded limits in `08-implementation-notes.md` (per-check
+floors, multi-profile selection, exception-allowlist representation), not an
+unimplemented requirement.
 **Priority:** Important; begin after the capability specs identify stable
 interfaces and acceptance tests.
 **Related:** `docs/specs/guardrail-gaps-2026/STATUS.md`,
@@ -291,51 +292,44 @@ verdict derivation, redaction, replay, stability) + `internal/mcp/control_plane_
 driving the real resource handler, the real permission matrix and the real
 dispatch counter. **Red-on-drift proven three ways, each PASS->FAIL then
 restored:** `active` forced true (killed by three tests), unexercised states
-counted as proven, and redaction disabled. Two of these are now permanent cases
-in `internal/mutationkill` (`controlplane-active-claim-ignores-state`,
-`controlplane-evidence-redaction-disabled`), both confirmed killing in the
-harness.
+counted as proven, and redaction disabled. Two are now permanent cases in
+`internal/mutationkill` (`controlplane-active-claim-ignores-state`,
+`controlplane-evidence-redaction-disabled`), both confirmed killing.
 
-**Still OPEN, and the spec does not claim otherwise:**
+**Rows landed after the core (all IMPLEMENTED; remaining limits are named in
+`08-implementation-notes.md`):**
 
-- **Profile requirement set IMPLEMENTED 2026-10-18 `main` (R08-4.1.5).** The
-  manifest declared components and nothing else, so no manifest could say what
-  evidence its profile accepts — every obligation a reader inferred from prose
-  was unenforceable. Now `requirements` is a required part of the manifest:
-  each entry binds components to a floor (`reachable` or `exercised` only —
-  `declared`/`installed`/`initialized` are refused because they restate the
-  component list) and/or names checks with an optional passing floor. Each
-  requirement is measured against its declared floor, never the strongest state
-  available; a named check with no record is `did not run` and fails it; unmet
-  requirements prevent `pass` and make readiness `not_ready`. The set is also a
-  **governed root**: lowering a floor or deleting a requirement needs a review,
-  because it changes what every future evaluation counts as proof. Detail and
-  the three mutation kills live in `08-implementation-notes.md`.
-- **Staged promotion, rollback and the root-change audit record IMPLEMENTED
-  2026-10-18 `main` (R08-4.4.2–R08-4.4.4).** Before this pass `Bundle.Enforce()`
-  refused an observe-only bundle, so a label could not be bypassed by a caller
-  that forgot to check it — and nothing could ever *change* the label. A
-  deployment was observe-only forever: there was no promotion path, no rollback,
-  and no record of who changed a policy root or a component's trust.
+- **Profile requirement set (R08-4.1.5).** The manifest declared components and
+  nothing else, so no manifest could say what evidence its profile accepts. Now
+  `requirements` is required: each entry binds components to a floor
+  (`reachable`/`exercised` only — `declared`/`installed`/`initialized` are
+  refused because they restate the component list) and/or names checks with an
+  optional passing floor. Each is measured against its **declared** floor, never
+  the strongest state available; a named check with no record is `did not run`
+  and fails it; unmet requirements prevent `pass` and make readiness
+  `not_ready`. The set is a **governed root**: lowering a floor or deleting a
+  requirement needs a review, because it changes what future evaluations count
+  as proof. Detail and mutation kills: `08-implementation-notes.md`.
+- **Staged promotion, rollback and the root-change audit record
+  (R08-4.4.2–R08-4.4.4).** `Enforce()` refused an observe-only bundle, so a label
+  could not be bypassed by a caller that forgot to check it — and nothing could
+  ever *change* the label. A deployment was observe-only forever, with no
+  promotion path, no rollback and no record of who changed a policy root.
 
   `internal/controlplane/governance.go` now holds the posture:
 
-  - **Promotion is evidence-bound, not configuration-bound** (R08-4.4.2). It
-    requires a review reference, an accountable approver, an explicit profile
-    version matching the active manifest, and a passing acceptance bundle whose
+  - **Promotion is evidence-bound, not configuration-bound** (R08-4.4.2): a
+    review reference, an accountable approver, an explicit profile version
+    matching the active manifest, and a passing acceptance bundle whose
     **manifest digest, policy digest and profile** are the ones the process is
-    running. A green bundle from another composition is evidence about a
-    different system and is refused naming what differed. Observe-only evidence
-    cannot promote: `Enforce()` is the single implementation of "may this bundle
-    satisfy a blocking gate", so the promotion path and a release gate cannot
-    disagree.
-  - **A governed-root change needs a reviewed adoption** (R08-4.4.3), and the
-    review is checked against the **computed** difference — policy digest,
-    profile, supported interfaces, and per component trust tier, mandatory
-    class, version, digest and dependencies. The caller never describes the
-    change it wants to make; `RequiresReview` computes it, and the refusal names
-    every difference it found. The adoption record carries that same computed
-    list plus the review reference and approver. Scope limit: exception
+    running. A green bundle from another composition is refused naming what
+    differed. Observe-only evidence cannot promote: `Enforce()` is the single
+    implementation of "may this bundle satisfy a blocking gate".
+  - **A governed-root change needs a reviewed adoption** (R08-4.4.3), checked
+    against the **computed** difference — policy digest, profile, supported
+    interfaces, and per component trust tier, mandatory class, version, digest
+    and dependencies. The caller never describes the change; `RequiresReview`
+    computes it and the refusal names every difference. Scope limit: exception
     allowlists have no representation in this manifest, so they are not covered
     by the check.
   - **Rollback restores one value** (R08-4.4.4). The prior manifest and its
@@ -379,21 +373,17 @@ harness.
 
   New `controlplane.Bundle.Readiness()` derives the decision from the bundle
   the resource already reports, so readiness and `guardrail://control-plane`
-  cannot disagree about one process. `ReadinessReport.control_plane` now
-  carries per-mandatory-component rows (`id`, `state`, `available`,
-  `exercised`, `reason`) and gates the same `ready` boolean. The state mapping
-  is the requirement:
-
-  - `declared` / `installed` / `initialized` are **not available** — the
-    component exists, nothing proves a request reaches it. The default branch
-    is the fail-closed one, so a state added later cannot silently count as
-    available.
-  - `reachable` is available but **not exercised** → status `degraded`, serving
-    but not proven. Blocking on `exercised` would make readiness false forever
-    on a fresh instance and teach operators to ignore it; reporting `ready`
-    would claim proof that does not exist.
-  - `exercised` is available and proven; `failed` is not available and outranks
-    a previously exercised observation.
+  cannot disagree about one process. `ReadinessReport.control_plane` carries
+  per-mandatory-component rows (`id`, `state`, `available`, `exercised`,
+  `reason`) and gates the same `ready` boolean. The state mapping is the
+  requirement: `declared`/`installed`/`initialized` are **not available** (the
+  component exists, nothing proves a request reaches it — the default branch is
+  fail-closed so a later state cannot silently count); `reachable` is available
+  but **not exercised** → `degraded`, serving but not proven (blocking on
+  `exercised` would make readiness false forever on a fresh instance and teach
+  operators to ignore it; reporting `ready` would claim proof that does not
+  exist); `exercised` is available and proven; `failed` is not available and
+  outranks a prior exercise.
 
   Only mandatory components decide the aggregate: the manifest itself declared
   the others optional, and readiness that blocks on an optional input is
@@ -407,13 +397,12 @@ harness.
 
   **Evidence:** `readiness_test.go` (10 cases over the real
   `Bundle.Readiness()`) + 4 request-path cases driving the real
-  `ReadinessEvaluator` and the real handler. **Red-on-drift proven twice:**
-  presence counted as availability flips two cases PASS→FAIL; dropping the
-  mandatory-check guard flips a third. The first is now a permanent
-  `mutationkill` case (`controlplane-readiness-presence-as-availability`),
-  confirmed killing in the harness (103s, all cases). Note the spec-18 check
-  list is **unchanged** — the composition is a separate field, because a spec-08
-  requirement must not silently rewrite a spec-18 contract.
+  `ReadinessEvaluator` and handler. **Red-on-drift proven twice:** presence
+  counted as availability flips two cases PASS→FAIL; dropping the
+  mandatory-check guard flips a third. The first is a permanent `mutationkill`
+  case (`controlplane-readiness-presence-as-availability`), confirmed killing.
+  The Spec 18 check list is **unchanged** — the composition is a separate field,
+  because a spec-08 requirement must not silently rewrite a spec-18 contract.
 - **Evidence persistence, retention, signing, access control and auditable
   deletion — IMPLEMENTED (R08-4.3.6).** "Evidence retention, signing, access
   control, and deletion policy MUST be configurable and auditable": until this
@@ -480,11 +469,22 @@ harness.
   first tamper attempt was caught by the digest check and the mutation
   **survived** — the test was strengthened rather than recorded as a kill that
   proved nothing.
-- **Trust labels are declared, not propagated (R08-4.5.3/4.5.4).** The manifest
-  carries a tier and the resolver enforces the ordering rule, but component
-  output is not tagged with its origin trust label at evaluation time, and the
-  digest of every policy input used is not recorded per evaluation beyond the
-  single policy digest.
+- **Trust labels and policy-input provenance — IMPLEMENTED 2026-10-18 `main`
+  (R08-4.5.3/4.5.4).** Component tiers existed and input classes did not, so
+  text flowing into an evaluation carried no label and a bundle could not say
+  which class produced a verdict. `internal/controlplane/trust.go` adds the five
+  labels R08-4.5.1 names, assigned **by the evaluator from the declared role,
+  not read out of the content**, so content cannot label itself policy; an
+  unknown label is refused rather than defaulted, and only `policy_input` may
+  define the policy identity. `PolicyInput` records source, version and digest
+  per input (R08-4.5.4) in the **lock's own canonical form**, and a test
+  recomputes the shipped lock's effective digest from those rows, so runtime
+  provenance and the CI gate cannot disagree about which policy is loaded.
+  Provenance is `recorded` / `not_declared` / `mismatch` / `unverifiable`; a
+  mismatch is `failed`, while declaring none stays legal and is reported, not
+  green. Recommendations (R08-4.5.3) are recorded, attributed, redacted and
+  **never applied**, and one naming a governed root is refused and fails the
+  verdict. Detail and the four mutation kills: `08-implementation-notes.md`.
 
 **Corrected in the same pass (live defects, found by building this):** the
 client-facing `mcp-server/README.md` advertised the resource set as **11**

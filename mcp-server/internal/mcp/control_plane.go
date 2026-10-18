@@ -61,6 +61,20 @@ type controlPlaneStatus struct {
 	// are different claims, and a client that sees only the first cannot tell
 	// a composition from a proven one.
 	Requirements []controlplane.RequirementResult `json:"requirements,omitempty"`
+	// PolicyInputs records the policy inputs this evaluation used, each with
+	// source, version, digest and trust label (R08-4.5.4). It is absent when
+	// no policy set is active, which is different from an empty verified set.
+	PolicyInputs []controlplane.PolicyInput `json:"policy_inputs,omitempty"`
+	// Provenance reports whether the policy inputs were verified against the
+	// manifest's declared digest: recorded, not_declared, mismatch or
+	// unverifiable. `not_declared` is honest rather than green.
+	Provenance string `json:"provenance"`
+	// ProvenanceReason names what failed when provenance was not recorded.
+	ProvenanceReason string `json:"provenance_reason,omitempty"`
+	// Recommendations records component-supplied suggestions and whether each
+	// was refused for asking to modify a governed root (R08-4.5.3). `applied`
+	// is always false: a recommendation is data, never an instruction.
+	Recommendations []controlplane.RecommendationRecord `json:"recommendations,omitempty"`
 	// Error is the resolution failure for a configured-but-broken manifest.
 	Error string `json:"error,omitempty"`
 	// Mode is the governance posture: observe_only or blocking (Spec 08
@@ -149,11 +163,52 @@ func (s *MCPServer) evaluateControlPlane(ctx context.Context) (*controlplane.Bun
 		Observer:      observationSource{server: s},
 		SubjectDigest: s.controlPlaneSubjectDigest(),
 		Checks:        s.controlPlaneChecks(),
+		// R08-4.5.4: the policy inputs this process is actually running, read
+		// from the resolved pack set. Recording them from the live set rather
+		// than from configuration is what makes the provenance a measurement:
+		// a pack that failed to load is absent here, not described.
+		PolicyInputs: s.activePolicyInputs(),
 		// A diagnostic read is observe-only by construction: it reports what
 		// would happen and cannot gate anything. Reporting it as blocking would
 		// let a GET satisfy a release gate.
 		ObserveOnly: true,
 	})
+}
+
+// activePolicyInputs converts the resolved policy set into the provenance form
+// the evaluator records (R08-4.5.4).
+//
+// It returns nil when no set is active, which the evaluator reports as
+// `not_declared` rather than as a satisfied provenance — an instance with no
+// policy set must not read as one whose policy was verified.
+func (s *MCPServer) activePolicyInputs() []controlplane.PolicyInput {
+	if s == nil || s.policyPacks == nil {
+		return nil
+	}
+	active := s.policyPacks.Active()
+	if active == nil || !active.Active() {
+		return nil
+	}
+	packs := active.Packs()
+	if len(packs) == 0 {
+		return nil
+	}
+	out := make([]controlplane.PolicyInput, 0, len(packs))
+	for _, p := range packs {
+		out = append(out, controlplane.PolicyInput{
+			ID:              p.Pack,
+			Source:          p.Path,
+			Version:         p.Version,
+			Digest:          p.Digest,
+			ResolverVersion: p.ResolverVersion,
+			OverlayDigest:   p.OverlayDigest,
+			// The role is assigned here, by the evaluator's caller, from what
+			// the object IS — a resolved pack set. Nothing a pack contains can
+			// change its own label.
+			Label: controlplane.LabelPolicyInput,
+		})
+	}
+	return out
 }
 
 // controlPlaneSubjectDigest identifies what is being evaluated. For a
@@ -278,6 +333,10 @@ func (s *MCPServer) controlPlaneStatusSnapshot(ctx context.Context) controlPlane
 	st.Unmet = bundle.Unmet
 	st.Requirements = bundle.Requirements
 	st.PolicyDigest = bundle.PolicyDigest
+	st.PolicyInputs = bundle.PolicyInputs
+	st.Provenance = string(bundle.Provenance)
+	st.ProvenanceReason = bundle.ProvenanceReason
+	st.Recommendations = bundle.Recommendations
 	st.Evidence = s.evidenceRetentionSnapshot()
 	return st
 }

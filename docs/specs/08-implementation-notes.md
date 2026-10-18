@@ -115,7 +115,70 @@ profile permanently `incomplete`.
 - **Requirements are per manifest, not selected by profile name.** A deployment
   runs one manifest, so one requirement set. Multi-profile selection is the
   manifest's job, not the resolver's.
-- **Trust-label propagation (R08-4.5.3/4.5.4) remains open.** Component output
-  is still not tagged with its origin trust label at evaluation time, and only
-  the single policy digest is recorded rather than the digest of every policy
-  input. That is the last open row in this spec.
+- **Trust labels classify INPUT, and no ordering exists between them.** `TrustTier`
+  orders components; `TrustLabel` deliberately does not order input classes, and
+  only `policy_input` is authoritative. Ranking input classes would invite a
+  caller to infer authority by comparison.
+- **Recommendations have no channel from a component INTO the evaluator yet.**
+  `EvaluateRequest.Recommendations` is implemented and enforced, but no component
+  submits one today: the shipped server passes none. The refusal path is proven;
+  the submission path is a caller contract, not a wired transport.
+
+## R08-4.5.3 / R08-4.5.4 — trust labels, recommendations, policy provenance
+
+**What was absent.** `TrustTier` existed per component and was enforced for
+ordering. Nothing else carried a label: no input class, no per-input policy
+digest, and no representation for a component suggestion. The bundle therefore
+could not answer "which class of input produced this verdict" or "is the policy
+set this run used the one the manifest declares" — the second being answerable
+only by comparing a single opaque digest with no way to recompute it.
+
+**The binding check.** `effectivePolicyDigest` recomputes the identity of a
+policy input set in the canonical form of `scripts/check_policy_pack_lock.py`
+(JSON array of `[path, pack, version, digest, resolver_version, overlay_digest]`
+in path order, compact separators) and `TestProvenanceDigestReproducesTheRealLock`
+asserts it equals the `effective_digest` in the SHIPPED `policy-packs/LOCK.json`.
+This is the difference between a check and a second opinion: a provenance record
+that hashed its own convenient shape would pass every other test while
+disagreeing with the gate.
+
+**Why `not_declared` is not a failure.** A deployment with no pack set is a legal
+configuration. Making it a failure would push callers to declare inputs they do
+not have — which is the declaration-restating defect this spec exists to remove.
+It is reported, and `ProvenanceReason` says so, so a reader cannot confuse it
+with a verified run. `mismatch` is `failed` because the process is running a
+policy set it did not declare: that is a broken deployment, not an unmeasured
+one. `unverifiable` is `incomplete` because nothing was proven either way.
+
+**Why a recommendation cannot act.** `RecommendationRecord.Applied` is always
+false and no code path assigns it. `Text` is recorded (through `RedactDetail`)
+and never parsed, templated or executed, so injection-shaped prose is inert —
+asserted with `$(rm -rf /)` and `IGNORE ALL PREVIOUS INSTRUCTIONS` in the test.
+A recommendation naming a governed root is refused per-recommendation and makes
+the verdict `failed`: a component arguing for its own promotion is exactly the
+move R08-4.5.2 forbids, and a recommendation channel is the obvious place to
+attempt it. An unattributed recommendation is refused too — a channel that
+accepts anonymous text is open to non-components.
+
+**Defects in my own first pass, fixed at the cause:** (1) I assigned the return
+values of `verifyProvenance` in the wrong order, so `ProvenanceReason` received
+the effective digest and the real reason was discarded — the
+`not_declared`-carries-a-reason test caught it. (2) I appended recommendation
+problems to `b.Unmet` one line before `deriveVerdict` recomputed it, which would
+have silently dropped every one; the problems now live on the bundle and
+`deriveVerdict` owns the verdict. (3) My first `CompareReplay` edit was not
+valid Go (an inline closure in an `if`), replaced with two named helpers.
+
+**Red-on-drift proven four ways, each PASS→FAIL then restored:** provenance
+mismatch no longer fails the verdict; the governed-target refusal removed; a
+non-authoritative label accepted as the policy identity; replay ignoring changed
+policy inputs.
+
+**Evidence.** `trust_test.go`: 14 tests including the real-lock digest binding,
+the legal recorded path, mismatch, not-declared, six label/input refusals, seven
+governed-target refusals, inert-text, overreach-fails-verdict, replay detection
+and bundle stability. `go test ./...` EXIT=0 (21 packages, mutation harness
+118s). Wired live: `MCPServer.activePolicyInputs()` reads the resolved pack set
+so provenance is measured, not configured, and `guardrail://control-plane`
+reports `policy_inputs` / `provenance` / `provenance_reason` /
+`recommendations`.

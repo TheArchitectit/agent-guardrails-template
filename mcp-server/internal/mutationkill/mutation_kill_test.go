@@ -809,6 +809,18 @@ func (s *MCPServer) authorizeToolCallDisabled(ctx context.Context, name string, 
 		pkg:       "./internal/controlplane",
 		testRegex: "^TestUnmetRequirementPreventsPass$",
 	},
+	{
+		// Spec 08 R08-4.5.4: a process running a policy set it did not declare
+		// is broken, not merely unmeasured. The mutation drops the failure, so a
+		// provenance mismatch is reported and then ignored by the verdict — the
+		// exact shape where evidence names a defect that nothing acts on.
+		name:      "controlplane-provenance-mismatch-does-not-fail",
+		file:      "internal/controlplane/evaluate.go",
+		old:       "\tif b.Provenance == ProvenanceMismatch {\n\t\tfailed = true",
+		new:       "\tif b.Provenance == ProvenanceMismatch {\n\t\t_ = failed // mutation: an undeclared policy set is only reported",
+		pkg:       "./internal/controlplane",
+		testRegex: "^TestProvenanceMismatchIsFailedNotIncomplete$",
+	},
 }
 
 // findModuleRoot walks up from the test working directory to the directory
