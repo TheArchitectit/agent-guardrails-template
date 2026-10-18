@@ -248,6 +248,13 @@ type Config struct {
 	// rather than an empty composition that trivially passes.
 	ControlPlaneManifest string `env:"CONTROL_PLANE_MANIFEST"`
 
+	// ControlPlaneStateFile persists the governance posture — observe-only or
+	// blocking — for the configured composition (Spec 08 R08-4.4.2/R08-4.4.4).
+	// Unset keeps the posture in memory: the deployment is observe-only after
+	// every start, which is the safe default but loses a promotion across a
+	// restart. Pointing it at a file makes a reviewed promotion hold.
+	ControlPlaneStateFile string `env:"CONTROL_PLANE_STATE_FILE"`
+
 	// Production Mode Indicator
 	ProductionMode bool `env:"PRODUCTION_MODE" envDefault:"false"`
 }

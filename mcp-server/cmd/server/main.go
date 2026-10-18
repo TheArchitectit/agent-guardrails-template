@@ -294,6 +294,26 @@ func main() {
 				"components", len(manifest.Components),
 				"mandatory", len(manifest.MandatoryIDs()),
 			)
+
+			// Spec 08 R08-4.4.2 .. R08-4.4.4: adoption, promotion and rollback
+			// posture. A state file is optional; when unset the posture is
+			// in-memory and every start is observe-only, which is the safe
+			// default but loses a reviewed promotion across a restart. A
+			// malformed state file is logged and left observe-only rather than
+			// fatal: the composition still runs, and the failure is reported
+			// through the resource with the reason.
+			gov, govErr := controlplane.OpenGovernanceWithManifest(manifest, cfg.ControlPlaneStateFile)
+			if govErr != nil {
+				slog.Error("control-plane governance state is unreadable; staying observe-only",
+					"path", cfg.ControlPlaneStateFile, "error", govErr)
+			} else {
+				mcpSrv.SetGovernance(gov)
+				slog.Info("control-plane governance loaded",
+					"mode", gov.Mode(),
+					"state_file", cfg.ControlPlaneStateFile,
+					"records", len(gov.Records()),
+				)
+			}
 		}
 	} else {
 		slog.Info("CONTROL_PLANE_MANIFEST is not set; no composition is evaluated (guardrail://control-plane reports not_configured)")

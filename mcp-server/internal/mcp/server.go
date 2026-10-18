@@ -102,6 +102,13 @@ type MCPServer struct {
 	controlPlane     *controlplane.Manifest
 	controlPlanePath string
 	controlPlaneErr  error
+
+	// governance holds the adoption/promotion posture for the resolved
+	// composition (Spec 08 R08-4.4.2 .. R08-4.4.4). When nil, no composition
+	// is governed and the diagnostic reports the manifest alone. It is the
+	// object readiness consults for a latched rollback failure, so a process
+	// that could not restore a prior composition cannot report itself ready.
+	governance *controlplane.Governance
 }
 
 // SetCredentialRegistry installs the process-wide credential registry so the

@@ -726,6 +726,22 @@ func (s *MCPServer) authorizeToolCallDisabled(ctx context.Context, name string, 
 		testRegex: "^TestReadinessMandatoryInstalledIsNotAvailable$",
 	},
 	{
+		// Spec 08 R08-4.4.4 / acceptance criterion 8: rollback restores the prior
+		// manifest and policy digest AS A UNIT. The mutation trusts the recorded
+		// digest instead of recomputing the content it just restored, which is
+		// exactly what a manifest mutated in place survives — "restored the
+		// object we recorded" reported as success over a changed composition.
+		name: "controlplane-rollback-trusts-recorded-digest",
+		file: "internal/controlplane/governance.go",
+		old: `	if got := g.prior.manifest.Digest(); got != g.prior.digest {
+		return fail("prior composition digest changed before restore: recorded %s, recomputed %s",
+			g.prior.digest, got)
+	}`,
+		new:       "	_ = g.prior.digest // mutation: trust the recorded digest",
+		pkg:       "./internal/controlplane",
+		testRegex: "^TestRollbackDetectsInPlaceMutationOfThePriorUnit$",
+	},
+	{
 		// Spec 16 Sec. 4 R16-09: issuance must not author a registry the server
 		// would reject. WriteRegistryFile validates the WHOLE set through the
 		// same buildSnapshot the loader runs, so an append can never replace a

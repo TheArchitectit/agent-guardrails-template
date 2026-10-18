@@ -3,8 +3,9 @@
 **Status:** PARTIAL — see Sec. 9 for exactly what is implemented, reachable and
 measured, and what remains. The composition core (manifest resolution,
 integration-state measurement, evidence bundle, derived verdict, replay
-comparison, readiness) exists and is reachable; staged promotion/rollback,
-evidence persistence and trust-label propagation do not.
+comparison, readiness) exists and is reachable, and staged adoption/promotion,
+rollback-as-a-unit and the root-change audit record landed 2026-10-18.
+Evidence persistence and trust-label propagation do not exist.
 **Priority:** Important; begin after the capability specs identify stable
 interfaces and acceptance tests.
 **Related:** `docs/specs/guardrail-gaps-2026/STATUS.md`,
@@ -174,16 +175,24 @@ reproduce all of these checks:
    actual request/evaluation entry point, not merely constructed in a unit
    test.
 
-**Status of these criteria (2026-10-18):** 2, 3, 4, 5, 6 and 7 have passing
+**Status of these criteria (2026-10-18):** 2, 3, 4, 5, 6, 7 and 8 have passing
 tests against the real package and are named in Sec. 9. **9 is PARTIAL, not
 met:** the mandatory injection check does run through the real resource handler
 (`TestControlPlaneResourceReportsMeasuredState`) and dispatch is proven at the
 real entry point (`TestDispatchRecordsExercise`), but `policy-engine` is
 mandatory in the shipped manifest and has no exercising check of its own — it
 is measured by state only. Criterion 1 holds at manifest resolution (before any
-component starts). **8 is NOT satisfied** — rollback restoring the prior
-manifest and policy digest as a unit has no implementation at all, which is why
-R08-4.4.2–4.4.4 remain open in Sec. 9.
+component starts).
+
+Criterion 8 is now met in the narrow sense the criterion states: rollback
+restores the prior manifest **and** policy digest as one value, verified by
+recomputing the content after the swap, and an interrupted (or impossible)
+rollback leaves readiness false via a latch that only a reviewed operator
+action clears. It is **not** an operating-system transaction — the state file
+is replaced atomically, but a crash between the in-memory swap and the persist
+leaves the process serving the restored unit with the previous file on disk,
+which is the correct direction to fail (the next start adopts the recorded
+composition and reports observe-only).
 
 ## 6. Dependencies and sequencing
 
@@ -291,9 +300,69 @@ harness.
   components; it does not declare "required checks and minimum evidence per
   profile". The profile field is recorded and reported, but nothing enforces a
   per-profile requirement list yet.
-- **No staged promotion flow (R08-4.4.2-4.4.4).** Observe-only is labelled and
-  cannot gate, but promotion to blocking, rollback-as-a-unit, and the audit record
-  for policy-root/trust-root changes are not implemented.
+- **Staged promotion, rollback and the root-change audit record IMPLEMENTED
+  2026-10-18 `main` (R08-4.4.2–R08-4.4.4).** Before this pass `Bundle.Enforce()`
+  refused an observe-only bundle, so a label could not be bypassed by a caller
+  that forgot to check it — and nothing could ever *change* the label. A
+  deployment was observe-only forever: there was no promotion path, no rollback,
+  and no record of who changed a policy root or a component's trust.
+
+  `internal/controlplane/governance.go` now holds the posture:
+
+  - **Promotion is evidence-bound, not configuration-bound** (R08-4.4.2). It
+    requires a review reference, an accountable approver, an explicit profile
+    version matching the active manifest, and a passing acceptance bundle whose
+    **manifest digest, policy digest and profile** are the ones the process is
+    running. A green bundle from another composition is evidence about a
+    different system and is refused naming what differed. Observe-only evidence
+    cannot promote: `Enforce()` is the single implementation of "may this bundle
+    satisfy a blocking gate", so the promotion path and a release gate cannot
+    disagree.
+  - **A governed-root change needs a reviewed adoption** (R08-4.4.3), and the
+    review is checked against the **computed** difference — policy digest,
+    profile, supported interfaces, and per component trust tier, mandatory
+    class, version, digest and dependencies. The caller never describes the
+    change it wants to make; `RequiresReview` computes it, and the refusal names
+    every difference it found. The adoption record carries that same computed
+    list plus the review reference and approver. Scope limit: exception
+    allowlists have no representation in this manifest, so they are not covered
+    by the check.
+  - **Rollback restores one value** (R08-4.4.4). The prior manifest and its
+    digest are a single unit; the digest is **recomputed after the swap**, so a
+    manifest mutated in place — the failure a shared pointer invites — is
+    caught instead of reported as a successful restore. A rollback with no
+    prior unit, or one whose verification fails, latches a failure that makes
+    `ControlPlaneReadiness` return `not_ready` with the reason, even when every
+    component measures fine; clearing the latch requires a review reference. A
+    rollback also does not inherit a promotion: the restored composition is
+    observe-only until it is promoted on its own evidence.
+  - **The posture is reported where a client reads it.** `guardrail://control-plane`
+    gained `mode` (`observe_only` / `blocking`), `profile_version` and
+    `governance_blocked`; the diagnostic read itself stays observe-only, so a
+    GET can never satisfy a release gate. `CONTROL_PLANE_STATE_FILE` persists
+    the posture at mode 0600 through temp+fsync+rename; unset keeps it in
+    memory (observe-only after every start). A state file naming a different
+    composition does **not** transfer the promotion — it is downgraded to
+    observe-only and the non-transfer is recorded. A malformed or empty state
+    file is an error at load, not a silent fallback to observe-only: the two are
+    different answers and only one is safe to guess.
+  - **One active-manifest source.** `MCPServer.activeManifest()` prefers the
+    governed manifest, so an adopted candidate is what the resource and the
+    readiness probe evaluate; before this the resource kept reading the
+    startup copy and an adoption would have changed nothing anyone could see.
+
+  **Evidence:** `internal/controlplane/governance_test.go` (18 cases, including
+  a real reopen across a restart, a state file at 0600, the non-transfer, and
+  the in-place-mutation rollback) + `internal/mcp/control_plane_governance_test.go`
+  (4 request-path cases driving the real handler and the real readiness path).
+  **Red-on-drift proven three ways**, each PASS→FAIL then restored: dropping
+  the review requirement in `Adopt` flips
+  `TestAdoptRequiresReviewForGovernedRootChange`; trusting the recorded digest
+  instead of recomputing flips
+  `TestRollbackDetectsInPlaceMutationOfThePriorUnit` (now a permanent
+  `mutationkill` case, `controlplane-rollback-trusts-recorded-digest`, confirmed
+  killing in the harness); allowing an observe-only bundle to promote flips
+  `TestPromoteRefusesObserveOnlyAcceptance`.
 - **R08-4.2.4 IMPLEMENTED 2026-10-18 `main` (this pass).** `/health/ready`
   reported the Spec 18 ordered checks and nothing about the composition, so a
   deployment whose mandatory injection detector was merely `installed` —

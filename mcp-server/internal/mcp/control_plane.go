@@ -57,6 +57,17 @@ type controlPlaneStatus struct {
 	Unmet []string `json:"unmet,omitempty"`
 	// Error is the resolution failure for a configured-but-broken manifest.
 	Error string `json:"error,omitempty"`
+	// Mode is the governance posture: observe_only or blocking (Spec 08
+	// R08-4.4.1). It is reported next to the verdict because an observe-only
+	// report describes what WOULD happen and must never read as enforcement.
+	Mode string `json:"mode,omitempty"`
+	// ProfileVersion is the reviewed profile revision a promotion was granted
+	// against. It is empty in observe-only mode.
+	ProfileVersion string `json:"profile_version,omitempty"`
+	// GovernanceBlocked names a latched rollback failure: the process could not
+	// restore the prior composition and must not present itself as serving a
+	// verified one.
+	GovernanceBlocked []string `json:"governance_blocked,omitempty"`
 }
 
 // SetControlPlane attaches a resolved manifest. It is called once at startup so
@@ -65,6 +76,20 @@ type controlPlaneStatus struct {
 func (s *MCPServer) SetControlPlane(manifest *controlplane.Manifest, path string) {
 	s.controlPlane = manifest
 	s.controlPlanePath = path
+}
+
+// SetGovernance attaches the adoption/promotion posture for the resolved
+// composition. It is installed after SetControlPlane because the posture is
+// about that specific manifest: a promotion granted to one composition does not
+// transfer to another.
+func (s *MCPServer) SetGovernance(g *controlplane.Governance) {
+	s.governance = g
+}
+
+// Governance exposes the posture object so the process owner can promote or
+// roll back without rebuilding the server.
+func (s *MCPServer) Governance() *controlplane.Governance {
+	return s.governance
 }
 
 // SetControlPlaneError records a manifest that failed to resolve, so the
@@ -76,13 +101,27 @@ func (s *MCPServer) SetControlPlaneError(path string, err error) {
 	s.controlPlaneErr = err
 }
 
+// activeManifest returns the composition the process is actually running. When
+// governance is installed it owns the active manifest, so an adopted candidate
+// is evaluated rather than the startup copy — otherwise an adoption would
+// change nothing any report could see.
+func (s *MCPServer) activeManifest() *controlplane.Manifest {
+	if s.governance != nil {
+		if m := s.governance.Active(); m != nil {
+			return m
+		}
+	}
+	return s.controlPlane
+}
+
 // evaluateControlPlane runs a live evaluation of the attached manifest.
 func (s *MCPServer) evaluateControlPlane(ctx context.Context) (*controlplane.Bundle, error) {
-	if s.controlPlane == nil {
+	m := s.activeManifest()
+	if m == nil {
 		return nil, fmt.Errorf("no control-plane manifest is configured")
 	}
 	return controlplane.Evaluate(controlplane.EvaluateRequest{
-		Manifest:      s.controlPlane,
+		Manifest:      m,
 		Observer:      observationSource{server: s},
 		SubjectDigest: s.controlPlaneSubjectDigest(),
 		Checks:        s.controlPlaneChecks(),
@@ -97,10 +136,11 @@ func (s *MCPServer) evaluateControlPlane(ctx context.Context) (*controlplane.Bun
 // composition diagnostic the subject is the composition itself, so the digest
 // is the manifest digest — a stable identity, not a random id.
 func (s *MCPServer) controlPlaneSubjectDigest() string {
-	if s.controlPlane == nil {
+	m := s.activeManifest()
+	if m == nil {
 		return ""
 	}
-	return s.controlPlane.Digest()
+	return m.Digest()
 }
 
 // controlPlaneChecks are the checks this server can honestly run. Each one
@@ -189,8 +229,14 @@ func (s *MCPServer) controlPlaneStatusSnapshot(ctx context.Context) controlPlane
 	}
 
 	st.Status = "evaluated"
-	st.ManifestDigest = s.controlPlane.Digest()
-	st.Profile = s.controlPlane.Profile
+	active := s.activeManifest()
+	st.ManifestDigest = active.Digest()
+	st.Profile = active.Profile
+	if s.governance != nil {
+		st.Mode = s.governance.Mode()
+		st.ProfileVersion = s.governance.ProfileVersion()
+		st.GovernanceBlocked = s.governance.RollbackBlocked()
+	}
 
 	bundle, err := s.evaluateControlPlane(ctx)
 	if err != nil {
@@ -240,5 +286,22 @@ func (s *MCPServer) ControlPlaneReadiness(ctx context.Context) *controlplane.Rea
 		}
 	}
 	rd := bundle.Readiness()
+	// R08-4.4.4: a rollback that could not complete leaves the composition
+	// unverified. Readiness reports that as not-ready even when every
+	// component measures fine, because the process is serving a composition
+	// nobody successfully restored.
+	if blocked := s.governanceRollbackFailures(); len(blocked) > 0 {
+		rd.Status = controlplane.ReadinessNotReady
+		rd.Ready = false
+		rd.Unmet = append(rd.Unmet, blocked...)
+	}
 	return &rd
+}
+
+// governanceRollbackFailures reports a latched rollback failure, if any.
+func (s *MCPServer) governanceRollbackFailures() []string {
+	if s.governance == nil {
+		return nil
+	}
+	return s.governance.RollbackBlocked()
 }
