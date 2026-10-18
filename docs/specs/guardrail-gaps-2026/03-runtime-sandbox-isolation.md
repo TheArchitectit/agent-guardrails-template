@@ -1,6 +1,6 @@
 # OpenSpec: Runtime Sandbox Isolation
 
-> **The library shipped; neither tool exists.** The sandbox is fully built in `internal/guardrails/sandbox.go` but no MCP tool exposes it. Sec. 4.3 fallback text is also wrong — see the amendment note in [STATUS.md](STATUS.md).
+> **Status 2026-10-18 — PARTIAL, wired.** Both tools now exist, are registered, dispatched, classified and audited, and the declared per-tool policies are applied at execution (`ExecuteFor`), which they were not before. The library is no longer unreachable. Residual gaps are named in Sec. 8: path-traversal detection beyond mount syntax, privilege-escalation/fork-bomb violation classes, a YAML loader, and the Sec. 5.x harnesses. Sec. 4.3 fallback text remains wrong — see the amendment note.
 
 **Gap:** Important — Pre-execution validation only; no OS-level isolation
 **Priority:** 🟡 Important (Phase 2)
@@ -233,42 +233,51 @@ func sandboxExecL2(command string, limits ResourceLimits) (*SandboxResult, error
 
 ---
 
-## 8. Implementation Status (reconciled 2026-10-03)
+## 8. Implementation Status (reconciled 2026-10-18)
 
-Evidence: `docs/specs/guardrail-gaps-2026/STATUS.md`.
+Evidence: `docs/specs/guardrail-gaps-2026/STATUS.md`; tests
+`mcp-server/internal/mcp/tools_sandbox_test.go` and
+`mcp-server/internal/guardrails/sandbox_policy_test.go`.
 
 | Sec. | Requirement | Status | Evidence |
 |---|-------------|--------|----------|
-| 3.1 | `guardrail_sandbox_execute` | **Not implemented** | name absent from every `.go` file; `ExecuteSandbox` (`engine.go:299`) has zero callers |
-| 3.1 | `guardrail_sandbox_config` | **Not implemented** | no tool, no runtime config setter |
-| 2.x | L0 / L1 (unshare) / L2 (podman→docker) | Implemented | `sandbox.go:174`, `:209`, `:254` (`--read-only`, `--cap-drop=ALL`, `no-new-privileges`) |
+| 3.1 | `guardrail_sandbox_execute` | **Implemented 2026-10-18** | registered in `toolList()`, routed in `dispatchToolCall`, classified `mutate` + audit-before-effect; `tools_sandbox.go` |
+| 3.1 | `guardrail_sandbox_config` | **Implemented 2026-10-18** | registered, routed, classified `admin` + audit-before-effect; whole config validated before the mutation is applied |
+| 3.1 | Tool cannot become a host-execution path | **Implemented 2026-10-18** | effective L0 refused outright even when a policy declares it; test asserts the marker file is never created |
+| 3.2 | Per-request `resource_limits` | **Implemented, narrowing only** | a wider value is refused naming the field, never clamped; `NarrowLimits` |
+| 3.3 | Per-tool policies **applied** | **Implemented 2026-10-18** | `ExecuteFor`/`ExecuteForLimits` resolve level + limits from `tool_policies`; before this the table had **no consumer at all** |
+| 3.3 | Per-tool policy **validated** | **Implemented 2026-10-18** | empty or unknown `DefaultLevel` is a config error; previously `L9` validated clean and resolved to L0 at use time |
+| 2.x | L0 / L1 (unshare) / L2 (podman→docker) | Implemented | `sandbox.go` exec funcs (`--read-only`, `--cap-drop=ALL`, `no-new-privileges`) |
 | 2.x | L3 Firecracker | Not implemented | the spec itself marks this optional |
-| 3.2 | `resource_limits` | Implemented field-for-field | `sandbox_config.go:19-45` |
-| 3.3 | Per-tool policies | Implemented | `sandbox_config.go:95-127` — under the Go key `tool_policies`, **not** the spec's `sandbox_policies` |
+| 3.2 | `resource_limits` shape | Implemented field-for-field | `sandbox_config.go` |
+| 3.3 | Policy key name | Differs, recorded | Go key is `tool_policies`, **not** the spec's `sandbox_policies`; renaming is a config-compat decision, not a defect |
 | 4.x | Network isolation | Implemented, **stronger than spec** | `--network=none` fail-closed plus CONNECT-filtering proxy and provisioned bridge network (`sandbox_network.go`) |
-| 4.x | Resource-exhaustion detection | Implemented | exit 137 / deadline mapping, `sandbox.go:413-417` |
-| 4.x | Path-traversal **detection** | **Not implemented** | only mount-path syntax validation (`:433-441`) |
-| 4.x | Privilege-escalation / fork-bomb detection | **Not implemented** | absent from `detectViolations` (`:408-427`) — 3 of 5 required violation classes are missing |
-| 5.2 | Config hot-reload | **Not implemented** | no sandbox YAML loader exists; `SandboxConfig` is only ever `DefaultSandboxConfig()` |
+| 4.x | Resource-exhaustion detection | Implemented | exit 137 / deadline mapping |
+| 4.x | Path-traversal **detection** | **Not implemented** | only mount-path syntax validation; L2 relies on the runtime's mounts, L1 does not enforce a path set at all |
+| 4.x | Privilege-escalation / fork-bomb detection | **Not implemented** | absent from `detectViolations` — 3 of 5 required violation classes are missing |
+| 5.1 | Unit tests for isolation behaviour | **Partial** | policy resolution, level resolution, override narrowing, L0 refusal, fail-closed-without-engine all covered; "namespace blocks file access outside allowed paths" is **not** covered because L1 does not implement a path set |
+| 5.2 | Config hot-reload | **Not implemented** | no sandbox YAML loader; `guardrail_sandbox_config` updates the live policy table in-process, but no file is read |
+| 5.3 | Container escape / fork bomb / exfiltration | **Not implemented** | no harness exists; this is the named blocker for the Sec. 5.x checkboxes |
 
-**Spec amendment — Sec. 4.3 fallback is wrong and should be rewritten.**
-Sec. 4.3 specifies unconditional L2→L1→L0 fallback. The implementation
-deliberately downgrades **only** on genuine setup errors (`isSetupError`,
-`sandbox.go:61-78`); a command denied while running under isolation is
-treated as a security breach and reported as a violation. That is the correct
-fail-closed behaviour — silently re-running a denied command at lower
-isolation would execute it on the host with none. The spec text should be
-amended to match the code, not the reverse.
+**Sec. 4.3 fallback is wrong and should be rewritten.** Sec. 4.3 specifies
+unconditional L2→L1→L0 fallback. The implementation deliberately downgrades
+**only** on genuine setup errors (`isSetupError`); a command denied while
+running under isolation is treated as a security breach and reported. That is
+the correct fail-closed behaviour — silently re-running a denied command at
+lower isolation would execute it on the host with none. The spec text should
+be amended to match the code, not the reverse.
 
-**Net position.** The sandbox is a fully built, tested library with **no
-entry point**: no MCP tool, no production caller, no config loader. It cannot
-protect anything until something calls it.
+**Net position after 2026-10-18.** The library is reachable and the declared
+policies bind. What remains is not reachability: it is detection breadth
+(path traversal, privilege escalation, fork bombs), a config-file loader, and
+the Sec. 5.x harnesses. Each is named above rather than stubbed.
 
-**Blocking decisions:**
+**Still-open decisions:**
 
-1. Expose `guardrail_sandbox_execute` or accept that L0–L2 is internal-only.
-2. Implement the 2 missing violation classes, or amend Sec. 4.x to drop them.
-3. Add a YAML loader, or amend Sec. 3.3 to rename `sandbox_policies` →
-   `tool_policies` and mark hot-reload out of scope.
-4. Sec. 5.x security criteria (container escape, fork bomb) need a defined test
-   harness to be checkable.
+1. Path-traversal detection: enforce a path set at L1, or amend Sec. 4.x to
+   scope detection to L2 mounts only.
+2. The two missing violation classes: implement, or drop from Sec. 4.x.
+3. A YAML loader for policies, or amend Sec. 3.3 to name `tool_policies` and
+   mark file-based configuration out of scope.
+4. Sec. 5.x security criteria need a defined harness (container escape, fork
+   bomb) before they can be checked at all.

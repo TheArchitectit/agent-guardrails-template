@@ -79,6 +79,14 @@ CORE_REGISTRIES = (
     # temporary test counting toolList() rather than by reading the gate's
     # output.
     "tools_compliance.go",
+    # Spec 03 runtime sandbox isolation tools. Registered unconditionally by
+    # toolList(), so core. This entry is the FIFTH occurrence of the same
+    # vacuity class, caught the same way: without it the gate printed core=48
+    # and exited 0 while a direct count of toolList() returned 50. Recorded
+    # rather than quietly fixed, because the pattern is the finding — this
+    # gate's scope is a hand-maintained list and it recurs its own failure
+    # mode whenever a registry file is added.
+    "tools_sandbox.go",
 )
 
 # Conditional groups, keyed by the label used in the docs.

@@ -75,6 +75,17 @@ func (s *MCPServer) complianceTools() []mcp.Tool {
 	return []mcp.Tool{}
 }
 '''
+# Spec 03 sandbox tools are registered unconditionally too, so they are core.
+# FIFTH occurrence of the identical class: without the real CORE_REGISTRIES
+# entry the gate printed core=48 and exited 0 while toolList() advertised 50.
+# The fixture declares nothing of its own on purpose — it proves the gate
+# requires the registry to exist while tolerating one that declares no tools,
+# which is exactly the property the real vacuity came through.
+CORE_SANDBOX = '''package mcp
+func (s *MCPServer) sandboxTools() []mcp.Tool {
+	return []mcp.Tool{}
+}
+'''
 VISION = '''package mcp
 func (vt *VisionToolSet) visionToolList() []mcp.Tool {
 	return []mcp.Tool{{Name: "vision_one"}, {Name: "vision_two"}}
@@ -144,6 +155,7 @@ def _build(root: Path) -> None:
     _write(root, f"{mcp}/tools_indirect_injection.go", CORE_INDIRECT)
     _write(root, f"{mcp}/tools_multi_agent.go", CORE_MULTI)
     _write(root, f"{mcp}/tools_compliance.go", CORE_COMPLIANCE)
+    _write(root, f"{mcp}/tools_sandbox.go", CORE_SANDBOX)
     _write(root, f"{mcp}/vision_tools.go", VISION)
     _write(root, f"{mcp}/tools_notifications.go", WEBHOOK)
     _write(root, f"{mcp}/tools_budget.go", BUDGET)

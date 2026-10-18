@@ -405,3 +405,51 @@ func (e *Engine) ExecuteSandbox(ctx context.Context, command string, level Sandb
 	}
 	return e.sandbox.Execute(ctx, command, level, limits)
 }
+
+// ExecuteSandboxFor runs a command under the isolation level and resource
+// limits declared for toolType (Spec 03 Sec. 3.3).
+//
+// The declared per-tool policies are the whole point of the table: before this
+// method, the only exported execution path required the caller to supply the
+// level and every limit by hand, so an operator's policy changed nothing.
+// A requestedLevel may raise isolation but never lower it.
+func (e *Engine) ExecuteSandboxFor(ctx context.Context, toolType, command string, requestedLevel SandboxLevel) (*SandboxResult, error) {
+	if e.sandbox == nil {
+		return nil, fmt.Errorf("sandbox is not configured")
+	}
+	return e.sandbox.ExecuteFor(ctx, toolType, command, requestedLevel)
+}
+
+// SetSandboxPolicy installs or replaces one tool type's sandbox policy.
+// The config is validated as a whole before it is applied.
+func (e *Engine) SetSandboxPolicy(toolType string, policy SandboxPolicy) error {
+	if e.sandbox == nil {
+		return fmt.Errorf("sandbox is not configured")
+	}
+	return e.sandbox.SetToolPolicy(toolType, policy)
+}
+
+// SandboxPolicies returns the active per-tool policy table.
+func (e *Engine) SandboxPolicies() map[string]SandboxPolicy {
+	if e.sandbox == nil {
+		return nil
+	}
+	return e.sandbox.ToolPolicies()
+}
+
+// SandboxConfig returns a copy of the active sandbox configuration.
+func (e *Engine) SandboxConfig() SandboxConfig {
+	if e.sandbox == nil {
+		return SandboxConfig{}
+	}
+	return e.sandbox.Config()
+}
+
+// ExecuteSandboxForLimits runs a command under the policy for toolType with
+// per-request narrowing overrides applied.
+func (e *Engine) ExecuteSandboxForLimits(ctx context.Context, toolType, command string, requestedLevel SandboxLevel, o LimitOverrides) (*SandboxResult, error) {
+	if e.sandbox == nil {
+		return nil, fmt.Errorf("sandbox is not configured")
+	}
+	return e.sandbox.ExecuteForLimits(ctx, toolType, command, requestedLevel, o)
+}

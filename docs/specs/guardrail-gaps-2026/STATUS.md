@@ -21,17 +21,17 @@ the specs themselves.
 |---------------|------|---------|
 | `guardrail_detect_injection` | 01 | **Yes (2026-10-18)** |
 | `guardrail_scan_text_batch` | 01 | **Yes (2026-10-18)** |
-| `guardrail_sandbox_execute` | 03 | **No** |
-| `guardrail_sandbox_config` | 03 | **No** |
+| `guardrail_sandbox_execute` | 03 | **Yes (2026-10-18)** |
+| `guardrail_sandbox_config` | 03 | **Yes (2026-10-18)** |
 | `guardrail_validate_agent_output` | 04 | **Yes (2026-10-18)** |
 | `guardrail_check_agent_constraints` | 04 | **Yes (2026-10-18)** |
 | `guardrail_resolve_conflicts` | 04 | **Yes (2026-10-18)** |
 | `guardrail_scan_external_content` | 05 | **Yes (2026-10-18)** |
 | `guardrail_mark_provenance` | 05 | **Yes (2026-10-18)** |
 | `guardrail_check_provenance` | 05 | **Yes (2026-10-18)** |
-| `guardrail_generate_compliance_report` | 06 | **No** |
-| `guardrail_check_compliance` | 06 | **No** |
-| `guardrail_collect_evidence` | 06 | **No** |
+| `guardrail_generate_compliance_report` | 06 | **Yes (2026-10-18)** |
+| `guardrail_check_compliance` | 06 | **Yes (2026-10-18)** |
+| `guardrail_collect_evidence` | 06 | **Yes (2026-10-18)** |
 | `guardrail_classify_content` | 02 | **Yes** |
 | `guardrail_check_policy` | 02 | **Yes** |
 
@@ -154,13 +154,42 @@ fail closed by design.
 
 | Requirement | Status |
 |-------------|--------|
-| `guardrail_sandbox_execute` / `guardrail_sandbox_config` tools | Not implemented |
+| `guardrail_sandbox_execute` / `guardrail_sandbox_config` tools | **Implemented 2026-10-18** — registered, dispatched, mutate/admin-classified, audit-before-effect |
+| Per-tool policy applied at execution | **Implemented 2026-10-18** — `ExecuteFor`/`ExecuteForLimits` resolve level + limits from `tool_policies`; previously the table had no consumer |
+| `DefaultLevel` validated | **Implemented 2026-10-18** — an empty or unknown level is a load error, not a silent L0 |
 | L0 / L1 (unshare) / L2 (podman→docker) | Implemented, and stronger than spec'd |
 | `resource_limits` config | Implemented, field-for-field |
 | Network isolation | Implemented — fail-closed, host allowlist via filtering proxy |
 | Path-traversal **detection** | Not implemented (only mount-path syntax validation) |
 | Privilege-escalation / fork-bomb detection | Not implemented (3 of 5 required violation classes absent) |
 | L3 Firecracker | Not implemented (the spec itself marks it optional) |
+
+**What the wiring deliberately adds beyond the spec's signature.** The spec
+asks for a tool that runs a command at a level the caller names. Shipped as
+specified, that is a host-execution surface with a reassuring name: any
+caller could pass `L0`, and any caller could pass limits wider than the
+deployment's policy. The two tools therefore constrain the request:
+
+- **L0 is refused outright**, even when a policy declares it. `file_edit`
+  ships an L0 policy, so a policy level of L0 is legal *config*; the tool
+  that claims to isolate still refuses to be the path to the host.
+- **Per-request overrides narrow only.** A larger memory/time/CPU value or a
+  path outside the policy's writable set is refused with the field named —
+  not clamped, because a clamp reads as "your override applied".
+- **A requested level may raise isolation, never lower it.**
+- **An unknown `tool_type` is refused** rather than run at the global
+  defaults, and the refusal names the types that exist.
+
+Executing under L1 where namespace creation is unavailable fails closed: the
+command does not run on the host, and the result reports the level that was
+attempted. Verified by a test that touches a marker file and asserts its
+absence.
+
+**Still open in 03** (stated, not stubbed): path-traversal *detection*
+beyond mount-syntax validation; privilege-escalation and fork-bomb violation
+classes; a YAML loader for `sandbox_policies` (the Go key remains
+`tool_policies`); and Sec. 5.x security criteria that need a defined
+container-escape/fork-bomb harness.
 
 **Spec amendment, not a gap:** the spec (Sec. 4.3) specifies unconditional
 L2→L1→L0 fallback. The implementation deliberately does not: it downgrades
@@ -289,7 +318,7 @@ status vocabulary).
 | 12-3.3.1 wildcard CORS accepted in production | **FIXED** | `d90cf52` | `config.go:302-306` rejects `*` when `ProductionMode`; reached at startup via `config.Load()`→`Validate()` (`main.go:65`, `config.go:161`) |
 | 12-3.6 `X-XSS-Protection` header emitted | **FIXED** | `d90cf52` | `web/server.go:330` no longer emits it (CSP + `nosniff` + `DENY` retained, `:327-329`) |
 | 06 compliance scoring restates the DB as a measurement | **UNIMPLEMENTED** (labelled, not fixed) | `beb8c02` | `compliance.go:54,104-107,136,225-250`; see gap 06 above |
-| 01/03/04/06 libraries unreachable from the request path | **PARTIAL** — 01, 04, 05 wired | `f85aa67` + 2026-10-18 | gaps 01, 04 and 05 are wired (see above); sandbox 03 and compliance 06 remain unreachable |
+| 01/03/04/06 libraries unreachable from the request path | **CLOSED** — 01, 03, 04, 05, 06 all reachable | `f85aa67` + 2026-10-18 | every gap-spec library now has a registered, dispatched, classified tool: 01 (2 tools), 03 (2), 04 (3), 05 (3), 06 (3). Residual per-spec gaps are listed under each spec and none of them is reachability |
 
 Exact tests re-run green on 2026-10-10 against this tree (HEAD `f85aa67`):
 `TestHandleClassifyContent_NoEngine_FailClosed`,

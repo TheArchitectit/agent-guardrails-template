@@ -28,6 +28,12 @@ func (s *MCPServer) toolList() []mcp.Tool {
 	// that vanishes cannot say "not configured" at all.
 	tools = append(tools, s.complianceTools()...)
 
+	// Runtime sandbox isolation (Spec 03 gap-spec). Registered
+	// unconditionally for the same reason as the two groups above: a caller
+	// must be able to learn that the sandbox is not configured, rather than
+	// inferring from a missing tool that this server has no such capability.
+	tools = append(tools, s.sandboxTools()...)
+
 	if s.visionTools != nil {
 		tools = append(tools, s.visionTools.visionToolList()...)
 	}

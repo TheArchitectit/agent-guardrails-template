@@ -1,7 +1,10 @@
 // Package guardrails provides runtime isolation and resource limiting for MCP tool executions.
 package guardrails
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 // SandboxLevel defines the isolation depth for a process execution.
 type SandboxLevel string
@@ -128,6 +131,35 @@ func DefaultSandboxConfig() *SandboxConfig {
 	}
 }
 
+// Clone returns a deep copy of the configuration.
+//
+// The maps and slices are copied because SetToolPolicy validates a candidate
+// built from a clone: a shallow copy would let a refused policy mutate the
+// live table through the shared backing map.
+func (c *SandboxConfig) Clone() *SandboxConfig {
+	if c == nil {
+		return nil
+	}
+	out := *c
+	out.GlobalDefaults = cloneLimits(c.GlobalDefaults)
+	if c.ToolPolicies != nil {
+		out.ToolPolicies = make(map[string]SandboxPolicy, len(c.ToolPolicies))
+		for name, policy := range c.ToolPolicies {
+			policy.ResourceLimits = cloneLimits(policy.ResourceLimits)
+			out.ToolPolicies[name] = policy
+		}
+	}
+	return &out
+}
+
+func cloneLimits(in ResourceLimits) ResourceLimits {
+	out := in
+	out.Disk.ReadOnlyPaths = append([]string(nil), in.Disk.ReadOnlyPaths...)
+	out.Disk.ReadWritePaths = append([]string(nil), in.Disk.ReadWritePaths...)
+	out.Network.AllowedHosts = append([]string(nil), in.Network.AllowedHosts...)
+	return out
+}
+
 // Validate checks the config for errors.
 func (c *SandboxConfig) Validate() error {
 	if c.GlobalDefaults.Time.MaxSeconds < 0 {
@@ -142,8 +174,24 @@ func (c *SandboxConfig) Validate() error {
 	if c.GlobalDefaults.Memory.MaxMB < 0 {
 		return fmt.Errorf("sandbox max_memory_mb must be >= 0")
 	}
+	if c.Image != "" && strings.ContainsAny(c.Image, " \t\n:;") {
+		// The image is passed as argv, but a value carrying whitespace or a
+		// second argument separator is a configuration mistake that should be
+		// refused at load rather than producing a confusing runtime failure.
+		return fmt.Errorf("sandbox image %q must not contain whitespace, ':' or ';'", c.Image)
+	}
 	// Validate tool policies
 	for name, policy := range c.ToolPolicies {
+		// A policy that names no level or an unknown one is a policy that
+		// cannot be applied. Before this check existed, `L9` validated clean
+		// and resolved to L0 at use time — a typo in a security control that
+		// failed open instead of failing at load.
+		if policy.DefaultLevel == "" {
+			return fmt.Errorf("tool policy %q: default_level is required", name)
+		}
+		if !validLevel(policy.DefaultLevel) {
+			return fmt.Errorf("tool policy %q: unknown default_level %q (must be L0, L1 or L2)", name, policy.DefaultLevel)
+		}
 		if policy.ResourceLimits.Time.MaxSeconds < 0 {
 			return fmt.Errorf("tool policy %q: max_seconds must be >= 0", name)
 		}

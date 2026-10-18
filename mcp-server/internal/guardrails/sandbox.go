@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -30,7 +31,13 @@ type SandboxResult struct {
 }
 
 // SandboxManager handles the lifecycle of isolated executions.
+//
+// The config is guarded by mu because a policy can be changed after
+// construction (guardrail_sandbox_config). Execute reads it under a read lock
+// and SetToolPolicy replaces the whole validated config atomically, so a
+// concurrent read can never observe a half-written policy table.
 type SandboxManager struct {
+	mu     sync.RWMutex
 	config *SandboxConfig
 	logger *slog.Logger
 }
@@ -41,7 +48,7 @@ func NewSandboxManager(cfg *SandboxConfig, logger *slog.Logger) *SandboxManager 
 		cfg = DefaultSandboxConfig()
 	}
 	return &SandboxManager{
-		config: cfg,
+		config: cfg.Clone(),
 		logger: logger,
 	}
 }
@@ -96,6 +103,12 @@ func (m *SandboxManager) Execute(ctx context.Context, command string, level Sand
 	var result *SandboxResult
 	var err error
 
+	// A level the implementation does not have must not reach the switch below
+	// and must not be interpreted as "no isolation".
+	if !validLevel(level) {
+		return nil, fmt.Errorf("unsupported sandbox level: %q", level)
+	}
+
 	// Reject malformed mount paths before any level is tried, so a missing
 	// container runtime can never mask the error by falling back to a level
 	// that ignores the mount.
@@ -124,7 +137,7 @@ func (m *SandboxManager) Execute(ctx context.Context, command string, level Sand
 			return nil, fmt.Errorf("unsupported sandbox level: %s", level)
 		}
 
-		if err == nil || !m.config.FallbackEnabled {
+		if err == nil || !m.configSnapshot().FallbackEnabled {
 			break
 		}
 		// Only genuine setup-time failures may justify a downgrade. A command
@@ -168,6 +181,60 @@ func (m *SandboxManager) Execute(ctx context.Context, command string, level Sand
 	}
 
 	return result, err
+}
+
+// configSnapshot returns the active configuration under a read lock.
+func (m *SandboxManager) configSnapshot() *SandboxConfig {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.config
+}
+
+// ExecuteFor resolves the effective isolation level and resource limits for a
+// tool type, then executes under them.
+//
+// This is the seam the sandbox library never had. Before it, every caller had
+// to pass a level and a limit set by hand, so the declared per-tool
+// SandboxConfig.ToolPolicies were read by nothing and a request could choose
+// L0 for a tool the deployment had classified L2.
+//
+// requestedLevel may be empty, in which case the tool policy decides. A
+// non-empty request may RAISE isolation but never lower it: the effective
+// level is the more isolated of the two, and the result records which level
+// actually ran.
+//
+// An unknown tool type is refused rather than executed under the global
+// defaults: "this tool type has no policy" is a configuration gap, and
+// silently running it at the least isolated level is the fail-open reading.
+func (m *SandboxManager) ExecuteFor(ctx context.Context, toolType, command string, requestedLevel SandboxLevel) (*SandboxResult, error) {
+	cfg := m.configSnapshot()
+	if cfg == nil {
+		return nil, fmt.Errorf("sandbox is not configured")
+	}
+	if strings.TrimSpace(toolType) == "" {
+		return nil, fmt.Errorf("tool_type is required")
+	}
+	if _, known := cfg.ToolPolicies[toolType]; !known {
+		return nil, fmt.Errorf("no sandbox policy for tool type %q", toolType)
+	}
+	policyLevel, limits := cfg.ResolveToolPolicy(toolType)
+	if policyLevel == "" {
+		return nil, fmt.Errorf("sandbox policy for tool type %q declares no level", toolType)
+	}
+
+	if requestedLevel != "" && !validLevel(requestedLevel) {
+		return nil, fmt.Errorf("unsupported sandbox level: %q", requestedLevel)
+	}
+	effective := maxLevel(policyLevel, requestedLevel)
+	if effective != policyLevel {
+		// Recorded, not a violation: the caller asked for MORE isolation than
+		// the policy requires, which is permitted.
+		m.logger.Debug("sandbox isolation raised above policy",
+			"tool_type", toolType, "policy_level", policyLevel,
+			"requested_level", requestedLevel, "effective_level", effective)
+	}
+
+	return m.Execute(ctx, command, effective, limits)
 }
 
 // execL0 executes the command directly on the host.
@@ -290,7 +357,7 @@ func (m *SandboxManager) execL2(ctx context.Context, command string, limits Reso
 	// (network egress), not the whole sandbox: fall back to --network=none and
 	// record a warning. This is NOT a sandboxSetupErr — execution setup for a
 	// requested feature failed, so we fail closed on the feature.
-	netMode := m.config.NetworkMode
+	netMode := m.configSnapshot().NetworkMode
 	egressProxyAddr := ""
 	if len(limits.Network.AllowedHosts) > 0 {
 		if err := ValidateAllowedHosts(limits.Network.AllowedHosts); err != nil {
@@ -360,7 +427,7 @@ func (m *SandboxManager) execL2(ctx context.Context, command string, limits Reso
 	}
 
 	// Use configurable image, fallback to alpine
-	image := m.config.Image
+	image := m.configSnapshot().Image
 	if image == "" {
 		image = "alpine:latest"
 	}

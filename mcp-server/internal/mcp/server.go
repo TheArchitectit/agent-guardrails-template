@@ -503,6 +503,11 @@ func (s *MCPServer) dispatchToolCall(ctx context.Context, name string, args map[
 		return s.handleCheckCompliance(ctx, args)
 	case "guardrail_collect_evidence":
 		return s.handleCollectEvidence(ctx, args)
+	// Runtime sandbox isolation (Spec 03 gap-spec)
+	case "guardrail_sandbox_execute":
+		return s.handleSandboxExecute(ctx, args)
+	case "guardrail_sandbox_config":
+		return s.handleSandboxConfig(ctx, args)
 	// Webhook notification tools
 	case "configure_webhook":
 		return s.handleConfigureWebhook(ctx, args)

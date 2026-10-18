@@ -388,7 +388,11 @@ func MCPToolAction(name string) (ActionKind, bool) {
 		return k, true
 	}
 	// Spec 04 multi-agent tools, same reasoning.
-	k, ok := multiAgentToolActions[name]
+	if k, ok := multiAgentToolActions[name]; ok {
+		return k, true
+	}
+	// Spec 03 sandbox tools, same reasoning.
+	k, ok := sandboxToolActions[name]
 	return k, ok
 }
 
@@ -439,7 +443,13 @@ func SafeResourceID(args map[string]interface{}) string {
 
 // IsSensitiveMCPTool reports whether a tool is a security-sensitive mutation.
 func IsSensitiveMCPTool(name string) bool {
-	return SensitiveMCPTools[name]
+	if SensitiveMCPTools[name] {
+		return true
+	}
+	// Spec 03 sandbox verbs: one executes arbitrary commands, the other
+	// redefines the isolation those commands run under. Both take the
+	// audit-before-effect path rather than living in the audited table.
+	return sandboxSensitiveTools[name]
 }
 
 // ---------------------------------------------------------------------------

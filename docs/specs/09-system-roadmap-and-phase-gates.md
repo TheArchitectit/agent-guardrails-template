@@ -36,7 +36,7 @@ The source-verified platform baseline is maintained in
 summarizes the material starting conditions; re-verify them before starting
 each phase because implementation may change.
 
-- The MCP server has 48 core tools and up to 22 conditionally registered
+- The MCP server has 50 core tools and up to 22 conditionally registered
   tools. Published schemas and handlers disagree on required names and types
   for multiple tools; see `docs/mcp-server/tools-reference.md`.
 - Content classification and policy tools are exposed. Other subsystems
