@@ -3,9 +3,11 @@ package mcp
 import (
 	"context"
 	"encoding/json"
+	"strings"
 
 	"github.com/mark3labs/mcp-go/mcp"
 
+	"github.com/thearchitectit/guardrail-mcp/internal/evidence"
 	"github.com/thearchitectit/guardrail-mcp/internal/guardrails"
 )
 
@@ -237,7 +239,39 @@ func (s *MCPServer) handleDetectInjection(ctx context.Context, args map[string]a
 	ctx = guardrails.WithAuditAttribution(ctx, "guardrail_detect_injection", provenance)
 
 	result := s.guardrailsEngine.DetectInjection(ctx, text, source)
-	return jsonToolResult(result, !result.Safe)
+
+	// Spec 15 gr-xp-02 / gr-oap-03: attach detached signed evidence so a peer
+	// product can verify who produced this verdict, under which policy, over
+	// which subject — without the artifact ever being an authorization grant.
+	// The outcome is the real verdict; nothing here invents one.
+	outcome := evidence.OutcomePass
+	reasonCode := "clean"
+	if !result.Safe {
+		outcome = evidence.OutcomeBlock
+		reasonCode = "injection_detected"
+	}
+	if result.Reason != "" {
+		// The producer's own reason is carried verbatim; the code stays the
+		// stable machine-readable token.
+		reasonCode = reasonCodeOf(result)
+	}
+	attached, err := s.buildEvidence("guardrail_detect_injection", text, outcome, reasonCode, result.Reason)
+	if err != nil {
+		// A configured signer that cannot sign is a hard failure: returning the
+		// unsigned verdict here would present an artifact as having provenance
+		// it does not.
+		return errorResult(`{"safe":false,"error":"evidence signing failed"}`), nil
+	}
+
+	block := any(unsignedEvidence())
+	if attached != nil {
+		block = attached
+	}
+	merged, err := withEvidence(result, block)
+	if err != nil {
+		return errorResult(`{"safe":false,"error":"evidence encoding failed"}`), nil
+	}
+	return jsonToolResult(merged, !result.Safe)
 }
 
 // errorJSON builds a well-formed error result for a message that carries
@@ -331,13 +365,46 @@ func (s *MCPServer) handleScanTextBatch(ctx context.Context, args map[string]any
 	}
 
 	anyUnsafe := false
+	unsafeIDs := make([]string, 0, len(batch.Results))
 	for _, result := range batch.Results {
 		if !result.Safe {
 			anyUnsafe = true
-			break
+			unsafeIDs = append(unsafeIDs, result.ID)
 		}
 	}
-	return jsonToolResult(batch, anyUnsafe)
+
+	// Spec 15 gr-xp-02 / gr-oap-03: the batch verdict is peer-consumable
+	// evidence too. The subject is the ordered id set rather than the texts, so
+	// the artifact binds to WHICH items were scanned without carrying their
+	// content, and the outcome is the real aggregate verdict.
+	outcome := evidence.OutcomePass
+	reasonCode := "clean"
+	if anyUnsafe {
+		outcome = evidence.OutcomeBlock
+		reasonCode = "injection_detected"
+	}
+	subject := strings.Join(func() []string {
+		ids := make([]string, 0, len(items))
+		for _, item := range items {
+			ids = append(ids, item.ID)
+		}
+		return ids
+	}(), "\x00")
+
+	attached, err := s.buildEvidence("guardrail_scan_text_batch", subject, outcome, reasonCode,
+		"batch of "+itoa(len(items))+" items, "+itoa(len(unsafeIDs))+" unsafe")
+	if err != nil {
+		return errorResult(`{"results":[],"error":"evidence signing failed"}`), nil
+	}
+	block := any(unsignedEvidence())
+	if attached != nil {
+		block = attached
+	}
+	merged, err := withEvidence(batch, block)
+	if err != nil {
+		return errorResult(`{"results":[],"error":"evidence encoding failed"}`), nil
+	}
+	return jsonToolResult(merged, anyUnsafe)
 }
 
 // itoa formats a small index without pulling strconv into every caller.

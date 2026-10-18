@@ -68,6 +68,11 @@ func (c *Config) secretSources() []secretSource {
 		// environment injection for them.
 		{name: "FALLBACK_API_KEY", value: &c.FallbackAPIKey, file: &c.FallbackAPIKeyFile, optional: true},
 		{name: "OPENAI_API_KEY", value: &c.OpenAIAPIKey, file: &c.OpenAIAPIKeyFile, optional: true},
+		// The outbound evidence instance key (Spec 15 gr-xp-02) is a private
+		// identity, not a shared secret, and it accepts a read-only secret file.
+		// Optional at this boundary; the nonlocal requirement is enforced by
+		// ValidateEvidenceIdentity, which can say why a key is needed.
+		{name: "EVIDENCE_PRIVATE_KEY", value: &c.EvidencePrivateKey, file: &c.EvidencePrivateKeyFile, optional: true},
 	}
 }
 

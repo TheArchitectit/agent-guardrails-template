@@ -151,6 +151,21 @@ type Config struct {
 	OpenAIAPIKey       string `env:"OPENAI_API_KEY"`
 	OpenAIAPIKeyFile   string `env:"OPENAI_API_KEY_FILE"`
 
+	// Outbound evidence identity (Spec 15 gr-xp-02). Every Guardrails-produced
+	// artifact is signed with an Ed25519 instance key over canonical envelope
+	// bytes, and the key ID is a domain-separated digest of the PUBLIC half.
+	// The key is deployment-supplied: a process that minted a fresh key at
+	// startup would present a new identity on every restart, so no peer could
+	// hold a trust record for it and every signature would be unverifiable in
+	// practice. Required outside `local` (an unsigned artifact is a claim with
+	// no provenance), optional there and reported when absent.
+	EvidencePrivateKey     string `env:"EVIDENCE_PRIVATE_KEY"`
+	EvidencePrivateKeyFile string `env:"EVIDENCE_PRIVATE_KEY_FILE"`
+	// EvidenceProducerID and EvidenceAudience are not secrets; they address the
+	// artifact to a peer and are bound into the signed envelope.
+	EvidenceProducerID string `env:"EVIDENCE_PRODUCER_ID"`
+	EvidenceAudience   string `env:"EVIDENCE_AUDIENCE"`
+
 	// JWT Configuration. The signing secret may come from the environment or
 	// from a read-only secret file (JWT_SECRET_FILE).
 	JWTSecret        string        `env:"JWT_SECRET"`
@@ -288,6 +303,15 @@ func (c *Config) Validate() error {
 	// out-of-band verifier key — supplied inline or as a read-only secret file
 	// — so verifier digests are keyed one-way values.
 	if err := c.validateCredentialRegistry(); err != nil {
+		return err
+	}
+
+	// Validate the outbound evidence identity (Spec 15 gr-xp-02): a configured
+	// instance key must parse as Ed25519 and carry a producer ID and audience;
+	// a nonlocal deployment must have one at all. An artifact that silently
+	// ships unsigned is a claim with no provenance, so this fails startup
+	// rather than degrading quietly.
+	if err := c.ValidateEvidenceIdentity(); err != nil {
 		return err
 	}
 
@@ -728,5 +752,10 @@ func (c *Config) Masked() *Config {
 	masked.FallbackAPIKeyFile = "***"
 	masked.OpenAIAPIKey = "***"
 	masked.OpenAIAPIKeyFile = "***"
+	// The evidence signing key is the instance's private identity: masked like
+	// every other secret. Producer ID and audience are public addressing data
+	// and are not masked.
+	masked.EvidencePrivateKey = "***"
+	masked.EvidencePrivateKeyFile = "***"
 	return &masked
 }

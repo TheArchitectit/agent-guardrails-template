@@ -21,6 +21,7 @@ import (
 	"github.com/thearchitectit/guardrail-mcp/internal/cache"
 	"github.com/thearchitectit/guardrail-mcp/internal/config"
 	"github.com/thearchitectit/guardrail-mcp/internal/database"
+	"github.com/thearchitectit/guardrail-mcp/internal/evidence"
 	"github.com/thearchitectit/guardrail-mcp/internal/guardrails"
 	"github.com/thearchitectit/guardrail-mcp/internal/metrics"
 	"github.com/thearchitectit/guardrail-mcp/internal/models"
@@ -67,6 +68,16 @@ type MCPServer struct {
 	// process owner denies the next request here too. When nil, Serve loads its
 	// own registry (the standalone path).
 	sharedRegistry *auth.Registry
+
+	// evidenceSigner is the deployment's Ed25519 instance identity (Spec 15
+	// gr-xp-02). When set, verdict-bearing tool results carry a detached
+	// signature over a canonical envelope so a peer product can verify who
+	// produced the evidence and under which policy. When nil, results are
+	// returned unsigned and the tool result says so explicitly rather than
+	// implying provenance it does not have.
+	evidenceSigner *evidence.Instance
+	// evidenceAudience is the peer this instance addresses artifacts to.
+	evidenceAudience string
 }
 
 // SetCredentialRegistry installs the process-wide credential registry so the
@@ -75,6 +86,15 @@ type MCPServer struct {
 // RevocationPropagationBound.
 func (s *MCPServer) SetCredentialRegistry(registry *auth.Registry) {
 	s.sharedRegistry = registry
+}
+
+// SetEvidenceSigner installs the deployment's Ed25519 instance identity
+// (Spec 15 gr-xp-02) so verdict-bearing tool results carry detached evidence
+// signatures. A nil signer leaves results unsigned; the result block then says
+// so explicitly rather than implying provenance it does not have.
+func (s *MCPServer) SetEvidenceSigner(signer *evidence.Instance, audience string) {
+	s.evidenceSigner = signer
+	s.evidenceAudience = audience
 }
 
 // SetWebhookStore sets the webhook store for notification tools.

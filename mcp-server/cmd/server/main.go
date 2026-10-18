@@ -20,6 +20,7 @@ import (
 	"github.com/thearchitectit/guardrail-mcp/internal/cache"
 	"github.com/thearchitectit/guardrail-mcp/internal/config"
 	"github.com/thearchitectit/guardrail-mcp/internal/database"
+	"github.com/thearchitectit/guardrail-mcp/internal/evidence"
 	"github.com/thearchitectit/guardrail-mcp/internal/guardrails"
 	mcpServer "github.com/thearchitectit/guardrail-mcp/internal/mcp"
 	"github.com/thearchitectit/guardrail-mcp/internal/notifications"
@@ -199,6 +200,31 @@ func main() {
 		slog.Info("Guardrails engine initialized", "backend", "openai-moderation")
 	}
 	mcpSrv.SetGuardrailsEngine(engine)
+
+	// Outbound evidence identity (Spec 15 gr-xp-02). The instance key is
+	// deployment-supplied, because a key minted at startup would present a new
+	// identity on every restart and no peer could hold a trust record for it.
+	// Config.Validate already refused an unusable or (outside `local`)
+	// missing key, so a failure here can only be a parse that Validate did not
+	// see — refuse to start rather than serve artifacts with no provenance.
+	if cfg.EvidencePrivateKey != "" {
+		key, err := config.ParseEvidenceKey(cfg.EvidencePrivateKey)
+		if err != nil {
+			slog.Error("evidence signing key is unusable; refusing to start", "error", err)
+			os.Exit(1)
+		}
+		signer, err := evidence.NewInstance(cfg.EvidenceProducerID, key)
+		if err != nil {
+			slog.Error("evidence signing identity is unusable; refusing to start", "error", err)
+			os.Exit(1)
+		}
+		mcpSrv.SetEvidenceSigner(signer, cfg.EvidenceAudience)
+		slog.Info("Outbound evidence signing enabled (Spec 15 gr-xp-02)",
+			"producer_id", signer.ProducerID(), "audience", cfg.EvidenceAudience, "key_id", signer.KeyID())
+	} else {
+		slog.Warn("EVIDENCE_PRIVATE_KEY is not set; MCP verdicts carry no signed provenance (permitted for the local profile only)")
+	}
+
 	if ollamaURL == "" && cfg.OpenAIAPIKey == "" {
 		slog.Info("No semantic content-filter backend configured (OLLAMA_URL and OPENAI_API_KEY unset); " +
 			"guardrail_classify_content and guardrail_check_policy will fail closed. " +
