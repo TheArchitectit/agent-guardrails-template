@@ -279,6 +279,13 @@ var mcpToolActions = map[string]ActionKind{
 	// tool is denied by ClassifyMCPTool before any handler runs.
 	"guardrail_detect_injection":   ActionRead,
 	"guardrail_scan_text_batch":    ActionRead,
+	// Spec 06 compliance tools are read-class: they observe live state and
+	// return an assessment. They write nothing (an explicit export_path is the
+	// only side effect, and the caller asks for it), so they belong with the
+	// other analysis tools rather than the validate or mutate sets.
+	"guardrail_generate_compliance_report": ActionRead,
+	"guardrail_check_compliance":           ActionRead,
+	"guardrail_collect_evidence":           ActionRead,
 	"list_webhooks":                ActionRead,
 	"get_webhook_deliveries":       ActionRead,
 	"get_budget_status":            ActionRead,

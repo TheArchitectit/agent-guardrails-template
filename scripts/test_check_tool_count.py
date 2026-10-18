@@ -64,6 +64,17 @@ func (s *MCPServer) multiAgentTools() []mcp.Tool {
 	return []mcp.Tool{}
 }
 '''
+# Spec 06 compliance tools are registered unconditionally too, so they are core
+# and the fixture must contain the registry for the same reason as the two
+# above. This is the FOURTH occurrence of the class: without the real
+# CORE_REGISTRIES entry the gate printed core=45 and exited 0 while toolList()
+# advertised 48. The fixture is empty of declarations on purpose — it proves the
+# gate tolerates a registry declaring nothing while still requiring it to exist.
+CORE_COMPLIANCE = '''package mcp
+func (s *MCPServer) complianceTools() []mcp.Tool {
+	return []mcp.Tool{}
+}
+'''
 VISION = '''package mcp
 func (vt *VisionToolSet) visionToolList() []mcp.Tool {
 	return []mcp.Tool{{Name: "vision_one"}, {Name: "vision_two"}}
@@ -132,6 +143,7 @@ def _build(root: Path) -> None:
     _write(root, f"{mcp}/tools_guardrails.go", CORE_GUARD)
     _write(root, f"{mcp}/tools_indirect_injection.go", CORE_INDIRECT)
     _write(root, f"{mcp}/tools_multi_agent.go", CORE_MULTI)
+    _write(root, f"{mcp}/tools_compliance.go", CORE_COMPLIANCE)
     _write(root, f"{mcp}/vision_tools.go", VISION)
     _write(root, f"{mcp}/tools_notifications.go", WEBHOOK)
     _write(root, f"{mcp}/tools_budget.go", BUDGET)

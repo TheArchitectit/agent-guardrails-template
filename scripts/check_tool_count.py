@@ -68,6 +68,17 @@ CORE_REGISTRIES = (
     # toolList() advertised 45 — the identical vacuous-scope failure as the
     # prose rewrite, recurring through a new file rather than a doc edit.
     "tools_multi_agent.go",
+    # Spec 06 compliance tools. Registered unconditionally by toolList() (a
+    # compliance report whose probes are missing reports every control as
+    # unmeasured, which is a truthful answer — a tool that vanishes cannot say
+    # "not configured" at all). This entry is the FOURTH occurrence of the same
+    # class: without it the gate printed core=45 and exited 0 while toolList()
+    # advertised 48. The pattern is now unmistakable — this gate recurs its own
+    # failure mode every time a new registry file appears, because its scope is
+    # a list a human must remember to extend. Verified directly against a
+    # temporary test counting toolList() rather than by reading the gate's
+    # output.
+    "tools_compliance.go",
 )
 
 # Conditional groups, keyed by the label used in the docs.

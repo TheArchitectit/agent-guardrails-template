@@ -22,6 +22,12 @@ func (s *MCPServer) toolList() []mcp.Tool {
 	// capability", and the absence is invisible to tools/list diffs.
 	tools = append(tools, s.multiAgentTools()...)
 
+	// Regulatory compliance mapping (Spec 06 gap-spec). Registered
+	// unconditionally: a compliance report whose probes are missing reports
+	// every control as unmeasured, which is a truthful answer, whereas a tool
+	// that vanishes cannot say "not configured" at all.
+	tools = append(tools, s.complianceTools()...)
+
 	if s.visionTools != nil {
 		tools = append(tools, s.visionTools.visionToolList()...)
 	}

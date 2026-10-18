@@ -118,6 +118,19 @@ func (l *Logger) SetStore(store AuditStoreInterface) {
 	l.auditStore = store
 }
 
+// HasDurableStore reports whether audit events are persisted to a store.
+//
+// It exists so a caller can state coverage honestly: when no store is
+// configured every event goes to slog only, and the code below already names
+// that path as "not durable". A compliance probe that assumed durability from
+// the logger's existence alone would be describing a different deployment.
+func (l *Logger) HasDurableStore() bool {
+	if l == nil {
+		return false
+	}
+	return l.auditStore != nil
+}
+
 // Stop gracefully shuts down the audit logger
 func (l *Logger) Stop() {
 	close(l.done)

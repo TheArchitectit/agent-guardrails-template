@@ -496,6 +496,13 @@ func (s *MCPServer) dispatchToolCall(ctx context.Context, name string, args map[
 		return s.handleCheckAgentConstraints(ctx, args)
 	case "guardrail_resolve_conflicts":
 		return s.handleResolveConflicts(ctx, args)
+	// Regulatory compliance mapping (Spec 06 gap-spec)
+	case "guardrail_generate_compliance_report":
+		return s.handleGenerateComplianceReport(ctx, args)
+	case "guardrail_check_compliance":
+		return s.handleCheckCompliance(ctx, args)
+	case "guardrail_collect_evidence":
+		return s.handleCollectEvidence(ctx, args)
 	// Webhook notification tools
 	case "configure_webhook":
 		return s.handleConfigureWebhook(ctx, args)
