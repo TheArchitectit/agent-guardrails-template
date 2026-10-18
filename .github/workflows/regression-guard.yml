@@ -83,6 +83,19 @@ jobs:
           python scripts/check_tool_count.py --repo .
           python scripts/test_check_tool_count.py
 
+      - name: Policy-pack lock record (Spec 07 R07-4.1 / R07-5.8)
+        run: |
+          # Spec 07 requires CI to verify that the checked-in lock record
+          # matches the declared pack revisions and content digests. The
+          # verifier that existed for this (`scripts/validate-policy-packs.mjs`)
+          # was invoked by no workflow at all, and passed with exit 0 on a tree
+          # with zero packs because its expected-lock loop iterated over
+          # nothing. This one fails on an empty discovery, on an unreadable or
+          # unrecognised lock record, and on any byte/version drift, and it
+          # requires every rule's `tool` to be a tool the server registers.
+          python scripts/check_policy_pack_lock.py --repo .
+          python scripts/test_check_policy_pack_lock.py
+
       - name: Run Regression Check
         id: regression_check
         run: |

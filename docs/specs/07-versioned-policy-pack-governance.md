@@ -1,7 +1,9 @@
 # OpenSpec: Versioned Policy-Pack Governance
 
-**Status:** Proposed — no policy-pack loader, resolver, or trust verifier is
-implemented in this repository.
+**Status:** PARTIAL — the lock-record half (R07-4.1 identity/determinism, R07-4.3.2
+schema-as-data, R07-5.8 CI verification) is implemented and **enforced in CI** as of
+2026-10-18. No runtime policy-pack loader or consumer is implemented: no engine
+resolves a pack set at startup, so R07-4.4 stays absent.
 **Priority:** Important; prerequisite to distributing policy changes safely.
 **Related:** `docs/specs/guardrail-gaps-2026/02-semantic-content-filtering.md`,
 `04-multi-agent-safety-policies.md`, and `06-regulatory-compliance-mapping.md`.
@@ -172,5 +174,70 @@ criterion currently passes.
 | 04 Multi-Agent Safety Policies | Supplies validator-chain and conflict policies |
 | 06 Regulatory Compliance Mapping | Supplies mappings only; pack presence is not compliance evidence |
 
-**Implementation status:** proposal only. No resolver, lock format, pack
-signature verification, or production consumer is implemented in this repo.
+**Implementation status (original proposal):** no resolver, lock format, pack
+signature verification, or production consumer existed when this spec was written.
+Superseded in part by the dated section below.
+
+## Implementation status (2026-10-18) — lock record enforced; runtime unchanged
+
+**What landed.** `scripts/check_policy_pack_lock.py` is the single decision for in-repo
+policy-pack resolution and lock verification, wired into `regression-guard.yml` as
+"Policy-pack lock record (Spec 07 R07-4.1 / R07-5.8)". It replaces
+`scripts/validate-policy-packs.mjs`, which **no workflow ever invoked** (the repository's own
+audit recorded that) and which **passed vacuously** — with zero packs and `{}` in `LOCK.json`
+it printed `lock ok` and exited 0, because its expected-lock loop iterated over an empty set.
+That is the same failure class as the F001 tool-count gate and the R19-11 docs gate in this
+repository. The `.mjs` file is retained as a delegating shim so the two cannot diverge.
+
+**Rows now enforced:**
+
+- **R07-4.1.2 / R07-4.1.5 / R07-4.1.3** — resolution is deterministic (the effective policy
+digest is recomputed and re-derived in the same run; `resolved_at` is metadata and is
+excluded from it), inspectable without executing policy text, and the lock record carries
+pack name, version, content digest, resolver version, overlay digest and resolution time.
+- **R07-4.3.2** — packs are parsed as inert data and schema-checked: unknown top-level or rule
+fields fail (an explicit `x-` annotation prefix is allowed), bad types fail, non-semver
+versions fail, a `pack` name that disagrees with its own path fails, duplicate rule ids fail.
+- **R07-4.2.4** — an empty rule set is valid only with `seed: true`.
+- **R07-5.8** — CI verifies the checked-in lock against the bytes on disk, in both
+directions (a changed pack with no re-lock fails; a lock entry with no pack fails), and a
+missing/unreadable/unrecognised lock record fails rather than skipping.
+- **Rule→tool references** — every rule's `tool` must be a tool the server actually
+registers; a rule naming a nonexistent tool can never fire.
+- **Non-vacuity** — zero discovered packs, or zero known tools, is a FAILURE.
+
+**Evidence.** `scripts/test_check_policy_pack_lock.py` **26/26**, including the two vacuity
+cases that the old verifier failed (zero packs; unrecognised legacy lock shape), byte-drift
+and version-drift without re-lock, extra/stale lock entries, malformed `resolved_at`, unknown
+critical field, bad semver, path/name mismatch, blocking rule without evidence, unknown tool,
+duplicate rule id, non-`stop` `on_unknown`, empty non-seed pack, determinism across two
+resolutions, and — separately — that a workflow actually invokes the gate. Live on the tree:
+`POLICY PACK LOCK: OK` (1 pack, 4 rules, `effective_digest sha256:980f2d48…`). Neighbours
+green: action pins 83, tool count 39/22/61, secret inventory 20/16, doc links 965/455, doc
+length 455/10 declared, `regression_check --all --pre-commit` exit 0.
+
+**Lock format change.** `policy-packs/LOCK.json` moved from the flat
+`{ path: { version, sha256 } }` map to the R07-4.1.3 shape (`resolver_version`,
+`effective_digest`, `packs.<path>.{pack, version, digest, resolver_version, overlay_digest,
+resolved_at}`). No other consumer of the old shape existed in the tree (grep-verified), so
+this is a deliberate one-time re-lock, not a silent break.
+
+**Still absent, and why this spec stays PARTIAL rather than CLOSED:**
+
+- **R07-4.1.4** — no inter-pack dependency graph or cycle detection: only one core pack
+ships and it declares no dependencies.
+- **R07-4.2.1–R07-4.2.3** — no precedence engine and no exception ledger; there is nothing
+for a domain pack or overlay to weaken yet.
+- **R07-4.3.4** — no signature verification and no trusted-key set.
+- **R07-4.3.5 / R07-4.3.3** — the lock records pinned-vs-verified state as `overlay_digest:
+none` and does not acquire remote packs; acquisition posture is moot until a remote source is
+chosen.
+- **R07-4.4.1–R07-4.4.4** — **no runtime consumer.** The engine does not load packs at
+startup, exposes no effective-digest diagnostic, and no enforcement decision is attributable
+to a pack rule. The verifier proves the *record* is honest; it does not make the running
+server obey the pack. `internal/mcp` still resolves policy from its own configured rule set.
+
+**Owner decisions still open (Sec. 7):** the authoritative core-pack source and release
+process, whether signature verification is required, overlay permissions and exception
+approvers, hot-reload vs restart-on-change, and whether the pack format is extended beyond
+the current declarative JSON.

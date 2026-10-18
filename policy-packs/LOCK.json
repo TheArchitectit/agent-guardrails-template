@@ -1,6 +1,14 @@
 {
-  "policy-packs/core/four-laws.pack.json": {
-    "version": "0.1.0",
-    "sha256": "54a0e0ae4da9c7e2161a16a0c54da8d3d6820bcbd3a4034f4b4fa1342a8103d5"
+  "resolver_version": "1",
+  "effective_digest": "sha256:980f2d482b331f9e7dd436747e2aad242b3ae625aa641aebe966fa517ee0c260",
+  "packs": {
+    "policy-packs/core/four-laws.pack.json": {
+      "pack": "core/four-laws",
+      "version": "0.1.0",
+      "digest": "sha256:54a0e0ae4da9c7e2161a16a0c54da8d3d6820bcbd3a4034f4b4fa1342a8103d5",
+      "resolver_version": "1",
+      "overlay_digest": "none",
+      "resolved_at": "2026-10-18T04:20:12Z"
+    }
   }
 }

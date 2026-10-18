@@ -230,8 +230,13 @@ client/server pair; label all others experimental or illustrative.
   section checks warn. Its Markdown link extractor has false positives.
 
 No active workflow builds/tests the `site/` app, tests `pi-extension`, runs
-`validate-policy-packs.mjs`, runs `scripts/test-guardrails-cli.sh`, validates
-examples across languages, or performs deployment smoke/rollback tests. The
+`scripts/test-guardrails-cli.sh`, validates examples across languages, or
+performs deployment smoke/rollback tests. (Policy-pack lock verification is no
+longer on this list: `scripts/check_policy_pack_lock.py` is wired into
+`regression-guard.yml` and enforces Spec 07 R07-4.1/R07-5.8 on every push and
+PR. The former `scripts/validate-policy-packs.mjs` was never invoked by any
+workflow and passed vacuously on an empty pack set; it is now a deprecated shim
+over the Python gate.) The
 GitLab/Jenkins files are copy templates, not active GitHub workflows; they
 contain stale assumptions such as root `requirements.txt` and Go 1.21 versus
 the server module's Go 1.25.5.
