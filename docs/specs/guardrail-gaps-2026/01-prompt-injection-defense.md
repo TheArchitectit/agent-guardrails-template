@@ -1,6 +1,6 @@
 # OpenSpec: Prompt Injection Defense
 
-> **Status: tools IMPLEMENTED 2026-10-18; detection is L1-only by default.**
+> **Status: tools IMPLEMENTED 2026-10-18, and callable since 2026-10-18; detection is L1-only by default.**
 > Both tools proposed by this spec now exist and are dispatched:
 > `guardrail_detect_injection` and `guardrail_scan_text_batch`
 > (`mcp-server/internal/mcp/tools_guardrails.go`, dispatched from
@@ -10,6 +10,18 @@
 > stays off by default, L3 remains a no-op classifier unless an Ollama
 > classifier is wired, and L4 is not implemented — see
 > [STATUS.md](STATUS.md) for the requirement-by-requirement position.
+>
+> **Authority-wiring defect found and fixed the same day.** Registering and
+> dispatching a tool is not the same as making it callable. Neither tool had an
+> entry in the MCP action table (`internal/auth/authz.go`), so
+> `ClassifyMCPTool` produced an unknown-action request and `Decide` denied every
+> call — even for a credential whose `mcp:read` scope is sufficient for the
+> sibling content tools. Both are now read-class (they analyse text and return a
+> verdict, with no side effect). The agreement between the advertised tool list
+> and the action table is pinned by `TestEveryRegisteredToolHasActionClass`, and
+> the call path by `TestInjectionToolsCallableByReadCredential` over the real
+> StreamableHTTP endpoint; the mutation case
+> `injection-tools-unclassified-in-action-table` kills.
 
 **Gap:** Critical — No native defense against prompt injection attacks
 **Priority:** 🔴 Critical (Phase 1)

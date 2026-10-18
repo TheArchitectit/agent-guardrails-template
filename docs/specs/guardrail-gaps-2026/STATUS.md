@@ -78,6 +78,7 @@ path.**
 | L4 LLM self-check | Not implemented (config struct exists, never run) |
 | Config keys | **Shape mismatch** — shipped config is flat (`l1_enabled`, `l2_enabled`), spec describes a nested `layers:` block. Unchanged by this pass |
 | Blocklist files | `config/blocklists/` does not exist; `BlocklistPaths` is honoured when set but empty by default |
+| Authorization (action table) | **Fixed 2026-10-18** — both tools were absent from `mcpToolActions`, so `Decide` denied every call as an unknown action; both are now `ActionRead`. Pinned by `TestEveryRegisteredToolHasActionClass` + `TestInjectionToolsCallableByReadCredential` (real StreamableHTTP call) + mutation case `injection-tools-unclassified-in-action-table` |
 | Audit trail | **SourceTool/ToolCallID now populated** — `WithAuditAttribution` carries the calling tool and the caller's provenance label onto the event; the text is recorded as a SHA-256 hash, never plaintext |
 
 The engine is now constructed **unconditionally** in `cmd/server/main.go`. It
