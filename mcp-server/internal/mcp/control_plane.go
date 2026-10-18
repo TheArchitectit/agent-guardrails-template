@@ -209,3 +209,36 @@ func (s *MCPServer) controlPlaneStatusSnapshot(ctx context.Context) controlPlane
 	st.PolicyDigest = bundle.PolicyDigest
 	return st
 }
+
+// ControlPlaneReadiness measures the composition for the readiness surface
+// (Spec 08 R08-4.2.4). It returns nil when no composition is claimed, so a
+// deployment that never opted in is not blocked by a feature it does not use.
+//
+// A configured-but-unresolvable manifest returns not_ready rather than nil:
+// the operator declared a composition, so "we could not measure it" is a
+// readiness failure, not an absence.
+func (s *MCPServer) ControlPlaneReadiness(ctx context.Context) *controlplane.Readiness {
+	if s == nil {
+		return nil
+	}
+	if s.controlPlaneErr != nil {
+		return &controlplane.Readiness{
+			Status: controlplane.ReadinessNotReady,
+			Ready:  false,
+			Unmet:  []string{"control-plane manifest failed to resolve: " + s.controlPlaneErr.Error()},
+		}
+	}
+	if s.controlPlane == nil {
+		return nil
+	}
+	bundle, err := s.evaluateControlPlane(ctx)
+	if err != nil {
+		return &controlplane.Readiness{
+			Status: controlplane.ReadinessNotReady,
+			Ready:  false,
+			Unmet:  []string{"control-plane evaluation failed: " + err.Error()},
+		}
+	}
+	rd := bundle.Readiness()
+	return &rd
+}

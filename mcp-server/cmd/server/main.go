@@ -299,6 +299,36 @@ func main() {
 		slog.Info("CONTROL_PLANE_MANIFEST is not set; no composition is evaluated (guardrail://control-plane reports not_configured)")
 	}
 
+	// Spec 08 R08-4.2.4: readiness must report per-mandatory-component state and
+	// return not-ready when a mandatory component is unavailable. Installed only
+	// when a composition is declared, so a deployment that never opted in is not
+	// blocked by a requirement it did not take on — while a declared
+	// composition, including one that failed to resolve, gates readiness.
+	if cfg.ControlPlaneManifest != "" {
+		webServer.SetControlPlaneProbe(func() *web.ControlPlaneReadiness {
+			rd := mcpSrv.ControlPlaneReadiness(context.Background())
+			if rd == nil {
+				return nil
+			}
+			out := &web.ControlPlaneReadiness{
+				Status: string(rd.Status),
+				Ready:  rd.Ready,
+				Unmet:  rd.Unmet,
+			}
+			out.Mandatory = make([]web.ControlPlaneComponent, 0, len(rd.Mandatory))
+			for _, m := range rd.Mandatory {
+				out.Mandatory = append(out.Mandatory, web.ControlPlaneComponent{
+					ID:        m.ID,
+					State:     string(m.State),
+					Available: m.Available,
+					Exercised: m.Exercised,
+					Reason:    m.Reason,
+				})
+			}
+			return out
+		})
+	}
+
 	// Outbound evidence identity (Spec 15 gr-xp-02). The instance key is
 	// deployment-supplied, because a key minted at startup would present a new
 	// identity on every restart and no peer could hold a trust record for it.

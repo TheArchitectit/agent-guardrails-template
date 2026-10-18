@@ -714,6 +714,18 @@ func (s *MCPServer) authorizeToolCallDisabled(ctx context.Context, name string, 
 		testRegex: "^TestInstalledIsNotReachableIsNotExercised$",
 	},
 	{
+		// Spec 08 R08-4.2.4: readiness must not treat presence as availability.
+		// The mutation counts an `installed`/`initialized` mandatory component
+		// as available, so an instance whose control is unreachable reports
+		// ready — the exact defect the requirement exists to prevent.
+		name:      "controlplane-readiness-presence-as-availability",
+		file:      "internal/controlplane/readiness.go",
+		old:       "\t\t\tmr.Available = false\n\t\t\tmr.Exercised = false\n\t\t\tmr.Reason = \"not_reachable_\" + string(cs.State)",
+		new:       "\t\t\tmr.Available = true // mutation: presence counted as availability",
+		pkg:       "./internal/controlplane",
+		testRegex: "^TestReadinessMandatoryInstalledIsNotAvailable$",
+	},
+	{
 		// Spec 08 R08-4.3.3: evidence must not carry secret values. The
 		// mutation removes redaction entirely, leaving only the length bound.
 		name:      "controlplane-evidence-redaction-disabled",

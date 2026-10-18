@@ -58,6 +58,33 @@ type ReadinessReport struct {
 	Version   string         `json:"version,omitempty"`
 	Timestamp time.Time      `json:"timestamp"`
 	Checks    []CheckState   `json:"checks"`
+	// ControlPlane is the Spec 08 R08-4.2.4 contribution: per-mandatory-component
+	// state from the live process. It is a separate field rather than another
+	// entry in Checks because Spec 18 pins the ordered check list, and a spec-08
+	// requirement must not silently rewrite a spec-18 contract. It still gates
+	// Ready: an unavailable mandatory component makes the instance not-ready.
+	ControlPlane *ControlPlaneReadiness `json:"control_plane,omitempty"`
+}
+
+// ControlPlaneComponent is one mandatory component's readiness contribution.
+type ControlPlaneComponent struct {
+	ID        string `json:"id"`
+	State     string `json:"state"`
+	Available bool   `json:"available"`
+	Exercised bool   `json:"exercised"`
+	Reason    string `json:"reason"`
+}
+
+// ControlPlaneReadiness is the control-plane decision as readiness needs it.
+//
+// It is a plain struct rather than the controlplane package's type so this
+// package keeps its dependency-free property (the ordered decision can be
+// exercised without a live database, cache or composition).
+type ControlPlaneReadiness struct {
+	Status    string                  `json:"status"`
+	Ready     bool                    `json:"ready"`
+	Mandatory []ControlPlaneComponent `json:"mandatory"`
+	Unmet     []string                `json:"unmet,omitempty"`
 }
 
 // PolicyState reports the policy engine state distinctly (Spec 18 Sec. 6 / R18-11):
@@ -96,6 +123,18 @@ type ReadinessDeps struct {
 	// PolicyRequired is true when the selected profile is an enforcement
 	// profile, where a disabled policy engine is non-ready (Spec 18 Sec. 5.3).
 	PolicyRequired bool
+
+	// ControlPlane is the measured per-mandatory-component state (Spec 08
+	// R08-4.2.4). Nil means no composition is claimed, which is not a failure
+	// and not a green signal: readiness then reports nothing about it and
+	// does not block on it.
+	ControlPlane func() *ControlPlaneReadiness
+	// ControlPlaneRequired is true when the selected profile treats the
+	// composition as part of its readiness contract. When set, an absent
+	// composition is NOT_READY rather than quietly ignored: an operator who
+	// declared a composition must not get a ready instance that never
+	// measured it.
+	ControlPlaneRequired bool
 
 	// Clock is injectable for deterministic tests; defaults to time.Now.
 	Clock func() time.Time
@@ -181,7 +220,38 @@ func (e *ReadinessEvaluator) Evaluate(lifecycle LifecycleState) ReadinessReport 
 	rep.Checks = append(rep.Checks, policyCheck(e.deps, now))
 
 	rep.Ready, rep.Status = overall(rep.Checks, lifecycle)
+
+	// Spec 08 R08-4.2.4: per-mandatory-component readiness. This is reported
+	// alongside the ordered checks and gates the same boolean, because an
+	// orchestrator that routes on `ready` must not be told a mandatory control
+	// is fine while it is unavailable.
+	rep.ControlPlane = e.controlPlaneReadiness()
+	if rep.ControlPlane != nil && !rep.ControlPlane.Ready && rep.Ready {
+		rep.Ready = false
+		rep.Status = "not ready"
+	}
 	return rep
+}
+
+// controlPlaneReadiness measures the composition, if one is claimed.
+func (e *ReadinessEvaluator) controlPlaneReadiness() *ControlPlaneReadiness {
+	if e.deps.ControlPlane == nil {
+		if !e.deps.ControlPlaneRequired {
+			return nil
+		}
+		// A profile that requires a composition and cannot measure one is
+		// not-ready, never silently exempt.
+		return &ControlPlaneReadiness{
+			Status: "not_configured",
+			Ready:  false,
+			Unmet:  []string{"control-plane composition is required by this profile but none is configured"},
+		}
+	}
+	cp := e.deps.ControlPlane()
+	if cp == nil {
+		return nil
+	}
+	return cp
 }
 
 func lifecycleResult(s LifecycleState) CheckResult {

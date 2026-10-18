@@ -209,3 +209,79 @@ func TestHealthReadyHandlerStatusCodes(t *testing.T) {
 		t.Fatalf("READY must return 200, got %d", rec.Code)
 	}
 }
+
+// Spec 08 R08-4.2.4: an unavailable mandatory control-plane component makes
+// the instance not-ready, through the same boolean an orchestrator routes on.
+func TestReadinessBlocksOnUnavailableMandatoryComponent(t *testing.T) {
+	deps := readyDeps()
+	deps.ControlPlane = func() *ControlPlaneReadiness {
+		return &ControlPlaneReadiness{
+			Status: "not_ready",
+			Ready:  false,
+			Mandatory: []ControlPlaneComponent{
+				{ID: "injection-detector", State: "installed", Available: false, Reason: "not_reachable_installed"},
+			},
+			Unmet: []string{"mandatory component injection-detector is installed"},
+		}
+	}
+	rep := NewReadinessEvaluator("v", deps).Evaluate(LifecycleReady)
+	if rep.Ready {
+		t.Fatalf("an unavailable mandatory component must make the instance not-ready: %+v", rep)
+	}
+	if rep.Status == "ready" || rep.Status == "degraded" {
+		t.Fatalf("expected a non-ready status, got %q", rep.Status)
+	}
+	if rep.ControlPlane == nil || len(rep.ControlPlane.Mandatory) != 1 {
+		t.Fatalf("readiness must report per-mandatory-component state: %+v", rep.ControlPlane)
+	}
+	if rep.ControlPlane.Mandatory[0].Available {
+		t.Fatal("installed must not be reported available")
+	}
+}
+
+// A reachable-but-unexercised composition is degraded: it must serve, and it
+// must not claim to be fully proven.
+func TestReadinessReportsDegradedComposition(t *testing.T) {
+	deps := readyDeps()
+	deps.ControlPlane = func() *ControlPlaneReadiness {
+		return &ControlPlaneReadiness{
+			Status: "degraded", Ready: true,
+			Mandatory: []ControlPlaneComponent{
+				{ID: "injection-detector", State: "reachable", Available: true, Reason: "reachable_not_exercised"},
+			},
+		}
+	}
+	rep := NewReadinessEvaluator("v", deps).Evaluate(LifecycleReady)
+	if !rep.Ready {
+		t.Fatalf("degraded composition must still serve: %+v", rep)
+	}
+	if rep.ControlPlane == nil || rep.ControlPlane.Status != "degraded" {
+		t.Fatalf("expected the degraded composition to be reported: %+v", rep.ControlPlane)
+	}
+}
+
+// A profile that requires a composition and has none is not-ready, not
+// silently exempt.
+func TestReadinessRequiredCompositionAbsentIsNotReady(t *testing.T) {
+	deps := readyDeps()
+	deps.ControlPlaneRequired = true
+	rep := NewReadinessEvaluator("v", deps).Evaluate(LifecycleReady)
+	if rep.Ready {
+		t.Fatalf("a required-but-absent composition must be not-ready: %+v", rep)
+	}
+	if rep.ControlPlane == nil || rep.ControlPlane.Status != "not_configured" {
+		t.Fatalf("expected not_configured with a reason: %+v", rep.ControlPlane)
+	}
+}
+
+// No composition declared and none required: the ordered Spec 18 decision is
+// unchanged, and the field is absent rather than reporting a green status.
+func TestReadinessWithoutCompositionIsUnchanged(t *testing.T) {
+	rep := NewReadinessEvaluator("v", readyDeps()).Evaluate(LifecycleReady)
+	if !rep.Ready || rep.Status != "ready" {
+		t.Fatalf("expected ready, got %+v", rep)
+	}
+	if rep.ControlPlane != nil {
+		t.Fatalf("no composition was declared; readiness must not invent one: %+v", rep.ControlPlane)
+	}
+}

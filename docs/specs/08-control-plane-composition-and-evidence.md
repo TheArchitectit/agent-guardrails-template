@@ -1,7 +1,10 @@
 # OpenSpec: Control-Plane Composition and Evidence
 
-**Status:** Proposed — current repositories contain components and an
-architecture direction, but no verified end-to-end control-plane contract.
+**Status:** PARTIAL — see Sec. 9 for exactly what is implemented, reachable and
+measured, and what remains. The composition core (manifest resolution,
+integration-state measurement, evidence bundle, derived verdict, replay
+comparison, readiness) exists and is reachable; staged promotion/rollback,
+evidence persistence and trust-label propagation do not.
 **Priority:** Important; begin after the capability specs identify stable
 interfaces and acceptance tests.
 **Related:** `docs/specs/guardrail-gaps-2026/STATUS.md`,
@@ -171,8 +174,16 @@ reproduce all of these checks:
    actual request/evaluation entry point, not merely constructed in a unit
    test.
 
-No control-plane implementation or evidence schema currently exists here;
-these criteria are proposals, not passing tests.
+**Status of these criteria (2026-10-18):** 2, 3, 4, 5, 6 and 7 have passing
+tests against the real package and are named in Sec. 9. **9 is PARTIAL, not
+met:** the mandatory injection check does run through the real resource handler
+(`TestControlPlaneResourceReportsMeasuredState`) and dispatch is proven at the
+real entry point (`TestDispatchRecordsExercise`), but `policy-engine` is
+mandatory in the shipped manifest and has no exercising check of its own — it
+is measured by state only. Criterion 1 holds at manifest resolution (before any
+component starts). **8 is NOT satisfied** — rollback restoring the prior
+manifest and policy digest as a unit has no implementation at all, which is why
+R08-4.4.2–4.4.4 remain open in Sec. 9.
 
 ## 6. Dependencies and sequencing
 
@@ -283,12 +294,57 @@ harness.
 - **No staged promotion flow (R08-4.4.2-4.4.4).** Observe-only is labelled and
   cannot gate, but promotion to blocking, rollback-as-a-unit, and the audit record
   for policy-root/trust-root changes are not implemented.
+- **R08-4.2.4 IMPLEMENTED 2026-10-18 `main` (this pass).** `/health/ready`
+  reported the Spec 18 ordered checks and nothing about the composition, so a
+  deployment whose mandatory injection detector was merely `installed` —
+  present in the process, no proven entry point — answered **200** and stayed
+  in rotation while the control it claimed could not run. That is the exact
+  failure this spec exists to prevent, reported by the one endpoint
+  orchestrators actually route on.
+
+  New `controlplane.Bundle.Readiness()` derives the decision from the bundle
+  the resource already reports, so readiness and `guardrail://control-plane`
+  cannot disagree about one process. `ReadinessReport.control_plane` now
+  carries per-mandatory-component rows (`id`, `state`, `available`,
+  `exercised`, `reason`) and gates the same `ready` boolean. The state mapping
+  is the requirement:
+
+  - `declared` / `installed` / `initialized` are **not available** — the
+    component exists, nothing proves a request reaches it. The default branch
+    is the fail-closed one, so a state added later cannot silently count as
+    available.
+  - `reachable` is available but **not exercised** → status `degraded`, serving
+    but not proven. Blocking on `exercised` would make readiness false forever
+    on a fresh instance and teach operators to ignore it; reporting `ready`
+    would claim proof that does not exist.
+  - `exercised` is available and proven; `failed` is not available and outranks
+    a previously exercised observation.
+
+  Only mandatory components decide the aggregate: the manifest itself declared
+  the others optional, and readiness that blocks on an optional input is
+  readiness nobody can satisfy — but their state is still reported. A mandatory
+  **check** that did not pass blocks even when its component is reachable, and
+  a manifest declaring **no** mandatory component is `not_ready` rather than
+  green over an empty set (same vacuity class as a gate that scans zero files
+  and exits 0). `CONTROL_PLANE_MANIFEST` unset with no requirement leaves the
+  Spec 18 decision byte-identical; a declared composition that failed to
+  resolve is `not_ready` with the reason, never an absence.
+
+  **Evidence:** `internal/controlplane/readiness_test.go` (10 cases over the
+  real `Bundle.Readiness()`) + 4 request-path cases driving the real
+  `ReadinessEvaluator` and the real handler. **Red-on-drift proven twice:**
+  presence counted as availability flips two cases PASS→FAIL
+  (`TestReadinessMandatoryInstalledIsNotAvailable`,
+  `TestReadinessMandatoryInitializedIsNotAvailable`); dropping the mandatory-check
+  guard flips `TestReadinessMandatoryCheckFailureBlocks`. The first is now a
+  permanent `mutationkill` case
+  (`controlplane-readiness-presence-as-availability`), confirmed killing in the
+  harness (103s, all cases). Note the spec-18 check list is **unchanged** — the
+  composition is a separate field, because a spec-08 requirement must not
+  silently rewrite a spec-18 contract.
 - **No evidence persistence, retention, signing or deletion policy (R08-4.3.6).**
   A bundle is produced and returned; there is no store, no retention window and
   no access control on stored evidence.
-- **No control-plane readiness endpoint (R08-4.2.4).** `/health/ready` reports the
-  Spec 18 ordered checks; it does not yet report per-mandatory-component state
-  from this manifest.
 - **Trust labels are declared, not propagated (R08-4.5.3/4.5.4).** The manifest
   carries a tier and the resolver enforces the ordering rule, but component
   output is not tagged with its origin trust label at evaluation time, and the

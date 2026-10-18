@@ -148,6 +148,17 @@ func (s *Server) EvaluateReadiness() ReadinessReport {
 	return s.readiness.Evaluate(s.Lifecycle())
 }
 
+// SetControlPlaneProbe installs the Spec 08 R08-4.2.4 measurement.
+//
+// It is a setter rather than a constructor argument because the MCP surface
+// (which owns the composition manifest and the exercise counters) is built
+// AFTER this server in cmd/server. Passing it late is honest: until it is
+// installed, readiness reports nothing about a composition instead of
+// guessing at one.
+func (s *Server) SetControlPlaneProbe(probe func() *ControlPlaneReadiness) {
+	s.readiness.deps.ControlPlane = probe
+}
+
 // registryLoadErr reports a configured-but-unloadable credential registry
 // without exposing verifier material (Spec 18 Sec. 6 / R18-10).
 func registryLoadErr(cfg *config.Config) error {
