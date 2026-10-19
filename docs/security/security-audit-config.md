@@ -267,6 +267,14 @@ func (c *Config) Validate() error {
 
 ### 9. JWT Rotation Period Too Long
 **File:** `/mnt/ollama/git/agent-guardrails-template/mcp-server/.env.example:112` | **Risk:** MEDIUM
+**Status: REMEDIATED 2026-10-19 (`Config.ValidateJWTPosture`, `internal/config/jwt.go`).**
+The recommendation below is now enforced: `JWT_ROTATION_HOURS` is bounded at
+168h (`MaxJWTRotationWindow`) inside `Config.Validate`, so an over-long window
+fails startup rather than being accepted; a token's validity (`JWT_EXPIRY`) must
+not exceed the rotation window. Honest limit: no JWT is minted or verified
+anywhere in this tree (no JWT library is a dependency; agent/session tokens are
+opaque and database-backed), so this bounds a declared posture a future token
+path must honour — it does not claim a token path exists.
 
 ```bash
 JWT_ROTATION_HOURS=168  # 7 days

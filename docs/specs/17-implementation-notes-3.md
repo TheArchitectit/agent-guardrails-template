@@ -61,3 +61,45 @@ boundary for a registry that is configured; the unconfigured (absent) registry
 keeps the documented bounded legacy mode (Spec 16 Sec. 4) and is unaffected. DB/JWT/
 TLS staged rotation remains open under R17-10 (the webhook half landed
 2026-10-17; see part 2 Sec. 15).
+
+**Update 2026-10-19 — the JWT rotation/expiry bound is now enforced.** Of the
+remaining R17-10 rotation halves (DB/JWT/TLS), the JWT *posture* is now bounded:
+`Config.ValidateJWTPosture` (`internal/config/jwt.go`) is called from
+`Config.Validate` and refuses `JWT_ROTATION_HOURS` above `MaxJWTRotationWindow`
+(168h, the audited bound) and refuses a `JWT_EXPIRY` longer than the rotation
+window ("a token must not outlive the rotation of the key that signed it"). This
+closes the open MEDIUM row 9 of `docs/security/security-audit-config.md`. **The
+staged-replacement/cutover half of R17-10 for JWT, DB and TLS remains open** — an
+operator still has no staged-rotation path for those, only for webhook signing
+material. Honest limit recorded in-repo: no JWT is minted or verified anywhere in
+this tree today (no JWT library is a dependency; agent/session tokens are opaque
+and database-backed), so this bounds a declared posture, not a live token path.
+
+## 18. Implementation note (2026-10-19) — R17-10 JWT rotation/expiry bound (audit row 9)
+
+`JWT_ROTATION_HOURS` (default 168h) and `JWT_EXPIRY` (default 15m) were declared
+environment settings that `ValidateTimeout` never touched: the shutdown, request,
+DB and circuit-breaker timers were bounded, the JWT pair was not. An operator
+could set any rotation window at all and startup accepted it, and a
+hand-built `Config` with both fields at zero was accepted too ("rotate never").
+This is the exact finding of `docs/security/security-audit-config.md` row 9
+("no mechanism for emergency rotation").
+
+**Mechanism.** `internal/config/jwt.go`:
+
+- `MaxJWTRotationWindow = 168 * time.Hour` (published, so a silent change fails
+the build) is the maximum rotation window;
+- `EffectiveJWTRotationWindow` / `EffectiveJWTTTL` default a non-positive value
+to the documented default, so an unset posture is bounded rather than unbounded;
+- `ValidateJWTPosture` refuses a rotation window over the bound and a TTL that
+exceeds the rotation window, naming R17-10 in both errors.
+
+It is called from `Config.Validate`, so the posture gates startup.
+
+**Evidence.** `internal/config/jwt_posture_test.go`: unset adopts the default and
+passes; defaults pass; the window at the bound (168h) passes; a window over the
+bound is refused naming R17-10; a TTL longer than the rotation window is refused;
+`TestMaxJWTRotationWindowPublished` pins the bound; and
+`TestValidateCouplesJWTPostureToStartup` proves the gate runs inside `Validate`.
+**Red-on-drift proven** (disabling the `Validate()` call flips the coupling test
+PASS→FAIL; restored).

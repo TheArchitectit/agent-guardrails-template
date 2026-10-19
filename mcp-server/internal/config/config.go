@@ -360,6 +360,14 @@ func (c *Config) Validate() error {
 		return fmt.Errorf("JWT_SECRET validation failed: %w", err)
 	}
 
+	// Validate the JWT rotation/expiry posture (Spec 17 R17-10): the rotation
+	// window must stay within the audited 168h bound and a token must not
+	// outlive the rotation of the key that signed it. An unbounded posture
+	// fails startup rather than serving tokens under a policy nobody bounded.
+	if err := c.ValidateJWTPosture(); err != nil {
+		return err
+	}
+
 	// Validate API keys
 	if err := ValidateAPIKey(c.MCPAPIKey, "MCP_API_KEY"); err != nil {
 		return err
