@@ -25,6 +25,18 @@
       "gaps": [],
       "recommendations": ["Extend privacy filters to training data validation"]
     },
+    "art_11": {
+      "title": "Technical Documentation",
+      "description": "Technical documentation shall be drawn up before the system is placed on the market and kept up to date, containing the elements set out in Annex IV.",
+      "required_for": ["high-risk"],
+      "guardrail_features": ["technical_documentation"],
+      "evidence_queries": [
+        "SELECT * FROM audit_logs WHERE event_type = 'technical_documentation_published'"
+      ],
+      "compliance_status": "gap",
+      "gaps": ["No versioned technical-documentation artifact is produced by this repository; the mapping tables in the spec are prose, not a generated Annex IV record"],
+      "recommendations": ["Generate a versioned technical-documentation artifact from the live control-plane manifest so Annex IV evidence is reproducible rather than hand-maintained"]
+    },
     "art_12": {
       "title": "Logging for Traceability",
       "description": "High-risk AI systems must be designed to enable automatic recording of events over the lifetime of the system.",

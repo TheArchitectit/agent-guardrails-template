@@ -275,22 +275,39 @@ satisfy spec 05.
 
 | Requirement | Status |
 |-------------|--------|
-| 3 proposed tools | Not implemented |
-| Requirement DB (`compliance_requirements.json`) | Exists, matches the spec's mapping |
-| `CalculateComplianceScore` | Implemented, unwired |
+| 3 proposed tools | **Implemented 2026-10-18** — registered, dispatched, read-class, on the MEASURED path |
+| Requirement DB (`compliance_requirements.json`) | Exists; covers EU AI Act art. 9, 10, **11**, 12, 13, 14, 15, 50 and NIST RMF govern/map/measure/manage |
+| `CalculateComplianceScore` | Implemented (legacy declared-status path, stamped `unimplemented`) |
 | Gap tracking / dashboard | Not implemented |
 
-The data file covers EU AI Act art. 9, 10, 12, 13, 14, 15, 50 and NIST RMF
-govern/map/measure/manage. **Art. 11 is absent**, although the spec lists it
-as a known gap — so spec Sec. 5.1's own acceptance criterion currently fails.
+The data file covers EU AI Act art. 9, 10, 11, 12, 13, 14, 15, 50 and NIST RMF
+govern/map/measure/manage. **Art. 11 is now present**, added 2026-10-19 with
+`compliance_status: "gap"` and explicit gap text, so spec Sec. 5.1's own
+acceptance criterion is met honestly — the article is mapped, and mapped as an
+acknowledged gap rather than as a control this repo has.
 
-**Treat these scores as fiction until implemented.** `CheckRequirement`
-returns `true` purely because a hand-written string in the JSON says
-`"full"`, with the comment *"In a real implementation, this would check if
-the features are actually enabled"* (`compliance.go:90-92`). `CollectEvidence`
-hardcodes its result and returns `completeness = 1.0` for any non-empty
-query (`compliance.go:213`). A score from this code restates the database; it
-does not measure the system.
+**Two score paths exist; only one of them measures.** `CheckRequirement` /
+`GenerateReport` is the legacy declared-status path: it returns `true` purely
+because a hand-written string in the JSON says `"full"`, and `CollectEvidence`
+hardcodes its result. That path is stamped `UnimplementedMethodology =
+"unimplemented"` and its evidence is `Verified:false`. The three Sec. 3.1 tools
+do NOT call it: they call `CheckMeasured` / `GenerateMeasuredReport`, which
+count a requirement only when every control it names was observed live, list
+unmeasured requirements separately, and stamp `MeasuredMethodology =
+"measured-runtime-probes-v1"`.
+
+**A probe must observe the control the requirement NAMES** (fixed 2026-10-19).
+`content_filter_watermark` was aliased to the content filter's probe, so EU AI
+Act Art. 50 reported an OBSERVED ACTIVE control the moment any semantic
+content-filter backend was attached — while `grep -ri watermark` over the tree
+returns **1 hit: the alias itself**. A declared, acknowledged gap was being
+converted into a measured compliance claim on the exact path built to stop
+restating declarations. The alias is removed; with no probe able to observe it,
+Art. 50 measures `unknown` and never counts as covered.
+`declarationAtLeast` now also distinguishes UNKNOWN: nothing observed the
+control, so nothing can contradict a declaration of *deficiency* — Art. 50
+(declared `gap`) is no longer falsely reported as an over-declaration, while a
+declaration of `full` still is.
 
 **Simulation made explicit 2026-10-09** (branch `forge/spec-program-wave0`, no
 push) — still UNIMPLEMENTED, not fixed by inventing numbers:

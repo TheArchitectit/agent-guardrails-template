@@ -190,17 +190,34 @@ func AssessRequirement(ctx context.Context, reqID string, req Requirement, probe
 	return a
 }
 
+// declarationFull is the rank a declaration carries when it claims a control
+// works. It is named because the UNKNOWN branch below is defined against it.
+const declarationFull = 3
+
 // declarationAtLeast reports whether a declared status is no stronger than what
 // was measured. Comparing ranks (rather than strings) is what makes an
 // over-claim visible: declared "full" against measured "partial" is a finding.
+//
+// The UNKNOWN case is not blanket disagreement. Nothing observed the control,
+// so nothing can contradict a declaration of DEFICIENCY — a requirement the
+// database already marks "gap"/"partial" is not over-claiming when no probe
+// could measure it. A declaration of POSITIVITY is the over-claim: "full"
+// asserts that a control works and nothing supports that. Treating unknown as
+// plain disagreement would have reported Art. 50 (declared "gap", no
+// watermarking implemented) as an over-declaration the moment its last probe
+// could not observe it — a false finding in the opposite direction, from the
+// same table.
 func declarationAtLeast(declared string, measured FeatureStatus) bool {
+	if measured == FeatureUnknown {
+		return declarationRank(declared) < declarationFull
+	}
 	return declarationRank(declared) <= statusRank(measured)
 }
 
 func declarationRank(s string) int {
 	switch strings.ToLower(strings.TrimSpace(s)) {
 	case "full", "compliant":
-		return 3
+		return declarationFull
 	case "partial":
 		return 2
 	case "gap", "absent", "none":

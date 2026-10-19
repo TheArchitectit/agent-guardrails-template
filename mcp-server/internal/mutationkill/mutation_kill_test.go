@@ -851,10 +851,41 @@ func (s *MCPServer) authorizeToolCallDisabled(ctx context.Context, name string, 
 		pkg:       "./internal/guardrails",
 		testRegex: "^TestVerificationEnabledRefusesUnsignedPack$",
 	},
+	{
+		// Spec 06: a probe must observe the control the requirement NAMES,
+		// not a control that merely happens to be configured. The mutation
+		// restores the alias that made EU AI Act Art. 50 report an OBSERVED
+		// ACTIVE control the moment a content-filter backend was attached,
+		// while no watermarking exists in the tree at all — a declared,
+		// acknowledged gap turned into a measured compliance claim on the path
+		// built to stop restating declarations.
+		name: "compliance-watermark-probe-borrows-content-filter-status",
+		file: "internal/guardrails/engine_probes.go",
+		old: "\t\t\"content_filter_privacy\": e.probeContentFilter,\n" +
+			"\t\t\"provenance_tracking\":    e.probeProvenanceTracking,",
+		new: "\t\t\"content_filter_privacy\":   e.probeContentFilter,\n" +
+			"\t\t\"content_filter_watermark\": e.probeContentFilter, // mutation: watermarking borrows the filter's status\n" +
+			"\t\t\"provenance_tracking\":      e.probeProvenanceTracking,",
+		pkg:       "./internal/guardrails",
+		testRegex: "^TestEngineProbes_ContentFilterStatusIsNotWatermarkingEvidence$",
+	},
+	{
+		// Spec 06: an unmeasured control cannot contradict a declaration of
+		// DEFICIENCY. The mutation drops the UNKNOWN branch, so "we did not
+		// look" is judged by rank like any other state and a requirement the
+		// database already marks "gap" is reported as an over-declaration — a
+		// false finding in the opposite direction, from the same table.
+		name: "compliance-unmeasured-judged-as-ordinary-disagreement",
+		file: "internal/guardrails/compliance_probe.go",
+		old: "\tif measured == FeatureUnknown {\n" +
+			"\t\treturn declarationRank(declared) < declarationFull\n" +
+			"\t}",
+		new:       "\tif measured == FeatureUnknown {\n\t\t_ = declarationFull // mutation: unmeasured is ranked like any other state\n\t}",
+		pkg:       "./internal/guardrails",
+		testRegex: "^TestAssessRequirement_UnmeasuredDoesNotContradictADeclaredGap$",
+	},
 }
 
-// findModuleRoot walks up from the test working directory to the directory
-// holding the mcp-server go.mod.
 func findModuleRoot(t *testing.T) string {
 	t.Helper()
 	dir, err := os.Getwd()

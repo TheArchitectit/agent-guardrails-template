@@ -1,6 +1,6 @@
 # OpenSpec: Regulatory Compliance Mapping
 
-> **Do not trust scores from this code.** The mapper exists but `CheckRequirement` restates a hand-written database string rather than measuring the system, and evidence collection is simulated. See [STATUS.md](STATUS.md).
+> **Do not trust scores from `GenerateReport`/`CheckRequirement`.** That legacy path restates a hand-written `compliance_status` string rather than measuring the system, and its evidence collection is simulated; it is stamped `methodology: "unimplemented"` for that reason. The MEASURED path (`GenerateMeasuredReport`/`CheckMeasured`, behind the three Sec. 3.1 tools) counts a requirement only when every control it names was observed live, reports unmeasured requirements separately, and is stamped `methodology: "measured-runtime-probes-v1"`. See [STATUS.md](STATUS.md).
 
 **Gap:** Nice-to-have — No explicit EU AI Act or NIST RMF compliance mapping
 **Priority:** 🟢 Nice-to-have (Phase 3)
@@ -255,8 +255,9 @@ Evidence: `docs/specs/guardrail-gaps-2026/STATUS.md`.
 | 3.1 | `guardrail_generate_compliance_report` | **Not implemented** | name absent from every `.go` file |
 | 3.1 | `guardrail_check_compliance` | **Not implemented** | same |
 | 3.1 | `guardrail_collect_evidence` | **Not implemented** | same |
-| 3.2 | Requirement DB | Implemented as **data** | `internal/guardrails/compliance_requirements.json` covers `eu_ai_act` art. 9, 10, 12, 13, 14, 15, 50; `nist_rmf` govern/map/measure/manage; `iso_42001` |
-| 3.2 | **Art. 11** | **Missing** | absent from the JSON although this spec lists it as a gap — so Sec. 5.1's own acceptance criterion fails today |
+| 3.2 | Requirement DB | Implemented as **data** | `internal/guardrails/compliance_requirements.json` covers `eu_ai_act` art. 9, 10, 11, 12, 13, 14, 15, 50; `nist_rmf` govern/map/measure/manage; `iso_42001` |
+| 3.2 | **Art. 11** | **Present 2026-10-19** | Added to the JSON with `compliance_status: "gap"` and explicit gap text, so Sec. 5.1's own criterion ("requirement mapping covers all EU AI Act articles") is now met *honestly* — the article is mapped, and mapped as an acknowledged gap, not as a control this repo has. Pinned by `TestRequirementDB_CoversEveryArticleTheSpecMaps`. |
+| 4.x | **Art. 50 watermark probe** | **Fixed 2026-10-19 (this change; landing SHA recorded in the closure board and ledger)** | `content_filter_watermark` was aliased to `probeContentFilter`, so Art. 50 reported an OBSERVED ACTIVE control the moment any semantic content-filter backend was attached, while `grep watermark` over the tree returns **1 hit — the alias itself**. A declared, acknowledged gap was being converted into a measured compliance claim on the exact path built to stop restating declarations. The alias is removed; no probe observes watermarking, so Art. 50 measures `unknown` and never counts as covered. `declarationAtLeast` now also distinguishes UNKNOWN: nothing observed the control, so nothing can contradict a declaration of deficiency — Art. 50 (declared `gap`) is no longer falsely reported as an over-declaration, while a declaration of `full` still is. Pinned by `compliance_watermark_test.go` (+2 permanent `mutationkill` cases). |
 | 4.1 | `ComplianceMapper` / `CalculateComplianceScore` | Built, **not wired** | `compliance.go:64,228`; constructed only in `compliance_test.go` |
 | 4.2 | Report generation | Built, not wired | `ComplianceReporter` / `GenerateReport` / `ExportReport` (`compliance.go:105,113,163`) |
 | 4.x | Evidence collection | **Simulated** | `CollectEvidence` hardcodes `Value: "Query result for [%s]: 12 events found"` and returns `completeness = 1.0` for any non-empty query (`compliance.go:213`) |
