@@ -160,6 +160,15 @@ func (e *Engine) EnableInjectionClassifier(classifier InjectionClassifier, cfg C
 	return nil
 }
 
+// InjectionPipelineConfigured reports whether the engine holds a constructed
+// injection pipeline. NewEngine logs and continues when construction fails (a
+// configuration naming an unimplemented layer, for example), so a caller that
+// must not serve without detection needs a way to ask. Nil means nothing
+// scans any input.
+func (e *Engine) InjectionPipelineConfigured() bool {
+	return e != nil && e.pipeline != nil
+}
+
 // InjectionClassifierConfigured reports whether a semantic L3 backend is
 // attached. Callers use it to state coverage rather than assume it.
 func (e *Engine) InjectionClassifierConfigured() bool {
@@ -353,9 +362,23 @@ func (e *Engine) Evaluate(ctx context.Context, input EvalInput) *EvalResult {
 }
 
 // DetectInjection is a convenience method for injection-only detection.
+//
+// An engine without a pipeline reports NOT EVALUATED (safe=false) rather than
+// safe. NewEngine only leaves the pipeline nil when construction failed — a
+// configuration that names an unimplemented layer, for instance — and the old
+// branch turned that failure into an unconditional "safe" verdict for every
+// input. The batch path already failed closed; this brings the single-text
+// path in line. Absent coverage must never read as a passing scan (P5/D-18).
 func (e *Engine) DetectInjection(ctx context.Context, text string, source Source) InjectionResult {
 	if e.pipeline == nil {
-		return InjectionResult{Safe: true, Decision: string(FailPolicyLogOnly)}
+		return InjectionResult{
+			Safe:        false,
+			Confidence:  1.0,
+			TextHash:    hashText(text),
+			ProcessedAt: time.Now().UTC(),
+			Reason:      "injection detection pipeline is not initialized; text was not evaluated",
+			Decision:    string(FailPolicyBlock),
+		}
 	}
 	return e.pipeline.Detect(ctx, text, source)
 }

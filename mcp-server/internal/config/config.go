@@ -257,6 +257,19 @@ type Config struct {
 	// author policy.
 	PolicyPackTrustedKeysFile string `env:"POLICY_PACK_TRUSTED_KEYS_FILE"`
 
+	// InjectionConfigFile names the YAML file carrying the Spec 01 Sec. 3.2
+	// `injection_defense:` section. Unset keeps the shipped defaults, which are
+	// L1 (with the built-in pattern set) and the content filter's fail-closed
+	// posture.
+	//
+	// This exists because the loader was unreachable: `LoadInjectionConfigFromYAML`
+	// had zero non-test callers, so an operator could write the documented file
+	// and the server never read it. A configured-but-unreadable or invalid file
+	// stops startup rather than falling back to defaults, because "I configured
+	// detection" and "detection runs with defaults I did not choose" must not
+	// look the same from the outside.
+	InjectionConfigFile string `env:"INJECTION_CONFIG_FILE"`
+
 	// ControlPlaneManifest names the component-composition manifest the control
 	// plane evaluates against (Spec 08 R08-4.1). Unset means no manifest is
 	// configured: guardrail://control-plane then reports "not_configured"

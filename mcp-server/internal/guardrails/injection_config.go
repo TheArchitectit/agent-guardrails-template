@@ -1,6 +1,7 @@
 package guardrails
 
 import (
+	"bytes"
 	"fmt"
 	"maps"
 	"os"
@@ -14,40 +15,40 @@ import (
 
 // InjectionConfig holds the YAML-mirrored configuration for the injection guard.
 type InjectionConfig struct {
-	Enabled             bool                       `yaml:"enabled"`
-	L1Enabled           bool                       `yaml:"l1_enabled"`
-	L1Patterns          map[string]string          `yaml:"l1_patterns"`
-	L2Enabled           bool                       `yaml:"l2_enabled"`
-	PerplexityThreshold float64                    `yaml:"perplexity_threshold"`
-	L3Enabled           bool                       `yaml:"l3_enabled"`
-	ClassifierBackend   string                     `yaml:"classifier_backend"`
-	ClassifierModelPath string                     `yaml:"classifier_model_path"`
-	ClassifierThreshold float64                    `yaml:"classifier_threshold"`
-	L4Enabled           bool                       `yaml:"l4_enabled"`
-	LLMSelfCheckModel   string                     `yaml:"llm_self_check_model"`
-	LLMSelfCheckThreshold float64                  `yaml:"llm_self_check_threshold"`
-	FailPolicy          string                     `yaml:"fail_policy"`
-	SourcePolicies      map[string]string          `yaml:"source_policies"`
-	BlocklistPaths      []string                   `yaml:"blocklist_paths"`
-	CustomPatterns      []string                   `yaml:"custom_patterns"`
+	Enabled               bool              `yaml:"enabled"`
+	L1Enabled             bool              `yaml:"l1_enabled"`
+	L1Patterns            map[string]string `yaml:"l1_patterns"`
+	L2Enabled             bool              `yaml:"l2_enabled"`
+	PerplexityThreshold   float64           `yaml:"perplexity_threshold"`
+	L3Enabled             bool              `yaml:"l3_enabled"`
+	ClassifierBackend     string            `yaml:"classifier_backend"`
+	ClassifierModelPath   string            `yaml:"classifier_model_path"`
+	ClassifierThreshold   float64           `yaml:"classifier_threshold"`
+	L4Enabled             bool              `yaml:"l4_enabled"`
+	LLMSelfCheckModel     string            `yaml:"llm_self_check_model"`
+	LLMSelfCheckThreshold float64           `yaml:"llm_self_check_threshold"`
+	FailPolicy            string            `yaml:"fail_policy"`
+	SourcePolicies        map[string]string `yaml:"source_policies"`
+	BlocklistPaths        []string          `yaml:"blocklist_paths"`
+	CustomPatterns        []string          `yaml:"custom_patterns"`
 }
 
 // DefaultInjectionConfig returns a config with spec-matching defaults.
 func DefaultInjectionConfig() *InjectionConfig {
 	return &InjectionConfig{
-		Enabled:             true,
-		L1Enabled:           true,
-		L1Patterns:          DefaultPatterns(),
-		L2Enabled:           true,
-		PerplexityThreshold: 0.85,
-		L3Enabled:           true,
-		ClassifierBackend:   "llama-guard",
-		ClassifierModelPath: "",
-		ClassifierThreshold: 0.7,
-		L4Enabled:           false,
-		LLMSelfCheckModel:   "",
+		Enabled:               true,
+		L1Enabled:             true,
+		L1Patterns:            DefaultPatterns(),
+		L2Enabled:             true,
+		PerplexityThreshold:   0.85,
+		L3Enabled:             true,
+		ClassifierBackend:     "llama-guard",
+		ClassifierModelPath:   "",
+		ClassifierThreshold:   0.7,
+		L4Enabled:             false,
+		LLMSelfCheckModel:     "",
 		LLMSelfCheckThreshold: 0.5,
-		FailPolicy:          "block",
+		FailPolicy:            "block",
 		SourcePolicies: map[string]string{
 			"user":         "warn",
 			"tool_output":  "block",
@@ -268,48 +269,305 @@ func loadBlocklistFile(path string) (map[string]string, error) {
 	return result, nil
 }
 
+// injectionConfigFile is the accepted on-disk shape for one configuration
+// file. It carries TWO forms because the tree documented one and implemented
+// the other:
+//
+//   - the flat form the InjectionConfig struct tags declare
+//     (`l1_enabled`, `blocklist_paths`, `custom_patterns`, …), and
+//   - the nested `layers:` form Spec 01 Sec. 3.2 documents
+//     (`layers.pattern_matching.enabled`, `layers.perplexity.threshold`, …).
+//
+// The loader used to unmarshal only the flat form. Every key of the
+// documented YAML therefore landed on a struct with no matching field, YAML
+// ignored it, and the resulting InjectionConfig had L1/L2/L3 all false — a
+// configured, syntactically valid file that silently disabled the detector.
+// Both forms are accepted here and an unknown key is an ERROR, so a shape
+// mistake can never again read as "all layers off".
+type injectionConfigFile struct {
+	InjectionDefense *injectionDefenseYAML `yaml:"injection_defense"`
+}
+
+// injectionDefenseYAML is the `injection_defense:` section in either form.
+// Pointers distinguish "absent" from "explicitly false": an omitted switch
+// must inherit the shipped default, while an explicit false must win.
+type injectionDefenseYAML struct {
+	Enabled        *bool             `yaml:"enabled"`
+	FailPolicy     string            `yaml:"fail_policy"`
+	SourcePolicies map[string]string `yaml:"source_policies"`
+
+	// Flat form.
+	L1Enabled             *bool             `yaml:"l1_enabled"`
+	L1Patterns            map[string]string `yaml:"l1_patterns"`
+	L2Enabled             *bool             `yaml:"l2_enabled"`
+	PerplexityThreshold   *float64          `yaml:"perplexity_threshold"`
+	L3Enabled             *bool             `yaml:"l3_enabled"`
+	ClassifierBackend     string            `yaml:"classifier_backend"`
+	ClassifierModelPath   string            `yaml:"classifier_model_path"`
+	ClassifierThreshold   *float64          `yaml:"classifier_threshold"`
+	L4Enabled             *bool             `yaml:"l4_enabled"`
+	LLMSelfCheckModel     string            `yaml:"llm_self_check_model"`
+	LLMSelfCheckThreshold *float64          `yaml:"llm_self_check_threshold"`
+	BlocklistPaths        []string          `yaml:"blocklist_paths"`
+	CustomPatterns        []string          `yaml:"custom_patterns"`
+
+	// Nested form (Spec 01 Sec. 3.2).
+	Layers *injectionLayersYAML `yaml:"layers"`
+}
+
+type injectionLayersYAML struct {
+	PatternMatching *patternMatchingYAML `yaml:"pattern_matching"`
+	Perplexity      *perplexityYAML      `yaml:"perplexity"`
+	Classifier      *classifierYAML      `yaml:"classifier"`
+	LLMSelfCheck    *llmSelfCheckYAML    `yaml:"llm_self_check"`
+}
+
+// blocklistRef is the documented `- path: "..."` entry. A bare string is also
+// accepted because the flat form used that shape.
+type blocklistRef struct {
+	Path string `yaml:"path"`
+}
+
+type blocklistPathsYAML []string
+
+// UnmarshalYAML accepts each entry either as `- path: file` (documented) or
+// as `- file` (flat form). A `path:` entry with no path is refused: an empty
+// blocklist path would load no patterns while looking configured.
+func (b *blocklistPathsYAML) UnmarshalYAML(node *yaml.Node) error {
+	if node.Kind != yaml.SequenceNode {
+		return fmt.Errorf("blocklists must be a list of paths")
+	}
+	out := make([]string, 0, len(node.Content))
+	for i, item := range node.Content {
+		switch item.Kind {
+		case yaml.ScalarNode:
+			var s string
+			if err := item.Decode(&s); err != nil {
+				return err
+			}
+			out = append(out, s)
+		case yaml.MappingNode:
+			var ref blocklistRef
+			if err := item.Decode(&ref); err != nil {
+				return fmt.Errorf("blocklists[%d]: %w", i, err)
+			}
+			if ref.Path == "" {
+				return fmt.Errorf("blocklists[%d] declares no path", i)
+			}
+			out = append(out, ref.Path)
+		default:
+			return fmt.Errorf("blocklists[%d] must be a path string or a {path: ...} entry", i)
+		}
+	}
+	*b = out
+	return nil
+}
+
+type patternMatchingYAML struct {
+	Enabled        *bool              `yaml:"enabled"`
+	Blocklists     blocklistPathsYAML `yaml:"blocklists"`
+	CustomPatterns []string           `yaml:"custom_patterns"`
+}
+
+type perplexityYAML struct {
+	Enabled   *bool    `yaml:"enabled"`
+	Threshold *float64 `yaml:"threshold"`
+}
+
+type classifierYAML struct {
+	Enabled   *bool    `yaml:"enabled"`
+	Backend   string   `yaml:"backend"`
+	ModelPath string   `yaml:"model_path"`
+	Threshold *float64 `yaml:"threshold"`
+}
+
+type llmSelfCheckYAML struct {
+	Enabled   *bool    `yaml:"enabled"`
+	Model     string   `yaml:"model"`
+	Threshold *float64 `yaml:"threshold"`
+}
+
 // LoadInjectionConfigFromYAML reads the injection_defense section from YAML.
+//
+// It is deliberately strict. Three failure modes that used to be silent now
+// stop startup instead:
+//
+//  1. A key the loader does not know is an ERROR (KnownFields), so a typo or
+//     a shape change cannot leave a switch at its zero value.
+//  2. A file with no `injection_defense` section is an ERROR: an empty file
+//     is not a configuration, and treating it as one made every layer off.
+//  3. Mixing the flat and nested forms is an ERROR. Two spellings of one
+//     switch with different values has no correct answer, and picking one
+//     would make the effective policy depend on parse order.
 func LoadInjectionConfigFromYAML(path string) (*InjectionConfig, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("read config: %w", err)
 	}
 
-	var raw struct {
-		InjectionDefense InjectionConfig `yaml:"injection_defense"`
-	}
-	if err := yaml.Unmarshal(data, &raw); err != nil {
+	var raw injectionConfigFile
+	dec := yaml.NewDecoder(bytes.NewReader(data))
+	dec.KnownFields(true)
+	if err := dec.Decode(&raw); err != nil {
 		return nil, fmt.Errorf("parse config: %w", err)
 	}
+	if raw.InjectionDefense == nil {
+		return nil, fmt.Errorf("config %s declares no injection_defense section", path)
+	}
+	section := raw.InjectionDefense
 
-	cfg := &raw.InjectionDefense
+	if section.Layers != nil && mixedInjectionForms(section) {
+		return nil, fmt.Errorf("injection_defense mixes the flat and nested (`layers:`) forms; use one")
+	}
+
+	cfg := DefaultInjectionConfig()
+	// The tree ships L2 OFF (DefaultPipelineConfig). Presence of a config file
+	// must not silently enable a heuristic detector the operator never asked
+	// for, so the shipped posture wins unless the file names L2 explicitly.
+	cfg.L2Enabled = false
+
+	if section.Enabled != nil {
+		cfg.Enabled = *section.Enabled
+	}
+	if section.FailPolicy != "" {
+		cfg.FailPolicy = section.FailPolicy
+	}
+	if section.SourcePolicies != nil {
+		cfg.SourcePolicies = section.SourcePolicies
+	}
+	applyFlatInjectionFields(cfg, section)
+	if section.Layers != nil {
+		applyNestedInjectionFields(cfg, section.Layers)
+	}
+
 	if !cfg.Enabled {
 		return cfg, nil
 	}
 
-	// Merge defaults for zero values
-	if cfg.L1Patterns == nil {
+	// An enabled L1 with no patterns is a matcher that can never fire; the
+	// shipped default seeds the built-in set, and an explicit empty custom set
+	// must not empty it.
+	if cfg.L1Enabled && len(cfg.L1Patterns) == 0 && len(cfg.CustomPatterns) == 0 {
 		cfg.L1Patterns = DefaultPatterns()
 	}
-	if cfg.PerplexityThreshold == 0 {
-		cfg.PerplexityThreshold = 0.85
+	if err := cfg.Validate(); err != nil {
+		return nil, fmt.Errorf("invalid injection_defense config: %w", err)
 	}
-	if cfg.ClassifierThreshold == 0 {
-		cfg.ClassifierThreshold = 0.7
+	return cfg, nil
+}
+
+// mixedInjectionForms reports whether the section sets a layer switch in both
+// the flat and the nested form.
+func mixedInjectionForms(s *injectionDefenseYAML) bool {
+	l := s.Layers
+	switch {
+	case s.L1Enabled != nil && l.PatternMatching != nil && l.PatternMatching.Enabled != nil:
+		return true
+	case s.L2Enabled != nil && l.Perplexity != nil && l.Perplexity.Enabled != nil:
+		return true
+	case s.L3Enabled != nil && l.Classifier != nil && l.Classifier.Enabled != nil:
+		return true
+	case s.L4Enabled != nil && l.LLMSelfCheck != nil && l.LLMSelfCheck.Enabled != nil:
+		return true
+	case len(s.BlocklistPaths) > 0 && l.PatternMatching != nil && len(l.PatternMatching.Blocklists) > 0:
+		return true
+	case len(s.CustomPatterns) > 0 && l.PatternMatching != nil && len(l.PatternMatching.CustomPatterns) > 0:
+		return true
+	case s.PerplexityThreshold != nil && l.Perplexity != nil && l.Perplexity.Threshold != nil:
+		return true
+	case s.ClassifierThreshold != nil && l.Classifier != nil && l.Classifier.Threshold != nil:
+		return true
 	}
-	if cfg.FailPolicy == "" {
-		cfg.FailPolicy = "block"
+	return false
+}
+
+func applyFlatInjectionFields(cfg *InjectionConfig, s *injectionDefenseYAML) {
+	if s.L1Enabled != nil {
+		cfg.L1Enabled = *s.L1Enabled
 	}
-	if cfg.SourcePolicies == nil {
-		cfg.SourcePolicies = map[string]string{
-			"user":         "warn",
-			"tool_output":  "block",
-			"file_content": "block",
-			"api_response": "block",
+	if s.L1Patterns != nil {
+		cfg.L1Patterns = s.L1Patterns
+	}
+	if s.L2Enabled != nil {
+		cfg.L2Enabled = *s.L2Enabled
+	}
+	if s.PerplexityThreshold != nil {
+		cfg.PerplexityThreshold = *s.PerplexityThreshold
+	}
+	if s.L3Enabled != nil {
+		cfg.L3Enabled = *s.L3Enabled
+	}
+	if s.ClassifierBackend != "" {
+		cfg.ClassifierBackend = s.ClassifierBackend
+	}
+	if s.ClassifierModelPath != "" {
+		cfg.ClassifierModelPath = s.ClassifierModelPath
+	}
+	if s.ClassifierThreshold != nil {
+		cfg.ClassifierThreshold = *s.ClassifierThreshold
+	}
+	if s.L4Enabled != nil {
+		cfg.L4Enabled = *s.L4Enabled
+	}
+	if s.LLMSelfCheckModel != "" {
+		cfg.LLMSelfCheckModel = s.LLMSelfCheckModel
+	}
+	if s.LLMSelfCheckThreshold != nil {
+		cfg.LLMSelfCheckThreshold = *s.LLMSelfCheckThreshold
+	}
+	if s.BlocklistPaths != nil {
+		cfg.BlocklistPaths = s.BlocklistPaths
+	}
+	if s.CustomPatterns != nil {
+		cfg.CustomPatterns = s.CustomPatterns
+	}
+}
+
+func applyNestedInjectionFields(cfg *InjectionConfig, l *injectionLayersYAML) {
+	if pm := l.PatternMatching; pm != nil {
+		if pm.Enabled != nil {
+			cfg.L1Enabled = *pm.Enabled
+		}
+		if pm.Blocklists != nil {
+			cfg.BlocklistPaths = pm.Blocklists
+		}
+		if pm.CustomPatterns != nil {
+			cfg.CustomPatterns = pm.CustomPatterns
 		}
 	}
-
-	return cfg, nil
+	if p := l.Perplexity; p != nil {
+		if p.Enabled != nil {
+			cfg.L2Enabled = *p.Enabled
+		}
+		if p.Threshold != nil {
+			cfg.PerplexityThreshold = *p.Threshold
+		}
+	}
+	if c := l.Classifier; c != nil {
+		if c.Enabled != nil {
+			cfg.L3Enabled = *c.Enabled
+		}
+		if c.Backend != "" {
+			cfg.ClassifierBackend = c.Backend
+		}
+		if c.ModelPath != "" {
+			cfg.ClassifierModelPath = c.ModelPath
+		}
+		if c.Threshold != nil {
+			cfg.ClassifierThreshold = *c.Threshold
+		}
+	}
+	if s := l.LLMSelfCheck; s != nil {
+		if s.Enabled != nil {
+			cfg.L4Enabled = *s.Enabled
+		}
+		if s.Model != "" {
+			cfg.LLMSelfCheckModel = s.Model
+		}
+		if s.Threshold != nil {
+			cfg.LLMSelfCheckThreshold = *s.Threshold
+		}
+	}
 }
 
 // Validate checks the config for errors.

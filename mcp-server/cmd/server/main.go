@@ -187,7 +187,39 @@ func main() {
 	// content filter fails closed when none is, so an absent backend blocks
 	// classification rather than reporting content safe (P5/D-18).
 	ollamaURL := os.Getenv("OLLAMA_URL")
-	engine := guardrails.NewEngine(nil, slog.Default())
+	// Spec 01 Sec. 3.2: the operator-facing config file. This is the caller
+	// LoadInjectionConfigFromYAML never had, so the documented
+	// `injection_defense:` file was inert in every deployment. A configured
+	// file that cannot be read, parsed or validated STOPS STARTUP: falling
+	// back to defaults would leave an operator who wrote a stricter policy
+	// running a looser one, with the only trace a log line.
+	engineConfig := guardrails.DefaultEngineConfig()
+	if cfg.InjectionConfigFile != "" {
+		injectionCfg, err := guardrails.LoadInjectionConfigFromYAML(cfg.InjectionConfigFile)
+		if err != nil {
+			slog.Error("injection config is unusable; refusing to start", "path", cfg.InjectionConfigFile, "error", err)
+			os.Exit(1)
+		}
+		engineConfig.Injection = injectionCfg.ToPipelineConfig()
+		slog.Info("injection defense configured from file",
+			"path", cfg.InjectionConfigFile,
+			"enabled", injectionCfg.Enabled,
+			"l1", injectionCfg.L1Enabled,
+			"l2", injectionCfg.L2Enabled,
+			"l3", injectionCfg.L3Enabled,
+			"blocklists", len(injectionCfg.BlocklistPaths),
+			"custom_patterns", len(injectionCfg.CustomPatterns),
+		)
+	}
+	engine := guardrails.NewEngine(engineConfig, slog.Default())
+	if !engine.InjectionPipelineConfigured() {
+		// NewEngine logs and continues when NewPipeline refuses. Continuing is
+		// what made a refused configuration look like a working one: the scan
+		// then reports "not evaluated" for every input. Refuse to serve instead.
+		slog.Error("injection detection pipeline could not be constructed; refusing to start",
+			"detail", "check INJECTION_CONFIG_FILE for an enabled layer with no implementation (Spec 01 L4)")
+		os.Exit(1)
+	}
 	if ollamaURL != "" {
 		model := os.Getenv("OLLAMA_MODEL")
 		if model == "" {
