@@ -155,6 +155,22 @@ func (m *SandboxManager) execute(ctx context.Context, command string, level Sand
 		return nil, fmt.Errorf("unsupported sandbox level: %q", level)
 	}
 
+	// Spec 03 Sec. 2/3.1. `enabled: false` used to be read by exactly one
+	// place in the tree — the readiness probe — so the two halves of the same
+	// process disagreed: readiness reported "sandbox manager is not enabled"
+	// (the control is absent) while every execution still ran through this
+	// function. A caller that reads the report and a caller that executes the
+	// command were told different things about one deployment.
+	//
+	// The manager is now the single source of truth for its own posture: when
+	// it is disabled it REFUSES to execute rather than silently running the
+	// command. Refusing is the only reading that keeps the report and the
+	// behaviour honest — quietly executing an unsandboxed command would make
+	// `enabled: false` a way to run without isolation while the probe said so.
+	if snap := m.configSnapshot(); snap != nil && !snap.Enabled {
+		return nil, fmt.Errorf("%w: sandbox is disabled in the configuration; refusing to execute an unsandboxed command", ErrSandboxViolation)
+	}
+
 	// Reject malformed mount paths before any level is tried, so a missing
 	// container runtime can never mask the error by falling back to a level
 	// that ignores the mount.
@@ -449,9 +465,27 @@ func (m *SandboxManager) execL2(ctx context.Context, command string, limits Reso
 	// (network egress), not the whole sandbox: fall back to --network=none and
 	// record a warning. This is NOT a sandboxSetupErr — execution setup for a
 	// requested feature failed, so we fail closed on the feature.
-	netMode := m.configSnapshot().NetworkMode
+	// `network.enabled` is the switch; `allowed_hosts` is only the allowlist
+	// that applies when it is on. Before this, the egress decision keyed off
+	// len(AllowedHosts) alone and NEVER read Enabled: a policy declaring
+	// `network: {enabled: false, allowed_hosts: ["github.com"]}` — the exact
+	// shape Sec. 3.2 documents as `enabled: false` with a whitelist "if
+	// network needed" — got a provisioned bridge network and a CONNECT proxy
+	// to that host. The declared control was false and the applied control
+	// was open. `NetworkMode` (an operator-managed network set globally) was
+	// applied the same way, so a tool policy that declared no network still
+	// inherited one because a process-wide field named a bridge.
+	//
+	// Enabled=false now binds: no proxy, no bridge, `--network=none`.
+	netMode := ""
+	if limits.Network.Enabled {
+		netMode = m.configSnapshot().NetworkMode
+	} else if m.configSnapshot().NetworkMode != "" {
+		m.logger.Warn("execution declares network disabled; ignoring the configured NetworkMode and using network=none",
+			"network_mode", m.configSnapshot().NetworkMode)
+	}
 	egressProxyAddr := ""
-	if len(limits.Network.AllowedHosts) > 0 {
+	if egressPermitted(limits) {
 		if err := ValidateAllowedHosts(limits.Network.AllowedHosts); err != nil {
 			// Overly broad allowlist (e.g. bare "*"): refuse to open egress.
 			m.logger.Warn("invalid AllowedHosts; using network=none (fail-closed)",
@@ -476,11 +510,7 @@ func (m *SandboxManager) execL2(ctx context.Context, command string, limits Reso
 			netMode = ""
 		}
 	}
-	if netMode != "" {
-		args = append(args, "--network="+netMode)
-	} else {
-		args = append(args, "--network=none")
-	}
+	args = append(args, containerNetworkPlan(limits, netMode))
 	if egressProxyAddr != "" {
 		proxyURL := egressProxyURL(egressProxyAddr)
 		args = append(args, "--env", "HTTPS_PROXY="+proxyURL, "--env", "HTTP_PROXY="+proxyURL)
@@ -732,6 +762,33 @@ func containerHardeningArgs(limits ResourceLimits) []string {
 		"--cap-add=SETGID",
 		"--security-opt", "no-new-privileges",
 	}
+}
+
+// egressPermitted reports whether an execution's declared limits allow any
+// network egress at all.
+//
+// Started life as `len(AllowedHosts) > 0` inside execL2, which is the bug this
+// pass fixes: an allowlist is a LIST OF HOSTS that may be reached when network
+// is on, not a statement that network is on. Sec. 3.2 documents exactly the
+// ambiguous pairing (`enabled: false` above `allowed_hosts: []`), and the
+// reading that ignored `enabled` was the permissive one — the wrong direction
+// to guess on a security boundary.
+func egressPermitted(limits ResourceLimits) bool {
+	return limits.Network.Enabled && len(limits.Network.AllowedHosts) > 0
+}
+
+// containerNetworkPlan returns the `--network=` argument for a container
+// execution. One function decides, and execL2 uses it, so the test that pins
+// the decision cannot pass against a helper no production path calls.
+//
+// networkMode is the operator-managed network from the process configuration.
+// It is ignored when the execution's own limits declare network disabled: a
+// process-wide field must not hand a bridge to a policy that said no.
+func containerNetworkPlan(limits ResourceLimits, networkMode string) string {
+	if !limits.Network.Enabled || networkMode == "" {
+		return "--network=none"
+	}
+	return "--network=" + networkMode
 }
 
 // containerResourceArgs builds the resource-limit flags for an L2 run.
