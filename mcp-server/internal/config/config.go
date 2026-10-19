@@ -270,6 +270,19 @@ type Config struct {
 	// look the same from the outside.
 	InjectionConfigFile string `env:"INJECTION_CONFIG_FILE"`
 
+	// SandboxConfigFile names the YAML file carrying the Spec 03 Sec. 3.2/3.3
+	// sandbox configuration (`sandbox:` section). Unset keeps
+	// DefaultSandboxConfig(), which is the shipped posture.
+	//
+	// This exists because the per-tool sandbox policy had no file source at
+	// all: `DefaultSandboxConfig()` was the only SandboxConfig in the tree, so
+	// an operator who wrote the documented YAML changed nothing. The artifact
+	// is a security boundary, so a configured-but-unusable file STOPS STARTUP
+	// rather than falling back to defaults — "I set network: false" and
+	// "the sandbox runs with the defaults I did not choose" must not look the
+	// same from outside.
+	SandboxConfigFile string `env:"SANDBOX_CONFIG_FILE"`
+
 	// ControlPlaneManifest names the component-composition manifest the control
 	// plane evaluates against (Spec 08 R08-4.1). Unset means no manifest is
 	// configured: guardrail://control-plane then reports "not_configured"

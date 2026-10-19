@@ -211,6 +211,28 @@ func main() {
 			"custom_patterns", len(injectionCfg.CustomPatterns),
 		)
 	}
+	// Spec 03 Sec. 3.2/3.3/Sec. 5.2: the operator-facing sandbox policy file.
+	// This is the caller LoadSandboxConfigFromYAML never had: the per-tool
+	// policy existed only as a Go literal, so the documented YAML described a
+	// configuration path nothing read. A configured-but-unusable file STOPS
+	// STARTUP. The artifact is a security boundary — an operator who wrote
+	// `network: {enabled: false}` and got the shipped posture instead has a
+	// review trail asserting a control the process never applied, and a log
+	// line is not a substitute for refusing to run.
+	if cfg.SandboxConfigFile != "" {
+		sandboxCfg, serr := guardrails.LoadSandboxConfigFromYAML(cfg.SandboxConfigFile)
+		if serr != nil {
+			slog.Error("sandbox config is unusable; refusing to start", "path", cfg.SandboxConfigFile, "error", serr)
+			os.Exit(1)
+		}
+		engineConfig.Sandbox = *sandboxCfg
+		slog.Info("sandbox policy configured from file",
+			"path", cfg.SandboxConfigFile,
+			"enabled", sandboxCfg.Enabled,
+			"fallback_enabled", sandboxCfg.FallbackEnabled,
+			"policies", sandboxCfg.ToolPolicyNames(),
+		)
+	}
 	engine := guardrails.NewEngine(engineConfig, slog.Default())
 	if !engine.InjectionPipelineConfigured() {
 		// NewEngine logs and continues when NewPipeline refuses. Continuing is

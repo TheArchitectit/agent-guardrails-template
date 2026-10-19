@@ -167,6 +167,38 @@ func cloneLimits(in ResourceLimits) ResourceLimits {
 	return out
 }
 
+// validateImageRef refuses an image value that cannot be passed as a single
+// argv element to the container runtime.
+//
+// The previous check was `strings.ContainsAny(image, " \t\n:;")`, which
+// refused EVERY valid OCI reference — `alpine:latest`, `alpine:3.19`,
+// `ghcr.io/org/img:v1` and `alpine@sha256:…` all failed — while leaving the
+// shipped default (`""`) as the only value that validated. That was invisible
+// for as long as no configuration file could set the field; the moment an
+// operator-supplied file can name an image, a correct value would have stopped
+// startup. The `:` in a registry port and in a tag is part of the reference,
+// not a second argument.
+//
+// What is refused is what would actually change the command line: whitespace
+// (splits one argv element in every runtime that reparses), a leading `-`
+// (would be read as a runtime flag), and shell metacharacters that make an
+// injected image string look like more than an image.
+func validateImageRef(image string) error {
+	if strings.TrimSpace(image) != image {
+		return fmt.Errorf("sandbox image %q has leading or trailing whitespace", image)
+	}
+	if strings.ContainsAny(image, " \t\n\r") {
+		return fmt.Errorf("sandbox image %q must not contain whitespace", image)
+	}
+	if strings.HasPrefix(image, "-") {
+		return fmt.Errorf("sandbox image %q must not begin with '-' (it would be read as a runtime flag)", image)
+	}
+	if strings.ContainsAny(image, ";&|`$()<>") {
+		return fmt.Errorf("sandbox image %q must not contain shell metacharacters", image)
+	}
+	return nil
+}
+
 // Validate checks the config for errors.
 func (c *SandboxConfig) Validate() error {
 	if c.GlobalDefaults.Time.MaxSeconds < 0 {
@@ -187,11 +219,10 @@ func (c *SandboxConfig) Validate() error {
 	if c.GlobalDefaults.Disk.MaxWriteMB < 0 {
 		return fmt.Errorf("sandbox max_write_mb must be >= 0")
 	}
-	if c.Image != "" && strings.ContainsAny(c.Image, " \t\n:;") {
-		// The image is passed as argv, but a value carrying whitespace or a
-		// second argument separator is a configuration mistake that should be
-		// refused at load rather than producing a confusing runtime failure.
-		return fmt.Errorf("sandbox image %q must not contain whitespace, ':' or ';'", c.Image)
+	if c.Image != "" {
+		if err := validateImageRef(c.Image); err != nil {
+			return err
+		}
 	}
 	// Validate tool policies
 	for name, policy := range c.ToolPolicies {

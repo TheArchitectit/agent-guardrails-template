@@ -1,6 +1,6 @@
 # OpenSpec: Runtime Sandbox Isolation
 
-> **Status 2026-10-19 — PARTIAL, wired, and the declared limits now bind.** Both tools exist, are registered, dispatched, classified and audited, and the declared per-tool policies are applied at execution (`ExecuteFor`). This pass fixed a class of defect the previous status missed: **three limits declared in the shipped default config were consumed by nothing.** `swap_allowed: false`, `max_wall_seconds` and `max_write_mb` were read by no code path, so a reviewer saw three controls and the sandbox applied none of them — and `ResourceLimits{}` (the engine's fallback for a tool with no policy) produced a zero deadline, killing every command before it started and reporting the result as `ErrSandboxViolation`. All four are fixed at the cause. Residual gaps are named in Sec. 8. Sec. 4.3 fallback text remains wrong — see the amendment note.
+> **Status 2026-10-19 — PARTIAL, wired, the declared limits bind, and the documented config file is now read.** Both tools exist, are registered, dispatched, classified and audited, and the declared per-tool policies are applied at execution (`ExecuteFor`). This pass fixed a class of defect the previous status missed: **three limits declared in the shipped default config were consumed by nothing.** `swap_allowed: false`, `max_wall_seconds` and `max_write_mb` were read by no code path, so a reviewer saw three controls and the sandbox applied none of them — and `ResourceLimits{}` (the engine's fallback for a tool with no policy) produced a zero deadline, killing every command before it started and reporting the result as `ErrSandboxViolation`. All four are fixed at the cause. **The configuration surface is now real:** `DefaultSandboxConfig()` had been the only `SandboxConfig` in the tree — no file, no environment variable, no caller — so an operator who wrote the Sec. 3.2/3.3 YAML changed nothing. `SANDBOX_CONFIG_FILE` now loads it at startup, the documented `sandbox_policies:` spelling and the policy-level path placement both load, an unknown key is an error, and a configured-but-unusable file stops startup. Residual gaps are named in Sec. 8. Sec. 4.3 fallback text remains wrong — see the amendment note.
 
 **Gap:** Important — Pre-execution validation only; no OS-level isolation
 **Priority:** 🟡 Important (Phase 2)
@@ -250,7 +250,8 @@ Evidence: `docs/specs/guardrail-gaps-2026/STATUS.md`; tests
 | 2.x | L0 / L1 (unshare) / L2 (podman→docker) | Implemented | `sandbox.go` exec funcs (`--read-only`, `--cap-drop=ALL`, `no-new-privileges`) |
 | 2.x | L3 Firecracker | Not implemented | the spec itself marks this optional |
 | 3.2 | `resource_limits` shape | Implemented field-for-field | `sandbox_config.go` |
-| 3.3 | Policy key name | Differs, recorded | Go key is `tool_policies`, **not** the spec's `sandbox_policies`; renaming is a config-compat decision, not a defect |
+| 3.3 | Policy key name | **Both accepted 2026-10-19** | the Go type is `tool_policies`; the spec documents `sandbox_policies`. The file loader accepts **either** and refuses a file declaring both, so the documented spelling now loads |
+| 3.3 | Spec's own YAML shape loads | **Implemented 2026-10-19** | Sec. 3.3 puts `read_write_paths`/`read_only_paths` at the **policy** level, beside `resource_limits`; a `resource_limits`-only decoder refused that as an unknown field. Both placements load; declaring one set in both places is refused (no correct merge order). `TestDocumentedSandboxShapeLoads` drives a verbatim copy of the documented YAML |
 | 4.x | Network isolation | Implemented, **stronger than spec** | `--network=none` fail-closed plus CONNECT-filtering proxy and provisioned bridge network (`sandbox_network.go`) |
 | 4.x | Resource-exhaustion detection | Implemented | exit 137 / deadline mapping |
 | 4.x | Path-traversal **detection** | **Not implemented** | only mount-path syntax validation; L2 relies on the runtime's mounts, L1 does not enforce a path set at all |
@@ -262,7 +263,9 @@ Evidence: `docs/specs/guardrail-gaps-2026/STATUS.md`; tests
 | 4.x | Fork-bomb **detection** | **Implemented, gated on an enforced bound** | `detectViolations` reports the class only where a process bound is actually in force (`processLimitEnforcedFor` → L2), so it cannot describe a control that does not exist |
 | 4.x | Privilege-escalation detection | **Deliberately not a text match** | prevention at the boundary (`--cap-drop=ALL`, `no-new-privileges`, user namespace). Grepping stderr for "Operation not permitted" would flag ordinary permission errors — the same false-positive generator Law 2 became in gap-spec 04. An assertion pins that an ordinary permission error is **not** reported as a violation |
 | 5.1 | Unit tests for isolation behaviour | **Partial, improved 2026-10-19** | policy resolution, level resolution, override narrowing, L0 refusal, fail-closed-without-engine, and now every declared limit bound to a real value (`sandbox_limits_test.go`); "namespace blocks file access outside allowed paths" is **not** covered because L1 does not implement a path set |
-| 5.2 | Config hot-reload | **Not implemented** | no sandbox YAML loader; `guardrail_sandbox_config` updates the live policy table in-process, but no file is read |
+| 5.2 | Config hot-reload | **File source IMPLEMENTED 2026-10-19; hot reload NOT implemented** | `SANDBOX_CONFIG_FILE` → `LoadSandboxConfigFromYAML` at startup; a configured-but-unusable file **stops startup**. The file is read once — an edit still requires a restart, so the Sec. 5.2 *reload* checkbox stays open |
+| 3.x | Operator can supply the policy at all | **Implemented 2026-10-19** | before this, `DefaultSandboxConfig()` was the **only** `SandboxConfig` in the tree: no file, no env var, no caller, so the documented YAML described a path nothing read. Now the loader is wired at startup and the loaded table is what `ExecuteForLimits` resolves |
+| 3.x | Sandbox image validation | **Fixed 2026-10-19 (latent defect)** | `Validate()` rejected **every** valid OCI reference — `alpine:latest`, `ghcr.io/org/img:v1`, `alpine@sha256:…` — because the ':' separator was treated as an argv split. Invisible while no file could set `image:`; the loader would have made a correct value stop startup. `validateImageRef` now refuses only what changes the command line (whitespace, leading `-`, shell metacharacters) |
 | 5.3 | Container escape / fork bomb / exfiltration | **Not implemented** | no harness exists; this is the named blocker for the Sec. 5.x checkboxes |
 
 **Sec. 4.3 fallback is wrong and should be rewritten.** Sec. 4.3 specifies
@@ -297,8 +300,36 @@ while proving the fix:
    detection is gated on that bound actually being in force.
 
 What remains is not reachability: it is detection breadth (path traversal), a
-config-file loader, and the Sec. 5.x harnesses. Each is named above rather than
+config *reload*, and the Sec. 5.x harnesses. Each is named above rather than
 stubbed.
+
+**Configuration file, 2026-10-19.** The loader landed because the absence was
+not theoretical. `DefaultSandboxConfig()` was the only `SandboxConfig` value in
+the tree; `LoadInjectionConfigFromYAML`'s Spec 01 seam had exactly the same
+shape one spec over, and both artifacts described a configuration path nothing
+read. Two defects surfaced only while wiring it:
+
+1. **The spec's own YAML did not load.** Sec. 3.3 places `read_write_paths` and
+   `read_only_paths` at the **policy** level, beside `resource_limits`. A
+   decoder built from the Go type — where those live under `resource_limits.disk`
+   — refused the documented shape as an unknown field. Both placements are now
+   accepted, and declaring one set in both places is refused because two
+   spellings of one path set has no correct merge order. `TestDocumentedSandboxShapeLoads`
+   drives a verbatim copy of the spec's own example.
+2. **`Validate()` refused every valid image reference.** The check was
+   `strings.ContainsAny(image, " \t\n:;")`, which rejects `alpine:latest`,
+   `alpine:3.19`, `ghcr.io/org/img:v1` and `alpine@sha256:…` — every reference a
+   deployment would actually use — while accepting only the empty string. That
+   was invisible for as long as no file could set `image:`; the moment one can,
+   a correct value would have stopped startup. The ':' in a tag and in a
+   registry port is part of the reference, not a second argument.
+
+Two rules keep the file from becoming a false assurance. **Unknown keys are an
+error** (`KnownFields`), so a typo cannot leave a bound at its zero value and
+load clean. And every boolean is a **pointer** in the YAML mirror, so an omitted
+switch inherits the shipped default while an explicit `false` wins — decoding
+straight into the Go struct collapses both, which would let a file naming only
+`max_mb` silently disable `fallback_enabled`.
 
 **Still-open decisions:**
 
@@ -309,8 +340,10 @@ stubbed.
    are prevented by `--pids-limit` and detected only where that bound exists;
    privilege escalation is prevention at the boundary, not a text match, and
    the reason is recorded in the table above.
-3. A YAML loader for policies, or amend Sec. 3.3 to name `tool_policies` and
-   mark file-based configuration out of scope.
+3. ~~A YAML loader for policies.~~ **Resolved 2026-10-19:** `SANDBOX_CONFIG_FILE`
+   loads the Sec. 3.2/3.3 file at startup; `sandbox_policies:` and
+   `tool_policies:` are both accepted. Hot *reload* (an edit picked up without a
+   restart) is still unimplemented and is the remaining Sec. 5.2 item.
 4. Sec. 5.x security criteria need a defined harness (container escape, fork
    bomb) before they can be checked at all. The fork-bomb half now has a
    mechanism to test; the harness itself is still unwritten.
