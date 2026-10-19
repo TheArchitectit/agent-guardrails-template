@@ -8,7 +8,7 @@ still awaits owner acceptance.**
 per-tool access hooks, and Phase 0 exit.
 **Related:** `docs/specs/AUTH-01-mcp-endpoint-auth.md`,
 `docs/specs/09-system-roadmap-and-phase-gates.md` Phase 0, and
-`docs/platform-current-state.md` Sec. Sec. 3, 5.
+`docs/platform-current-state.md` Sec. 3 and Sec. 5.
 
 ## 1. Problem
 

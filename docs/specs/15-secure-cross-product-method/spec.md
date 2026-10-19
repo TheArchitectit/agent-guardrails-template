@@ -36,7 +36,7 @@ clause) are not implemented. Signature verification of *policy packs* stays
 gr-xp open under spec 07 R07-4.3.4.
 **Related:** [Spec 11](../11-authorization-scopes-and-roles.md),
 [Spec 14](../14-optional-oap-guardrail-checker/spec.md),
-`platform-current-state.md` Sec. Sec. 3, 5.
+`platform-current-state.md` Sec. 3 and Sec. 5.
 
 ## Purpose
 
