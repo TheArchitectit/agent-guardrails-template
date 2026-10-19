@@ -1,7 +1,6 @@
 package guardrails
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -332,9 +331,10 @@ func (m *SandboxManager) execL0(ctx context.Context, command string, limits Reso
 		return nil, lerr
 	}
 	cmd := exec.CommandContext(ctx, launcher, largs...)
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
+	stdout := newBoundedCapture(MaxCapturedOutputBytes)
+	stderr := newBoundedCapture(MaxCapturedOutputBytes)
+	cmd.Stdout = stdout
+	cmd.Stderr = stderr
 
 	err := cmd.Run()
 
@@ -383,9 +383,10 @@ func (m *SandboxManager) execL1(ctx context.Context, command string, limits Reso
 	defer cancel()
 
 	cmd := exec.CommandContext(ctx, "unshare", args...)
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
+	stdout := newBoundedCapture(MaxCapturedOutputBytes)
+	stderr := newBoundedCapture(MaxCapturedOutputBytes)
+	cmd.Stdout = stdout
+	cmd.Stderr = stderr
 
 	err := cmd.Run()
 
@@ -570,9 +571,10 @@ func (m *SandboxManager) execL2(ctx context.Context, command string, limits Reso
 	defer cancel()
 
 	cmd := exec.CommandContext(ctx, runtime, args...)
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
+	stdout := newBoundedCapture(MaxCapturedOutputBytes)
+	stderr := newBoundedCapture(MaxCapturedOutputBytes)
+	cmd.Stdout = stdout
+	cmd.Stderr = stderr
 
 	err := cmd.Run()
 

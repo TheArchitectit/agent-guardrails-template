@@ -912,6 +912,20 @@ func (s *MCPServer) authorizeToolCallDisabled(ctx context.Context, name string, 
 		pkg:       "./internal/guardrails",
 		testRegex: "^TestDeclaredBlocklistThatCannotBeReadIsRefused$",
 	},
+	{
+		// Spec 03 Sec. 4.x: every execution path piped the child's stdout and
+		// stderr into an unbounded bytes.Buffer, so the declared memory limit
+		// constrained the CONTAINER and not the server collecting its output.
+		// The mutation restores an effectively unbounded collector by moving the
+		// cap out of reach — the pre-fix behaviour, expressed as a compilable
+		// edit rather than by re-introducing the removed import.
+		name:      "sandbox-output-capture-unbounded",
+		file:      "internal/guardrails/sandbox_output.go",
+		old:       "\treturn &boundedCapture{limit: limit}",
+		new:       "\treturn &boundedCapture{limit: 1 << 40} // mutation: the cap is out of reach",
+		pkg:       "./internal/guardrails",
+		testRegex: "^TestExecuteBoundsUnboundedOutput$",
+	},
 }
 
 func findModuleRoot(t *testing.T) string {

@@ -70,14 +70,15 @@
     },
     {
       "id": "sandbox-isolation",
-      "version": "1.0.3",
-      "digest": "sha256:8256f1a04c57029c9090ee0af2f7d3fcf3e9cb517297ab5cb10e67fbd83a5591",
+      "version": "1.0.4",
+      "digest": "sha256:22d34f0c72ed3622304cc8b39e509c1c2673276cb88e991015bbd9296b2dcfc6",
       "source_paths": [
         "mcp-server/internal/guardrails/sandbox.go",
         "mcp-server/internal/guardrails/sandbox_config.go",
         "mcp-server/internal/guardrails/sandbox_config_file.go",
         "mcp-server/internal/guardrails/sandbox_policy.go",
-        "mcp-server/internal/guardrails/sandbox_capability.go"
+        "mcp-server/internal/guardrails/sandbox_capability.go",
+        "mcp-server/internal/guardrails/sandbox_output.go"
       ],
       "owner": "guardrails",
       "interface": "controlplane.component/v1",
