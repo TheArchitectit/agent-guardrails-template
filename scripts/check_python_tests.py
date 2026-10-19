@@ -70,6 +70,40 @@ SKIP_DIRS = {
     ".tox",
 }
 
+# The repository DECLARES its own out-of-scope directories in
+# ``.guardrails/scope.json`` (fw-scope-01), and every other gate honours it via
+# gate_common.load_skip_dirs. This gate kept a private list instead, so the two
+# disagreed the moment a vendored tree appeared: the declared scope excluded
+# ``.devgate`` while this list had never heard of it, and the gate reported a
+# "suite" inside the DevGate submodule that CI could never run — a FAIL against
+# a tree that had done nothing wrong.
+#
+# Declared scope wins; the built-in list is the fallback when no contract ships.
+SCOPE_CONTRACT = Path(".guardrails") / "scope.json"
+
+
+def _skip_dirs(repo: Path) -> set[str]:
+    """Declared scope, unioned with the built-in defaults.
+
+    Union, not replacement: a project overlay narrows what is scanned, and the
+    defaults stay authoritative for VCS/dependency/cache directories a project
+    might forget to list. A malformed contract is an ERROR, never a silent
+    fall-through to the defaults — a gate that scans the wrong tree fails open.
+    """
+    dirs = set(SKIP_DIRS)
+    path = repo / SCOPE_CONTRACT
+    if not path.is_file():
+        return dirs
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ValueError(f"{path}: unreadable scope contract: {exc}") from exc
+    declared = data.get("skip_dirs")
+    if not isinstance(declared, list):
+        raise ValueError(f"{path}: skip_dirs must be a list")
+    dirs.update(str(d) for d in declared)
+    return dirs
+
 # pytest's default python_files, matched case-sensitively so illustrative
 # templates (e.g. EXAMPLE_REGRESSION_TEST.py) are not mistaken for live suites.
 TEST_FILE_PATTERNS = ("test_*.py", "*_test.py")
@@ -88,9 +122,14 @@ def discover_suites(repo: Path) -> tuple[set[str], list[str]]:
     if not repo.is_dir():
         return found, [f"{repo}: not a directory (fail-closed)"]
 
+    try:
+        skip_dirs = _skip_dirs(repo)
+    except ValueError as exc:
+        return found, [str(exc)]
+
     for path in sorted(repo.rglob("*.py")):
         rel = path.relative_to(repo)
-        if any(part in SKIP_DIRS for part in rel.parts[:-1]):
+        if any(part in skip_dirs for part in rel.parts[:-1]):
             continue
         if not _is_test_file(path.name):
             continue
