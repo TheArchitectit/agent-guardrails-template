@@ -4,7 +4,7 @@
     {
       "suite": "scripts",
       "path": "scripts",
-      "setup_command": "python3 -m pip install pytest pytest-cov",
+      "setup_command": "python3 -m pip install pytest pytest-cov pyyaml",
       "test_command": "python3 -m pytest scripts/ -v --cov=scripts --cov-report=xml",
       "min_tests": 100,
       "applicability": "required always: the gate/regression scripts and their red-on-drift self-tests"
