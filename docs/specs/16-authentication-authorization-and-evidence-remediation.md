@@ -376,6 +376,12 @@ half landed (`main@58ceb6c4`) and its receiving half has no submitter.
 R16-11 (Spec 14 checker) needs a real consumer and host readiness evidence.
 Neither is advertised as enforced.
 
+**Implementation note — R16-08 audit posture (2026-10-19).** The audit
+durability path was declared but never wired, and three settings around it
+were inert; the dated note and its evidence are in the companion file
+[`16-implementation-notes.md`](16-implementation-notes.md) (split out to stay
+within the 500-line Markdown limit, Spec 19 R19-11).
+
 ## 6. Migration and rollback
 
 1. Record current clients, public consumers, config sources, and tool/resource

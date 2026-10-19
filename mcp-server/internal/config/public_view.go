@@ -40,7 +40,6 @@ type PublicConfig struct {
 	EnableAuditLogging   bool          `json:"enable_audit_logging"`
 	EnableCache          bool          `json:"enable_cache"`
 	AuditBufferSize      int           `json:"audit_buffer_size"`
-	AuditFlushInterval   time.Duration `json:"audit_flush_interval"`
 
 	CircuitBreakerEnabled          bool          `json:"circuit_breaker_enabled"`
 	CircuitBreakerFailureThreshold int           `json:"circuit_breaker_failure_threshold"`
@@ -107,7 +106,6 @@ func (c *Config) PublicView() PublicConfig {
 		EnableAuditLogging:   c.EnableAuditLogging,
 		EnableCache:          c.EnableCache,
 		AuditBufferSize:      c.AuditBufferSize,
-		AuditFlushInterval:   c.AuditFlushInterval,
 
 		CircuitBreakerEnabled:          c.CircuitBreakerEnabled,
 		CircuitBreakerFailureThreshold: c.CircuitBreakerFailureThreshold,

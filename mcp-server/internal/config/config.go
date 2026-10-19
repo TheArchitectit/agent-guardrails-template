@@ -192,9 +192,12 @@ type Config struct {
 	EnableAuditLogging bool `env:"ENABLE_AUDIT_LOGGING" envDefault:"true"`
 	EnableCache        bool `env:"ENABLE_CACHE" envDefault:"true"`
 
-	// Audit Logging Configuration
-	AuditBufferSize    int           `env:"AUDIT_BUFFER_SIZE" envDefault:"1000"`
-	AuditFlushInterval time.Duration `env:"AUDIT_FLUSH_INTERVAL" envDefault:"5s"`
+	// Audit Logging Configuration. AuditBufferSize is the channel capacity the
+	// startup path must use (see AuditBufferCapacity); it is consumed by
+	// cmd/server/main.go and gated here. AUDIT_FLUSH_INTERVAL was removed: no
+	// batch/flush path exists in the tree, so the setting described a behaviour
+	// the server does not have (see internal/config/audit.go).
+	AuditBufferSize int `env:"AUDIT_BUFFER_SIZE" envDefault:"1000"`
 
 	// Circuit Breaker Configuration
 	CircuitBreakerEnabled          bool          `env:"CIRCUIT_BREAKER_ENABLED" envDefault:"true"`
@@ -607,6 +610,13 @@ func (c *Config) Validate() error {
 	// valid IP or CIDR: a malformed entry is a configuration error, not a
 	// silent narrowing to "trust nothing".
 	if _, err := clientip.NewStance(c.TrustedProxies); err != nil {
+		return err
+	}
+
+	// Validate the audit posture (Spec 16 R16-08): a nonlocal/production
+	// deployment must not run with audit logging disabled, and the buffer size
+	// the startup path uses is bounded here.
+	if err := c.ValidateAuditPosture(); err != nil {
 		return err
 	}
 

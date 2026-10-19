@@ -101,8 +101,10 @@ func main() {
 		go startPProfServer(cfg)
 	}
 
-	// Initialize audit logger
-	auditLogger := audit.NewLogger(1000)
+	// Initialize audit logger at the configured capacity (Spec 16 R16-08). The
+	// capacity comes from AUDIT_BUFFER_SIZE, which Config.Validate bounds; the
+	// previous hardcoded 1000 made the validated setting inert.
+	auditLogger := audit.NewLogger(cfg.AuditBufferCapacity())
 
 	// Connect to database
 	db, err := database.New(cfg)
@@ -128,6 +130,14 @@ func main() {
 	dbMetricsCollector := database.NewMetricsCollector(db, 15*time.Second)
 	dbMetricsCollector.Start()
 	defer dbMetricsCollector.Stop()
+
+	// Give the audit logger its durable store (Spec 16 R16-08). Without this the
+	// logger emits to the process log only, so a nonlocal deployment ran with an
+	// audit trail that did not survive the process — and every
+	// LogDecision(required=true) path would ultimately fail closed. The store is
+	// the same database the rest of the server uses.
+	auditLogger.SetStore(database.NewAuditStore(db))
+	slog.Info("Audit logger configured", "buffer_size", cfg.AuditBufferCapacity(), "durable_store", auditLogger.HasDurableStore())
 
 	// Connect to Redis
 	redisClient, err := cache.New(cfg)
@@ -736,6 +746,11 @@ policyPacksDone:
 	if err := mcpSrv.Shutdown(shutdownCtx); err != nil {
 		slog.Error("MCP server shutdown error", "error", err)
 	}
+
+	// Drain the audit logger last, so events emitted while the web/MCP servers
+	// are shutting down are still written to the durable store before the
+	// database handle closes below.
+	auditLogger.Stop()
 
 	// Close database connection
 	if err := db.Close(); err != nil {
