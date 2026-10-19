@@ -1,0 +1,6 @@
+# Spec 01 Sec. 4.2 — operator custom patterns.
+#
+# Add site-specific rules here; one regex per line, '#' starts a comment.
+# This file ships empty on purpose: a fleet-wide rule belongs in
+# injection-patterns.txt with the categories in Spec 01 Sec. 3.3, so the
+# baseline stays reviewable and this file stays local policy.

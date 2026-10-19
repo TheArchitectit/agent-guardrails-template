@@ -9,7 +9,7 @@
     {
       "id": "policy-engine",
       "version": "1.2.0",
-      "digest": "sha256:f76174ee4a80d822bac456d1b905e4903c01b44a64b00d5471f41b0f45a57392",
+      "digest": "sha256:df775ba4174c45b158675f953d52ea1344593451632e08cd3775ec5f7b594cc4",
       "source_paths": [
         "mcp-server/internal/guardrails/engine.go",
         "mcp-server/internal/guardrails/policy_pack.go",
@@ -28,7 +28,7 @@
     {
       "id": "injection-detector",
       "version": "1.4.3",
-      "digest": "sha256:a62fc347bd4587d781cdc4f67577342e888b527443d06a861d0b64edfe92a5be",
+      "digest": "sha256:0b93f9337ae2e9ee1dc2507bdf46db4fdc4392c7f4546b46c9e0d3cf276a7fb4",
       "source_paths": [
         "mcp-server/internal/guardrails/injection_detection.go",
         "mcp-server/internal/guardrails/injection_detection_patterns.go",

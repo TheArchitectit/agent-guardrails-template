@@ -421,10 +421,12 @@ func LoadInjectionConfigFromYAML(path string) (*InjectionConfig, error) {
 	}
 
 	cfg := DefaultInjectionConfig()
-	// The tree ships L2 OFF (DefaultPipelineConfig). Presence of a config file
-	// must not silently enable a heuristic detector the operator never asked
-	// for, so the shipped posture wins unless the file names L2 explicitly.
-	cfg.L2Enabled = false
+	// Spec 01 Sec. 2.2: "L1-L2 run on every input", and Sec. 3.2 documents
+	// `perplexity: enabled: true`. The loader previously forced L2 off so a
+	// file could not silently enable a heuristic detector, but that made the
+	// documented default unexpressible and left the tree with two defaults
+	// that disagreed. The spec is the decision: L2 ships on, and a file may
+	// still switch it off explicitly.
 
 	if section.Enabled != nil {
 		cfg.Enabled = *section.Enabled

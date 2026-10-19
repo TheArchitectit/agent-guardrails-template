@@ -1,0 +1,28 @@
+# Spec 01 Sec. 4.2 — baseline injection blocklist.
+#
+# Format: one Go/RE2 regex per line. Blank lines and lines starting with '#'
+# are ignored. Every line must compile; an uncompilable line is a construction
+# error, not a skip (fw: an unreadable or malformed corpus must never reduce
+# coverage silently).
+#
+# Categories follow Spec 01 Sec. 3.3. This file is the operator-editable
+# baseline; the same expressions ship compiled in DefaultPatterns() so a
+# deployment with no config file still evaluates input.
+
+# directive_override — instructions that override the system prompt
+(?i)(ignore\s+(all\s+)?previous\s+instructions|disregard\s+(your|all)\s+(instructions|rules)|forget\s+(your|all)\s+(instructions|rules))
+
+# role_play — attempts to change the agent's role
+(?i)(you\s+are\s+now\s+a|act\s+as\s+(if\s+)?you\s+(are|have)\s+no\s+rules|pretend\s+you\s+(are|have)\s+no)
+
+# encoding_bypass — base64/ROT13/unicode obfuscation
+(?i)(base64\s*decode|rot13|unicode\s+escape|\\u[0-9a-fA-F]{4})
+
+# context_manipulation — attempts to control what the agent sees
+(?i)(the\s+system\s+message\s+(actually\s+)?says|override\s+the\s+system\s+prompt|replace\s+your\s+instructions)
+
+# privilege_escalation — requesting elevated permissions
+(?i)(run\s+(this\s+)?as\s+root|execute\s+with\s+sudo|bypass\s+(the\s+)?permission|elevated\s+privileges)
+
+# data_exfiltration — attempts to leak system information
+(?i)(print\s+(your|the)\s+system\s+prompt|reveal\s+(your|the)\s+instructions|show\s+(me\s+)?(your|the)\s+system\s+(prompt|instructions)|output\s+your\s+system\s+prompt)

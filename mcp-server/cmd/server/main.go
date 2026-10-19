@@ -711,6 +711,21 @@ policyPacksDone:
 		}
 	}()
 
+	// Spec 01 Sec. 4.2: "Blocklists are hot-reloaded (SIGHUP or file watcher)",
+	// and .env.example documents "send SIGHUP". Until now SIGHUP was not
+	// handled at all — the documented reload path did not exist.
+	reload := make(chan os.Signal, 1)
+	signal.Notify(reload, syscall.SIGHUP)
+	go func() {
+		for range reload {
+			if err := engine.ReloadInjectionPatterns(); err != nil {
+				slog.Error("injection blocklist reload failed; the prior pattern set remains in force", "error", err)
+				continue
+			}
+			slog.Info("injection blocklists reloaded (SIGHUP)")
+		}
+	}()
+
 	// Wait for shutdown signal
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
@@ -721,6 +736,7 @@ policyPacksDone:
 	case <-ctx.Done():
 		slog.Info("Context cancelled")
 	}
+	signal.Stop(reload)
 
 	// Graceful shutdown with configurable timeout
 	shutdownTimeout := cfg.ShutdownTimeout

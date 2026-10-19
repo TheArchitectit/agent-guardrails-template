@@ -73,8 +73,8 @@ type InjectionResult struct {
 	// them (Spec 01).
 	LayersEvaluated []string  `json:"layers_evaluated,omitempty"`
 	TextHash        string    `json:"text_hash"`
-	Decision       string    `json:"decision"`
-	ProcessedAt    time.Time `json:"processed_at"`
+	Decision        string    `json:"decision"`
+	ProcessedAt     time.Time `json:"processed_at"`
 }
 
 // BatchResult is the output of batch scanning.
@@ -195,7 +195,12 @@ func DefaultPipelineConfig() PipelineConfig {
 				CustomPatterns: DefaultPatternList(),
 			},
 			Perplexity: PerplexityConfig{
-				Enabled:   false,
+				// Spec 01 Sec. 2.2: "L1-L2 run on every input." The shipped
+				// default must match the spec rather than undercut it. Measured
+				// before flipping: ordinary prose, source code and SQL all
+				// score 0.000 (no anomaly); only degenerate repetition trips
+				// the entropy floor.
+				Enabled:   true,
 				Threshold: 0.85,
 			},
 			Classifier: ClassifierConfig{},

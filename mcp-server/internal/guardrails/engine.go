@@ -216,6 +216,19 @@ func (e *Engine) AddContentFilterBackend(backend SemanticClassifier) {
 	}
 }
 
+// ReloadInjectionPatterns recompiles the L1 blocklists from their source files
+// (Spec 01 Sec. 4.2: "Blocklists are hot-reloaded (SIGHUP or file watcher)").
+//
+// This is the caller ReloadPatterns never had. A failed reload leaves the prior
+// compiled set in force — a reload must not be able to disarm a running control
+// — so the error is for the operator, not a reason to stop serving.
+func (e *Engine) ReloadInjectionPatterns() error {
+	if e == nil || e.pipeline == nil {
+		return fmt.Errorf("injection pipeline is not configured; nothing to reload")
+	}
+	return e.pipeline.ReloadPatterns()
+}
+
 // Stop releases background resources owned by the engine (cache prune loop, etc.).
 func (e *Engine) Stop() {
 	if e.filter != nil {
