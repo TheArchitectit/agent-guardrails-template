@@ -1,0 +1,30 @@
+{
+  "api_version": "devgate.scope/v1",
+  "note": [
+    "Project overlay for DevGate gate scope (fw-scope-01).",
+    "Consumed by every gate via gate_common.load_skip_dirs.",
+    "Extends the upstream baseline; does not edit it (overlay-not-fork).",
+    "Added 2026-10-19 when GR moved from a local check_charset.py copy to",
+    "consuming .devgate/scripts/check_charset.py."
+  ],
+  "skip_dirs": [
+    ".claude",
+    ".crew",
+    ".devgate",
+    ".git",
+    ".next",
+    ".nuxt",
+    ".sandbox-home",
+    ".venv",
+    "__pycache__",
+    "build",
+    "dist",
+    "egg-info",
+    "node_modules",
+    "out",
+    "target",
+    "vendor",
+    "venv",
+    "worktrees"
+  ]
+}

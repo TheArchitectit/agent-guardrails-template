@@ -12,10 +12,13 @@ jobs:
     name: Check for Potential Regressions
 
     steps:
-      - name: Checkout code
+      - name: Checkout code (with DevGate submodule)
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           fetch-depth: 0
+          # .devgate carries the shared gate implementations. Overlay-not-fork:
+          # this repo keeps .guardrails/* as its policy and consumes the code.
+          submodules: recursive
 
       - name: Set up Python
         uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
@@ -76,8 +79,8 @@ jobs:
           # and therefore invisible to a codepoint check. The self-test drives
           # the real gate against real git trees, so a green run cannot come
           # from an assertion that never executes.
-          python scripts/check_charset.py --repo .
-          python scripts/test_check_charset.py
+          python .devgate/scripts/check_charset.py --repo .
+          python .devgate/tests/test_check_charset.py
 
       - name: Go module discovery (Spec 19 R19-10)
         run: |
