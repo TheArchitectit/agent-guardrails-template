@@ -26,6 +26,17 @@ func writeInjectionConfig(t *testing.T, body string) string {
 // operator-written file that silently disabled the detector. Probed before the
 // fix: Enabled=true L1=false L2=false L3=false.
 func TestDocumentedNestedShapeEnablesTheLayers(t *testing.T) {
+	// The spec's Sec. 3.2 example names a corpus that does not ship, and a
+	// declared-but-unreadable blocklist is now an ERROR (a matcher that runs
+	// with fewer patterns than the review trail declares reports Safe for text
+	// it never evaluated). So the fixture writes the corpus it declares — the
+	// point of this test is the documented SHAPE, not the shipped filenames.
+	dir := t.TempDir()
+	corpus := filepath.Join(dir, "injection-patterns.txt")
+	if err := os.WriteFile(corpus, []byte(`(?i)ignore\s+(all\s+)?previous\s+instructions`+"\n"), 0o600); err != nil {
+		t.Fatalf("write corpus: %v", err)
+	}
+
 	p := writeInjectionConfig(t, `
 injection_defense:
   enabled: true
@@ -33,7 +44,7 @@ injection_defense:
     pattern_matching:
       enabled: true
       blocklists:
-        - path: "config/blocklists/injection-patterns.txt"
+        - path: "`+corpus+`"
       custom_patterns: []
     perplexity:
       enabled: true
@@ -59,7 +70,7 @@ injection_defense:
 		t.Fatalf("documented shape loaded with layers disabled: L1=%v L2=%v L3=%v",
 			cfg.L1Enabled, cfg.L2Enabled, cfg.L3Enabled)
 	}
-	if len(cfg.BlocklistPaths) != 1 || cfg.BlocklistPaths[0] != "config/blocklists/injection-patterns.txt" {
+	if len(cfg.BlocklistPaths) != 1 || cfg.BlocklistPaths[0] != corpus {
 		t.Fatalf("blocklist path from `- path:` form was not read: %v", cfg.BlocklistPaths)
 	}
 	if cfg.PerplexityThreshold != 0.85 {
@@ -75,9 +86,6 @@ injection_defense:
 	pc := cfg.ToPipelineConfig()
 	if !pc.Layers.PatternMatching.Enabled {
 		t.Fatal("pipeline L1 disabled after loading an enabling config")
-	}
-	if len(pc.Layers.PatternMatching.CustomPatterns) == 0 {
-		t.Fatal("pipeline L1 enabled with zero patterns; scans would report safe without evaluating")
 	}
 
 	pipeline, err := NewPipeline(pc, nil, nil)

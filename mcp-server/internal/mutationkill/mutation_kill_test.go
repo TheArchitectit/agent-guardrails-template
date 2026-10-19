@@ -884,6 +884,34 @@ func (s *MCPServer) authorizeToolCallDisabled(ctx context.Context, name string, 
 		pkg:       "./internal/guardrails",
 		testRegex: "^TestAssessRequirement_UnmeasuredDoesNotContradictADeclaredGap$",
 	},
+	{
+		// Spec 01 Sec. 2.2: an enabled L1 matcher with ZERO compiled patterns is
+		// constructible, and a matcher that can never fire reports Safe for text
+		// it never evaluated. The mutation removes the zero-pattern guard so the
+		// vacuous layer is built again.
+		name: "injection-l1-enabled-with-zero-patterns-allowed",
+		file: "internal/guardrails/injection_detection_patterns.go",
+		old: "\tif len(patterns) == 0 {\n" +
+			"\t\treturn fmt.Errorf(\"L1 pattern matching is enabled with zero compiled patterns; a matcher that can never fire reports Safe for text it never evaluated (Spec 01 Sec. 2.2)\")\n" +
+			"\t}",
+		new:       "\t_ = patterns // mutation: an enabled matcher with no compiled pattern is accepted",
+		pkg:       "./internal/guardrails",
+		testRegex: "^TestEnabledL1WithZeroPatternsIsRefused$",
+	},
+	{
+		// Spec 01 Sec. 4.2: a blocklist the operator DECLARED but that cannot be
+		// read used to be logged and skipped, so the layer enforced less than the
+		// review trail claimed while every scan still returned a verdict. The
+		// mutation restores the warn-and-continue behaviour.
+		name: "injection-declared-blocklist-unreadable-is-skipped",
+		file: "internal/guardrails/injection_detection_patterns.go",
+		old: "\t\tif err != nil {\n" +
+			"\t\t\treturn fmt.Errorf(\"declared blocklist %q could not be read (Spec 01 Sec. 4.2): %w\", path, err)\n" +
+			"\t\t}",
+		new:       "\t\tif err != nil {\n\t\t\tcontinue // mutation: a declared-but-unreadable blocklist is skipped\n\t\t}",
+		pkg:       "./internal/guardrails",
+		testRegex: "^TestDeclaredBlocklistThatCannotBeReadIsRefused$",
+	},
 }
 
 func findModuleRoot(t *testing.T) string {

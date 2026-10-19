@@ -2,7 +2,7 @@ package guardrails
 
 import (
 	"context"
-	"log/slog"
+	"fmt"
 	"math"
 	"sync"
 
@@ -25,32 +25,50 @@ func NewPatternMatcher(config PatternMatchingConfig) (*PatternMatcher, error) {
 	return pm, nil
 }
 
+// loadPatterns compiles the configured blocklist and custom patterns into the
+// matcher. It is fail-closed at the three points this pass fixed:
+//
+//  1. A blocklist path the operator DECLARED but that cannot be read used to be
+//     logged and skipped, so the layer ran with fewer patterns than declared
+//     while every scan still returned a verdict. An operator who pointed the
+//     detector at a corpus and mistyped the filename had a detector silently
+//     enforcing less than the review trail claimed.
+//  2. A pattern that failed to COMPILE used to be dropped the same way, so a
+//     malformed rule reduced coverage without failing anything.
+//  3. An enabled matcher with ZERO compiled patterns was constructible, and a
+//     matcher that can never fire reports Safe for text it never evaluated —
+//     the same vacuity class this spec family keeps re-creating.
+//
+// On any error the previously compiled set is left in force: a reload must not
+// be able to disarm a running control (the credential registry uses the same
+// rule).
 func (pm *PatternMatcher) loadPatterns() error {
 	var patterns []*regexp2.Regexp
 
 	for _, path := range pm.config.BlocklistPaths {
 		lines, err := ReadBlocklistFile(path)
 		if err != nil {
-			slog.Warn("Failed to read blocklist", "path", path, "error", err)
-			continue
+			return fmt.Errorf("declared blocklist %q could not be read (Spec 01 Sec. 4.2): %w", path, err)
 		}
-		for _, line := range lines {
+		for i, line := range lines {
 			re, err := regexp2.Compile(line, regexp2.None)
 			if err != nil {
-				slog.Warn("Failed to compile pattern", "pattern", line, "error", err)
-				continue
+				return fmt.Errorf("declared blocklist %q line %d does not compile (Spec 01 Sec. 4.2): %w", path, i+1, err)
 			}
 			patterns = append(patterns, re)
 		}
 	}
 
-	for _, pattern := range pm.config.CustomPatterns {
+	for i, pattern := range pm.config.CustomPatterns {
 		re, err := regexp2.Compile(pattern, regexp2.None)
 		if err != nil {
-			slog.Warn("Failed to compile custom pattern", "pattern", pattern, "error", err)
-			continue
+			return fmt.Errorf("custom pattern %d does not compile (Spec 01 Sec. 3.2): %w", i, err)
 		}
 		patterns = append(patterns, re)
+	}
+
+	if len(patterns) == 0 {
+		return fmt.Errorf("L1 pattern matching is enabled with zero compiled patterns; a matcher that can never fire reports Safe for text it never evaluated (Spec 01 Sec. 2.2)")
 	}
 
 	pm.mu.Lock()
