@@ -116,13 +116,32 @@ func NewPerplexityAnalyzer(config PerplexityConfig) *PerplexityAnalyzer {
 	return &PerplexityAnalyzer{config: config}
 }
 
-// Analyze computes a perplexity-like score for the text.
+// minPerplexityTextRunes is the shortest text L2 will score.
+//
+// Character-level statistics on a tiny sample are sampling noise, not signal:
+// measured before this floor existed, the single character "x" scored 1.000 and
+// tripped the 0.85 threshold, as did "- a\n- b\n- c" (11 runes) and a 30-rune
+// markdown table. L2 is the cheap-and-broad layer; a layer that answers "anomalous"
+// for a three-item list teaches operators to ignore it. Below the floor L2 abstains
+// (score 0, not anomalous) and the result records no L2 evaluation.
+const minPerplexityTextRunes = 32
+
+// Analyze computes a perplexity-like score for the text, in [0,1].
+//
+// The score MUST be bounded to [0,1]: Spec 01 Sec. 3.2 documents
+// `perplexity: threshold: 0.85  # above this = suspicious`, and a score that can
+// exceed 1 makes every comparison against that number meaningless. Before this
+// pass the special-character branch divided by the ALPHA count rather than by the
+// text length, so it was unbounded: a 30-rune markdown table scored 3.000, a
+// 531-rune JSON array scored 2.492, and with L2 enabled by default (2026-10-19)
+// both returned Safe=false and, for tool output, decision=block — ordinary
+// structured tool output refused as an injection.
 func (pa *PerplexityAnalyzer) Analyze(ctx context.Context, text string) (float64, bool) {
-	if len(text) == 0 {
+	runes := []rune(text)
+	if len(runes) < minPerplexityTextRunes {
 		return 0, false
 	}
 
-	runes := []rune(text)
 	n := float64(len(runes))
 
 	freq := make(map[rune]int)
@@ -140,28 +159,31 @@ func (pa *PerplexityAnalyzer) Analyze(ctx context.Context, text string) (float64
 
 	var score float64
 	if entropy > 5.0 {
+		// Dense, high-entropy text: encoded payloads look like this.
 		score = (entropy - 5.0) / 3.0
 	} else if entropy < 2.0 {
+		// Degenerate repetition (a long run of one or two characters).
 		score = (2.0 - entropy) / 2.0
 	}
 
 	specialCount := 0
-	alphaCount := 0
 	for _, r := range runes {
-		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') {
-			alphaCount++
-		} else if (r >= 33 && r <= 47) || (r >= 58 && r <= 64) {
+		if (r >= 33 && r <= 47) || (r >= 58 && r <= 64) {
 			specialCount++
 		}
 	}
 
-	if alphaCount > 0 {
-		specialRatio := float64(specialCount) / float64(alphaCount)
-		if specialRatio > 0.5 {
-			if specialRatio > score {
-				score = specialRatio
-			}
-		}
+	// Special characters are measured as a FRACTION OF THE TEXT, not as a ratio
+	// against the letter count. The threshold is documented as "above this =
+	// suspicious" on a 0..1 scale, so the quantity compared to it must live on
+	// that scale: 0.85 means "85% of the characters are punctuation", which no
+	// ordinary prose, JSON, SQL or Markdown reaches.
+	if fraction := float64(specialCount) / n; fraction > score {
+		score = fraction
+	}
+
+	if score > 1 {
+		score = 1
 	}
 
 	return score, score > pa.config.Threshold

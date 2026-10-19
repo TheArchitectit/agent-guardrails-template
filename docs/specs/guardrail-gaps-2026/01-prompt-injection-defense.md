@@ -1,13 +1,21 @@
 # OpenSpec: Prompt Injection Defense
 
-> **Status: tools IMPLEMENTED 2026-10-18, and callable since 2026-10-18; detection is L1-only by default.**
+> **Status: tools IMPLEMENTED 2026-10-18, and callable since 2026-10-18; L1+L2 run by default since 2026-10-19.**
 > Both tools proposed by this spec now exist and are dispatched:
 > `guardrail_detect_injection` and `guardrail_scan_text_batch`
 > (`mcp-server/internal/mcp/tools_guardrails.go`, dispatched from
 > `server.go`, registered by `guardrailsToolList()`). The shipped default
 > pipeline now compiles the built-in L1 pattern set, so a scan actually
-> evaluates input instead of returning `safe:true` vacuously. L2 perplexity
-> stays off by default. **L3 is now wired (2026-10-18):** the pipeline is no
+> evaluates input instead of returning `safe:true` vacuously. **L2 ships on**
+> (2026-10-19, Spec 01 Sec. 2.2 "L1-L2 run on every input"), and the analyser
+> had to be repaired before that default could ship: its score was unbounded
+> (a 30-rune markdown table scored 3.000 against a documented 0.85 threshold)
+> and it flagged ordinary structured tool output, which for `tool_output` means
+> `decision: block`. The score is now bounded to [0,1], pragmatic
+> special-character density is a fraction of the text rather than a ratio
+> against the letter count, and L2 abstains below a 32-rune sample instead of
+> scoring sampling noise. Pinned by `injection_l2_bounded_score_test.go`.
+> **L3 is now wired (2026-10-18):** the pipeline is no
 > longer built around a `NoOpClassifier` that answered "safe" for text it
 > never evaluated, `Engine.EnableInjectionClassifier` attaches a real backend
 > and its switch together, and `cmd/server/main.go` enables the Ollama

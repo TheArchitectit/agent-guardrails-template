@@ -27,8 +27,8 @@
     },
     {
       "id": "injection-detector",
-      "version": "1.4.3",
-      "digest": "sha256:0b93f9337ae2e9ee1dc2507bdf46db4fdc4392c7f4546b46c9e0d3cf276a7fb4",
+      "version": "1.4.4",
+      "digest": "sha256:8f830b6bb8ed13940321c71e048065c5fa2d16ae93028f142524b02a1286ef0a",
       "source_paths": [
         "mcp-server/internal/guardrails/injection_detection.go",
         "mcp-server/internal/guardrails/injection_detection_patterns.go",
