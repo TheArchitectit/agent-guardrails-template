@@ -312,6 +312,9 @@ satisfy spec 05.
 | 3 proposed tools | **Implemented 2026-10-18** — registered, dispatched, read-class, on the MEASURED path |
 | Requirement DB (`compliance_requirements.json`) | Exists; covers EU AI Act art. 9, 10, **11**, 12, 13, 14, 15, 50 and NIST RMF govern/map/measure/manage |
 | `CalculateComplianceScore` | Implemented (legacy declared-status path, stamped `unimplemented`) |
+| `compliance_reports:` config file (Sec. 2.3) | **Read + enforced 2026-10-19** — `COMPLIANCE_CONFIG_FILE` → `LoadComplianceConfigFromYAML` at startup; the block had **no reader** before (`ComplianceConfig` had zero production call sites) |
+| `sections:` (Sec. 2.3) | **Not implemented — refused by name.** The measured report emits a fixed structure; a declared list would be inert |
+| `config_history` evidence source (Sec. 2.3/3.3) | **Not implemented — refused by name.** No code path records a restorable configuration snapshot |
 | Gap tracking / dashboard | Not implemented |
 
 The data file covers EU AI Act art. 9, 10, 11, 12, 13, 14, 15, 50 and NIST RMF

@@ -203,6 +203,20 @@ func (s *MCPServer) handleGenerateComplianceReport(ctx context.Context, args map
 		return errorResult(string(payload)), nil
 	}
 
+	// Spec 06 Sec. 2.3 scope. A framework the operator did not activate is
+	// refused by name rather than reported: an operator who scoped the audit to
+	// one framework and gets another scored has a review trail asserting a
+	// scope the server never applied.
+	if !s.complianceConfig.AllowsFramework(framework) {
+		payload, _ := json.Marshal(map[string]any{
+			"error":             "framework not activated by the compliance configuration",
+			"framework":         framework,
+			"active_frameworks": s.complianceConfig.ActiveFrameworks,
+			"known_frameworks":  mapper.Frameworks(),
+		})
+		return errorResult(string(payload)), nil
+	}
+
 	reporter := guardrails.NewComplianceReporter(mapper, nil)
 	art, err := reporter.GenerateMeasuredReport(ctx, framework, s.complianceProbes())
 	if err != nil {
@@ -242,6 +256,16 @@ func (s *MCPServer) handleCheckCompliance(ctx context.Context, args map[string]a
 		return errorResult(string(payload)), nil
 	}
 
+	if !s.complianceConfig.AllowsFramework(framework) {
+		payload, _ := json.Marshal(map[string]any{
+			"compliant":         false,
+			"error":             "framework not activated by the compliance configuration",
+			"framework":         framework,
+			"active_frameworks": s.complianceConfig.ActiveFrameworks,
+		})
+		return errorResult(string(payload)), nil
+	}
+
 	assessment, err := mapper.CheckMeasured(ctx, framework, reqID, s.complianceProbes())
 	if err != nil {
 		payload, _ := json.Marshal(map[string]any{"compliant": false, "error": err.Error()})
@@ -267,6 +291,15 @@ func (s *MCPServer) handleCollectEvidence(ctx context.Context, args map[string]a
 	mapper, err := s.complianceMapper()
 	if err != nil {
 		payload, _ := json.Marshal(map[string]any{"error": err.Error()})
+		return errorResult(string(payload)), nil
+	}
+
+	if !s.complianceConfig.AllowsFramework(framework) {
+		payload, _ := json.Marshal(map[string]any{
+			"error":             "framework not activated by the compliance configuration",
+			"framework":         framework,
+			"active_frameworks": s.complianceConfig.ActiveFrameworks,
+		})
 		return errorResult(string(payload)), nil
 	}
 

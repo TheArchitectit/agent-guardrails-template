@@ -120,6 +120,13 @@ type MCPServer struct {
 	// (Spec 08 R08-4.3.6). When nil, nothing is retained and the diagnostic
 	// reports not_configured rather than implying a history it does not have.
 	evidenceStore *controlplane.EvidenceStore
+
+	// complianceConfig is the Spec 06 Sec. 2.3 `compliance_reports:` file.
+	// When nil the three compliance tools accept every framework the
+	// requirement database carries, which is the pre-file behaviour; when set,
+	// a framework the operator did not activate is refused by the tool rather
+	// than silently reported as unmeasured.
+	complianceConfig *guardrails.ComplianceConfig
 }
 
 // SetEvidenceStore installs the retention store (Spec 08 R08-4.3.6) so the
@@ -256,6 +263,13 @@ func (s *MCPServer) SetGuardrailsEngine(engine *guardrails.Engine) {
 // the three multi-agent tools answer "not configured" and never claim a pass.
 func (s *MCPServer) SetMultiAgentRegistry(registry *guardrails.MultiAgentRegistry) {
 	s.multiAgent = registry
+}
+
+// SetComplianceConfig attaches the Spec 06 Sec. 2.3 compliance_reports
+// configuration. Without it the three compliance tools accept every framework
+// the requirement database carries, which is the pre-file behaviour.
+func (s *MCPServer) SetComplianceConfig(cfg *guardrails.ComplianceConfig) {
+	s.complianceConfig = cfg
 }
 
 // Start starts the MCP server on the given address.

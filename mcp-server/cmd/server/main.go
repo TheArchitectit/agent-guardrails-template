@@ -351,6 +351,30 @@ func main() {
 		slog.Info("multi-agent safety chains initialized", "chains", multiAgentRegistry.Chains())
 	}
 
+	// Compliance reporting scope (Spec 06 Sec. 2.3). The documented
+	// `compliance_reports:` block had no reader at all: `ComplianceConfig` and
+	// `DefaultComplianceConfig()` had zero non-test call sites, so an operator
+	// who wrote the file changed nothing and the three compliance tools ran on
+	// hardcoded defaults. This is the caller the loader never had. A
+	// configured-but-unusable file STOPS STARTUP: an operator who scoped the
+	// audit to one framework and gets another scored has a review trail
+	// asserting a scope the process never applied.
+	if cfg.ComplianceConfigFile != "" {
+		complianceCfg, cerr := guardrails.LoadComplianceConfigFromYAML(cfg.ComplianceConfigFile)
+		if cerr != nil {
+			slog.Error("compliance config is unusable; refusing to start", "path", cfg.ComplianceConfigFile, "error", cerr)
+			os.Exit(1)
+		}
+		mcpSrv.SetComplianceConfig(complianceCfg)
+		slog.Info("compliance reporting configured from file",
+			"path", cfg.ComplianceConfigFile,
+			"enabled", complianceCfg.Enabled,
+			"active_frameworks", complianceCfg.ActiveFrameworks,
+			"report_format", complianceCfg.ReportFormat,
+			"evidence_sources", complianceCfg.EvidenceSources,
+		)
+	}
+
 	// Runtime policy-pack consumer (Spec 07 R07-4.4). The CI gate proves the
 	// checked-in lock record is honest; it cannot make the running server obey
 	// the pack. Before this block there was no runtime consumer at all: the

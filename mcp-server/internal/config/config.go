@@ -318,6 +318,19 @@ type Config struct {
 	// chains are the ones I did not choose" must not look the same from outside.
 	SafetyChainsConfigFile string `env:"SAFETY_CHAINS_CONFIG_FILE"`
 
+	// ComplianceConfigFile names the YAML file carrying the Spec 06 Sec. 2.3
+	// `compliance_reports:` section. Unset keeps DefaultComplianceConfig() and
+	// every framework the requirement database carries.
+	//
+	// This exists because the documented file had no reader at all:
+	// `ComplianceConfig` / `DefaultComplianceConfig()` had zero non-test call
+	// sites, so an operator who wrote the documented block changed nothing and
+	// the three compliance tools ran on hardcoded defaults. A
+	// configured-but-unusable file STOPS STARTUP rather than falling back to
+	// defaults — "I scoped the audit to NIST RMF" and "the audit ran the
+	// shipped scope" must not look the same from outside.
+	ComplianceConfigFile string `env:"COMPLIANCE_CONFIG_FILE"`
+
 	// ControlPlaneManifest names the component-composition manifest the control
 	// plane evaluates against (Spec 08 R08-4.1). Unset means no manifest is
 	// configured: guardrail://control-plane then reports "not_configured"
