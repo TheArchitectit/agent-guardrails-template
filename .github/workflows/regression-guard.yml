@@ -65,6 +65,20 @@ jobs:
           python scripts/check_secret_inventory.py --repo .
           python scripts/test_check_secret_inventory.py
 
+      - name: Text charset standard (fw-charset-01)
+        run: |
+          # Tracked text must be ASCII (fw-charset-01): U+00A7 renders as a
+          # dollar-ish glyph in some clients and the same class covers emoji
+          # priority labels, arrows and curly quotes. Checked fail-closed:
+          # docs/specs and .github/workflows are ZERO TOLERANCE and the ratchet
+          # baseline may not grandfather them, and the gate also rejects the
+          # SUBSTITUTION ARTIFACT (a doubled marker word) which is pure ASCII
+          # and therefore invisible to a codepoint check. The self-test drives
+          # the real gate against real git trees, so a green run cannot come
+          # from an assertion that never executes.
+          python scripts/check_charset.py --repo .
+          python scripts/test_check_charset.py
+
       - name: Go module discovery (Spec 19 R19-10)
         run: |
           # Spec 19 R19-10 requires the package gate to ENUMERATE modules from
@@ -248,24 +262,24 @@ jobs:
             const bugFixCount = parseInt('${{ steps.check_bug_fixes.outputs.bug_fix_count }}' || '0');
             report += `### Bug Fix Detection\n`;
             if (bugFixCount > 0) {
-              report += `⚠️ **${bugFixCount} bug fix commit(s) detected**\n\n`;
+              report += `WARNING **${bugFixCount} bug fix commit(s) detected**\n\n`;
 
               // Regression tests check
               const newTests = parseInt('${{ steps.check_regression_tests.outputs.new_regression_tests }}' || '0');
               if (newTests === 0) {
-                report += `🔴 **Warning:** No new regression tests found in \`tests/regression/\`\n`;
+                report += `CRITICAL **Warning:** No new regression tests found in \`tests/regression/\`\n`;
                 report += `> Bug fixes should include regression tests to prevent reintroduction.\n\n`;
               } else {
-                report += `✅ ${newTests} new regression test(s) added\n\n`;
+                report += `OK ${newTests} new regression test(s) added\n\n`;
               }
             } else {
-              report += `✅ No bug fix commits detected\n\n`;
+              report += `OK No bug fix commits detected\n\n`;
             }
 
             // High risk files
             const highRiskFiles = `${{ steps.check_modified_files.outputs.high_risk_files }}`;
             if (highRiskFiles && highRiskFiles !== 'undefined') {
-              report += `### ⚠️ Files with Known Bug History\n`;
+              report += `### WARNING Files with Known Bug History\n`;
               report += `The following modified files have active failures in the registry:\n`;
               report += highRiskFiles + '\n\n';
               report += `> Please review the failure registry before merging.\n\n`;

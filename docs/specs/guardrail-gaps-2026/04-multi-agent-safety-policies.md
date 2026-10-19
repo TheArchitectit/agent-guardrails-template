@@ -3,7 +3,7 @@
 > **Status: WIRED (2026-10-18).** The chain engine, its validators and all three proposed tools are reachable from the MCP request path. See Sec. 8 and [STATUS.md](STATUS.md) for the rows that remain open.
 
 **Gap:** Important — No agent-validates-agent mechanism
-**Priority:** 🟡 Important (Phase 2)
+**Priority:** Important (Phase 2)
 **Depends on:** 02-semantic-content-filtering
 **Blocks:** None
 
@@ -29,11 +29,11 @@ Add **Multi-Agent Safety Policies** that define how agents validate each other's
 
 ```
 ┌──────────┐     ┌──────────────────┐     ┌──────────┐
-│ Agent A  │────▶│ Safety Validator  │────▶│ Agent B  │
+│ Agent A  │────>│ Safety Validator  │────>│ Agent B  │
 │ (output) │     │ (policy engine)   │     │ (input)  │
 └──────────┘     └──────────────────┘     └──────────┘
                        │
-                ┌──────▼──────┐
+                ┌──────v──────┐
                 │  Audit Log  │
                 │  + Chain    │
                 │  Tracking   │

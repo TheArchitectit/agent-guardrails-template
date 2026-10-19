@@ -25,12 +25,12 @@ Status is from the 2026-10-03 reconciliation, not from the original drafting.
 
 | # | Gap | Priority | Spec File | Status |
 |---|-----|----------|-----------|--------|
-| 1 | [Prompt Injection Defense](01-prompt-injection-defense.md) | 🔴 Critical | `01-prompt-injection-defense.md` | Library only — no tool, unwired |
-| 2 | [Semantic Content Filtering](02-semantic-content-filtering.md) | 🔴 Critical | `02-semantic-content-filtering.md` | **Shipped** — both tools live |
-| 3 | [Runtime Sandbox Isolation](03-runtime-sandbox-isolation.md) | 🟡 Important | `03-runtime-sandbox-isolation.md` | Library only — no tool, unwired |
-| 4 | [Multi-Agent Safety Policies](04-multi-agent-safety-policies.md) | 🟡 Important | `04-multi-agent-safety-policies.md` | Library only — no tool, unwired |
-| 5 | [Indirect Prompt Injection Handling](05-indirect-prompt-injection.md) | 🟡 Important | `05-indirect-prompt-injection.md` | Config shipped; tracker unwired |
-| 6 | [Regulatory Compliance Mapping](06-regulatory-compliance-mapping.md) | 🟢 Nice-to-have | `06-regulatory-compliance-mapping.md` | Library only — and scores are simulated |
+| 1 | [Prompt Injection Defense](01-prompt-injection-defense.md) | Critical | `01-prompt-injection-defense.md` | Library only — no tool, unwired |
+| 2 | [Semantic Content Filtering](02-semantic-content-filtering.md) | Critical | `02-semantic-content-filtering.md` | **Shipped** — both tools live |
+| 3 | [Runtime Sandbox Isolation](03-runtime-sandbox-isolation.md) | Important | `03-runtime-sandbox-isolation.md` | Library only — no tool, unwired |
+| 4 | [Multi-Agent Safety Policies](04-multi-agent-safety-policies.md) | Important | `04-multi-agent-safety-policies.md` | Library only — no tool, unwired |
+| 5 | [Indirect Prompt Injection Handling](05-indirect-prompt-injection.md) | Important | `05-indirect-prompt-injection.md` | Config shipped; tracker unwired |
+| 6 | [Regulatory Compliance Mapping](06-regulatory-compliance-mapping.md) | Nice-to-have | `06-regulatory-compliance-mapping.md` | Library only — and scores are simulated |
 
 Full requirement-by-requirement position: **[STATUS.md](STATUS.md)**.
 

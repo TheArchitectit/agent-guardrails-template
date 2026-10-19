@@ -3,7 +3,7 @@
 > **This spec shipped in part, and the config surface is now real.** Both proposed tools exist and are exposed. The production defect noted here (policies never loaded, so `guardrail_check_policy` returned non-compliant for every call) was fixed 2026-10-03 — see the "Fixed since drafting" note below. As of 2026-10-19 the Sec. 3.2 `content_filter:` file is **read and validated at startup** (`CONTENT_FILTER_CONFIG_FILE`) and the declared taxonomy is enforced; before that the loader had zero callers and a verbatim copy of this spec's own example loaded with **zero policies**. See [STATUS.md](STATUS.md).
 
 **Gap:** Critical — No native semantic content moderation
-**Priority:** 🔴 Critical (Phase 1)
+**Priority:** Critical (Phase 1)
 **Depends on:** None
 **Blocks:** 04-multi-agent-safety-policies
 
@@ -28,11 +28,11 @@ Add a **Semantic Content Filter** that classifies text against configurable safe
 
 ```
 ┌──────────────┐     ┌──────────────────┐     ┌──────────────┐
-│  Text In/Out  │────▶│ Content Filter    │────▶│ Agent / User │
+│  Text In/Out  │────>│ Content Filter    │────>│ Agent / User │
 │              │     │ (multi-classifier)│     │              │
 └──────────────┘     └──────────────────┘     └──────────────┘
                            │
-                    ┌──────▼──────┐
+                    ┌──────v──────┐
                     │  Policy     │
                     │  Engine     │
                     │  (YAML)     │

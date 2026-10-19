@@ -37,7 +37,7 @@
 > `injection-tools-unclassified-in-action-table` kills.
 
 **Gap:** Critical — No native defense against prompt injection attacks
-**Priority:** 🔴 Critical (Phase 1)
+**Priority:** Critical (Phase 1)
 **Depends on:** None
 **Blocks:** 05-indirect-prompt-injection
 
@@ -68,11 +68,11 @@ Add a **Prompt Injection Detection Layer** that intercepts all text flowing into
 
 ```
 ┌─────────────┐     ┌──────────────────┐     ┌─────────────┐
-│  Text Input  │────▶│ Injection Guard   │────▶│  Agent LLM  │
+│  Text Input  │────>│ Injection Guard   │────>│  Agent LLM  │
 │  (any source)│     │ (classifier)      │     │  (safe input)│
 └─────────────┘     └──────────────────┘     └─────────────┘
                            │
-                    ┌──────▼──────┐
+                    ┌──────v──────┐
                     │  Audit Log  │
                     │  + Metrics  │
                     └─────────────┘

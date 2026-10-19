@@ -156,9 +156,67 @@ def check_file_against_failures(
     return matching_failures
 
 
+def _glob_to_regex(glob: str) -> "re.Pattern[str]":
+    """Translate a repo-relative glob to a regex (same contract as the Node scanner).
+
+    ``*`` never crosses a path separator and ``**`` does. Python's ``fnmatch``
+    lets ``*`` cross ``/``, so reusing it here would silently widen a rule
+    scoped to ``src/*.py`` into one matching ``src/a/b.py``.
+    """
+    out = []
+    i = 0
+    while i < len(glob):
+        ch = glob[i]
+        if ch == "*":
+            if glob[i:i + 3] == "**/":
+                out.append("(?:.*/)?")
+                i += 3
+                continue
+            if glob[i:i + 2] == "**":
+                out.append(".*")
+                i += 2
+                continue
+            out.append("[^/]*")
+            i += 1
+            continue
+        if ch == "?":
+            out.append("[^/]")
+            i += 1
+            continue
+        out.append(re.escape(ch))
+        i += 1
+    return re.compile("^" + "".join(out) + "$")
+
+
+def rule_applies_to(rule: Dict, file_path: str) -> bool:
+    """True when the rule's declared ``file_glob`` covers this path.
+
+    A rule may scope itself to a file kind. That declaration was ignored here
+    entirely - ``file_glob`` had ZERO readers in this module while all 32
+    shipped pattern rules declare one - so a rule written for ``Dockerfile*``
+    fired against every changed Markdown, Python and JSON file. The Node
+    scanner (``guardrails-scan.mjs``) has always consulted it, which is why the
+    two scanners disagreed about the same rule set.
+    """
+    globs = rule.get("file_glob")
+    if not isinstance(globs, list) or not globs:
+        return True
+    # Basename OR repo-relative path, matching the shared ``glob_matches``
+    # contract used by the other gates in this family. The rules are authored
+    # as file KINDS ("*.py", "*.gd", "*.js"), and a path-only match would make
+    # nearly every one of them dead the moment a file sits in a subdirectory -
+    # which is the same silent-scope failure this fix exists to remove.
+    base = file_path.rsplit("/", 1)[-1]
+    return any(
+        _glob_to_regex(g).match(file_path) or ("/" not in g and _glob_to_regex(g).match(base))
+        for g in globs
+    )
+
+
 def check_diff_against_patterns(
     diff_content: str,
-    rules: List[Dict]
+    rules: List[Dict],
+    file_path: str | None = None,
 ) -> List[Dict]:
     """Check diff content against pattern rules."""
     violations = []
@@ -173,6 +231,11 @@ def check_diff_against_patterns(
 
     for rule in rules:
         if rule.get("rule_type") != "pattern":
+            continue
+
+        # Scope first: a rule that does not apply to this file cannot be
+        # violated by it, regardless of what the regex would match.
+        if file_path is not None and not rule_applies_to(rule, file_path):
             continue
 
         pattern = rule.get("pattern")
@@ -264,7 +327,7 @@ def run_regression_check(
         # Check diff against pattern rules
         diff = get_diff_content(file_path, staged=staged)
         if diff:
-            violations = check_diff_against_patterns(diff, rules)
+            violations = check_diff_against_patterns(diff, rules, file_path)
             if violations:
                 file_issues["violations"] = violations
 

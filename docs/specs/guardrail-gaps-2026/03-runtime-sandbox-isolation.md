@@ -13,7 +13,7 @@
 > **Status 2026-10-19 (first pass) — PARTIAL, the declared limits bind, and the documented config file is now read.** Both tools exist, are registered, dispatched, classified and audited, and the declared per-tool policies are applied at execution (`ExecuteFor`). This pass fixed a class of defect the previous status missed: **three limits declared in the shipped default config were consumed by nothing.** `swap_allowed: false`, `max_wall_seconds` and `max_write_mb` were read by no code path, so a reviewer saw three controls and the sandbox applied none of them — and `ResourceLimits{}` (the engine's fallback for a tool with no policy) produced a zero deadline, killing every command before it started and reporting the result as `ErrSandboxViolation`. All four are fixed at the cause. **The configuration surface is now real:** `DefaultSandboxConfig()` had been the only `SandboxConfig` in the tree — no file, no environment variable, no caller — so an operator who wrote the Sec. 3.2/3.3 YAML changed nothing. `SANDBOX_CONFIG_FILE` now loads it at startup, the documented `sandbox_policies:` spelling and the policy-level path placement both load, an unknown key is an error, and a configured-but-unusable file stops startup.
 
 **Gap:** Important — Pre-execution validation only; no OS-level isolation
-**Priority:** 🟡 Important (Phase 2)
+**Priority:** Important (Phase 2)
 **Depends on:** None
 **Blocks:** None
 
@@ -39,11 +39,11 @@ Add **Runtime Sandbox Execution** that wraps tool calls in isolated environments
 
 ```
 ┌─────────────┐     ┌──────────────────┐     ┌─────────────────┐
-│  Tool Call   │────▶│ Sandbox Manager   │────▶│  Isolated Exec  │
+│  Tool Call   │────>│ Sandbox Manager   │────>│  Isolated Exec  │
 │  (validated) │     │ (namespace/cgroup)│     │  (restricted)   │
 └─────────────┘     └──────────────────┘     └─────────────────┘
                            │                         │
-                    ┌──────▼──────┐           ┌──────▼──────┐
+                    ┌──────v──────┐           ┌──────v──────┐
                     │  Audit Log  │           │  Resource   │
                     │  + Metrics  │           │  Monitor    │
                     └─────────────┘           └─────────────┘

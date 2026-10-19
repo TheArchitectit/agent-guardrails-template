@@ -3,7 +3,7 @@
 > **Wired 2026-10-18; config file read at startup 2026-10-19.** Config keys, trust table and sanitisation shipped long ago, but the tracker was reachable only from `Engine.Evaluate`, which no tool calls — and the one injection scan in the tree ran on **raw** text, so a single zero-width character inside a keyword defeated L1. All three tools now exist and route through `Engine.ScanExternalContent`, which sanitises and decodes **before** scanning. As of 2026-10-19 the Sec. 2.3 `indirect_injection:` trust table is **read and validated at startup** (`PROVENANCE_CONFIG_FILE`); before that its loader had zero callers, so which sources are trusted could not be configured at all. See [STATUS.md](STATUS.md).
 
 **Gap:** Important — No protection against malicious file contents that override safety instructions
-**Priority:** 🟡 Important (Phase 2)
+**Priority:** Important (Phase 2)
 **Depends on:** 01-prompt-injection-defense
 **Blocks:** None
 
@@ -35,12 +35,12 @@ Add **Indirect Injection Protection** that tracks the provenance of all text and
 
 ```
 ┌─────────────┐     ┌──────────────────┐     ┌─────────────┐
-│  External    │────▶│ Provenance       │────▶│  Injection  │
+│  External    │────>│ Provenance       │────>│  Injection  │
 │  Content     │     │ Tracker          │     │  Detector   │
 │  (file/API)  │     │ (source tagging) │     │  (Spec 01)  │
 └─────────────┘     └──────────────────┘     └─────────────┘
                            │                         │
-                    ┌──────▼──────┐           ┌──────▼──────┐
+                    ┌──────v──────┐           ┌──────v──────┐
                     │  Source      │           │  Decision   │
                     │  Trust       │           │  Engine     │
                     │  Policy      │           │             │
@@ -122,32 +122,32 @@ For untrusted content, apply sanitization before the agent processes it:
 ```
 Untrusted Content
        │
-       ▼
+       v
 ┌──────────────┐
 │ Strip Control │  Remove zero-width chars, bidi overrides
 │ Characters    │  Remove invisible Unicode that could hide instructions
 └──────────────┘
        │
-       ▼
+       v
 ┌──────────────┐
 │ Decode       │  Decode base64, ROT13, URL encoding
 │ Obfuscation  │  Detect encoding-based bypass attempts
 └──────────────┘
        │
-       ▼
+       v
 ┌──────────────┐
 │ Inject       │  Use Spec 01 detection layers
 │ Detection    │  Block if injection detected
 └──────────────┘
        │
-       ▼
+       v
 ┌──────────────┐
 │ Wrap in      │  Add clear provenance markers
 │ Provenance   │  "[Content from untrusted source: file.json]"
 │ Marker       │  so agent knows to treat with caution
 └──────────────┘
        │
-       ▼
+       v
 Safe Content (for agent)
 ```
 

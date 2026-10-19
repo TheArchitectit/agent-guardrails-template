@@ -3,7 +3,7 @@
 > **Do not trust scores from `GenerateReport`/`CheckRequirement`.** That legacy path restates a hand-written `compliance_status` string rather than measuring the system, and its evidence collection is simulated; it is stamped `methodology: "unimplemented"` for that reason. The MEASURED path (`GenerateMeasuredReport`/`CheckMeasured`, behind the three Sec. 3.1 tools) counts a requirement only when every control it names was observed live, reports unmeasured requirements separately, and is stamped `methodology: "measured-runtime-probes-v1"`. See [STATUS.md](STATUS.md).
 
 **Gap:** Nice-to-have — No explicit EU AI Act or NIST RMF compliance mapping
-**Priority:** 🟢 Nice-to-have (Phase 3)
+**Priority:** Nice-to-have (Phase 3)
 **Depends on:** All previous specs
 **Blocks:** None
 
@@ -30,13 +30,13 @@ Add **Compliance Mapping** that explicitly maps guardrail features to regulatory
 
 ```
 ┌─────────────────┐     ┌──────────────────┐     ┌─────────────────┐
-│  Guardrail      │────▶│ Compliance       │────▶│  Compliance     │
+│  Guardrail      │────>│ Compliance       │────>│  Compliance     │
 │  Events/Logs    │     │ Mapper           │     │  Reports        │
 │                 │     │ (requirement →   │     │  (evidence      │
 │                 │     │  feature mapping)│     │   packages)     │
 └─────────────────┘     └──────────────────┘     └─────────────────┘
                                │
-                        ┌──────▼──────┐
+                        ┌──────v──────┐
                         │  Requirement │
                         │  Database    │
                         │  (JSON)      │
@@ -51,12 +51,12 @@ Add **Compliance Mapping** that explicitly maps guardrail features to regulatory
 |-------------|-------------------|--------|----------|
 | **Art. 9 - Risk Management** | Four Laws + Halt Conditions | ✅ Partial | Audit logs, halt condition records |
 | **Art. 10 - Data Governance** | Content Filter (S7 Privacy) | ✅ Partial | Classification logs |
-| **Art. 11 - Technical Documentation** | This spec + existing docs | ⚠️ Gap | Needs compliance docs |
+| **Art. 11 - Technical Documentation** | This spec + existing docs | Gap Gap | Needs compliance docs |
 | **Art. 12 - Logging for Traceability** | PostgreSQL audit trail | ✅ Full | Audit log queries |
 | **Art. 13 - Transparency** | Agent behavior logging | ✅ Partial | Tool call logs |
 | **Art. 14 - Human Oversight** | Halt Conditions + human review | ✅ Full | Halt condition logs |
 | **Art. 15 - Accuracy/Robustness** | Injection Defense (Spec 01) | ✅ Partial | Injection detection logs |
-| **Art. 50 - AI-Generated Content** | Content Filter (Spec 02) | ⚠️ Gap | No content watermarking yet |
+| **Art. 50 - AI-Generated Content** | Content Filter (Spec 02) | Gap Gap | No content watermarking yet |
 
 #### NIST AI RMF Mapping
 
