@@ -304,6 +304,20 @@ type Config struct {
 	// STARTUP rather than falling back to defaults.
 	ProvenanceConfigFile string `env:"PROVENANCE_CONFIG_FILE"`
 
+	// SafetyChainsConfigFile names the YAML file carrying the Spec 04 Sec. 2.2
+	// `safety_chains:` section. Unset keeps the built-in chains.
+	//
+	// This exists because the loader was unreachable: the only safety chains in
+	// the tree were three Go literals, so an operator who wrote the documented
+	// YAML changed nothing. The artifact is a safety boundary — a chain written
+	// to require `four_laws_check` before one agent's output reaches another,
+	// which the server silently replaced with its built-in chain, leaves a
+	// review trail asserting validation that never ran. A
+	// configured-but-unusable file STOPS STARTUP rather than falling back to the
+	// built-in chains, for the same reason: "I configured the chains" and "the
+	// chains are the ones I did not choose" must not look the same from outside.
+	SafetyChainsConfigFile string `env:"SAFETY_CHAINS_CONFIG_FILE"`
+
 	// ControlPlaneManifest names the component-composition manifest the control
 	// plane evaluates against (Spec 08 R08-4.1). Unset means no manifest is
 	// configured: guardrail://control-plane then reports "not_configured"

@@ -211,7 +211,9 @@ fail-closed behaviour and the spec text is wrong. Sec. 4.3 should be amended.
 | Validators `injection_defense` / `content_filter` / `four_laws_check` | **Wired** — bound to the same engine the rest of the server uses |
 | `code_review_agent` validator | Not implemented (needs an LLM review backend — owner call) |
 | Conflict strategies | **Wired**; shipped name is `escalate` (spec's `human_escalate` maps to it) |
-| Config keys as YAML (`safety_chains`, `agent_registry`, …) | Not implemented — the registry ships built-in chains instead; no YAML loader |
+| Config keys as YAML (`safety_chains`) | **READ AT STARTUP 2026-10-19** (`SAFETY_CHAINS_CONFIG_FILE`) — the loader had **zero callers**, so the documented Sec. 2.2 block changed nothing and the server ran its built-in chains regardless. Both the loader and the wiring landed this pass. Unknown keys, a missing/empty section, a chain with no steps, an unknown validator (refused by name), a missing/unknown step action, and `on_failure: warn_and_continue`/`block_and_escalate` are all refused; a configured-but-unusable file stops startup; a declared chain list REPLACES the built-in one so a disabled chain is genuinely absent |
+| Config keys as YAML (`agent_registry`, `cross_agent_policies`) | Not implemented — no loader for either; the constraint policies ship built-in and the tools take the policy id directly |
+| `on_failure` semantics | **Corrected 2026-10-19** — the built-in `research_output` chain declared `warn_and_continue`, which `SafetyChain.Execute` never reads: a blocking step stops the chain and records a block decision whatever the field says. The declaration was inert and fail-open if honoured. Built-in chains now declare the one implemented semantic (`block_and_notify`); a warning is a step's own `action: warn`, and the loader refuses the two unimplemented chain-level values by name |
 | Law-2 keyword false positive | **Fixed 2026-10-18** — quoted/mentioned occurrences no longer fail |
 
 **Law 2 was a false-positive generator, and wiring it would have shipped the
@@ -230,6 +232,32 @@ chain step: it labelled benign output "Content blocked: SYSTEM". The step now
 returns an `UnavailableError`; the chain records it in `UnavailableSteps`, keeps
 running its remaining detectors, and reports `decision: incomplete` — never
 `passed`. "Every step passed" and "one step never ran" are different answers.
+
+**The `safety_chains:` file was inert, and one declared behaviour was never
+honoured (both fixed 2026-10-19).** Two defects on one seam, the same class as
+the Spec 01/02/03/05 config files fixed earlier in this program. (1) The
+registry built its three chains as Go literals and `LoadSafetyChainsFromYAML`
+did not exist, so an operator who wrote the documented Sec. 2.2 block got the
+built-in chain instead — a review trail asserting validation that never ran.
+`SAFETY_CHAINS_CONFIG_FILE` now loads it, strict and fail-closed: unknown keys,
+a missing/empty section, a chain with no steps, an unknown validator (named,
+not ignored — `code_review_agent` is refused because this tree has no LLM review
+backend), a missing or unknown step action, and both unimplemented chain-level
+`on_failure` values are refused; a declared chain list REPLACES the built-in one,
+so a disabled chain is genuinely absent and its id is unknown (already refused).
+(2) The built-in `research_output` chain declared `on_failure:
+warn_and_continue`, which `SafetyChain.Execute` never reads — a blocking step
+stops the chain and records a block decision regardless. The declaration was
+inert *and* fail-open if honoured (P5/D-18: fail-closed is not configurable), so
+the built-in chains now declare `block_and_notify` and a warning is expressed
+with a step's own `action: warn`, which is implemented and enforced. Evidence:
+`safety_chain_file_test.go` drives the REAL loader (with a verbatim copy of the
+spec's documented YAML) and the REAL registry/chain — the loaded chain is proven
+to be the chain that RUNS, not merely the chain that parsed; 13 refusal shapes;
+**red-on-drift proven three ways** (registry wires built-ins regardless; drop
+`KnownFields`; remove the fail-open guard), each PASS→FAIL then restored.
+`go test ./...` EXIT=0 (21 pkgs); `regression_check --all --pre-commit` exit 0;
+all repo gates green.
 
 ### 05 — Indirect prompt injection
 

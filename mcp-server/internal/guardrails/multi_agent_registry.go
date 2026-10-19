@@ -157,8 +157,26 @@ type MultiAgentRegistry struct {
 // "safe": the point of the registry is that a chain which runs has run
 // something.
 func NewMultiAgentRegistry(engine *Engine, scopePatterns []string) (*MultiAgentRegistry, error) {
+	return NewMultiAgentRegistryWithChains(engine, scopePatterns, BuiltinSafetyChainDefinitions())
+}
+
+// NewMultiAgentRegistryWithChains builds the registry over an explicit chain
+// list.
+//
+// It exists because Spec 04 Sec. 2.2 documents a `safety_chains:` configuration
+// file and the chains were, until now, three Go literals with no file source at
+// all — the same defect class as the Spec 01/02/03/05 config files. The chain
+// list is validated here as well as at load, because a caller that assembled
+// definitions in Go (or edited the loader) must not be able to hand the
+// registry a chain naming a validator nothing implements: that produces a
+// chain whose "missing validator" step fails every output and reads as a
+// detector finding, not as a wiring mistake.
+func NewMultiAgentRegistryWithChains(engine *Engine, scopePatterns []string, defs []SafetyChainDefinition) (*MultiAgentRegistry, error) {
 	if engine == nil {
 		return nil, fmt.Errorf("multi-agent registry requires a guardrails engine")
+	}
+	if err := ValidateSafetyChainDefinitions(defs); err != nil {
+		return nil, err
 	}
 
 	fourLaws, err := NewFourLawsValidatorChecked(scopePatterns)
@@ -170,42 +188,30 @@ func NewMultiAgentRegistry(engine *Engine, scopePatterns []string) (*MultiAgentR
 	filter := NewEngineContentFilterValidator(engine, nil)
 
 	r := &MultiAgentRegistry{
-		chains:   make(map[string]*SafetyChain, 3),
+		chains:   make(map[string]*SafetyChain, len(defs)),
 		policies: map[string]ConstraintPolicy{},
 	}
 
-	defs := []SafetyChainDefinition{
-		{
-			ID:          ChainCodeGeneration,
-			Description: "Safety chain for agents that emit code other agents will run",
-			OnFailure:   OnFailureBlockAndNotify,
-			Steps: []ChainStep{
-				{Validator: injection.Name(), Action: ActionBlock, Description: "prompt injection in generated output"},
-				{Validator: filter.Name(), Action: ActionBlock, Description: "harmful content taxonomy"},
-				{Validator: fourLaws.Name(), Action: ActionBlock, Description: "Four Laws of agent safety"},
-			},
-		},
-		{
-			ID:          ChainResearchOutput,
-			Description: "Safety chain for research agents producing text for humans",
-			OnFailure:   OnFailureWarnAndContinue,
-			Steps: []ChainStep{
-				{Validator: filter.Name(), Action: ActionBlock, Description: "harmful content taxonomy"},
-				{Validator: fourLaws.Name(), Action: ActionBlock, Description: "Four Laws of agent safety"},
-			},
-		},
-		{
-			ID:          ChainReviewOnly,
-			Description: "Injection-only check for output that is reviewed before use",
-			OnFailure:   OnFailureBlockAndNotify,
-			Steps: []ChainStep{
-				{Validator: injection.Name(), Action: ActionBlock, Description: "prompt injection in reviewed output"},
-			},
-		},
+	// One validator instance per name, so two chains naming the same validator
+	// share the same detector. Building a second copy per chain is how two
+	// entry points start disagreeing about the same text.
+	validatorsByName := map[string]SafetyValidator{
+		injection.Name(): injection,
+		filter.Name():    filter,
+		fourLaws.Name():  fourLaws,
 	}
-
 	validators := []SafetyValidator{injection, filter, fourLaws}
+
 	for _, def := range defs {
+		// The registry is the only place that resolves a chain name to a live
+		// validator, so this is where the name must exist. ValidateSafetyChain
+		// Definitions already refused an unknown name; this is the belt to that
+		// brace, and it is deliberately a hard error rather than a skip.
+		for _, step := range def.Steps {
+			if _, ok := validatorsByName[step.Validator]; !ok {
+				return nil, fmt.Errorf("safety chain %q names validator %q, which this server cannot construct", def.ID, step.Validator)
+			}
+		}
 		chain := NewSafetyChain(def, validators, &DefaultMultiAgentAuditLogger{})
 		r.chains[def.ID] = chain
 		r.order = append(r.order, def.ID)

@@ -284,7 +284,8 @@ Evidence: `docs/specs/guardrail-gaps-2026/STATUS.md`.
 | 2.x | Conflict strategies | **WIRED** | `multi_agent_conflict.go`; shipped name `escalate` = the spec's `human_escalate` |
 | 3.x | Constraint inheritance | **WIRED** | `CheckConstraints` measures what the agent DECLARED against the policy, not the merge result |
 | 3.3 | Audit trail | **WIRED** | `DefaultMultiAgentAuditLogger` emits `MULTI_AGENT_CHAIN` per validation; durable-store persistence is not claimed |
-| 3.2 | Config keys `safety_chains`, `cross_agent_policies`, `agent_registry` | **Built-in chains only** | no YAML loader; chains and policies are compiled in, because a deployment-configurable chain set needs an owner decision on who may edit it |
+| 3.2 | Config keys `safety_chains` (Sec. 2.2) | **LOADED AT STARTUP 2026-10-19** (`SAFETY_CHAINS_CONFIG_FILE`) — the documented block had **no reader at all**: the only chains in the tree were three Go literals in `NewMultiAgentRegistry`, so an operator who wrote the documented YAML changed nothing and the server silently ran its built-in chain. `LoadSafetyChainsFromYAML` now reads it; a configured-but-unusable file **stops startup**; unknown keys, a missing/empty section, a chain with no steps, an unknown validator (`code_review_agent` is refused *by name*, since this tree has no LLM review backend), a missing or unknown step action, and `on_failure: warn_and_continue`/`block_and_escalate` are all refused. A declared chain list **REPLACES** the built-in one, so a disabled chain is genuinely absent and its id is unknown (the registry already refuses an unknown id). Pinned by `safety_chain_file_test.go`; red-on-drift proven three ways |
+| 3.2 | Config keys `cross_agent_policies`, `agent_registry` | **Not implemented** — no YAML loader for either; the constraint policies ship built-in (`defaultConstraintPolicies`) and the three tools take the policy id directly |
 
 **Two defects found in the library while wiring it, both fixed at the cause.**
 
@@ -305,5 +306,19 @@ Evidence: `docs/specs/guardrail-gaps-2026/STATUS.md`.
 **Still open, stated rather than implied:** Sec. 5.3's adversarial agent-to-agent
 cases presuppose a runtime this repo does not have (the transport question is
 unresolved), the `code_review_agent` validator needs an LLM backend, the audit
-log writes to slog rather than a durable store, and the built-in chains are not
-configuration-driven.
+log writes to slog rather than a durable store, and Sec. 3.2's
+`cross_agent_policies`/`agent_registry` blocks have no loader (the chains do,
+as of 2026-10-19; see row 3.2 above).
+
+**One declared behaviour the engine does not honour, corrected rather than
+left implied (2026-10-19).** The built-in `research_output` chain declared
+`on_failure: warn_and_continue`. `SafetyChain.Execute` never reads
+`OnFailure`: a blocking step stops the chain and records a block decision
+whatever the field says, so the declaration was inert and described a
+behaviour the engine does not have. `warn_and_continue` at chain level would
+also be fail-open — a block downgraded to a warning — which a configuration
+file may not request (P5/D-18: fail-closed is not configurable). The built-in
+chains now declare the one semantic the engine implements
+(`block_and_notify`), a warning is expressed with a step's own `action: warn`
+(implemented and enforced), and the loader **refuses** `warn_and_continue` and
+`block_and_escalate` by name rather than accepting an inert declaration.

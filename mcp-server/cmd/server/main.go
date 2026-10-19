@@ -323,7 +323,25 @@ func main() {
 	// let two detectors disagree about the same text. Scope patterns come from
 	// the deployment: an agent's declared scope is a property of the work, not
 	// of the binary.
-	multiAgentRegistry, err := guardrails.NewMultiAgentRegistry(engine, splitScopePatterns(os.Getenv("MULTI_AGENT_SCOPE_PATTERNS")))
+	//
+	// Spec 04 Sec. 2.2 documents a `safety_chains:` file and this is the caller
+	// the loader never had: the chains were three Go literals with no file
+	// source, so an operator's documented chain was silently replaced by the
+	// built-in one. A configured-but-unusable file STOPS STARTUP — an operator
+	// who wrote a chain requiring `four_laws_check` and got the shipped chain
+	// instead has a review trail asserting validation that never ran.
+	chainDefs := guardrails.BuiltinSafetyChainDefinitions()
+	if cfg.SafetyChainsConfigFile != "" {
+		configured, cerr := guardrails.LoadSafetyChainsFromYAML(cfg.SafetyChainsConfigFile)
+		if cerr != nil {
+			slog.Error("safety chains config is unusable; refusing to start", "path", cfg.SafetyChainsConfigFile, "error", cerr)
+			os.Exit(1)
+		}
+		chainDefs = configured
+		slog.Info("multi-agent safety chains configured from file",
+			"path", cfg.SafetyChainsConfigFile, "chains", len(configured))
+	}
+	multiAgentRegistry, err := guardrails.NewMultiAgentRegistryWithChains(engine, splitScopePatterns(os.Getenv("MULTI_AGENT_SCOPE_PATTERNS")), chainDefs)
 	if err != nil {
 		// Not fatal: the three tools then fail closed with "not configured"
 		// rather than reporting a chain that never ran as passed.
