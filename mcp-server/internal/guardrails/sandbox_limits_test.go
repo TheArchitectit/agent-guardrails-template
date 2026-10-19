@@ -86,7 +86,13 @@ func TestUnlimitedMemoryStillDisablesSwap(t *testing.T) {
 func TestMaxWriteMBSizesTheWritableSurface(t *testing.T) {
 	limits := DefaultSandboxConfig().GlobalDefaults
 	limits.Disk.MaxWriteMB = 200
-	args := containerHardeningArgs(limits)
+	// The tmpfs is part of the mount plan, not the hardening flags: it and the
+	// declared writable paths share one namespace of destinations (see
+	// sandbox_mounts.go).
+	args, err := containerMountArgs(limits)
+	if err != nil {
+		t.Fatalf("containerMountArgs: %v", err)
+	}
 
 	var tmpSize string
 	for i, a := range args {

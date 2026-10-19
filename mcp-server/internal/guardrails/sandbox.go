@@ -462,7 +462,7 @@ func (m *SandboxManager) execL2(ctx context.Context, command string, limits Reso
 		}
 	}
 
-	args := containerHardeningArgs(limits)
+	args := containerHardeningArgs()
 
 	// Network isolation.
 	//
@@ -538,23 +538,18 @@ func (m *SandboxManager) execL2(ctx context.Context, command string, limits Reso
 	// it produces a review trail that says the bound exists.
 	args = append(args, containerResourceArgs(limits)...)
 
-	// Bind mount declared workspace paths (read-write). Paths containing ':'
-	// or ',' corrupt the -v spec (':' separates host:container:mode and ','
-	// separates mount options), so reject them instead of building a malformed
-	// mount that could escape the intended path.
-	for _, path := range limits.Disk.ReadWritePaths {
-		if err := validateMountPath(path); err != nil {
-			return nil, err
-		}
-		args = append(args, "-v", fmt.Sprintf("%s:%s:rw", path, path))
+	// The mount set is ONE decision (sandbox_mounts.go). It used to be two:
+	// containerHardeningArgs emitted `--tmpfs /tmp` unconditionally while the
+	// loop below emitted `-v /tmp:/tmp:rw` whenever the policy declared /tmp
+	// writable — which the SHIPPED DEFAULTS do. Two mounts at one destination
+	// make the runtime refuse the container with exit 125, which the fallback
+	// chain reads as a setup error, so every default configuration silently
+	// ran at L1 while reporting an L2 request. See sandbox_mounts.go.
+	mountArgs, err := containerMountArgs(limits)
+	if err != nil {
+		return nil, err
 	}
-	// Bind mount declared read-only paths
-	for _, path := range limits.Disk.ReadOnlyPaths {
-		if err := validateMountPath(path); err != nil {
-			return nil, err
-		}
-		args = append(args, "-v", fmt.Sprintf("%s:%s:ro", path, path))
-	}
+	args = append(args, mountArgs...)
 
 	// Use configurable image, fallback to alpine
 	image := m.configSnapshot().Image
@@ -576,7 +571,9 @@ func (m *SandboxManager) execL2(ctx context.Context, command string, limits Reso
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr
 
-	err := cmd.Run()
+	// err is already declared above by the mount plan; reuse it so a mount
+	// error cannot be shadowed by a later declaration in this scope.
+	err = cmd.Run()
 
 	exitCode := 0
 	if err != nil {
@@ -767,17 +764,13 @@ func limitLauncher(limits ResourceLimits, command string) (string, []string, err
 // Pure and separated from execL2 so the declared posture can be asserted on a
 // host with no container runtime: a test that shells out to podman proves a
 // different thing on every machine, and on CI it proves nothing at all.
-func containerHardeningArgs(limits ResourceLimits) []string {
+func containerHardeningArgs() []string {
+	// The writable tmpfs is NOT here: it is part of the mount set, because it
+	// and the declared writable paths share one namespace of destinations and
+	// had to be reconciled (sandbox_mounts.go).
 	return []string{
 		"run", "--rm",
 		"--read-only", // Read-only root filesystem
-		// Writable tmpfs for scratch, sized from the declared disk bound so the
-		// writable surface is the number the policy names rather than a constant
-		// the policy cannot influence. `/tmp` is where a shell actually writes;
-		// a max_write_mb larger than the tmpfs only moves the failure, so the
-		// tmpfs is the enforcement point for the write bound at L2.
-		"--tmpfs", fmt.Sprintf("/tmp:rw,noexec,size=%dm", tmpfsSizeMB(limits, 64)),
-		"--tmpfs", "/var/tmp:rw,noexec,size=32m",
 		"--cap-drop=ALL",
 		"--cap-add=SETUID", // Needed by some shells
 		"--cap-add=SETGID",

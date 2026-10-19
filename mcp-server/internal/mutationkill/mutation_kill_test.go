@@ -926,6 +926,23 @@ func (s *MCPServer) authorizeToolCallDisabled(ctx context.Context, name string, 
 		pkg:       "./internal/guardrails",
 		testRegex: "^TestExecuteBoundsUnboundedOutput$",
 	},
+	{
+		// Spec 03 Sec. 3.4 / Sec. 5.1: the L2 mount set was assembled in two
+		// places. containerHardeningArgs always emitted `--tmpfs /tmp` and execL2
+		// also emitted `-v /tmp:/tmp:rw` whenever the policy declared /tmp
+		// writable — which the SHIPPED DEFAULTS do. Two mounts at one destination
+		// make the runtime refuse the container (exit 125), which isSetupError
+		// reads as a setup failure, so every default deployment silently ran one
+		// isolation level lower than requested and reported success. The
+		// mutation removes the guard that lets the bounded tmpfs satisfy a
+		// declared scratch path, restoring the duplicate destination.
+		name:      "sandbox-duplicate-mount-destination",
+		file:      "internal/guardrails/sandbox_mounts.go",
+		old:       "\t\tif isReservedScratch(abs) {",
+		new:       "\t\tif false && isReservedScratch(abs) {",
+		pkg:       "./internal/guardrails",
+		testRegex: "^TestNoDestinationIsMountedTwice$",
+	},
 }
 
 func findModuleRoot(t *testing.T) string {
