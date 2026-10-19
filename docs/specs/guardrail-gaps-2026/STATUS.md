@@ -164,9 +164,11 @@ fail closed by design.
 | `DefaultLevel` validated | **Implemented 2026-10-18** — an empty or unknown level is a load error, not a silent L0 |
 | L0 / L1 (unshare) / L2 (podman→docker) | Implemented, and stronger than spec'd |
 | `resource_limits` config | Implemented, field-for-field |
-| Network isolation | Implemented — fail-closed, host allowlist via filtering proxy |
+| Network isolation | Implemented — fail-closed, host allowlist via filtering proxy; `network.enabled: false` now binds on the execution path (2026-10-19) |
+| Network-violation **detection** | **Repaired 2026-10-19** — the detector found "hosts" with a bare `//` and a bare `to:`, so a source comment (`main.go:12: // increment`), a UNC path or ordinary prose produced `network access to non-allowed host: <word>`, and a non-empty violation set becomes `ErrSandboxViolation`: a successful benign command was reported as a security breach. Candidates now need an explicit scheme or connection phrase **and** must look like a hostname; the branch is gated on `egressPermitted`, so a `network=none` run is not judged for egress. Pinned by `sandbox_network_falsepositive_test.go`, red-on-drift proven 4 ways. Named limit: protocol-relative URLs (`//host/path`) are no longer detected |
 | Path-traversal **detection** | Not implemented (only mount-path syntax validation) |
-| Privilege-escalation / fork-bomb detection | Not implemented (3 of 5 required violation classes absent) |
+| Fork-bomb prevention / detection | **Implemented 2026-10-19** — `--pids-limit` from `max_processes` at L2 prevents it; detection reports the class only where that bound is actually in force (`processLimitEnforcedFor`), so it cannot describe a control that does not exist |
+| Privilege-escalation detection | **Deliberately not a text match** — prevention at the boundary (`--cap-drop=ALL`, `no-new-privileges`, user namespace). Grepping stderr for "Operation not permitted" would flag ordinary permission errors; an assertion pins that it does not |
 | L3 Firecracker | Not implemented (the spec itself marks it optional) |
 
 **What the wiring deliberately adds beyond the spec's signature.** The spec
@@ -191,10 +193,12 @@ attempted. Verified by a test that touches a marker file and asserts its
 absence.
 
 **Still open in 03** (stated, not stubbed): path-traversal *detection*
-beyond mount-syntax validation; privilege-escalation and fork-bomb violation
-classes; a YAML loader for `sandbox_policies` (the Go key remains
-`tool_policies`); and Sec. 5.x security criteria that need a defined
-container-escape/fork-bomb harness.
+beyond mount-syntax validation; hot reload of the sandbox policy while serving
+(the file is read once at startup — `SANDBOX_CONFIG_FILE` landed 2026-10-19);
+and Sec. 5.x security criteria that need a defined container-escape harness.
+Fork-bomb prevention/detection and privilege-escalation prevention landed
+2026-10-19; the two rows above that said otherwise were stale and are corrected
+here rather than left to contradict the spec.
 
 **Spec amendment, not a gap:** the spec (Sec. 4.3) specifies unconditional
 L2→L1→L0 fallback. The implementation deliberately does not: it downgrades

@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"os/exec"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -619,7 +620,14 @@ func (m *SandboxManager) detectViolations(result *SandboxResult, actualLevel San
 			"process limit reached (fork bomb attempt)")
 	}
 	// Network egress outside the declared allowlist (best-effort detection).
-	if len(limits.Network.AllowedHosts) > 0 {
+	//
+	// Gated on egress actually being permitted, for the same reason the
+	// process bound above is gated: when `network.enabled` is false the
+	// execution ran with `--network=none`, so there is no egress to violate and
+	// a "network access" verdict about it would describe a control that was
+	// never reachable. `egressPermitted` is the single decision the execution
+	// path already uses, so the detector and the enforcement cannot disagree.
+	if egressPermitted(limits) {
 		for _, addr := range extractNetworkTargets(result.Stderr + result.Stdout) {
 			if !hostAllowed(addr, limits.Network.AllowedHosts) {
 				result.SandboxViolations = append(result.SandboxViolations,
@@ -863,22 +871,89 @@ func hostAllowed(host string, allowed []string) bool {
 	return false
 }
 
-// extractNetworkTargets pulls candidate hostnames out of command/tool output
-// (e.g. curl/wget/ssh target hosts) for best-effort network-violation checks.
-func extractNetworkTargets(text string) []string {
-	var hosts []string
-	// URLs with explicit scheme.
-	urlRe := regexp.MustCompile(`(?i)(?:https?://|ssh://|ftp://|//)([a-z0-9.-]+)`)
+// networkTargetPatterns are the shapes that count as evidence of an egress
+// attempt in command output. Each one names a host that the tool itself said
+// it was talking to, or that it failed to reach.
+//
+// Two earlier alternations were removed because they manufactured violations
+// from ordinary output, and a fabricated security verdict is worse than a
+// missed one: it teaches the operator to disable the detector.
+//
+//   - a bare `//` matched source comments (`main.go:12: // increment`), UNC
+//     paths (`//server/share/f`) and division, then reported the first two
+//     path components as a host;
+//   - a bare `to` matched ordinary prose and documentation
+//     (`next step to: nothing-here`).
+//
+// Both produced `network access to non-allowed host: <word>` and, because any
+// non-empty violation set becomes ErrSandboxViolation, turned a successful
+// benign command into a hard security failure. The patterns below require an
+// explicit scheme or an explicit connection/resolution phrase.
+//
+// Named limit: protocol-relative URLs (`//host/path`, an HTML idiom) are no
+// longer detected. They are indistinguishable from a comment or a UNC path in
+// free-form tool output, and guessing produced the defect above.
+var networkTargetPatterns = []*regexp.Regexp{
+	// A URL with an explicit scheme: the strongest signal there is.
+	regexp.MustCompile(`(?i)\b(?:https?|ssh|sftp|ftp|ftps|git|wss?)://([a-z0-9](?:[a-z0-9.-]*[a-z0-9])?)`),
 	// Tool-reported host resolution failures, e.g. curl's
 	// "Could not resolve host: evil.example.com".
-	resolveRe := regexp.MustCompile(`(?i)(?:could not resolve host|resolve host|to|connect to|connected to):\s*([a-z0-9.-]+)`)
-	for _, mt := range urlRe.FindAllStringSubmatch(text, -1) {
-		hosts = append(hosts, mt[1])
-	}
-	for _, mt := range resolveRe.FindAllStringSubmatch(text, -1) {
-		hosts = append(hosts, mt[1])
+	regexp.MustCompile(`(?i)(?:could not resolve host|failed to resolve host|name or service not known)[:\s]+([a-z0-9](?:[a-z0-9.-]*[a-z0-9])?)`),
+	// Tool-reported connection attempts and failures.
+	regexp.MustCompile(`(?i)(?:failed to connect to|connected to|connect to|connecting to)[:\s]+([a-z0-9](?:[a-z0-9.-]*[a-z0-9])?)`),
+}
+
+// extractNetworkTargets pulls candidate hostnames out of command/tool output
+// (e.g. curl/wget/ssh target hosts) for best-effort network-violation checks.
+//
+// A candidate must look like a hostname: at least one dot, and only letters,
+// digits, dots and hyphens. Single-label tokens are excluded deliberately —
+// `docs`, `server` and `localhost` are ordinary words far more often than they
+// are egress targets, and inside a namespace `localhost` is not egress at all.
+func extractNetworkTargets(text string) []string {
+	var hosts []string
+	seen := make(map[string]struct{})
+	for _, re := range networkTargetPatterns {
+		for _, mt := range re.FindAllStringSubmatch(text, -1) {
+			host := strings.ToLower(strings.Trim(mt[1], "."))
+			if !plausibleHostname(host) {
+				continue
+			}
+			if _, dup := seen[host]; dup {
+				continue
+			}
+			seen[host] = struct{}{}
+			hosts = append(hosts, host)
+		}
 	}
 	return hosts
+}
+
+// plausibleHostname reports whether a token is specific enough to be reported
+// as an egress target. Requiring a dot is what separates `evil.example.com`
+// from the word `docs`.
+func plausibleHostname(host string) bool {
+	if !strings.Contains(host, ".") || len(host) < 4 || len(host) > 253 {
+		return false
+	}
+	for _, label := range strings.Split(host, ".") {
+		if label == "" || len(label) > 63 {
+			return false
+		}
+		for _, r := range label {
+			if !(r >= 'a' && r <= 'z') && !(r >= '0' && r <= '9') && r != '-' {
+				return false
+			}
+		}
+	}
+	// A bare numeric last label (e.g. `1.2`) is a version or a decimal, not a
+	// hostname. An IPv4 literal has four octets, so it still qualifies.
+	labels := strings.Split(host, ".")
+	last := labels[len(labels)-1]
+	if _, err := strconv.Atoi(last); err == nil && len(labels) < 4 {
+		return false
+	}
+	return true
 }
 
 // ErrSandboxViolation is returned by Execute when a security boundary is

@@ -70,8 +70,8 @@
     },
     {
       "id": "sandbox-isolation",
-      "version": "1.0.1",
-      "digest": "sha256:fd51bc74e7a004f58f6f23a2ef0b0d0a98040759b94dd7ac8a46ae405f93b5d3",
+      "version": "1.0.2",
+      "digest": "sha256:70cf25d755b6dba215b97fc2ac3d28ec90f0e80142b782b78eeaa5b73a45a8b9",
       "source_paths": [
         "mcp-server/internal/guardrails/sandbox.go",
         "mcp-server/internal/guardrails/sandbox_config.go",
