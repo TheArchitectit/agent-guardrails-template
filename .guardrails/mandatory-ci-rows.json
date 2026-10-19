@@ -1,0 +1,74 @@
+{
+  "$comment": "Spec 19 R19-14 mandatory-row manifest. Each row names a class the requirement lists with MUST, the workflow that carries it, and the exact step name inside that workflow. scripts/check_mandatory_rows.py resolves every row and fails if the step does not exist or if its workflow never runs on a protected push (main/master). A row that is satisfied only by a pull_request-triggered workflow is a VIOLATION: R19-14 says these checks run on every protected push and release candidate.",
+  "version": 1,
+  "rows": [
+    {
+      "class": "security",
+      "workflow": ".github/workflows/team-validation.yml",
+      "step": "Web fail-closed middleware + REST authorization row",
+      "reason": "Fail-closed middleware is the row every other security assertion is layered on; if it is skipped, each downstream row measures a weaker server than production runs."
+    },
+    {
+      "class": "secret",
+      "workflow": ".github/workflows/secret-validation.yml",
+      "step": "Run Gitleaks",
+      "reason": "Full-history secret scan. A protected push is the last point at which a leaked credential can be refused before it is on the default branch."
+    },
+    {
+      "class": "registry",
+      "workflow": ".github/workflows/team-validation.yml",
+      "step": "Registry fail-closed + lifecycle row",
+      "reason": "R19-16 names 'registry fallback' among the conditions a release MUST fail on; the credential registry must be proven to refuse rather than degrade on every protected push."
+    },
+    {
+      "class": "deployment-readiness",
+      "workflow": ".github/workflows/team-validation.yml",
+      "step": "Readiness and lifecycle row",
+      "reason": "A readiness endpoint that reports ready for a control that cannot run keeps a broken instance in rotation; it is a deployment gate, so it runs on every protected push."
+    },
+    {
+      "class": "package-inventory",
+      "workflow": ".github/workflows/regression-guard.yml",
+      "step": "Go module discovery (Spec 19 R19-10)",
+      "reason": "Package inventory: a module that escapes enumeration is never built or tested, and the omission is invisible because the run is green over the modules it did find."
+    },
+    {
+      "class": "test-floor",
+      "workflow": ".github/workflows/team-validation.yml",
+      "step": "Run every enumerated Python test suite",
+      "reason": "Nonzero test floor (R19-12). A suite that collects zero tests still exits 0 unless the floor is enforced, so the floor must run wherever the suite runs."
+    }
+  ],
+  "full_matrix_escalation": {
+    "workflow": [".github/workflows/*.yml", ".github/workflows/*.yaml"],
+    "script_tool": ["scripts/**", "mcp-server/scripts/**", "tools/**"],
+    "config_schema_migration": [
+      ".guardrails/**",
+      "mcp-server/internal/config/**",
+      "mcp-server/scripts/migrations/**",
+      "**/*.schema.json",
+      "control-plane.manifest.json",
+      "policy-packs/**"
+    ],
+    "shared_handler": [
+      "mcp-server/internal/mcp/**",
+      "mcp-server/internal/guardrails/**",
+      "mcp-server/internal/controlplane/**"
+    ],
+    "auth_route_transport": [
+      "mcp-server/internal/auth/**",
+      "mcp-server/internal/web/**",
+      "mcp-server/internal/notifications/**"
+    ],
+    "dependency_file": [
+      "**/go.mod",
+      "**/go.sum",
+      "**/Cargo.toml",
+      "**/Cargo.lock",
+      "**/package.json",
+      "**/package-lock.json",
+      "**/requirements*.txt"
+    ],
+    "uncertain": ["*"]
+  }
+}

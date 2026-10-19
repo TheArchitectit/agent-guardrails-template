@@ -155,3 +155,81 @@ that). The probe measures the workspace, not the host kernel, network namespace
 or container runtime. And **the first trusted-lane run on `main` is the real
 test of clause 5** — a probe that passes locally has still not proved the UCS03
 host; this note does not claim that run has happened.
+
+---
+
+## 10. Implementation note (2026-10-19) — R19-14 path-filter safeguards and mandatory-row reachability
+
+**What was measured first.** R19-14 was the one Phase 0 row with no automated
+half. Nothing in the tree read a `paths:` filter, and nothing asserted that the
+six classes it names with MUST were reachable from a protected push. Three
+defects were live in `guardrails-lint.yml`, and the third is the one that
+matters:
+
+1. It ran **only** on `pull_request`, branch-filtered to `main`/`develop`. A
+   direct push to `main` never executed any of its four jobs. (`gh run list
+   --workflow guardrails-lint.yml` shows five runs, every one a
+   `pull_request`; the last was 2026-08-23.)
+2. It computed its change set as `git diff --name-only origin/main...HEAD` while
+   also triggering on `develop`, so a `develop` PR was compared against the wrong
+   branch.
+3. `|| git diff --name-only HEAD~1` is a **narrowing** fallback. When the real
+   diff fails — shallow checkout, missing base ref, filter error — it scans the
+   tip commit only and the job still reports green. R19-14 says a filter error or
+   missing diff is `NOT_RUN`/FAIL, not an automatic skip.
+
+**Also fixed in the same file.** The `check-forbidden-files` job passed **glob**
+patterns to **`grep -E`**. `*.pem` and `*.key` begin with `*`, which GNU grep
+warns about and handles as undefined behaviour; and `.env` as an ERE means "any
+character then `env`", which matches `docs/.env.example`, `src/config.env.md`
+and `.envrc`. The check therefore refused `.env.example` — the exact file its
+own failure message tells contributors to use. Replaced with
+`scripts/check_forbidden_files.py`: basename-exact, permits only `.env.example` /
+`.env.sample`, and refuses a new `.env.*` variant by default rather than
+silently permitting it.
+
+**The gate.** `scripts/check_mandatory_rows.py` asserts three independent
+properties, and each is separately killable:
+
+- **Filter discipline.** No workflow may declare `paths:` / `paths-ignore:`.
+  Narrowing is legal only behind a dependency manifest mapping every changed path
+  to every affected gate; a filter in `on:` cannot express that mapping, so it is
+  refused rather than assumed sound. `.guardrails/mandatory-ci-rows.json`
+  declares the full-matrix escalation list, and a missing or empty required path
+  class is a violation.
+- **Reachability.** Each mandatory class must resolve to an existing step inside
+  a workflow triggered by a protected push. A step that exists only in a
+  `pull_request`-only workflow is a VIOLATION — a reader sees enforcement and
+  `main` never runs it.
+- **Event-correct diffing.** Executable `run:` blocks are scanned (the YAML
+  parser keeps comments out of the document, so a note quoting the old broken
+  command cannot fail the gate and train the next maintainer to delete the
+  explanation): no hardcoded base its triggers contradict, no single-tip-commit
+  fallback.
+
+`scripts/changed_files.sh` and `scripts/changed_commits.sh` replace the one-line
+diff. They derive the range from the event (`pull_request` → three-dot against
+the PR base; `push` → the pushed range via `github.event.before`), deepen a
+shallow clone before deciding, and **exit non-zero** when an honest set cannot be
+computed. A push with no usable before-SHA and no default branch is refused
+rather than reported as "no changes".
+
+**Evidence.** `scripts/test_check_mandatory_rows.py` — 18 cases, one mutation per
+case against a tree that otherwise passes, plus the real-tree run.
+`scripts/test_check_forbidden_files.py` — 16 cases; the permission cases are the
+paths the old matcher refused, so a regression to the old behaviour turns the
+suite red. **Red-on-drift proven on the unfixed tree:** the gate returns
+`EXIT=1` naming the hardcoded base and the tip-only fallback, and `EXIT=0` after
+the fix. `regression_check --all --pre-commit` exit 0; all repo gates green
+(action pins 88, tool count 50/22/72 ×10, resources 13, doc links 968/458, doc
+length 458/10, inventory 23/17, image pins 8, secret argv 16, pack lock OK, Go
+modules 3/3, Python suites 2/2).
+
+**Named limits.** The gate reads workflow YAML; it does not query GitHub for the
+repository's actual branch-protection or required-check configuration, so
+R19-13's external required-check list and R19-16 release blocking remain
+owner-configured items outside code. The escalation manifest is a declaration:
+it states which path classes must select the full matrix, and the gate verifies
+the declaration is complete, not that a future `paths:` filter would honour it.
+That is why a filter is refused outright instead of being validated against the
+manifest.

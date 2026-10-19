@@ -5,12 +5,12 @@ this document does not claim the full Phase 0 matrix is enforced. Enforced today
 (each with a fail-closed gate and a red-on-drift fixture): R19-10 package and
 test discovery, R19-11 the 500-line/link/line-count gate, R19-12 nonzero test
 floors, R19-13 runner trust and repository isolation (static gate + host probe),
-R19-15 action full-SHA and image digest pinning. **Still proposed:** R19-13's
-external required-check configuration and the full negative-control matrix as
-branch-protection settings, R19-14 path-filter dependency mapping, and R19-16
-release blocking. Dated implementation records live in
-[`19-implementation-notes.md`](19-implementation-notes.md) so this file stays
-within the 500-line limit (R19-11).
+R19-14 path-filter safeguards and mandatory-row reachability, R19-15 action
+full-SHA and image digest pinning. **Still proposed:** R19-13's external
+required-check configuration and the full negative-control matrix as
+branch-protection settings, and R19-16 release blocking. Dated implementation
+records live in [`19-implementation-notes.md`](19-implementation-notes.md) so
+this file stays within the 500-line limit (R19-11).
 **Owner:** Project maintainer (solo-maintainer defaults below).
 **Scope:** Same-commit blocking validation for web, MCP, configuration, deployment,
 secret, documentation, build, and regression controls.
@@ -376,6 +376,35 @@ configuration/schema/migration change, shared handler, auth/route/transport
 change, dependency-file change, or uncertain path MUST select the full matrix.
 A filter error, missing diff, shallow checkout, or unclassified path is
 `NOT_RUN`/FAIL, not an automatic skip.
+
+**Enforced (2026-10-19).** `scripts/check_mandatory_rows.py` (self-test
+`scripts/test_check_mandatory_rows.py`, 18 cases) asserts three properties and
+is wired into `regression-guard.yml`. **Filter discipline:** no workflow may
+declare `paths:` or `paths-ignore:` — narrowing is permitted only behind a
+dependency manifest mapping changed paths to every affected gate, which a
+`on:`-level filter cannot express, so a filter is refused rather than assumed
+sound; `.guardrails/mandatory-ci-rows.json` declares the full-matrix escalation
+list and a missing or empty required path class is a violation. **Reachability:**
+every mandatory class (security, secret, registry, deployment-readiness, package
+inventory, test floor) must resolve to an existing step in a workflow triggered
+by a protected push — a step living only in a `pull_request`-only workflow is a
+VIOLATION, which was a live defect when this gate was written. **Event-correct
+diffing:** a `run:` block may not hardcode a base ref its own triggers contradict,
+and may not narrow to a single tip commit when the real diff fails.
+`scripts/changed_files.sh` and `scripts/changed_commits.sh` replace the previous
+one-line diff, deriving the range from the event and **failing** when it cannot
+(an empty change set is never reported as clean).
+
+Three defects were live in `guardrails-lint.yml` when measured: it ran **only**
+on `pull_request` (so no protected push ever executed its rows), it diffed
+against a hardcoded `origin/main` while also triggering on `develop`, and its
+`|| git diff --name-only HEAD~1` fallback silently scanned the tip commit when
+the real diff failed. Its `check-forbidden-files` job also passed **glob**
+patterns to **`grep -E`**: `*.pem` / `*.key` are undefined leading-`*`
+expressions (grep warns), and `.env` as an ERE matched `docs/.env.example`,
+`src/config.env.md` and `.envrc` — refusing `.env.example`, the exact file the
+job's own failure text tells contributors to use. Replaced by
+`scripts/check_forbidden_files.py` (basename-exact, 16-case self-test).
 
 ### R19-15 — Immutable workflow and image provenance
 

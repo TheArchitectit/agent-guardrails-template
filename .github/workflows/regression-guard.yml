@@ -99,6 +99,20 @@ jobs:
           python scripts/check_runner_isolation.py --repo .
           python scripts/test_check_runner_isolation.py
 
+      - name: Mandatory rows reach a protected push (Spec 19 R19-14)
+        run: |
+          # R19-14 was the one Phase 0 row with no automated half: nothing read a
+          # `paths:` filter and nothing asserted the six named mandatory classes
+          # (security, secret, registry, deployment-readiness, package inventory,
+          # test floor) were reachable from a protected push. A "mandatory" step
+          # living in a pull_request-only workflow reads as enforcement and never
+          # runs on main. Also refuses a path filter on any workflow (narrowing is
+          # permitted only behind a dependency manifest, which `on:` cannot
+          # express) and a change-set command that hardcodes a base its triggers
+          # contradict or silently narrows to one commit when the real diff fails.
+          python scripts/check_mandatory_rows.py --repo .
+          python scripts/test_check_mandatory_rows.py
+
       - name: Tool manifest counts (F001)
         run: |
           # F001: documented tool counts must equal the registries in source.
