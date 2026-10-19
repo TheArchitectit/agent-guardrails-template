@@ -224,6 +224,16 @@ func (o observationSource) Observe(c controlplane.Component) controlplane.Observ
 			obs.Detail = "sandbox configured but disabled"
 			return obs
 		}
+		// Enabled is a declaration. Reachability is a MEASUREMENT: a host where
+		// the required level cannot execute is `installed`, not `reachable`, or
+		// the report claims an entry point that would refuse every call. Spec 08
+		// maps installed/initialized to NOT available, which is the honest state
+		// for a sandbox whose isolation mechanism cannot run here.
+		if status, detail := s.guardrailsEngine.ProbeSandbox(context.Background()); status != guardrails.FeatureActive {
+			obs.State = controlplane.StateInstalled
+			obs.Detail = detail
+			return obs
+		}
 		obs.State = controlplane.StateReachable
 		obs.Detail = "sandbox enabled with per-tool policies"
 		if exercised > 0 {

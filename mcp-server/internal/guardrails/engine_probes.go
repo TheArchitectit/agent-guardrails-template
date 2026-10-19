@@ -14,7 +14,6 @@ package guardrails
 
 import (
 	"context"
-	"os/exec"
 	"strings"
 )
 
@@ -95,37 +94,6 @@ func (e *Engine) probeContentFilter(ctx context.Context) (FeatureStatus, string)
 			"content filter present with no semantic backend; classification fails closed rather than evaluating content"
 	}
 	return FeatureActive, "content filter has " + itoa(n) + " semantic backend(s) attached"
-}
-
-// probeSandbox reports whether isolation is configured AND the mechanism it
-// would use exists on this host. Presence of the struct is not capability: a
-// manager that would exec `unshare` on a host without it cannot isolate
-// anything, and reporting "active" from the config alone is the same
-// declaration-restating defect in a different type.
-func (e *Engine) probeSandbox(ctx context.Context) (FeatureStatus, string) {
-	_ = ctx
-	if e == nil || e.sandbox == nil || e.config == nil || !e.config.Sandbox.Enabled {
-		return FeatureAbsent, "sandbox manager is not enabled"
-	}
-
-	var available []string
-	if _, err := exec.LookPath("unshare"); err == nil {
-		available = append(available, "unshare")
-	}
-	if _, err := exec.LookPath("podman"); err == nil {
-		available = append(available, "podman")
-	}
-	if _, err := exec.LookPath("docker"); err == nil {
-		available = append(available, "docker")
-	}
-
-	if len(available) == 0 {
-		// Configured but unenforceable on this host: every execution would
-		// fall back to L0, which is pre-validation only.
-		return FeaturePartial,
-			"sandbox configured but no isolation mechanism found on PATH (unshare/podman/docker); executions would run at L0"
-	}
-	return FeatureActive, "isolation mechanisms present: " + strings.Join(available, ", ")
 }
 
 // probeProvenanceTracking reports whether external content carries a

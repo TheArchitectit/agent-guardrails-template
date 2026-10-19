@@ -41,6 +41,16 @@ type SandboxManager struct {
 	mu     sync.RWMutex
 	config *SandboxConfig
 	logger *slog.Logger
+
+	// prober runs the capability measurements. Overridable so a test can
+	// prove the decision on a host whose real answer varies.
+	prober sandboxProber
+
+	// capOnce guards cap. The measurement execs a process, so it is done
+	// once per manager and reused by every report: a compliance report that
+	// forked a namespace per requirement would be a cost nobody asked for.
+	capOnce sync.Once
+	cap     SandboxCapability
 }
 
 // NewSandboxManager creates a new manager with the provided configuration.
@@ -51,6 +61,7 @@ func NewSandboxManager(cfg *SandboxConfig, logger *slog.Logger) *SandboxManager 
 	return &SandboxManager{
 		config: cfg.Clone(),
 		logger: logger,
+		prober: defaultSandboxProber(),
 	}
 }
 
