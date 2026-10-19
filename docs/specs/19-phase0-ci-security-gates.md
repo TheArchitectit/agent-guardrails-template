@@ -1,7 +1,16 @@
 # OpenSpec 19: Phase 0 Same-Commit CI Security Gates
 
-**Status:** Proposed; not implemented. This document defines the release contract for
-Phase 0 and does not claim that current workflows enforce it.
+**Status:** PARTIAL. Several controls are implemented and enforced in CI;
+this document does not claim the full Phase 0 matrix is enforced. Enforced today
+(each with a fail-closed gate and a red-on-drift fixture): R19-10 package and
+test discovery, R19-11 the 500-line/link/line-count gate, R19-12 nonzero test
+floors, R19-13 runner trust and repository isolation (static gate + host probe),
+R19-15 action full-SHA and image digest pinning. **Still proposed:** R19-13's
+external required-check configuration and the full negative-control matrix as
+branch-protection settings, R19-14 path-filter dependency mapping, and R19-16
+release blocking. Dated implementation records live in
+[`19-implementation-notes.md`](19-implementation-notes.md) so this file stays
+within the 500-line limit (R19-11).
 **Owner:** Project maintainer (solo-maintainer defaults below).
 **Scope:** Same-commit blocking validation for web, MCP, configuration, deployment,
 secret, documentation, build, and regression controls.
@@ -412,62 +421,7 @@ Before declaring Phase 0 complete, the evidence bundle MUST include:
 9. Hosted PR/fork evidence, trusted-main UCS03 isolation evidence, and cleanup
    confirmation; the maintainer records external required-check settings.
 
-These requirements are proposed review criteria, not evidence that current CI has
-implemented them. No workflow file is changed by this specification.
+These requirements are proposed review criteria. Where a row is not enforced,
+this specification does not assert that CI implements it. No workflow file is
+changed by this specification.
 
-## 6. Implementation note (2026-10-15) — R19-15 action pinning
-
-R19-15 requires required workflow actions to use reviewed full commit SHA
-references, with a test that validates them and a mutation fixture that changes
-a pin to a tag and fails. That half is now implemented and enforced:
-
-- Every third-party action in all six workflows under `.github/workflows/` is
-  pinned by a 40-hex commit SHA with the human tag in a trailing comment
-  (`actions/checkout` `11d5960a…` v4.4.0, `actions/setup-python` `a26af69b…`
-  v5, `actions/setup-go` `40f1582b…` v5, `actions/github-script` `f28e40c7…`
-  v7, `actions/upload-artifact` `ea165f8d…` v4.6.2, `codecov/codecov-action`
-  `ab904c41…` v3.1.6, `gitleaks/gitleaks-action` `ff98106e…` v2). Each SHA was
-  resolved live via the GitHub API and re-verified to resolve to that commit.
-- `scripts/check_action_pins.py` enforces the rule on every push: fail-closed
-  (an unreadable workflow is a violation, not a skip) and non-vacuous (zero
-  workflows, or zero `uses:` refs, FAILS). Local actions (`./…`) and
-  digest-pinned container actions are allowed; a mutable tag or a bare
-  `owner/repo` is a violation. The allowlist is empty by design.
-- `scripts/test_check_action_pins.py` is the mutation fixture the requirement
-  names: it asserts the gate changes PASS → FAIL on a mutable tag, a missing
-  ref, and an unpinned container, and PASS on a full-SHA pin and a local action.
-- The gate + self-test run in `.github/workflows/regression-guard.yml` on every
-  push and PR (the step "Action pinning (Spec 19 R19-15 / Spec 17 R17-11)").
-
-Remaining R19 rows (external required-check configuration, negative-control
-matrix, UCS03 isolation attestation) stay **proposed** — this note closes only
-the action-pinning control, and does not assert that the full Phase 0 matrix is
-enforced. No gate was weakened.
-
-## 7. Implementation note (2026-10-15) — R19-15 image-digest half
-
-R19-15 also requires that release/base **images** use immutable digests. That
-half is now implemented and enforced (see Spec 17 R17-11 Sec. 5 for the full
-record): every external image ref in `docker-compose.yml`,
-`mcp-server/deploy/{podman-compose,docker-compose.example}.yml` and
-`mcp-server/deploy/Dockerfile` is pinned by an immutable `@sha256` digest, and
-`image-pins.json` is the reviewed `name:tag` → digest record each manifest must
-agree with.
-
-- `scripts/check_image_pins.py` enforces the rule on every push (fail-closed,
-  non-vacuous, empty-of-third-parties allowlist with a reason per entry).
-- `scripts/test_check_image_pins.py` is the mutation fixture: a tag-only ref, a
-  mismatched digest, and an unreviewed pin must each change PASS → FAIL.
-- Both run in `.github/workflows/regression-guard.yml` on every push and PR (the
-  step "Image-digest pinning (Spec 19 R19-15 / Spec 17 R17-11)").
-
-With this, R19-15's two named controls (workflow actions by full SHA; images by
-digest) are both enforced. The external required-check configuration, the
-negative-control matrix and the UCS03 isolation attestation remain **proposed**;
-this note does not assert the full Phase 0 matrix is enforced. No gate was
-weakened.
-
-A third fail-closed gate now runs in the same `regression-guard.yml` job —
-`scripts/check_secret_argv.py` (Spec 17 R17-08): a credential in a container
-manifest's argv (`redis-cli -a`, `--requirepass <pw>`) fails the build. It is
-the Phase 0 "no secret in process arguments" control; see Spec 17 Sec. 6.

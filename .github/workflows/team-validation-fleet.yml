@@ -37,7 +37,7 @@ jobs:
           python3 scripts/team_manager.py --project example status
 
       - name: Install Python test dependencies
-        run: python3 -m pip install pytest pytest-cov
+        run: python3 -m pip install pytest pytest-cov pyyaml
 
       # Spec 19 R19-10: enumerate Python test suites from the tree rather than
       # hardcode a single pytest path. The discovery gate fails closed when a
@@ -134,3 +134,44 @@ jobs:
             fi
             echo "::endgroup::"
           done
+
+      # Spec 19 R19-13 clause 5, first half: measure THIS host. The static gate
+      # (regression-guard.yml) reads the YAML and proves the job definition is
+      # repo-scoped; only a probe running here can show what the host actually
+      # looks like. The record is written outside the checkout so it does not
+      # become the residue the next run has to clean up. A violated property
+      # fails the job — an isolation claim with no measurement behind it is the
+      # thing the requirement forbids.
+      - name: Runner isolation probe (Spec 19 R19-13)
+        run: |
+          set -euo pipefail
+          python3 scripts/runner_isolation_probe.py \
+            --workspace "$GITHUB_WORKSPACE" \
+            --sha "$GITHUB_SHA" \
+            --repo "$GITHUB_REPOSITORY" \
+            --out "$RUNNER_TEMP/runner-isolation.json"
+
+      # Spec 19 R19-13 clause 5, second half: the recorded attestation must be
+      # well-formed and must agree that no property was violated. Running the
+      # gate in `--attestation` mode means the record is validated by the same
+      # code that reads the definitions, so the two cannot drift apart.
+      - name: Validate runner isolation attestation (Spec 19 R19-13)
+        run: |
+          set -euo pipefail
+          python3 scripts/check_runner_isolation.py \
+            --repo . \
+            --attestation "$RUNNER_TEMP/runner-isolation.json"
+
+      # Spec 19 R19-13: post-job cleanup is part of the isolation contract, not
+      # housekeeping. The UCS03 pool is a persistent host, so a failed or
+      # cancelled run would otherwise leave a staged fixture, an exported file
+      # or a build output for the next run — and the next run may be a different
+      # commit. This runs unconditionally and last, so it cleans up after the
+      # work rather than before it.
+      - name: Post-job cleanup (Spec 19 R19-13)
+        if: always()
+        run: |
+          set -euo pipefail
+          rm -f .teams/example.json teams-export.json
+          rm -f "${RUNNER_TEMP:-/tmp}/runner-isolation.json"
+          echo "workspace-local artifacts removed"
