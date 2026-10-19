@@ -1,6 +1,6 @@
 # OpenSpec: Runtime Sandbox Isolation
 
-> **Status 2026-10-18 — PARTIAL, wired.** Both tools now exist, are registered, dispatched, classified and audited, and the declared per-tool policies are applied at execution (`ExecuteFor`), which they were not before. The library is no longer unreachable. Residual gaps are named in Sec. 8: path-traversal detection beyond mount syntax, privilege-escalation/fork-bomb violation classes, a YAML loader, and the Sec. 5.x harnesses. Sec. 4.3 fallback text remains wrong — see the amendment note.
+> **Status 2026-10-19 — PARTIAL, wired, and the declared limits now bind.** Both tools exist, are registered, dispatched, classified and audited, and the declared per-tool policies are applied at execution (`ExecuteFor`). This pass fixed a class of defect the previous status missed: **three limits declared in the shipped default config were consumed by nothing.** `swap_allowed: false`, `max_wall_seconds` and `max_write_mb` were read by no code path, so a reviewer saw three controls and the sandbox applied none of them — and `ResourceLimits{}` (the engine's fallback for a tool with no policy) produced a zero deadline, killing every command before it started and reporting the result as `ErrSandboxViolation`. All four are fixed at the cause. Residual gaps are named in Sec. 8. Sec. 4.3 fallback text remains wrong — see the amendment note.
 
 **Gap:** Important — Pre-execution validation only; no OS-level isolation
 **Priority:** 🟡 Important (Phase 2)
@@ -254,8 +254,14 @@ Evidence: `docs/specs/guardrail-gaps-2026/STATUS.md`; tests
 | 4.x | Network isolation | Implemented, **stronger than spec** | `--network=none` fail-closed plus CONNECT-filtering proxy and provisioned bridge network (`sandbox_network.go`) |
 | 4.x | Resource-exhaustion detection | Implemented | exit 137 / deadline mapping |
 | 4.x | Path-traversal **detection** | **Not implemented** | only mount-path syntax validation; L2 relies on the runtime's mounts, L1 does not enforce a path set at all |
-| 4.x | Privilege-escalation / fork-bomb detection | **Not implemented** | absent from `detectViolations` — 3 of 5 required violation classes are missing |
-| 5.1 | Unit tests for isolation behaviour | **Partial** | policy resolution, level resolution, override narrowing, L0 refusal, fail-closed-without-engine all covered; "namespace blocks file access outside allowed paths" is **not** covered because L1 does not implement a path set |
+| 3.2 | `max_wall_seconds` **applied** | **Implemented 2026-10-19** | `effectiveDeadline` binds both time fields and takes the tighter one; before this only `max_seconds` was ever read, so a config declaring a 60 s wall clock had no 60 s bound at all |
+| 3.2 | `swap_allowed: false` **applied** | **Implemented 2026-10-19** | `containerResourceArgs` emits `--memory-swap` equal to `--memory` when swap is disallowed; without it the memory ceiling was advisory and the container swapped past it |
+| 3.2 | `max_write_mb` **applied** | **Implemented 2026-10-19** | the writable `/tmp` tmpfs is sized from the declared bound instead of a hardcoded 64 MB |
+| 3.2 | Absent limits use the documented default | **Implemented 2026-10-19** | `ResourceLimits{}` used to mean a **zero deadline**: every command was killed before it ran and reported as `ErrSandboxViolation`. `effectiveDeadline` now falls back to `DefaultTimeoutSeconds`, and `Engine.Evaluate` uses `SandboxManager.DefaultLimits()` |
+| 4.x | Fork-bomb **prevention** | **Implemented at L2 2026-10-19** | `--pids-limit` from the declared `max_processes` — a cgroup bound scoped to the container |
+| 4.x | Fork-bomb **detection** | **Implemented, gated on an enforced bound** | `detectViolations` reports the class only where a process bound is actually in force (`processLimitEnforcedFor` → L2), so it cannot describe a control that does not exist |
+| 4.x | Privilege-escalation detection | **Deliberately not a text match** | prevention at the boundary (`--cap-drop=ALL`, `no-new-privileges`, user namespace). Grepping stderr for "Operation not permitted" would flag ordinary permission errors — the same false-positive generator Law 2 became in gap-spec 04. An assertion pins that an ordinary permission error is **not** reported as a violation |
+| 5.1 | Unit tests for isolation behaviour | **Partial, improved 2026-10-19** | policy resolution, level resolution, override narrowing, L0 refusal, fail-closed-without-engine, and now every declared limit bound to a real value (`sandbox_limits_test.go`); "namespace blocks file access outside allowed paths" is **not** covered because L1 does not implement a path set |
 | 5.2 | Config hot-reload | **Not implemented** | no sandbox YAML loader; `guardrail_sandbox_config` updates the live policy table in-process, but no file is read |
 | 5.3 | Container escape / fork bomb / exfiltration | **Not implemented** | no harness exists; this is the named blocker for the Sec. 5.x checkboxes |
 
@@ -267,17 +273,51 @@ the correct fail-closed behaviour — silently re-running a denied command at
 lower isolation would execute it on the host with none. The spec text should
 be amended to match the code, not the reverse.
 
-**Net position after 2026-10-18.** The library is reachable and the declared
-policies bind. What remains is not reachability: it is detection breadth
-(path traversal, privilege escalation, fork bombs), a config-file loader, and
-the Sec. 5.x harnesses. Each is named above rather than stubbed.
+**Net position after 2026-10-19.** The library is reachable, the declared
+policies bind, and **every limit the config declares now has a consumer**. That
+last point was the defect this pass existed to fix: `swap_allowed`,
+`max_wall_seconds` and `max_write_mb` were declared in `DefaultSandboxConfig()`
+and read by nothing, which is worse than an absent control — a reviewer sees a
+bound in the file and the sandbox applies none of it. Two defects surfaced only
+while proving the fix:
+
+1. **`ResourceLimits{}` was a zero deadline.** `Engine.Evaluate` passed the zero
+   value for any tool with no declared policy, so every command was killed
+   before it started and the caller received `ErrSandboxViolation` — a security
+   verdict about work that never ran. That teaches operators to ignore the
+   violation signal.
+2. **The first mechanism I used was itself a no-op.** A `ulimit -u` shell prefix
+   silently failed under `dash` (`sh` on Debian has no `-u`), so the
+   "fix" ran the command unbounded while printing nothing. `prlimit` replaced
+   it. Then measurement killed the `--nproc` form too: `RLIMIT_NPROC` is counted
+   **per real UID across the whole host**, not per process tree, so
+   `--nproc=128` made every fork fail on an account already running 837
+   processes. That is an outage shaped like a control. The process bound is now
+   `--pids-limit` at L2, which is a cgroup bound scoped to the container, and
+   detection is gated on that bound actually being in force.
+
+What remains is not reachability: it is detection breadth (path traversal), a
+config-file loader, and the Sec. 5.x harnesses. Each is named above rather than
+stubbed.
 
 **Still-open decisions:**
 
 1. Path-traversal detection: enforce a path set at L1, or amend Sec. 4.x to
-   scope detection to L2 mounts only.
-2. The two missing violation classes: implement, or drop from Sec. 4.x.
+   scope detection to L2 mounts only. (Unchanged: L1 opens a mount namespace
+   but mounts nothing, so there is no path set to violate.)
+2. ~~The two missing violation classes.~~ **Resolved 2026-10-19:** fork bombs
+   are prevented by `--pids-limit` and detected only where that bound exists;
+   privilege escalation is prevention at the boundary, not a text match, and
+   the reason is recorded in the table above.
 3. A YAML loader for policies, or amend Sec. 3.3 to name `tool_policies` and
    mark file-based configuration out of scope.
 4. Sec. 5.x security criteria need a defined harness (container escape, fork
-   bomb) before they can be checked at all.
+   bomb) before they can be checked at all. The fork-bomb half now has a
+   mechanism to test; the harness itself is still unwritten.
+5. Whether `max_processes` should default non-zero for L0/L1 callers at all.
+   It currently defaults to 256 in `DefaultSandboxConfig()`, but that bound only
+   binds at L2 — at L0/L1 there is no per-tree mechanism that does not also
+   break every other process under the same UID. Recording the limit as
+   L2-only, rather than silently pretending it applies everywhere, is the
+   honest disposition; making it real at L1 needs a cgroup-per-command
+   supervisor, which is a design decision, not a bug fix.

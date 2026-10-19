@@ -314,7 +314,13 @@ func (e *Engine) Evaluate(ctx context.Context, input EvalInput) *EvalResult {
 	// 4. Sandbox execution
 	if e.sandbox != nil && input.Command != "" {
 		level := LevelL0
-		limits := ResourceLimits{}
+		// A policy that names no limits must inherit the sandbox's own
+		// defaults, never an empty ResourceLimits. Passing the zero value made
+		// effectiveDeadline zero, so the command was killed before it started
+		// and the caller received ErrSandboxViolation — a security verdict
+		// about work that never ran, which also taught operators to ignore the
+		// violation signal.
+		limits := e.sandbox.DefaultLimits()
 		if input.ToolPolicy != nil {
 			level = input.ToolPolicy.SandboxLevel
 			limits = input.ToolPolicy.Limits

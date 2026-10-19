@@ -296,10 +296,14 @@ func (m *SandboxManager) ExecuteFor(ctx context.Context, toolType, command strin
 func (m *SandboxManager) execL0(ctx context.Context, command string, limits ResourceLimits) (*SandboxResult, error) {
 	m.logger.Debug("executing L0 (no isolation)", "command", command)
 
-	ctx, cancel := context.WithTimeout(ctx, time.Duration(limits.Time.MaxSeconds)*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, effectiveDeadline(limits))
 	defer cancel()
 
-	cmd := exec.CommandContext(ctx, "sh", "-c", command)
+	launcher, largs, lerr := limitLauncher(limits, command)
+	if lerr != nil {
+		return nil, lerr
+	}
+	cmd := exec.CommandContext(ctx, launcher, largs...)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
@@ -339,10 +343,15 @@ func (m *SandboxManager) execL1(ctx context.Context, command string, limits Reso
 		"--user",          // Isolate user namespace (maps to unprivileged)
 		"--map-root-user", // Map to root inside namespace
 		"--fork",          // Fork before exec
-		"sh", "-c", command,
 	}
+	launcher, largs, lerr := limitLauncher(limits, command)
+	if lerr != nil {
+		return nil, lerr
+	}
+	args = append(args, launcher)
+	args = append(args, largs...)
 
-	ctx, cancel := context.WithTimeout(ctx, time.Duration(limits.Time.MaxSeconds)*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, effectiveDeadline(limits))
 	defer cancel()
 
 	cmd := exec.CommandContext(ctx, "unshare", args...)
@@ -424,16 +433,7 @@ func (m *SandboxManager) execL2(ctx context.Context, command string, limits Reso
 		}
 	}
 
-	args := []string{
-		"run", "--rm",
-		"--read-only",                        // Read-only root filesystem
-		"--tmpfs", "/tmp:rw,noexec,size=64m", // Writable tmpfs for scratch
-		"--tmpfs", "/var/tmp:rw,noexec,size=32m",
-		"--cap-drop=ALL",
-		"--cap-add=SETUID", // Needed by some shells
-		"--cap-add=SETGID",
-		"--security-opt", "no-new-privileges",
-	}
+	args := containerHardeningArgs(limits)
 
 	// Network isolation.
 	//
@@ -487,18 +487,13 @@ func (m *SandboxManager) execL2(ctx context.Context, command string, limits Reso
 	}
 
 	// Resource limits — guard against zero values
-	if limits.Memory.MaxMB > 0 {
-		args = append(args, fmt.Sprintf("--memory=%dm", limits.Memory.MaxMB))
-	} else {
-		args = append(args, "--memory=256m") // Safe default
-	}
-	if limits.CPU.MaxPercent > 0 {
-		args = append(args, fmt.Sprintf("--cpus=%.2f", limits.CPU.MaxPercent/100.0))
-	} else if limits.CPU.MaxCores > 0 {
-		args = append(args, fmt.Sprintf("--cpus=%d", limits.CPU.MaxCores))
-	} else {
-		args = append(args, "--cpus=1.0") // Safe default
-	}
+	//
+	// Every declared limit binds here. `swap_allowed`, `max_write_mb` and the
+	// process bound were declared in the shipped default config and consumed by
+	// nothing, so a deployment read a config that promised three controls and
+	// got none of them. A limit with no consumer is worse than an absent one:
+	// it produces a review trail that says the bound exists.
+	args = append(args, containerResourceArgs(limits)...)
 
 	// Bind mount declared workspace paths (read-write). Paths containing ':'
 	// or ',' corrupt the -v spec (':' separates host:container:mode and ','
@@ -523,9 +518,13 @@ func (m *SandboxManager) execL2(ctx context.Context, command string, limits Reso
 	if image == "" {
 		image = "alpine:latest"
 	}
+	// At L2 the runtime enforces the process bound itself (--pids-limit) and the
+	// memory/CPU ceilings via cgroups, so no in-shell prefix is needed or wanted:
+	// requiring prlimit inside the image would make an otherwise-hardened
+	// container fail for a reason the container already handles.
 	args = append(args, image, "sh", "-c", command)
 
-	ctx, cancel := context.WithTimeout(ctx, time.Duration(limits.Time.MaxSeconds)*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, effectiveDeadline(limits))
 	defer cancel()
 
 	cmd := exec.CommandContext(ctx, runtime, args...)
@@ -560,10 +559,19 @@ func (m *SandboxManager) execL2(ctx context.Context, command string, limits Reso
 //
 // Detected cases:
 //   - resource limit exceeded: exit code 137 (OOM/sigkill) or ctx timeout
+//   - process limit reached (see processLimitSignatures): only reported when a
+//     process bound was actually configured for this execution
 //   - network access attempt outside AllowedHosts (best-effort)
 //
 // The "ran at a lower isolation level than requested" breach is recorded by
 // Execute against the requested level, not here (exec funcs don't know it).
+//
+// Privilege escalation is deliberately NOT detected from output text. At L2 it
+// is prevented (--cap-drop=ALL plus no-new-privileges); at L1 the user
+// namespace maps root to an unprivileged host user. Grepping stderr for
+// "Operation not permitted" would flag ordinary permission errors — the same
+// false-positive generator that Law 2 became in gap-spec 04 — so the control
+// here is prevention at the boundary, not text matching.
 func (m *SandboxManager) detectViolations(result *SandboxResult, actualLevel SandboxLevel, limits ResourceLimits, ctx context.Context, execErr error) {
 	// Resource limit exceeded: OOM kill / SIGKILL, or the execution context
 	// deadline was hit (timeout). When the context deadline fires, exec kills
@@ -574,6 +582,12 @@ func (m *SandboxManager) detectViolations(result *SandboxResult, actualLevel San
 		result.SandboxViolations = append(result.SandboxViolations,
 			"resource limit exceeded (OOM/timeout)")
 	}
+	// Process limit reached. Gated on a bound that is actually in force for
+	// this execution, so the message can only describe a control that exists.
+	if processLimitEnforcedFor(actualLevel, limits) && forkedPastLimit(result.Stderr+"\n"+result.Stdout) {
+		result.SandboxViolations = append(result.SandboxViolations,
+			"process limit reached (fork bomb attempt)")
+	}
 	// Network egress outside the declared allowlist (best-effort detection).
 	if len(limits.Network.AllowedHosts) > 0 {
 		for _, addr := range extractNetworkTargets(result.Stderr + result.Stdout) {
@@ -583,6 +597,186 @@ func (m *SandboxManager) detectViolations(result *SandboxResult, actualLevel San
 			}
 		}
 	}
+}
+
+// processLimitSignatures are the messages a process-creation failure produces
+// when RLIMIT_NPROC or a container pid limit is hit. Matched case-insensitively
+// as whole substrings so a command that merely mentions the words cannot
+// fabricate a violation about itself.
+var processLimitSignatures = []string{
+	"fork: retry:",
+	"fork: resource temporarily unavailable",
+	"resource temporarily unavailable: can't fork",
+	"pthread_create: resource temporarily unavailable",
+	"cannot allocate memory: fork",
+	"can't fork",
+	"unable to fork",
+}
+
+// forkedPastLimit reports whether the output carries a fork-failure signature.
+func forkedPastLimit(text string) bool {
+	lower := strings.ToLower(text)
+	for _, sig := range processLimitSignatures {
+		if strings.Contains(lower, sig) {
+			return true
+		}
+	}
+	return false
+}
+
+// DefaultTimeoutSeconds is used when a limit set declares no usable time
+// bound. It exists so that "no deadline configured" means "the documented
+// default", never "expire immediately" and never "run forever".
+const DefaultTimeoutSeconds = 300
+
+// effectiveDeadline returns the wall-clock bound for one execution.
+//
+// Both declared time fields bind, and the tighter one wins: MaxSeconds is the
+// in-sandbox CPU-time limit, MaxWallSeconds the supervisor bound. Using only
+// MaxSeconds made `max_wall_seconds` a declared field with no consumer, which
+// is the same class of defect as a gate that scans nothing. A limit set that
+// declares neither falls back to the documented default rather than to a zero
+// duration: `ResourceLimits{}` used to produce an already-expired context, so
+// every command was killed before it started and the caller was handed
+// ErrSandboxViolation — a security verdict about work that never ran.
+func effectiveDeadline(limits ResourceLimits) time.Duration {
+	secs := 0
+	for _, v := range []int{limits.Time.MaxSeconds, limits.Time.MaxWallSeconds} {
+		if v > 0 && (secs == 0 || v < secs) {
+			secs = v
+		}
+	}
+	if secs == 0 {
+		secs = DefaultTimeoutSeconds
+	}
+	return time.Duration(secs) * time.Second
+}
+
+// processLimitEnforcedFor reports whether a process-count bound is actually in
+// force for this execution.
+//
+// It is at L2 only, where the container runtime applies a cgroup pids limit
+// scoped to the container. It is NOT at L0 (no isolation) or L1 (a namespace
+// bounds visibility and identity, not how many tasks may exist).
+//
+// Detection is gated on this because reporting "fork bomb" for a control that
+// was never applied is a false positive about a security boundary — the same
+// class of defect as a gate that scans nothing and reports clean.
+//
+// RLIMIT_NPROC is deliberately not used as the mechanism. It is counted per
+// REAL UID across the whole machine, not per process tree, so on a host whose
+// account already runs more processes than the limit, every fork fails —
+// including the ones the command needs in order to start. Measured here: a
+// prlimit --nproc=128 wrapper made `sh -c` fail with "Cannot fork" because the
+// account already had 837 processes. That is an outage shaped like a control.
+func processLimitEnforcedFor(level SandboxLevel, limits ResourceLimits) bool {
+	return level == LevelL2 && limits.Process.MaxProcesses > 0
+}
+
+// processBoundFlags returns the per-process bounds enforced through prlimit.
+//
+// RLIMIT_CPU is per-process and correct: it caps the CPU time one command may
+// burn. Process COUNT is not here for the per-UID reason above; it is enforced
+// by the container pid limit at L2.
+func processBoundFlags(limits ResourceLimits) []string {
+	var flags []string
+	if limits.Time.MaxSeconds > 0 {
+		flags = append(flags, fmt.Sprintf("--cpu=%d", limits.Time.MaxSeconds))
+	}
+	return flags
+}
+
+// limitLauncher returns the argv that runs command under the declared bounds.
+//
+// A shell builtin is NOT a viable mechanism. `sh` on Debian is dash, which
+// rejects `ulimit -u` outright: a prefix of the form `ulimit -u 128 2>/dev/null;`
+// wrote "Illegal option -u" to stderr, swallowed it with 2>/dev/null, and ran
+// the command COMPLETELY UNBOUNDED. That is the exact defect class this pass
+// removes — a configured control with no effect — and my own first attempt at
+// the fix had it. The test that read `ulimit -u` back caught it.
+//
+// `prlimit(1)` sets RLIMIT_CPU on the process it execs. It needs no shell
+// cooperation, so a shell script cannot sidestep it. When a bound is declared
+// and no mechanism exists, this returns an error rather than running unbounded:
+// silently dropping a declared security limit is the fail-open behaviour the
+// rest of this file refuses.
+func limitLauncher(limits ResourceLimits, command string) (string, []string, error) {
+	flags := processBoundFlags(limits)
+	if len(flags) == 0 {
+		return "sh", []string{"-c", command}, nil
+	}
+	if _, err := exec.LookPath("prlimit"); err != nil {
+		return "", nil, fmt.Errorf("sandbox declares a process/cpu bound but prlimit is not installed; refusing to run unbounded (declare max_processes and max_seconds as 0 to opt out explicitly)")
+	}
+	return "prlimit", append(flags, "--", "sh", "-c", command), nil
+}
+
+// containerHardeningArgs builds the fixed isolation flags for an L2 run.
+//
+// Pure and separated from execL2 so the declared posture can be asserted on a
+// host with no container runtime: a test that shells out to podman proves a
+// different thing on every machine, and on CI it proves nothing at all.
+func containerHardeningArgs(limits ResourceLimits) []string {
+	return []string{
+		"run", "--rm",
+		"--read-only", // Read-only root filesystem
+		// Writable tmpfs for scratch, sized from the declared disk bound so the
+		// writable surface is the number the policy names rather than a constant
+		// the policy cannot influence. `/tmp` is where a shell actually writes;
+		// a max_write_mb larger than the tmpfs only moves the failure, so the
+		// tmpfs is the enforcement point for the write bound at L2.
+		"--tmpfs", fmt.Sprintf("/tmp:rw,noexec,size=%dm", tmpfsSizeMB(limits, 64)),
+		"--tmpfs", "/var/tmp:rw,noexec,size=32m",
+		"--cap-drop=ALL",
+		"--cap-add=SETUID", // Needed by some shells
+		"--cap-add=SETGID",
+		"--security-opt", "no-new-privileges",
+	}
+}
+
+// containerResourceArgs builds the resource-limit flags for an L2 run.
+//
+// Every field it reads is a field the config declares. `swap_allowed: false`
+// without `--memory-swap` is advisory: the container swaps and keeps running
+// past the memory ceiling it was given. `max_processes` without
+// `--pids-limit` leaves fork-bomb prevention to a detection heuristic that can
+// only read output after the damage.
+func containerResourceArgs(limits ResourceLimits) []string {
+	var args []string
+	if limits.Memory.MaxMB > 0 {
+		args = append(args, fmt.Sprintf("--memory=%dm", limits.Memory.MaxMB))
+		if !limits.Memory.SwapAllowed {
+			args = append(args, fmt.Sprintf("--memory-swap=%dm", limits.Memory.MaxMB))
+		}
+	} else {
+		args = append(args, "--memory=256m", "--memory-swap=256m") // Safe default, no swap
+	}
+	switch {
+	case limits.CPU.MaxPercent > 0:
+		args = append(args, fmt.Sprintf("--cpus=%.2f", limits.CPU.MaxPercent/100.0))
+	case limits.CPU.MaxCores > 0:
+		args = append(args, fmt.Sprintf("--cpus=%d", limits.CPU.MaxCores))
+	default:
+		args = append(args, "--cpus=1.0") // Safe default
+	}
+	if limits.Process.MaxProcesses > 0 {
+		args = append(args, fmt.Sprintf("--pids-limit=%d", limits.Process.MaxProcesses))
+	}
+	return args
+}
+
+// tmpfsSizeMB returns the writable scratch size for an execution.
+//
+// A declared max_write_mb bounds how much the command may write; the tmpfs is
+// where that write lands at L2. When the policy declares no disk bound the
+// caller-supplied fallback is used, so "not configured" stays the documented
+// default rather than zero (a zero-size tmpfs would make every write fail for
+// a reason the policy never stated).
+func tmpfsSizeMB(limits ResourceLimits, fallback int) int {
+	if limits.Disk.MaxWriteMB > 0 {
+		return limits.Disk.MaxWriteMB
+	}
+	return fallback
 }
 
 // validateMountPath rejects paths that would corrupt the container -v mount

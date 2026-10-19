@@ -36,6 +36,10 @@ type ResourceLimits struct {
 		ReadWritePaths []string `yaml:"read_write_paths"` // Paths that MAY be written
 	} `yaml:"disk"`
 
+	Process struct {
+		MaxProcesses int `yaml:"max_processes"` // Maximum concurrent processes (0 = no bound)
+	} `yaml:"process"`
+
 	Network struct {
 		Enabled      bool     `yaml:"enabled"`       // Whether network access is permitted
 		AllowedHosts []string `yaml:"allowed_hosts"` // Domain whitelist
@@ -86,6 +90,9 @@ func DefaultSandboxConfig() *SandboxConfig {
 				ReadOnlyPaths:  []string{"/etc", "/usr", "/bin", "/sbin"},
 				ReadWritePaths: []string{"/tmp", "/workspace"},
 			},
+			Process: struct {
+				MaxProcesses int `yaml:"max_processes"`
+			}{MaxProcesses: 256},
 			Network: struct {
 				Enabled      bool     `yaml:"enabled"`
 				AllowedHosts []string `yaml:"allowed_hosts"`
@@ -174,6 +181,12 @@ func (c *SandboxConfig) Validate() error {
 	if c.GlobalDefaults.Memory.MaxMB < 0 {
 		return fmt.Errorf("sandbox max_memory_mb must be >= 0")
 	}
+	if c.GlobalDefaults.Process.MaxProcesses < 0 {
+		return fmt.Errorf("sandbox max_processes must be >= 0")
+	}
+	if c.GlobalDefaults.Disk.MaxWriteMB < 0 {
+		return fmt.Errorf("sandbox max_write_mb must be >= 0")
+	}
 	if c.Image != "" && strings.ContainsAny(c.Image, " \t\n:;") {
 		// The image is passed as argv, but a value carrying whitespace or a
 		// second argument separator is a configuration mistake that should be
@@ -200,6 +213,12 @@ func (c *SandboxConfig) Validate() error {
 		}
 		if policy.ResourceLimits.Memory.MaxMB < 0 {
 			return fmt.Errorf("tool policy %q: max_memory_mb must be >= 0", name)
+		}
+		if policy.ResourceLimits.Process.MaxProcesses < 0 {
+			return fmt.Errorf("tool policy %q: max_processes must be >= 0", name)
+		}
+		if policy.ResourceLimits.Disk.MaxWriteMB < 0 {
+			return fmt.Errorf("tool policy %q: max_write_mb must be >= 0", name)
 		}
 	}
 	return nil

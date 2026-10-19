@@ -9,7 +9,7 @@
     {
       "id": "policy-engine",
       "version": "1.2.0",
-      "digest": "sha256:6142d9fdf5ec473b14657ca6eaccd048c40fdd6f9ce0a18a350327ae6e467eed",
+      "digest": "sha256:601550432c751f5483937c054d3e233d3d74d57ddfa4c224b6a55d88811f8e31",
       "source_paths": [
         "mcp-server/internal/guardrails/engine.go",
         "mcp-server/internal/guardrails/policy_pack.go",
@@ -68,10 +68,11 @@
     {
       "id": "sandbox-isolation",
       "version": "1.0.0",
-      "digest": "sha256:473869b041072dbb7bc8e5a1070e7e4da8cada26a102e4838804b8e3f94323f0",
+      "digest": "sha256:cff87f2f25af7a1ffbd72f5f49ff516fc4adda494a6edf31bae699e3cdb5dc33",
       "source_paths": [
         "mcp-server/internal/guardrails/sandbox.go",
-        "mcp-server/internal/guardrails/sandbox_policy.go"
+        "mcp-server/internal/guardrails/sandbox_policy.go",
+        "mcp-server/internal/guardrails/sandbox_config.go"
       ],
       "owner": "guardrails",
       "interface": "controlplane.component/v1",

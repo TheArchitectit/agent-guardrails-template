@@ -193,6 +193,20 @@ func (m *SandboxManager) Config() SandboxConfig {
 	return *m.config.Clone()
 }
 
+// DefaultLimits returns the manager's global default limits.
+//
+// This is the fallback an execution with no declared policy uses. Without it
+// every caller that had no limits to pass had to pass ResourceLimits{}, which
+// is not "no limits" — it is a zero deadline.
+func (m *SandboxManager) DefaultLimits() ResourceLimits {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	if m.config == nil {
+		return DefaultSandboxConfig().GlobalDefaults
+	}
+	return cloneLimits(m.config.GlobalDefaults)
+}
+
 // LevelRank orders isolation levels so callers can compare them without
 // duplicating the ranking. L0 = 0, L1 = 1, L2 = 2; an unknown level is -1 so
 // it can never out-rank a real one.
