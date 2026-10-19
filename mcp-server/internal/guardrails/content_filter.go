@@ -92,16 +92,19 @@ func NewContentFilter(backends []SemanticClassifier, policies []PolicyRule, opts
 	cfg := DefaultFilterConfig()
 	cf := &ContentFilter{
 		backends:     backends,
-		policyEngine: NewPolicyEngineWithThresholds(policies, cfg.Thresholds),
+		policyEngine: NewPolicyEngineWithConfig(policies, cfg.Thresholds, cfg.Taxonomy.EnabledCategories, cfg.Taxonomy.CustomCategories),
 		cache:        NewResultCache(60 * time.Second),
 		config:       cfg,
 	}
 	for _, opt := range opts {
 		opt(cf)
 	}
-	// Rebuild policy engine if config was overridden
+	// Rebuild policy engine if config was overridden. The taxonomy and
+	// thresholds both come from the config, so a filter built with an
+	// explicit config evaluates exactly the categories that config declares.
 	if cf.config != nil {
-		cf.policyEngine = NewPolicyEngineWithThresholds(policies, cf.config.Thresholds)
+		cf.policyEngine = NewPolicyEngineWithConfig(policies, cf.config.Thresholds,
+			cf.config.Taxonomy.EnabledCategories, cf.config.Taxonomy.CustomCategories)
 	}
 	return cf
 }
@@ -264,7 +267,8 @@ func (cf *ContentFilter) AddContentFilterBackend(backend SemanticClassifier) {
 func (cf *ContentFilter) UpdateRules(rules []PolicyRule) {
 	cf.mu.Lock()
 	defer cf.mu.Unlock()
-	cf.policyEngine = NewPolicyEngineWithThresholds(rules, cf.config.Thresholds)
+	cf.policyEngine = NewPolicyEngineWithConfig(rules, cf.config.Thresholds,
+		cf.config.Taxonomy.EnabledCategories, cf.config.Taxonomy.CustomCategories)
 	if cf.cache != nil {
 		cf.cache.Clear()
 	}

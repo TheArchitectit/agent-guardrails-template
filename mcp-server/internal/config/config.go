@@ -283,6 +283,27 @@ type Config struct {
 	// same from outside.
 	SandboxConfigFile string `env:"SANDBOX_CONFIG_FILE"`
 
+	// ContentFilterConfigFile names the YAML file carrying the Spec 02 Sec.
+	// 3.2 `content_filter:` section. Unset keeps DefaultFilterConfig().
+	//
+	// This exists because the loader was unreachable: `LoadContentConfig` had
+	// zero non-test callers, so an operator who wrote the documented file
+	// changed nothing. A configured-but-unusable file STOPS STARTUP rather
+	// than falling back to defaults — "I configured the taxonomy and the fail
+	// policy" and "the filter runs with defaults I did not choose" must not
+	// look the same from outside.
+	ContentFilterConfigFile string `env:"CONTENT_FILTER_CONFIG_FILE"`
+
+	// ProvenanceConfigFile names the YAML file carrying the Spec 05 Sec. 2.3
+	// `indirect_injection:` section. Unset keeps DefaultProvenanceConfig().
+	//
+	// This exists because `LoadProvenanceConfigFromYAML` had zero non-test
+	// callers: the documented trust table was inert in every deployment. The
+	// artifact is a security boundary (which sources are trusted determines
+	// which content is scanned), so a configured-but-unusable file STOPS
+	// STARTUP rather than falling back to defaults.
+	ProvenanceConfigFile string `env:"PROVENANCE_CONFIG_FILE"`
+
 	// ControlPlaneManifest names the component-composition manifest the control
 	// plane evaluates against (Spec 08 R08-4.1). Unset means no manifest is
 	// configured: guardrail://control-plane then reports "not_configured"

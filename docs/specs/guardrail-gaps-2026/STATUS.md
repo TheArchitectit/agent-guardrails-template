@@ -2,7 +2,9 @@
 
 **Status: reconciliation, 2026-10-03; wave-0 release-gating fixes reconciled
 2026-10-09; Spec 01 injection tools and Spec 05 provenance tools implemented
-2026-10-18.** This page supersedes the `Status: Draft` labels on the six specs.
+2026-10-18; the Spec 02 (`CONTENT_FILTER_CONFIG_FILE`) and Spec 05
+(`PROVENANCE_CONFIG_FILE`) config files are now read and validated at startup,
+2026-10-19.** This page supersedes the `Status: Draft` labels on the six specs.
 
 The six specs in this directory are **proposals written before the reboot**,
 not descriptions of the system. Since then a Go rewrite implemented much of
@@ -11,11 +13,12 @@ what actually exists and what can actually be called.
 
 ## The headline finding
 
-**Of the 15 MCP tools these specs propose or name, exactly 7 exist.** Verified
-by grepping every `.go` file in the repository. As of 2026-10-18 that count
-includes the two Spec 01 injection tools and the three Spec 05 provenance
-tools, all added in this pass — the other 8 names still appear nowhere outside
-the specs themselves.
+**Of the 15 MCP tools these specs propose or name, all 15 now exist**, verified
+by grepping every `.go` file in the repository (2026-10-19). The table below is
+the per-tool record; when it was first written (2026-10-03) only 7 existed,
+and the headline said so. As of 2026-10-18 the Spec 01, 03, 04, 05 and 06
+tools were added, so the stale count is corrected here rather than left to
+contradict the table underneath it.
 
 | Proposed tool | Spec | Exists? |
 |---------------|------|---------|
@@ -140,8 +143,10 @@ The best-executed spec, and the only one whose tools shipped.
 | 60s result cache | Implemented |
 | `fail_policy: block` | Implemented (synthetic block result, not an error) |
 | NeMo backend | Not implemented |
-| OpenAI Moderation backend | Implemented but never registered |
+| OpenAI Moderation backend | **Registered 2026-10-18** — constructed in `cmd/server/main.go` when `OPENAI_API_KEY` is set |
 | Streaming | Not implemented |
+| `taxonomy.enabled_categories` / `custom_categories` | **Enforced 2026-10-19** — was parsed and never read; the policy engine now carries the declared taxonomy as an allow-list |
+| YAML loader (`LoadContentConfig`) | **READ AT STARTUP 2026-10-19** (`CONTENT_FILTER_CONFIG_FILE`) — was zero-caller; the documented `content_filter:` wrapper loaded with **zero policies** because the loader only accepted the flat struct-tag form. Both forms load now (not both at once); unknown keys, a missing section, an unimplemented backend, an invalid action and `fail_policy: allow` are all refused |
 
 **Defect fixed 2026-10-03:** `NewEngine` built the filter as
 `NewContentFilter(nil, nil)`, discarding `config.ContentFilter.Policies`. With
@@ -237,6 +242,7 @@ The most completely built of the six, and as of 2026-10-18 also **wired**.
 | Sanitization / base64 / ROT13 / URL decoding | Implemented, **now applied before the scan** |
 | Provenance marker wrapping | Implemented, **now reachable via `guardrail_mark_provenance`** |
 | Redis cache | Deviates — implemented as in-memory (`provenance_cache.go`) |
+| YAML loader (`LoadProvenanceConfigFromYAML`) | **READ AT STARTUP 2026-10-19** (`PROVENANCE_CONFIG_FILE`) — was zero-caller, so the documented trust table was inert. Now strict: unknown keys, a missing `indirect_injection` section and a config failing `Validate()` are errors; a configured-but-unusable file stops startup |
 
 **The defect this pass fixed was an ordering defect, and it made the whole
 feature cosmetic.** `DecodeObfuscation`/`SanitizeContent` existed and worked;

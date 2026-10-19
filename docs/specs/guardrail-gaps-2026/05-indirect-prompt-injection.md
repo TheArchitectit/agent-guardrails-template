@@ -1,6 +1,6 @@
 # OpenSpec: Indirect Prompt Injection Handling
 
-> **Wired 2026-10-18.** Config keys, trust table and sanitisation shipped long ago, but the tracker was reachable only from `Engine.Evaluate`, which no tool calls — and the one injection scan in the tree ran on **raw** text, so a single zero-width character inside a keyword defeated L1. All three tools now exist and route through `Engine.ScanExternalContent`, which sanitises and decodes **before** scanning. See [STATUS.md](STATUS.md).
+> **Wired 2026-10-18; config file read at startup 2026-10-19.** Config keys, trust table and sanitisation shipped long ago, but the tracker was reachable only from `Engine.Evaluate`, which no tool calls — and the one injection scan in the tree ran on **raw** text, so a single zero-width character inside a keyword defeated L1. All three tools now exist and route through `Engine.ScanExternalContent`, which sanitises and decodes **before** scanning. As of 2026-10-19 the Sec. 2.3 `indirect_injection:` trust table is **read and validated at startup** (`PROVENANCE_CONFIG_FILE`); before that its loader had zero callers, so which sources are trusted could not be configured at all. See [STATUS.md](STATUS.md).
 
 **Gap:** Important — No protection against malicious file contents that override safety instructions
 **Priority:** 🟡 Important (Phase 2)
@@ -288,7 +288,7 @@ is the most completely built — and it is still unreachable.**
 | 2.4 | Provenance marker wrapping | Implemented, unwired | `WrapWithProvenance` `provenance.go:465` |
 | 4.1 | Redis-backed hash cache | **Differs** — in-memory | `NewInMemoryProvenanceCache` (`engine.go:87`); the spec names Redis |
 | 4.x | SHA-256 hashing + TTL | Implemented | in-memory cache |
-| 6 | YAML loader | Library only | `LoadProvenanceConfigFromYAML` (`provenance_config.go:68`) has zero callers; no `guardrails.yaml` exists in the repo |
+| 6 | YAML loader | **LOADED AT STARTUP 2026-10-19 (`PROVENANCE_CONFIG_FILE`)** — `LoadProvenanceConfigFromYAML` had zero non-test callers, so the documented trust table (the input to every trust decision in `ScanExternalContent`) was inert in every deployment. It is now strict, matching the Spec 01/02/03 loaders: unknown keys, a missing `indirect_injection` section and a config failing `Validate()` are all errors, and a configured-but-unusable file stops startup. A declared trust table REPLACES the shipped one rather than merging into it | `provenance_config.go`; pinned by `config_file_wiring_test.go` |
 
 **Where the wiring dies.** The tracker is genuinely constructed
 (`engine.go:88`) and genuinely called with trust-based gating (`engine.go:175`;

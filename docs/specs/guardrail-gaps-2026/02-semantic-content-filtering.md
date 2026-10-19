@@ -1,6 +1,6 @@
 # OpenSpec: Semantic Content Filtering
 
-> **This spec shipped in part.** Both proposed tools exist and are exposed. Note the production defect: policies are never loaded, so `guardrail_check_policy` returns non-compliant for every call. See [STATUS.md](STATUS.md).
+> **This spec shipped in part, and the config surface is now real.** Both proposed tools exist and are exposed. The production defect noted here (policies never loaded, so `guardrail_check_policy` returned non-compliant for every call) was fixed 2026-10-03 — see the "Fixed since drafting" note below. As of 2026-10-19 the Sec. 3.2 `content_filter:` file is **read and validated at startup** (`CONTENT_FILTER_CONFIG_FILE`) and the declared taxonomy is enforced; before that the loader had zero callers and a verbatim copy of this spec's own example loaded with **zero policies**. See [STATUS.md](STATUS.md).
 
 **Gap:** Critical — No native semantic content moderation
 **Priority:** 🔴 Critical (Phase 1)
@@ -244,14 +244,14 @@ one whose tools actually shipped.**
 | 2.x | S1–S15 taxonomy | Implemented | `content_filter_policy.go:14-28` matches the spec table |
 | 3.4 | Result format | Implemented | `content_filter.go:39-46` |
 | 3.2 | Llama Guard backend | Implemented, wired | registered at `cmd/server/main.go:136` |
-| 3.2 | OpenAI Moderation backend | Built, never registered | `content_filter_backends.go:232`; no construction site |
+| 3.2 | OpenAI Moderation backend | **Registered 2026-10-18** — `cmd/server/main.go` constructs it when `OPENAI_API_KEY` is set (`main.go:275`); the `"implemented but never registered"` note was stale |
 | 3.2 | NeMo backend | **Not implemented** | no code; `BackendConfig` (`content_filter_config.go:42-45`) has no `nemo` key |
 | 3.3 | Policy engine | Implemented | `content_filter_config.go:71-92`, `content_filter_policy.go:88-116` |
-| 3.2 | `taxonomy.enabled_categories` / `custom_categories` | **No effect** | declared (`content_filter_config.go:60-61`) but never read at request time |
+| 3.2 | `taxonomy.enabled_categories` / `custom_categories` | **Enforced 2026-10-19** — parsed into the config and, before this pass, never read at request time. The policy engine now carries the declared taxonomy as an allow-list: a category outside it is not scored at all. A nil list keeps every category (the pre-existing behaviour); an EMPTY declared list evaluates nothing rather than falling back to all fifteen, which is what the spec's own subset example implies |
 | 4.x | 60s result cache | Implemented | `content_filter.go:96` |
 | 4.x | `fail_policy: block` | Implemented | synthetic block result, `content_filter.go:184-205` |
 | 4.3 | Streaming | **Not implemented** | no streaming path in `content_filter*.go` |
-| — | YAML loader | Library only | `LoadContentConfig` (`content_filter_config.go:130`) has zero callers; production uses `DefaultFilterConfig()` |
+| — | YAML loader | **LOADED AT STARTUP 2026-10-19 (`CONTENT_FILTER_CONFIG_FILE`)** — `LoadContentConfig` had zero non-test callers, so the documented file was inert in every deployment, and `NewContentFilter` built its own `DefaultFilterConfig()`, so the deployment's `fail_policy`/`thresholds`/`taxonomy` were inert even when supplied programmatically. Both are fixed: the engine now hands the whole config to the filter, and the loader accepts the documented `content_filter:` wrapper (Sec. 3.2) as well as the flat form — rejecting both at once. It is strict: unknown keys, a missing section, an unimplemented backend (`nemo`, `custom`), an invalid action, and `fail_policy: allow` (a fail-open security semantic, refused per P5/D-18) all stop startup. A configured-but-unusable file stops startup rather than falling back to the shipped posture. The documented example — which previously loaded with ZERO policies — now binds every declared key |
 
 **Fixed since drafting:** `NewEngine` discarded
 `config.ContentFilter.Policies`, so every `check_policy` call took the
@@ -260,14 +260,13 @@ fail-closed unknown-policy branch. Configured policies now reach the filter
 
 **Remaining gaps:**
 
-1. **The engine is optional.** It exists only when `OLLAMA_URL` is set
-   (`main.go:130`); otherwise both tools answer "guardrails engine not
-   configured" and `classify_content` **fails open** (`safe:true`,
-   `tools_guardrails.go:69`). A deployment that forgets the env var has no
-   content filtering and no error telling it so.
-2. **Sec. 5.3 accuracy criteria are untestable.** FP <5%, FN <1% and
+1. **Sec. 5.3 accuracy criteria are untestable.** FP <5%, FN <1% and
    precision/recall within 10% of Llama Guard require a labelled evaluation
    harness; none exists in the repo.
-3. **Backend failover is list order, not a declared chain**
+2. **Backend failover is list order, not a declared chain**
    (`content_filter.go:161-181`), and today only one backend is ever
    registered.
+3. **The semantic backends are still optional.** The engine is built
+   unconditionally (fixed 2026-10-18), and an absent backend fails closed
+   rather than reporting content safe, but a deployment with no backend
+   classifies nothing. `fail_policy` cannot lower that boundary.

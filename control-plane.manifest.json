@@ -9,7 +9,7 @@
     {
       "id": "policy-engine",
       "version": "1.2.0",
-      "digest": "sha256:fa6bba981afc0c3777ac069ea34da428294c56a62bf76d879659610b3feb4f63",
+      "digest": "sha256:f76174ee4a80d822bac456d1b905e4903c01b44a64b00d5471f41b0f45a57392",
       "source_paths": [
         "mcp-server/internal/guardrails/engine.go",
         "mcp-server/internal/guardrails/policy_pack.go",
@@ -49,10 +49,12 @@
     {
       "id": "content-filter",
       "version": "1.1.0",
-      "digest": "sha256:6afcc8c88627d7c6232d0c0184b7156eb310d2f3f8b637f927086d5f1f732e46",
+      "digest": "sha256:ebe1c19adedfcbd61852fecfc8a848e33203dda4ad886bfc9f1ba5e9cfadea3c",
       "source_paths": [
         "mcp-server/internal/guardrails/content_filter.go",
-        "mcp-server/internal/guardrails/content_filter_backends.go"
+        "mcp-server/internal/guardrails/content_filter_backends.go",
+        "mcp-server/internal/guardrails/content_filter_config.go",
+        "mcp-server/internal/guardrails/content_filter_policy.go"
       ],
       "owner": "guardrails",
       "interface": "controlplane.component/v1",

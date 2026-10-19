@@ -194,6 +194,45 @@ func main() {
 	// back to defaults would leave an operator who wrote a stricter policy
 	// running a looser one, with the only trace a log line.
 	engineConfig := guardrails.DefaultEngineConfig()
+	if cfg.ContentFilterConfigFile != "" {
+		// Spec 02 Sec. 3.2. This is the caller LoadContentConfig never had: the
+		// documented `content_filter:` file (taxonomy, thresholds, policies,
+		// fail_policy) was inert in every deployment. A configured-but-unusable
+		// file STOPS STARTUP: falling back to defaults would leave an operator
+		// who narrowed the taxonomy or tightened a threshold running the shipped
+		// posture, with only a log line as trace.
+		contentCfg, cerr := guardrails.LoadContentConfig(cfg.ContentFilterConfigFile)
+		if cerr != nil {
+			slog.Error("content filter config is unusable; refusing to start", "path", cfg.ContentFilterConfigFile, "error", cerr)
+			os.Exit(1)
+		}
+		engineConfig.ContentFilter = *contentCfg
+		slog.Info("content filter configured from file",
+			"path", cfg.ContentFilterConfigFile,
+			"enabled", contentCfg.Enabled,
+			"backend", contentCfg.Backend,
+			"fail_policy", contentCfg.FailPolicy,
+			"categories", len(contentCfg.Taxonomy.EnabledCategories),
+			"policies", len(contentCfg.Policies),
+		)
+	}
+	if cfg.ProvenanceConfigFile != "" {
+		// Spec 05 Sec. 2.3. The documented `indirect_injection:` trust table had
+		// no reader, so which sources are treated as trusted — the input to every
+		// trust decision in ScanExternalContent — could not be configured.
+		provCfg, perr := guardrails.LoadProvenanceConfigFromYAML(cfg.ProvenanceConfigFile)
+		if perr != nil {
+			slog.Error("provenance config is unusable; refusing to start", "path", cfg.ProvenanceConfigFile, "error", perr)
+			os.Exit(1)
+		}
+		engineConfig.Provenance = provCfg
+		slog.Info("provenance configured from file",
+			"path", cfg.ProvenanceConfigFile,
+			"enabled", provCfg.Enabled,
+			"trust_policies", len(provCfg.SourceTrustPolicies),
+			"cache_ttl_hours", provCfg.CacheTTL,
+		)
+	}
 	if cfg.InjectionConfigFile != "" {
 		injectionCfg, err := guardrails.LoadInjectionConfigFromYAML(cfg.InjectionConfigFile)
 		if err != nil {

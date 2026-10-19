@@ -95,7 +95,14 @@ func NewEngine(config *EngineConfig, logger *slog.Logger) *Engine {
 	// without them the policy engine has no rules, and every
 	// guardrail_check_policy call falls through to the fail-closed
 	// "unknown policy_id" branch regardless of the policy requested.
-	e.filter = NewContentFilter(nil, config.ContentFilter.Policies)
+	//
+	// The whole config is handed over, not just the policies. Before this,
+	// NewContentFilter built its own DefaultFilterConfig(), so the
+	// deployment's `fail_policy`, `thresholds` and `taxonomy` were inert even
+	// when supplied programmatically: a file that set `fail_policy: allow` or
+	// narrowed the taxonomy changed nothing the filter did.
+	filterCfg := config.ContentFilter
+	e.filter = NewContentFilter(nil, config.ContentFilter.Policies, WithConfig(&filterCfg))
 
 	// Initialize provenance tracker
 	if config.Provenance != nil && config.Provenance.Enabled {

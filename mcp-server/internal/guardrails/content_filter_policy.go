@@ -2,6 +2,7 @@ package guardrails
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 )
 
@@ -39,6 +40,13 @@ func CategoryMetadata(id string) (name string, defaultAction Action) {
 type PolicyEngine struct {
 	rules      []PolicyRule
 	thresholds ThresholdConfig
+	// categories is the taxonomy filter (Spec 02 Sec. 3.2
+	// `taxonomy.enabled_categories`). A nil slice means every category is
+	// evaluated, which is the shipped default. A non-nil slice is an
+	// allow-list: a category that is not in it is never scored, so a backend
+	// that reports S5 when the operator enabled only S1-S4 cannot silently
+	// widen the taxonomy the deployment declared.
+	categories []string
 	mu         sync.RWMutex
 }
 
@@ -61,6 +69,56 @@ func NewPolicyEngineWithThresholds(rules []PolicyRule, thresholds ThresholdConfi
 	}
 }
 
+// NewPolicyEngineWithConfig creates a policy engine whose thresholds AND
+// enabled-category set come from one configuration.
+//
+// It exists because the taxonomy was declared and had no effect: the
+// `enabled_categories` / `custom_categories` keys were parsed into the config
+// and never read at request time, so an operator who narrowed the taxonomy
+// still got every S1-S15 category evaluated.
+func NewPolicyEngineWithConfig(rules []PolicyRule, thresholds ThresholdConfig, enabled, custom []string) *PolicyEngine {
+	pe := NewPolicyEngineWithThresholds(rules, thresholds)
+	pe.categories = normalizeCategories(enabled, custom)
+	return pe
+}
+
+// normalizeCategories resolves the declared taxonomy into the allow-list the
+// engine enforces.
+//
+// An EMPTY declared list is a real declaration, not "absent": the spec's own
+// example enables a subset (S1,S2,S3,S4,S7,S9,S10,S11,S14,S15), and a config
+// that enables nothing must evaluate nothing rather than falling back to all
+// fifteen. Callers that want the shipped default must not call this at all
+// (DefaultFilterConfig sets every category).
+func normalizeCategories(enabled, custom []string) []string {
+	seen := make(map[string]bool, len(enabled)+len(custom))
+	out := make([]string, 0, len(enabled)+len(custom))
+	for _, id := range append(append([]string{}, enabled...), custom...) {
+		id = strings.TrimSpace(id)
+		if id == "" || seen[id] {
+			continue
+		}
+		seen[id] = true
+		out = append(out, id)
+	}
+	return out
+}
+
+// categoryEnabled reports whether a category is inside the declared taxonomy.
+// A nil allow-list means the engine was built without a taxonomy filter, so
+// every category passes (the pre-existing behaviour).
+func (pe *PolicyEngine) categoryEnabled(catID string) bool {
+	if pe.categories == nil {
+		return true
+	}
+	for _, id := range pe.categories {
+		if id == catID {
+			return true
+		}
+	}
+	return false
+}
+
 // Evaluate maps category scores to actions based on policy rules.
 func (pe *PolicyEngine) Evaluate(scores map[string]float64, backendName string) *ClassificationResult {
 	pe.mu.RLock()
@@ -71,6 +129,12 @@ func (pe *PolicyEngine) Evaluate(scores map[string]float64, backendName string) 
 
 	for catID, score := range scores {
 		if score <= 0 {
+			continue
+		}
+		// A category outside the declared taxonomy is not evaluated. Before
+		// this it was scored and reported like any other, so a narrowed
+		// taxonomy changed nothing an operator could observe.
+		if !pe.categoryEnabled(catID) {
 			continue
 		}
 
