@@ -17,7 +17,16 @@ jobs:
     name: Trusted main validation
     if: github.ref == 'refs/heads/main'
     runs-on: [self-hosted, Linux, X64, guardrails-ucs03]
-    timeout-minutes: 30
+    # Sized to the MEASURED work, not to a round number. Four consecutive
+    # trusted-lane runs on 2026-10-19 completed at 28m53s, 29m45s, 29m53s and
+    # 29m49s of job time against a 30-minute cap -- zero headroom. Two runs
+    # then ended CANCELLED at 30m06s and 30m08s with every validation step
+    # (1-14, incl. the R19-13 isolation probe and cleanup) already SUCCESS: the
+    # cap was killing the job during post-step teardown, so the lane reported a
+    # cancelled gate instead of a verdict. 45 keeps a hard bound on a hung job
+    # while leaving headroom; it relaxes no check, no threshold and no
+    # assertion -- the checks themselves are unchanged.
+    timeout-minutes: 45
     env:
       CGO_ENABLED: "1"
     steps:
