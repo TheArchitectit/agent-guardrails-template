@@ -2,9 +2,10 @@
 
 **Status:** Implemented (gate live) — opened 2026-10-10 (spin-out from spec 20
 / spec 10 Sec. 4.1.2); gate landed 2026-10-10. The gate runs and blocks on drift;
-the discovered drift inventory is pinned in an allowlist and remains open work.
-This is the CI gate that closes the single most important required
-FastMCP-parity item.
+**the discovered drift inventory is fully remediated — 0 drifting, 0 allowlisted**
+(re-measured 2026-10-20; see the closure block in Sec. 5). The allowlist file
+remains as a fail-closed escape hatch that can only shrink. This is the CI gate
+that closes the single most important required FastMCP-parity item.
 
 **Priority:** High — blocking gate; without it "canonical tool contract" is a
 claim, not a check.
@@ -119,7 +120,18 @@ The injected-drift path is also proven without editing the tree by the pure
 `computeDrift` function under
 `TestToolSchemaHandlerConformance_DetectsInjectedDrift`.
 
-Honest limits (updated 2026-10-17). (a) CLOSED — the gate is now wired as its
+Re-measured (2026-10-20, `main@0d5887d`, this pass):
+
+```
+TestToolSchemaHandlerConformance
+    enumerated 72 registered tools; 0 drifting, 0 allowlisted
+```
+
+72 tools are enumerated at the live tip and the drift count is still **zero**
+with an **empty** allowlist. The header above records this; the earlier 58/59
+figures below are kept verbatim as the dated measurements they were.
+
+Honest limits (updated 2026-10-17; re-measured 2026-10-20). (a) CLOSED — the gate is now wired as its
 own named blocking job, `security-matrix-tool-schema-handler`, in
 `.github/workflows/team-validation.yml`, running
 `go test ./internal/mcp -run 'TestToolSchemaHandlerConformance' -count=1 -v`
@@ -129,12 +141,14 @@ invocation, R21.6). It carries no `continue-on-error`, no skip and no threshold
 id rather than only inside the `go test ./...` job. Measured at
 `main@d52983a` before the wiring: **59 registered tools, 0 drifting, 0
 allowlisted**.
-(b) Drift count IS NOW **zero**: 59 registered tools, 0 drifting, 0
-allowlisted at `main@d52983a` (58 when the 2026-10-14 batch was measured; the
-registry has gained one tool since) — the 24-entry inventory was remediated in two schema-only
-batches (9 tools at `5a44414`, 14 tools + gate helper attribution made
-transitive at `3a64bf0`), the tracked allowlist is intentionally empty, and
-the gate fails closed on any new divergence. (c) The parser attribute family
+(b) Drift count IS **zero**: 0 drifting, 0 allowlisted, re-measured live at
+`main@0d5887d` on 2026-10-20 as **72 registered tools** (59 at `main@d52983a` on
+2026-10-17; 58 when the 2026-10-14 batch was measured — the registry has grown
+since) — the 24-entry inventory was remediated in two schema-only batches
+(9 tools at `5a44414`, 14 tools + gate helper attribution made transitive at
+`3a64bf0`), the tracked allowlist is intentionally empty, and the gate fails
+closed on any new divergence. The count rise 59 -> 72 is registry growth, not
+reintroduced drift: the drift figure is what this slot tracks, and it is 0. (c) The parser attribute family
 is `args`/`a`/`arguments` (the names this package uses); a future handler using
 a different local variable name would need the visitor extended. (d) Engine
 closure is no longer deferred: with the drift inventory at zero the allowlist
