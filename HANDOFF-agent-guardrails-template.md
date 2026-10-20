@@ -1,5 +1,11 @@
 # HANDOFF — agent-guardrails-template (DevGate)
 
+> **Project:** `agent-guardrails-template`  ·  **Default branch:** `main`
+> **Scope:** DevGate consumer guardrails: gates, workflow templates, runner standard, monitor hub
+> **This file:** `HANDOFF-agent-guardrails-template.md` — a `HANDOFF-<project>` file. If the project name in this
+> filename does not match the work you are doing, you have the wrong handoff.
+> **Spec index:** [`openspec/INDEX.md`](openspec/INDEX.md)
+
 > **Spec status lives in the index: [`openspec/INDEX.md`](openspec/INDEX.md).**
 > Generated from the tree; it is the single answer to "which specs are closed
 > and which are not". Do not keep a second list here.
