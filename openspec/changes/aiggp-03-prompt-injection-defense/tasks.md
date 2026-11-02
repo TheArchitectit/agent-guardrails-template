@@ -1,5 +1,12 @@
-- Phase 0 (boundaries and taxonomy): enumerate mediation points; finalize classification tiers and disclosure shapes.
-- Phase 1 (pipeline): interceptors, classifier pipeline, mediation engine, envelope emission.
-- Phase 2 (corpus v1): public adversarial corpus across the six categories plus benign corpus and budget.
-- Phase 3 (conformance): corpus runner, per-category reporting, release gate wiring.
-- Phase 4 (hardening): red-team refresh, tuning through bundle parameters, performance budgets.
+> **Re-anchored 2026-10-02:** `aiggp-00`/`aiggp-09` are retired (see `openspec/changes/AIGGP-RETIREMENT-2026-10-02.md`); references below read against DevGate's shipped evidence machinery (`hub/coherence/`) and runner enrollment (`scripts/runner-enroll.sh`).
+
+- [x] Phase 0 (boundaries and taxonomy): enumerate mediation points; finalize classification tiers and disclosure shapes.
+      **EXERCISED:** Source taxonomy (`user`, `tool_output`, `file_content`, `api_response`), six injection categories (`directive_override`, `role_play`, `encoding_bypass`, `context_manipulation`, `privilege_escalation`, `data_exfiltration`), and mediation actions (`block`, `warn`, `log_only`) implemented in `mcp-server/internal/guardrails/injection_detection.go` and `injection_config.go`; verified by `injection_spec01_defaults_test.go` and `injection_startup_test.go`.
+- [x] Phase 1 (pipeline): interceptors, classifier pipeline, mediation engine, envelope emission.
+      **EXERCISED:** L1 pattern matcher, L2 bounded perplexity scorer, and L3 classifier pipeline wired to MCP handlers `handleDetectInjection` (`guardrail_detect_injection`) and `handleScanTextBatch` (`guardrail_scan_text_batch`) in `mcp-server/internal/mcp/tools_guardrails.go`, with detached Ed25519 evidence envelopes emitted by `mcp-server/internal/mcp/evidence_wiring.go`; verified by `tools_injection_test.go`, `evidence_test.go`, `injection_l1_failclosed_test.go`, `injection_l2_bounded_score_test.go`, and `injection_l3_wiring_test.go`.
+- [x] Phase 2 (corpus v1): public adversarial corpus across the six categories plus benign corpus and budget.
+      **EXERCISED:** Baseline six-category regex corpus in `config/blocklists/injection-patterns.txt` and `DefaultPatterns()` (`mcp-server/internal/guardrails/injection_detection_patterns.go`), plus adversarial and benign structured-output corpora in `injection_l2_bounded_score_test.go` and `injection_detection_pipeline_test.go`.
+- [ ] Phase 3 (conformance): corpus runner, per-category reporting, release gate wiring.
+      **PARTIAL (WIRED / NOT_RUN):** Go test suite exercises all six categories (`injection_detection_test.go`, `injection_spec01_defaults_test.go`), but a standalone third-party conformance runner with declared per-category false-positive budget gates is not yet wired as a release gate (`docs/specs/guardrail-gaps-2026/STATUS.md` §01).
+- [x] Phase 4 (hardening): red-team refresh, tuning through bundle parameters, performance budgets.
+      **EXERCISED:** Startup config validation (`INJECTION_CONFIG_FILE`), SIGHUP hot-reload of blocklists with fail-closed rollback on invalid patterns, and Spec 07 policy-pack lock verification (`mcp-server/internal/guardrails/policy_pack.go`); verified by `injection_l1_failclosed_test.go`, `injection_startup_test.go`, and `policy_pack_test.go`.

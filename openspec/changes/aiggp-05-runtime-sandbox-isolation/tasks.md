@@ -1,7 +1,12 @@
 > **Re-anchored 2026-10-02:** `aiggp-00`/`aiggp-09` are retired (see `openspec/changes/AIGGP-RETIREMENT-2026-10-02.md`); references below read against DevGate's shipped evidence machinery (`hub/coherence/`) and runner enrollment (`scripts/runner-enroll.sh`).
 
-- Phase 0 (level definitions): capability matrices, bundle declaration schema, publication.
-- Phase 1 (reference enforcer): container backend mapping levels to mechanism; refusal path.
-- Phase 2 (fault path): containment-fault detection to ERROR evidence.
-- Phase 3 (escape suite): fixtures, CI wiring, per-release certification report.
-- Phase 4 (integration): Guardrails runtime consumes levels; AIGGP-02 container runtime aligns; AIGGP-09 trust classes map to levels.
+- [x] Phase 0 (level definitions): capability matrices, bundle declaration schema, publication.
+      **EXERCISED:** Isolation levels (`L0`, `L1` namespace isolation via `unshare`, `L2` rootless container via `podman`/`docker`), per-tool policies, resource limits, and mount/network schemas defined in `mcp-server/internal/guardrails/sandbox_config.go`, `sandbox_config_file.go`, and `sandbox_policy.go`; verified by `sandbox_config_file_test.go` and `sandbox_policy_test.go`.
+- [x] Phase 1 (reference enforcer): container backend mapping levels to mechanism; refusal path.
+      **EXERCISED:** `SandboxManager` (`mcp-server/internal/guardrails/sandbox.go`, `sandbox_mounts.go`, `sandbox_network.go`) and MCP tools `guardrail_sandbox_execute` / `guardrail_sandbox_config` (`mcp-server/internal/mcp/tools_sandbox.go`) enforce per-tool minimum levels, refuse `L0` execution requests, disallow widening overrides, and prevent silent downgrade on command denial; verified by `tools_sandbox_test.go`, `sandbox_mounts_test.go`, and `sandbox_limits_test.go`.
+- [x] Phase 2 (fault path): containment-fault detection to ERROR evidence.
+      **EXERCISED:** Live capability probing (`mcp-server/internal/guardrails/sandbox_capability.go`), setup-vs-command failure separation (`isSetupError`), network-violation and fork-bomb detection, and `ActualIsolationLvl` / `SandboxViolations` reporting in `SandboxResult`; verified by `sandbox_capability_test.go`, `sandbox_network_test.go`, `sandbox_network_falsepositive_test.go`, and `sandbox_net_enabled_test.go`.
+- [ ] Phase 3 (escape suite): fixtures, CI wiring, per-release certification report.
+      **PARTIAL (EXERCISED / ABSENT):** Unit and mount/network confinement tests (`sandbox_mounts_test.go`, `sandbox_limits_test.go`, `check_runner_isolation.py`) run in CI, while a full container-escape certification fixture suite across all four named levels (`observer`, `restricted`, `contained`, `ephemeral`) remains open (`docs/specs/guardrail-gaps-2026/STATUS.md` §03).
+- [x] Phase 4 (integration): Guardrails runtime consumes levels; AIGGP-02 container runtime aligns; AIGGP-09 trust classes map to levels.
+      **EXERCISED:** `SANDBOX_CONFIG_FILE` startup loading, runtime capability probing wired into compliance measurement (`compliance_probe.go`) and control-plane readiness (`controlplane_observe.go`), and runner isolation gate (`scripts/check_runner_isolation.py`, `scripts/runner_isolation_probe.py`); verified by `test_check_runner_isolation.py` and `test_runner_isolation_probe.py`.

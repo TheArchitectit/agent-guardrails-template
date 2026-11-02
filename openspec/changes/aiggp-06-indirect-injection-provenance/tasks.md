@@ -1,5 +1,12 @@
-- Phase 0 (schema and classes): provenance record schema, classes, envelope extension.
-- Phase 1 (instrumentation): fetch/email/tool/file ingestion points; chain store.
-- Phase 2 (policy hooks and verifier): class-aware bundle policy; kernel chain verification.
-- Phase 3 (conformance): class-differentiated fixtures; ancestry reconstruction queries.
-- Phase 4 (coverage audit): enumerate ingestion paths across Guardrails surfaces; close or declare gaps.
+> **Re-anchored 2026-10-02:** `aiggp-00`/`aiggp-09` are retired (see `openspec/changes/AIGGP-RETIREMENT-2026-10-02.md`); references below read against DevGate's shipped evidence machinery (`hub/coherence/`) and runner enrollment (`scripts/runner-enroll.sh`).
+
+- [x] Phase 0 (schema and classes): provenance record schema, classes, envelope extension.
+      **EXERCISED:** `Provenance` record (`source`, `source_path`, `trust_level`, `read_by`, `timestamp`, `hash`), `SourceTrustLevel` (`trusted`, `untrusted`, `unknown`), and `TrustPolicy` defined in `mcp-server/internal/guardrails/provenance.go` and `provenance_config.go`; verified by `provenance_test.go`.
+- [x] Phase 1 (instrumentation): fetch/email/tool/file ingestion points; chain store.
+      **EXERCISED:** Unicode control-character sanitization, labelled base64/ROT13/URL obfuscation decoding prior to injection scanning (`Engine.ScanExternalContent` in `provenance_scan.go`), provenance marker wrapping, in-memory `ProvenanceCache` (`provenance_cache.go`), and MCP tools `guardrail_scan_external_content`, `guardrail_mark_provenance`, and `guardrail_check_provenance` (`mcp-server/internal/mcp/tools_indirect_injection.go`); verified by `tools_indirect_injection_test.go` and `provenance_integration_test.go`.
+- [x] Phase 2 (policy hooks and verifier): class-aware bundle policy; kernel chain verification.
+      **EXERCISED:** `PROVENANCE_CONFIG_FILE` startup loader (`LoadProvenanceConfigFromYAML`), default-to-`unknown` trust resolution for unmatched sources, untrusted override enforcement, and detached Ed25519 evidence signing (`mcp-server/internal/mcp/evidence_wiring.go`); verified by `config_file_wiring_test.go` and `evidence_test.go`.
+- [ ] Phase 3 (conformance): class-differentiated fixtures; ancestry reconstruction queries.
+      **PARTIAL (EXERCISED / ABSENT):** Class-differentiated trust policy tests (`provenance_test.go`, `tools_indirect_injection_test.go`) are exercised in CI, while multi-hop append-only cryptographic ancestry chains and ledger ancestry reconstruction queries remain open (`docs/specs/guardrail-gaps-2026/STATUS.md` §05).
+- [x] Phase 4 (coverage audit): enumerate ingestion paths across Guardrails surfaces; close or declare gaps.
+      **EXERCISED:** Full ingestion-surface audit and requirement-by-requirement reconciliation recorded in `docs/specs/guardrail-gaps-2026/STATUS.md` §05 and `docs/specs/guardrail-gaps-2026/AUDIT-2026-10-09.md`.
