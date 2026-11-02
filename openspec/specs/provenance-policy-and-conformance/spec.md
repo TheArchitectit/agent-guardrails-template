@@ -1,6 +1,6 @@
 # Provenance Policy and Conformance
 
-Status: PARTIAL (EXERCISED 1, WIRED 1)
+Status: CLOSED (EXERCISED 2)
 
 ## Purpose
 
@@ -33,4 +33,4 @@ Given any mediated action recorded in the ledger, an auditor SHALL be able to re
 | Requirement | Status | Implementation | Verification |
 |---|---|---|---|
 | `class-aware policy` | **EXERCISED** | `mcp-server/internal/guardrails/provenance_config.go` (`LoadProvenanceConfigFromYAML`, `SourceTrustPolicies`, `UntrustedOverrides`), `mcp-server/internal/guardrails/provenance_scan.go` (`ScanExternalContent`) | `mcp-server/internal/guardrails/provenance_test.go`, `mcp-server/internal/guardrails/config_file_wiring_test.go`, `mcp-server/internal/mcp/tools_indirect_injection_test.go` |
-| `ancestry reconstruction` | **WIRED** | `mcp-server/internal/guardrails/provenance.go` (`LookupProvenance`), `mcp-server/internal/mcp/tools_indirect_injection.go` (`handleCheckProvenance`), `mcp-server/internal/guardrails/injection_detection.go` (`AuditEvent` with `SourceTool`, `ToolCallID`, `TextHash`) | `mcp-server/internal/mcp/tools_indirect_injection_test.go`, `mcp-server/internal/mcp/r16_08_audit_durability_test.go` (full multi-hop ledger ancestry query open in `docs/specs/guardrail-gaps-2026/STATUS.md` §05) |
+| `ancestry reconstruction` | **EXERCISED** | `mcp-server/internal/guardrails/provenance_chain.go` (`ProvenanceLedger.RecordMediatedAction`, `ProvenanceLedger.ReconstructAncestry`), `mcp-server/internal/mcp/tools_indirect_injection.go` | `mcp-server/internal/guardrails/provenance_chain_test.go`, `mcp-server/internal/mcp/tools_indirect_injection_test.go` |

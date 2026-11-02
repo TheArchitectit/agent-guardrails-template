@@ -1,6 +1,6 @@
 # Prompt Injection Evidence and Conformance
 
-Status: PARTIAL (EXERCISED 2, WIRED 1)
+Status: CLOSED (EXERCISED 3)
 
 ## Purpose
 
@@ -43,5 +43,5 @@ Conformance SHALL evaluate a benign corpus alongside the adversarial corpus and 
 | Requirement | Status | Implementation | Verification |
 |---|---|---|---|
 | `per-decision evidence` | **EXERCISED** | `mcp-server/internal/mcp/evidence_wiring.go` (`buildEvidence`, `withEvidence`, `evidencePolicyDigest`), `mcp-server/internal/evidence/` | `mcp-server/internal/mcp/evidence_test.go`, `mcp-server/internal/mcp/tools_injection_test.go` |
-| `adversarial conformance corpus` | **WIRED** | `config/blocklists/injection-patterns.txt`, `mcp-server/internal/guardrails/injection_detection_patterns.go` (`DefaultPatterns` covering all 6 categories) | `mcp-server/internal/guardrails/injection_spec01_defaults_test.go`, `mcp-server/internal/guardrails/injection_detection_test.go` (standalone release-gate runner open in `docs/specs/guardrail-gaps-2026/STATUS.md` §01) |
+| `adversarial conformance corpus` | **EXERCISED** | `mcp-server/internal/guardrails/injection_conformance.go` (`RunInjectionConformance`, `DefaultInjectionConformanceCorpus`), `config/blocklists/injection-patterns.txt`, `mcp-server/internal/guardrails/injection_detection_patterns.go` | `mcp-server/internal/guardrails/injection_conformance_test.go`, `mcp-server/internal/guardrails/injection_spec01_defaults_test.go` |
 | `benign-corpus false-positive budget` | **EXERCISED** | `mcp-server/internal/guardrails/injection_detection.go` (bounded L2 perplexity score in `[0,1]`, 32-rune abstention floor) | `mcp-server/internal/guardrails/injection_l2_bounded_score_test.go` |

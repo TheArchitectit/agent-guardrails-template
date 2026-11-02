@@ -1,6 +1,6 @@
 # Sandbox Conformance and Evidence
 
-Status: PARTIAL (EXERCISED 1, WIRED 1)
+Status: CLOSED (EXERCISED 2)
 
 ## Purpose
 
@@ -32,5 +32,5 @@ Every evidence envelope for an executed workload SHALL record the declared isola
 
 | Requirement | Status | Implementation | Verification |
 |---|---|---|---|
-| `escape-fixture conformance` | **WIRED** | `mcp-server/internal/guardrails/sandbox_mounts.go`, `mcp-server/internal/guardrails/sandbox_network.go`, `scripts/check_runner_isolation.py`, `scripts/runner_isolation_probe.py` | `mcp-server/internal/guardrails/sandbox_mounts_test.go`, `mcp-server/internal/guardrails/sandbox_limits_test.go`, `scripts/test_check_runner_isolation.py` (full four-level container-escape harness open in `docs/specs/guardrail-gaps-2026/STATUS.md` §03) |
+| `escape-fixture conformance` | **EXERCISED** | `mcp-server/internal/guardrails/sandbox_conformance.go` (`RunSandboxEscapeConformance`, `DefaultSandboxEscapeFixtures`, `CheckPathContainment`, `CheckSecretContainment`), `mcp-server/internal/guardrails/sandbox_mounts.go`, `mcp-server/internal/guardrails/sandbox_network.go` | `mcp-server/internal/guardrails/sandbox_conformance_test.go`, `mcp-server/internal/guardrails/sandbox_mounts_test.go`, `scripts/test_check_runner_isolation.py` |
 | `isolation in evidence` | **EXERCISED** | `mcp-server/internal/guardrails/sandbox.go` (`SandboxResult.ActualIsolationLvl`, `SandboxViolations`), `mcp-server/internal/guardrails/sandbox_capability.go` (`MeasureSandboxCapability`), `mcp-server/internal/guardrails/compliance_probe.go` | `mcp-server/internal/guardrails/sandbox_capability_test.go`, `mcp-server/internal/mcp/tools_sandbox_test.go` |

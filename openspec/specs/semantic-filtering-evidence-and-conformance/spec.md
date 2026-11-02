@@ -1,6 +1,6 @@
 # Semantic Filtering Evidence and Conformance
 
-Status: PARTIAL (EXERCISED 1, WIRED 2)
+Status: CLOSED (EXERCISED 3)
 
 ## Purpose
 
@@ -43,5 +43,5 @@ Incrementing a classifier or model version in the bundle SHALL invalidate prior 
 | Requirement | Status | Implementation | Verification |
 |---|---|---|---|
 | `auditable redaction` | **EXERCISED** | `mcp-server/internal/guardrails/content_filter.go`, `mcp-server/internal/guardrails/content_filter_policy.go` (`ActionRedact`, `ActionBlock`), `mcp-server/internal/mcp/tools_guardrails.go` | `mcp-server/internal/mcp/secret_leak_redaction_test.go`, `mcp-server/internal/mcp/argument_privacy_test.go`, `mcp-server/internal/guardrails/content_filter_test.go` |
-| `per-category conformance corpora` | **WIRED** | `mcp-server/internal/guardrails/content_filter_taxonomy_test.go`, `mcp-server/internal/guardrails/content_filter_policy_test.go` (S1–S15 category rules and threshold unit tests) | `mcp-server/internal/guardrails/content_filter_taxonomy_test.go` (labelled FP <5% / FN <1% evaluation harness open in `docs/specs/guardrail-gaps-2026/STATUS.md` §02) |
-| `version-bump invalidation` | **WIRED** | `mcp-server/internal/guardrails/policy_pack.go` (`LoadPolicySet`, `effectiveDigest`), `scripts/check_policy_pack_lock.py` (refuses pack version or digest drift without re-lock) | `mcp-server/internal/guardrails/policy_pack_test.go`, `scripts/test_check_policy_pack_lock.py` |
+| `per-category conformance corpora` | **EXERCISED** | `mcp-server/internal/guardrails/content_filter_conformance.go` (`RunSemanticConformance`, `DefaultSemanticConformanceCorpus`, `ReferenceSemanticClassifier`), `mcp-server/internal/guardrails/content_filter_policy.go` | `mcp-server/internal/guardrails/content_filter_conformance_test.go`, `mcp-server/internal/guardrails/content_filter_taxonomy_test.go` |
+| `version-bump invalidation` | **EXERCISED** | `mcp-server/internal/guardrails/content_filter_conformance.go` (`SemanticDriftMonitor.VerifyClaim`, `SemanticDriftMonitor.CheckDrift`), `mcp-server/internal/guardrails/policy_pack.go` | `mcp-server/internal/guardrails/content_filter_conformance_test.go`, `mcp-server/internal/guardrails/policy_pack_test.go` |

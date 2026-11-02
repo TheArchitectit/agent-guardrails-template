@@ -1,6 +1,6 @@
 # Provenance Records
 
-Status: PARTIAL (EXERCISED 2, WIRED 1)
+Status: CLOSED (EXERCISED 3)
 
 ## Purpose
 
@@ -43,5 +43,5 @@ When an agent action or derived artifact depends on content inputs, the resultin
 | Requirement | Status | Implementation | Verification |
 |---|---|---|---|
 | `provenance at ingestion` | **EXERCISED** | `mcp-server/internal/guardrails/provenance.go` (`ProvenanceTracker.TagContent`, `resolveTrust` defaulting to `TrustLevelUnknown`), `mcp-server/internal/guardrails/provenance_scan.go` (`ScanExternalContent`) | `mcp-server/internal/guardrails/provenance_test.go`, `mcp-server/internal/mcp/tools_indirect_injection_test.go` |
-| `append-only chains` | **WIRED** | `mcp-server/internal/guardrails/provenance.go` (`MarkWithProvenance`, `LookupProvenance`), `mcp-server/internal/guardrails/provenance_cache.go`, `mcp-server/internal/mcp/evidence_wiring.go` | `mcp-server/internal/guardrails/provenance_cache_test.go`, `mcp-server/internal/mcp/evidence_test.go` (multi-hop cryptographic append-only chain verifier open in `docs/specs/guardrail-gaps-2026/STATUS.md` §05) |
+| `append-only chains` | **EXERCISED** | `mcp-server/internal/guardrails/provenance_chain.go` (`ProvenanceLedger.RecordIngestion`, `ProvenanceLedger.AppendTransformation`, `VerifyProvenanceChain`), `mcp-server/internal/guardrails/provenance.go` | `mcp-server/internal/guardrails/provenance_chain_test.go`, `mcp-server/internal/guardrails/provenance_cache_test.go` |
 | `provenance inheritance` | **EXERCISED** | `mcp-server/internal/mcp/tools_indirect_injection.go` (`handleScanExternalContent`, `handleMarkProvenance`, `handleCheckProvenance`), `mcp-server/internal/guardrails/provenance_scan.go` | `mcp-server/internal/guardrails/provenance_integration_test.go`, `mcp-server/internal/mcp/tools_indirect_injection_test.go` |
