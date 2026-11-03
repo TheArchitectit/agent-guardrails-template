@@ -9,4 +9,4 @@
 - [x] Phase 3 (conformance): class-differentiated fixtures; ancestry reconstruction queries.
       **EXERCISED:** `ProvenanceLedger` (`mcp-server/internal/guardrails/provenance_chain.go`) implements multi-hop append-only cryptographic provenance chains (`RecordIngestion`, `AppendTransformation`, `VerifyProvenanceChain`) with mixed-trust inheritance (`EffectiveChainTrust`) and full ledger ancestry reconstruction (`RecordMediatedAction`, `ReconstructAncestry`); verified by `provenance_chain_test.go`.
 - [x] Phase 4 (coverage audit): enumerate ingestion paths across Guardrails surfaces; close or declare gaps.
-      **EXERCISED:** Full ingestion-surface audit and requirement-by-requirement reconciliation recorded in `docs/specs/guardrail-gaps-2026/STATUS.md` §05 and `docs/specs/guardrail-gaps-2026/AUDIT-2026-10-09.md`.
+      **EXERCISED:** Full ingestion-surface audit and requirement-by-requirement reconciliation recorded in `docs/specs/guardrail-gaps-2026/STATUS.md` Sec. 05 and `docs/specs/guardrail-gaps-2026/AUDIT-2026-10-09.md`.

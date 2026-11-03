@@ -45,7 +45,6 @@
   "ide/testing-guide.md": 4,
   "mcp-server/internal/controlplane/redact_test.go": 1,
   "mcp-server/internal/guardrails/provenance_integration_test.go": 15,
-  "mcp-server/internal/guardrails/provenance_test.go": 16,
   "mcp-server/internal/mcp/team_tool_crud.go": 1,
   "mcp-server/internal/mcp/team_tool_project.go": 4,
   "mcp-server/internal/mcp/tools_lifecycle.go": 2,
