@@ -19,6 +19,7 @@ import (
 	"github.com/thearchitectit/guardrail-mcp/internal/clientip"
 	"github.com/thearchitectit/guardrail-mcp/internal/config"
 	"github.com/thearchitectit/guardrail-mcp/internal/database"
+	"github.com/thearchitectit/guardrail-mcp/internal/evidence"
 	"github.com/thearchitectit/guardrail-mcp/internal/ingest"
 	metricsMiddleware "github.com/thearchitectit/guardrail-mcp/internal/metrics"
 	loggingMiddleware "github.com/thearchitectit/guardrail-mcp/internal/middleware"
@@ -56,6 +57,12 @@ type Server struct {
 	// unloadable registry is carried as an error so both surfaces fail closed.
 	credentialRegistry    *auth.Registry
 	credentialRegistryErr error
+
+	// evidenceVerifier verifies inbound cross-product evidence envelopes
+	// (Spec 15 gr-xp-02..gr-xp-06). Loaded at startup from
+	// cfg.EvidenceTrustStoreFile (+ optional cfg.EvidenceRevocationFile).
+	evidenceVerifier    *evidence.Verifier
+	evidenceVerifierErr error
 }
 
 // NewServer creates a new web server
@@ -114,6 +121,7 @@ func NewServer(cfg *config.Config, db *database.DB, cacheClient *cache.Client, a
 	// middleware consults this exact object, so an operator reload applied to
 	// it denies the next request on this surface without a rebuild.
 	s.credentialRegistry, s.credentialRegistryErr = buildCredentialRegistry(cfg)
+	s.evidenceVerifier, s.evidenceVerifierErr = buildEvidenceVerifier(cfg)
 
 	s.setupMiddleware()
 	s.setupRoutes()
@@ -348,6 +356,9 @@ func registerRoutes(e *echo.Echo, s *Server) {
 
 	// Policy enforcement (CI/CD)
 	api.POST("/v1/policy/check", s.policyCheck)
+
+	// Cross-product evidence verification (Spec 15 gr-xp-02..gr-xp-06)
+	api.POST("/evidence/verify", s.verifyEvidence)
 
 	// API documentation (no auth required)
 	e.GET("/docs", s.apiDocs)

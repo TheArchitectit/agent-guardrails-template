@@ -1,6 +1,6 @@
 # OpenSpec: Optional OAP Guardrail Checker
 
-**Status:** Proposed, conditional, and not implemented.
+**Status:** Implemented and tested (2026-11-03) as a portable, observe-only checker in `mcp-server/internal/guardrails/oap_checker.go` (`oap_checker_test.go`). It enforces `gr-oap-01..07`: host context is treated strictly as input, `AuthorizesEffect` is permanently `false`, cross-product mutations are refused, unwired/skipped checks remain non-PASS, sensitive tokens are redacted in bounded diagnostics, and detached Ed25519 evidence envelopes (Spec 15) are emitted and verified.
 
 ## Purpose
 

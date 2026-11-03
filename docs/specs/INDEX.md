@@ -1,20 +1,20 @@
 # Specs
 
-Design specifications and change proposals for the guardrails MCP server.
+Design specifications and change proposals for the guardrails MCP server, authored using the [OpenSpec](https://openspec.dev) framework ([documentation](https://openspec.dev/docs), [GitHub source](https://github.com/Fission-AI/OpenSpec)).
 
 | Document | Purpose |
 |----------|---------|
 | [09-system-roadmap-and-phase-gates.md](09-system-roadmap-and-phase-gates.md) | Master roadmap: transform the repo into a verified MCP guardrail system |
 | [10-mcp-protocol-and-fastmcp-parity.md](10-mcp-protocol-and-fastmcp-parity.md) | MCP contract/test parity informed by FastMCP implementations |
-| [11-authorization-scopes-and-roles.md](11-authorization-scopes-and-roles.md) | Proposed intersection of scoped API keys and named roles; migration plan |
-| [12-web-exposure-boundary.md](12-web-exposure-boundary.md) | Public routes, CORS, trusted proxies, and deployment exposure profiles |
+| [11-authorization-scopes-and-roles.md](11-authorization-scopes-and-roles.md) | Intersection of scoped API keys and named roles; implemented and tested |
+| [12-web-exposure-boundary.md](12-web-exposure-boundary.md) | Public routes, CORS, trusted proxies, and deployment exposure profiles (`local`, `private-operator`, `public`) |
 | [13-webhook-ssrf-hardening.md](13-webhook-ssrf-hardening.md) | Delivery-time DNS pinning, redirect policy, and bounded webhook egress |
-| [14-optional-oap-guardrail-checker/spec.md](14-optional-oap-guardrail-checker/spec.md) | Conditional OAP checker boundary; no identity or effect authority |
-| [15-secure-cross-product-method/spec.md](15-secure-cross-product-method/spec.md) | Cross-Product Evidence Auth v1: identity, signing, replay, both sides |
-| [16-authentication-authorization-and-evidence-remediation.md](16-authentication-authorization-and-evidence-remediation.md) | Proposed source-audited remediation gates for auth, authorization, audit, lifecycle, and evidence; not shipped |
-| [17-deployment-tls-and-secret-boundary.md](17-deployment-tls-and-secret-boundary.md) | Proposed deployment profiles, TLS, secret sources and rotation |
-| [18-migration-startup-and-readiness.md](18-migration-startup-and-readiness.md) | Proposed migration ownership, startup ordering, readiness and outage behavior |
-| [19-phase0-ci-security-gates.md](19-phase0-ci-security-gates.md) | Proposed same-commit blocking CI matrix, UCS03 isolation and negative controls |
+| [14-optional-oap-guardrail-checker/spec.md](14-optional-oap-guardrail-checker/spec.md) | Portable observe-only OAP checker boundary (`internal/guardrails/oap_checker.go`); no identity or effect authority |
+| [15-secure-cross-product-method/spec.md](15-secure-cross-product-method/spec.md) | Cross-Product Evidence Auth v1 (`internal/evidence` + `POST /api/evidence/verify`): identity, signing, replay, revocation snapshots, both sides |
+| [16-authentication-authorization-and-evidence-remediation.md](16-authentication-authorization-and-evidence-remediation.md) | Source-audited remediation gates for auth, authorization, audit, lifecycle, and evidence |
+| [17-deployment-tls-and-secret-boundary.md](17-deployment-tls-and-secret-boundary.md) | Deployment profiles, TLS, secret sources and rotation |
+| [18-migration-startup-and-readiness.md](18-migration-startup-and-readiness.md) | Migration ownership, startup ordering, readiness and outage behavior |
+| [19-phase0-ci-security-gates.md](19-phase0-ci-security-gates.md) | Same-commit blocking CI matrix, UCS03 isolation and negative controls |
 | [20-mcp-parity-with-fastmcp.md](20-mcp-parity-with-fastmcp.md) | FastMCP parity closure: consolidates spec 10's required items into one closable unit (NEW 2026-10-10) |
 | [21-tool-schema-handler-conformance-gate.md](21-tool-schema-handler-conformance-gate.md) | Blocking CI gate comparing advertised tool schemas to handler argument reads (NEW 2026-10-10) |
 | [22-mcp-client-transport-compatibility-matrix.md](22-mcp-client-transport-compatibility-matrix.md) | Versioned client/transport compatibility matrix backed by live tests; **required row (official MCP Inspector) SUPPORTED 2026-10-10** (NEW 2026-10-10) |

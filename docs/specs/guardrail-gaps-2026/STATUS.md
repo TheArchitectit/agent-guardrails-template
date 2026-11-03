@@ -144,7 +144,8 @@ The best-executed spec, and the only one whose tools shipped.
 | `fail_policy: block` | Implemented (synthetic block result, not an error) |
 | NeMo backend | Not implemented |
 | OpenAI Moderation backend | **Registered 2026-10-18** — constructed in `cmd/server/main.go` when `OPENAI_API_KEY` is set |
-| Streaming | Not implemented |
+| Streaming | **Implemented 2026-11-03** — `ContentFilter.ClassifyStream` and `Engine.ClassifyContentStream` evaluate chunked streams with short-circuit termination on high-confidence violations |
+| `ReloadConfig` | **Implemented 2026-11-03** — `ContentFilter.ReloadConfig` and `Engine.ReloadContentFilter` hot-reload policies on SIGHUP |
 | `taxonomy.enabled_categories` / `custom_categories` | **Enforced 2026-10-19** — was parsed and never read; the policy engine now carries the declared taxonomy as an allow-list |
 | YAML loader (`LoadContentConfig`) | **READ AT STARTUP 2026-10-19** (`CONTENT_FILTER_CONFIG_FILE`) — was zero-caller; the documented `content_filter:` wrapper loaded with **zero policies** because the loader only accepted the flat struct-tag form. Both forms load now (not both at once); unknown keys, a missing section, an unimplemented backend, an invalid action and `fail_policy: allow` are all refused |
 
@@ -215,7 +216,7 @@ fail-closed behaviour and the spec text is wrong. Sec. 4.3 should be amended.
 | Safety chain engine | **Wired 2026-10-18** — `MultiAgentRegistry` built from the live engine at startup |
 | Validators `injection_defense` / `content_filter` / `four_laws_check` | **Wired** — bound to the same engine the rest of the server uses |
 | `code_review_agent` validator | Not implemented (needs an LLM review backend — owner call) |
-| Conflict strategies | **Wired**; shipped name is `escalate` (spec's `human_escalate` maps to it) |
+| Conflict strategies | **Wired**; `highest_confidence`, `most_restrictive`, `majority` (**added 2026-11-03**), and `escalate` (spec's `human_escalate` maps to it) |
 | Config keys as YAML (`safety_chains`) | **READ AT STARTUP 2026-10-19** (`SAFETY_CHAINS_CONFIG_FILE`) — the loader had **zero callers**, so the documented Sec. 2.2 block changed nothing and the server ran its built-in chains regardless. Both the loader and the wiring landed this pass. Unknown keys, a missing/empty section, a chain with no steps, an unknown validator (refused by name), a missing/unknown step action, and `on_failure: warn_and_continue`/`block_and_escalate` are all refused; a configured-but-unusable file stops startup; a declared chain list REPLACES the built-in one so a disabled chain is genuinely absent |
 | Config keys as YAML (`agent_registry`, `cross_agent_policies`) | Not implemented — no loader for either; the constraint policies ship built-in and the tools take the policy id directly |
 | `on_failure` semantics | **Corrected 2026-10-19** — the built-in `research_output` chain declared `warn_and_continue`, which `SafetyChain.Execute` never reads: a blocking step stops the chain and records a block decision whatever the field says. The declaration was inert and fail-open if honoured. Built-in chains now declare the one implemented semantic (`block_and_notify`); a warning is a step's own `action: warn`, and the loader refuses the two unimplemented chain-level values by name |
@@ -273,8 +274,8 @@ The most completely built of the six, and as of 2026-10-18 also **wired**.
 | 3 proposed tools | **Implemented 2026-10-18** |
 | Config keys (`source_trust_policies`, `untrusted_overrides`) | **Implemented**, including the spec's trust table |
 | Sanitization / base64 / ROT13 / URL decoding | Implemented, **now applied before the scan** |
-| Provenance marker wrapping | Implemented, **now reachable via `guardrail_mark_provenance`** |
-| Redis cache | Deviates — implemented as in-memory (`provenance_cache.go`) |
+| Provenance marker wrapping | Implemented, **reachable via `guardrail_mark_provenance`** and `AugmentSystemPromptWithProvenance` (Spec 05 Sec. 3.3, **2026-11-03**) |
+| Redis cache | **Implemented 2026-11-03** — `RedisProvenanceCache` (`provenance_cache.go`) implements a stdlib TCP/RESP2 client (`GET`, `SET PX`, `DEL`, `KEYS`) alongside `InMemoryProvenanceCache` |
 | YAML loader (`LoadProvenanceConfigFromYAML`) | **READ AT STARTUP 2026-10-19** (`PROVENANCE_CONFIG_FILE`) — was zero-caller, so the documented trust table was inert. Now strict: unknown keys, a missing `indirect_injection` section and a config failing `Validate()` are errors; a configured-but-unusable file stops startup |
 
 **The defect this pass fixed was an ordering defect, and it made the whole
@@ -320,7 +321,7 @@ satisfy spec 05.
 | `compliance_reports:` config file (Sec. 2.3) | **Read + enforced 2026-10-19** — `COMPLIANCE_CONFIG_FILE` → `LoadComplianceConfigFromYAML` at startup; the block had **no reader** before (`ComplianceConfig` had zero production call sites) |
 | `sections:` (Sec. 2.3) | **Not implemented — refused by name.** The measured report emits a fixed structure; a declared list would be inert |
 | `config_history` evidence source (Sec. 2.3/3.3) | **Not implemented — refused by name.** No code path records a restorable configuration snapshot |
-| Gap tracking / dashboard | Not implemented |
+| Gap tracking / dashboard | **Implemented 2026-11-03** — `ExtractComplianceGaps` and `ComplianceArtifact.GapRecords` emit structured `ComplianceGapRecord` items with severity and remediation text for every uncovered or over-declared requirement |
 
 The data file covers EU AI Act art. 9, 10, 11, 12, 13, 14, 15, 50 and NIST RMF
 govern/map/measure/manage. **Art. 11 is now present**, added 2026-10-19 with
@@ -390,11 +391,8 @@ Exact tests re-run green on 2026-10-10 against this tree (HEAD `f85aa67`):
 **Still open and release-gating — do not describe these as fixed:**
 - Full-history Gitleaks is RED: 5 real findings, not rotated, history not purged
   (`16-R16-02` / `19-R19-06`). Not weakened, not skipped.
-- `/metrics` remains public (`web/server.go:145`; `middleware.go:38,293`) — needs
-  the operator (Roger); binding it to auth changes the scrape contract.
-- Guardrail capabilities unwired from the request path (`03`/`06`; `09-P2`). Gaps `01`, `04` and `05` are wired as of 2026-10-18.
-- Specs `07`/`08`/`15` and the optional OAP checker (`14`) remain ABSENT /
-  proposal-only.
+- `/metrics`, `/docs`, and `/openapi.yaml` are now gated by exposure profile (`ExposureForConfig` in `internal/web/exposure.go`, **2026-11-03**): only `/healthz` and `/readyz` remain unauthenticated under `DEPLOYMENT_PROFILE=public` or `PRODUCTION_MODE=true`.
+- Guardrail capabilities (`01`..`06`), the portable observe-only OAP checker (`14`, `internal/guardrails/oap_checker.go`), and Cross-Product Evidence Auth v1 (`15`, `internal/evidence` + `POST /api/evidence/verify`) are implemented and tested on `main` (2026-11-03).
 
 **Requirement ledger totals** (recounted 2026-10-10 from the AUDIT-2026-10-09
 requirement tables; one status per requirement row): ABSENT 101 · WIRED 75 ·

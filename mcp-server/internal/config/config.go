@@ -165,6 +165,12 @@ type Config struct {
 	// artifact to a peer and are bound into the signed envelope.
 	EvidenceProducerID string `env:"EVIDENCE_PRODUCER_ID"`
 	EvidenceAudience   string `env:"EVIDENCE_AUDIENCE"`
+	// EvidenceTrustStoreFile and EvidenceRevocationFile configure the inbound
+	// out-of-band peer trust store and offline revocation snapshot (Spec 15
+	// gr-xp-03/gr-xp-04). When configured, unreadable or expired files fail
+	// startup closed.
+	EvidenceTrustStoreFile string `env:"EVIDENCE_TRUST_STORE_FILE"`
+	EvidenceRevocationFile string `env:"EVIDENCE_REVOCATION_FILE"`
 
 	// JWT Configuration. The signing secret may come from the environment or
 	// from a read-only secret file (JWT_SECRET_FILE).
@@ -447,6 +453,9 @@ func (c *Config) Validate() error {
 	// ships unsigned is a claim with no provenance, so this fails startup
 	// rather than degrading quietly.
 	if err := c.ValidateEvidenceIdentity(); err != nil {
+		return err
+	}
+	if err := c.ValidateEvidenceTrustStore(); err != nil {
 		return err
 	}
 

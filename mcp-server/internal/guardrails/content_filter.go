@@ -14,6 +14,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"log/slog"
+	"strings"
 	"sync"
 	"time"
 )
@@ -271,6 +272,61 @@ func (cf *ContentFilter) UpdateRules(rules []PolicyRule) {
 		cf.config.Taxonomy.EnabledCategories, cf.config.Taxonomy.CustomCategories)
 	if cf.cache != nil {
 		cf.cache.Clear()
+	}
+}
+
+// ReloadConfig validates and atomically swaps the active ContentFilterConfig
+// (Spec 02 Sec. 3.2 hot-reload). A rejected config leaves the existing policy
+// engine and cache untouched so a bad reload never disarms the filter.
+func (cf *ContentFilter) ReloadConfig(cfg *ContentFilterConfig) error {
+	if cfg == nil {
+		return fmt.Errorf("content filter config is nil")
+	}
+	if err := cfg.Validate(); err != nil {
+		return err
+	}
+	cf.mu.Lock()
+	defer cf.mu.Unlock()
+	cf.config = cfg
+	cf.policyEngine = NewPolicyEngineWithConfig(cfg.Policies, cfg.Thresholds,
+		cfg.Taxonomy.EnabledCategories, cfg.Taxonomy.CustomCategories)
+	if cf.cache != nil {
+		cf.cache.Clear()
+	}
+	return nil
+}
+
+// ClassifyStream incrementally classifies streamed chunks (Spec 02 streaming
+// mode). Each chunk is appended to the running buffer and evaluated; if any
+// prefix triggers a block decision (`IsBlocked()`), classification halts
+// immediately and returns the blocking result without waiting for the rest of
+// the stream.
+func (cf *ContentFilter) ClassifyStream(ctx context.Context, chunks <-chan string, direction ContentDirection) (*ClassificationResult, error) {
+	var buf strings.Builder
+	var last *ClassificationResult
+	sawChunk := false
+	for {
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case chunk, ok := <-chunks:
+			if !ok {
+				if !sawChunk {
+					return cf.Classify(ctx, "", direction)
+				}
+				return last, nil
+			}
+			sawChunk = true
+			buf.WriteString(chunk)
+			res, err := cf.Classify(ctx, buf.String(), direction)
+			if err != nil {
+				return nil, err
+			}
+			last = res
+			if res.IsBlocked() {
+				return res, nil
+			}
+		}
 	}
 }
 

@@ -10,7 +10,7 @@ not yet scheduled into a sprint. One entry per item; move to a sprint doc under
 
 **Added:** 2026-10-11 (owner request, Roger)
 **Type:** docs
-**Status:** open
+**Status:** closed (2026-11-03)
 
 ### Why
 
@@ -36,14 +36,14 @@ Official sources (verified live 2026-10-11):
 
 ### Acceptance criteria
 
-- [ ] `docs/standards/api-specifications.md` "OpenSpec Overview" section links
+- [x] `docs/standards/api-specifications.md` "OpenSpec Overview" section links
       the official site, docs, and GitHub source; the "hypothetical" example and
       "details would go here" placeholder are removed or clearly marked as a
       local illustration.
-- [ ] Whatever index file governs specs (e.g. `docs/specs/INDEX.md`) or the
+- [x] Whatever index file governs specs (e.g. `docs/specs/INDEX.md`) or the
       repo README gains a short "OpenSpec" reference pointing at the official
       docs.
-- [ ] No invented OpenSpec versions or URLs — links must resolve.
+- [x] No invented OpenSpec versions or URLs — links must resolve.
 
 ### Notes
 

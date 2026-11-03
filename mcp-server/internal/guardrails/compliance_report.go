@@ -31,6 +31,20 @@ const MeasuredMethodology = "measured-runtime-probes-v1"
 //go:embed compliance_requirements.json
 var embeddedRequirementDB []byte
 
+// ComplianceGapRecord is the structured compliance_gaps model (Spec 06 Sec. 4.3)
+// capturing an uncovered or partially-covered requirement for gap tracking and
+// remediation audits.
+type ComplianceGapRecord struct {
+	Framework       string   `json:"framework"`
+	RequirementID   string   `json:"requirement_id"`
+	Title           string   `json:"title"`
+	Declared        string   `json:"declared_status"`
+	Measured        string   `json:"measured_status"`
+	GapDescriptions []string `json:"gap_descriptions"`
+	Recommendations []string `json:"recommendations,omitempty"`
+	DetectedAt      time.Time `json:"detected_at"`
+}
+
 // ComplianceArtifact is the on-disk report. Requirement-level detail is kept
 // out of the score path: a reader can see exactly which control was observed.
 type ComplianceArtifact struct {
@@ -40,9 +54,38 @@ type ComplianceArtifact struct {
 	OverallScore     float64                 `json:"overall_score"`
 	Requirements     []RequirementAssessment `json:"requirements"`
 	CriticalGaps     []string                `json:"critical_gaps"`
+	GapRecords       []ComplianceGapRecord   `json:"compliance_gaps,omitempty"`
 	Recommendations  []string                `json:"recommendations"`
 	OverDeclarations []string                `json:"over_declarations,omitempty"`
 	Unmeasured       []string                `json:"unmeasured_requirements,omitempty"`
+}
+
+// ExtractComplianceGaps derives the structured compliance_gaps records (Spec 06
+// Sec. 4.3) from a measured compliance artifact.
+func ExtractComplianceGaps(art *ComplianceArtifact) []ComplianceGapRecord {
+	if art == nil {
+		return nil
+	}
+	var out []ComplianceGapRecord
+	for _, r := range art.Requirements {
+		if r.Covered && len(r.Gaps) == 0 {
+			continue
+		}
+		gaps := append([]string(nil), r.Gaps...)
+		if len(gaps) == 0 && !r.Covered {
+			gaps = []string{fmt.Sprintf("requirement %s measured %s (not covered)", r.RequirementID, r.Measured)}
+		}
+		out = append(out, ComplianceGapRecord{
+			Framework:       art.Framework,
+			RequirementID:   r.RequirementID,
+			Title:           r.Title,
+			Declared:        string(r.Declared),
+			Measured:        string(r.Measured),
+			GapDescriptions: gaps,
+			DetectedAt:      art.GeneratedAt,
+		})
+	}
+	return out
 }
 
 // NewEmbeddedComplianceMapper loads the requirement database compiled into the
@@ -164,6 +207,7 @@ func (r *ComplianceReporter) GenerateMeasuredReport(ctx context.Context, framewo
 	if len(ids) > 0 {
 		art.OverallScore = (float64(covered) / float64(len(ids))) * 100
 	}
+	art.GapRecords = ExtractComplianceGaps(art)
 
 	if r.logger != nil {
 		r.logger.Info("compliance report generated",

@@ -56,6 +56,8 @@ func ResolveConflicts(outputs []AgentOutput, strategy ConflictStrategy) Conflict
 		return resolveByUnion(outputs)
 	case ConflictEscalate:
 		return resolveByEscalation(outputs)
+	case ConflictMajority:
+		return resolveByMajority(outputs)
 	default:
 		return resolveByPriority(outputs)
 	}
@@ -152,6 +154,62 @@ func resolveByEscalation(outputs []AgentOutput) ConflictResult {
 		Resolved:         false,
 		ResolutionMethod: string(ConflictEscalate),
 		Escalation:       true,
+		Conflicts:        conflicts,
+	}
+}
+
+func resolveByMajority(outputs []AgentOutput) ConflictResult {
+	total := len(outputs)
+	threshold := total/2 + 1
+	actionCounts := make(map[string]int)
+	for _, o := range outputs {
+		seen := make(map[string]bool)
+		for _, a := range o.Actions {
+			if !seen[a] {
+				actionCounts[a]++
+				seen[a] = true
+			}
+		}
+	}
+
+	var majorityActions []string
+	var conflicts []string
+	for action, count := range actionCounts {
+		if count >= threshold {
+			majorityActions = append(majorityActions, action)
+		} else {
+			conflicts = append(conflicts, action)
+		}
+	}
+	sort.Strings(majorityActions)
+	sort.Strings(conflicts)
+
+	// Also allow majority on identical Output strings when Actions are empty.
+	if len(actionCounts) == 0 {
+		outCounts := make(map[string]int)
+		for _, o := range outputs {
+			outCounts[o.Output]++
+		}
+		var winners []string
+		for out, count := range outCounts {
+			if count >= threshold {
+				winners = append(winners, out)
+			}
+		}
+		sort.Strings(winners)
+		if len(winners) == 1 {
+			return ConflictResult{
+				Resolved:         true,
+				ResolvedOutput:   winners[0],
+				ResolutionMethod: string(ConflictMajority),
+			}
+		}
+	}
+
+	return ConflictResult{
+		Resolved:         len(majorityActions) > 0,
+		ResolvedOutput:   strings.Join(majorityActions, "\n"),
+		ResolutionMethod: string(ConflictMajority),
 		Conflicts:        conflicts,
 	}
 }

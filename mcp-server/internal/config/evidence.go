@@ -146,3 +146,29 @@ func (c *Config) ValidateEvidenceIdentity() error {
 	}
 	return nil
 }
+
+// ValidateEvidenceTrustStore validates the inbound cross-product peer trust
+// store and optional revocation snapshot when configured (Spec 15 gr-xp-03,
+// gr-xp-04).
+func (c *Config) ValidateEvidenceTrustStore() error {
+	if c == nil {
+		return nil
+	}
+	trustFile := strings.TrimSpace(c.EvidenceTrustStoreFile)
+	revFile := strings.TrimSpace(c.EvidenceRevocationFile)
+	if trustFile == "" && revFile == "" {
+		return nil
+	}
+	if trustFile == "" && revFile != "" {
+		return errors.New("EVIDENCE_TRUST_STORE_FILE is required when EVIDENCE_REVOCATION_FILE is set")
+	}
+	if _, err := secretfile.Read(trustFile); err != nil {
+		return fmt.Errorf("EVIDENCE_TRUST_STORE_FILE: %w", err)
+	}
+	if revFile != "" {
+		if _, err := secretfile.Read(revFile); err != nil {
+			return fmt.Errorf("EVIDENCE_REVOCATION_FILE: %w", err)
+		}
+	}
+	return nil
+}

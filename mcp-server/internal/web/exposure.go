@@ -3,6 +3,8 @@ package web
 import (
 	"net/http"
 	"strings"
+
+	"github.com/thearchitectit/guardrail-mcp/internal/config"
 )
 
 // ExposureClass is the declared exposure of a route (Spec 12 Sec. 3.1).
@@ -217,6 +219,23 @@ func ExposureFor(method, pattern, requestPath string) ExposureClass {
 		return rule.class
 	}
 	return ExposureAuthenticated
+}
+
+// ExposureForConfig returns the effective exposure class under cfg (Spec 12
+// Sec. 3.2). When cfg is in ProductionMode or the public deployment profile,
+// operational/schema routes (/metrics, /docs, /openapi.yaml) are narrowed to
+// ExposureAuthenticated so anonymous internet callers cannot scrape metrics or
+// schema definitions.
+func ExposureForConfig(cfg *config.Config, method, pattern, requestPath string) ExposureClass {
+	if cfg != nil && (cfg.ProductionMode || strings.EqualFold(strings.TrimSpace(cfg.DeploymentProfile), string(config.DeploymentProfilePublic))) {
+		switch {
+		case pattern == "/metrics" || requestPath == "/metrics",
+			pattern == "/docs" || requestPath == "/docs",
+			pattern == "/openapi.yaml" || requestPath == "/openapi.yaml":
+			return ExposureAuthenticated
+		}
+	}
+	return ExposureFor(method, pattern, requestPath)
 }
 
 // lookupRule returns the first declared rule that classifies the request.

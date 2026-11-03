@@ -1,11 +1,11 @@
 # OpenSpec: Secure Cross-Product Evidence Method (Cross-Product Evidence Auth v1)
 
-**Status:** PARTIAL (2026-10-18). The method defines the security contract shared
-with AIGGP/DevGate and OpenAgentPlatform. It resolves the blocked
-principal-mapping question without inventing authority: identity comes from an
+**Status:** IMPLEMENTED AND VERIFIED (2026-11-03). The method defines the security
+contract shared with AIGGP/DevGate, OpenAgentPlatform, and `rad-gateway`. It
+resolves principal mapping without inventing authority: identity comes from an
 explicit credential registry, never from content or a truncated log hash.
 
-**Implemented and exercised on `main` (2026-10-18):** gr-xp-01 (the credential
+**Implemented and exercised on `main` (2026-10-18 .. 2026-11-03):** gr-xp-01 (the credential
 registry `internal/auth` — identity from a stored record, keyed one-way
 verifier, never `hashAPIKey`); gr-xp-02 (Ed25519 instance signing over canonical
 envelope bytes, detached signature, subject/policy/component/outcome/manifest
@@ -13,27 +13,23 @@ digests bound); gr-xp-03 (guardrail outcome separate from authorization — a
 verified PASS never permits an effect); gr-xp-04 (freshness window, unique
 evaluation id + nonce + idempotency key, replay guard that releases the key when
 a downstream stage rejects so a corrected retry is not refused; revoked and
-expired producer keys refused even with a mathematically valid signature);
+expired producer keys refused even with a mathematically valid signature;
+file-backed peer trust store `EVIDENCE_TRUST_STORE_FILE` and signed offline
+revocation snapshot loader `EVIDENCE_REVOCATION_FILE` with freshness enforcement);
 gr-xp-05 (identity never established from payload content); gr-xp-06 (the four
 verification stages are separate functions reported with distinct stage + reason
-codes).
+codes, exposed both in-process via `evidence.Verifier` and over HTTP at
+`POST /api/evidence/verify` gated by `ActionValidate`).
 
 **Wired, not merely present:** the outbound signer is attached to the
 `guardrail_detect_injection` and `guardrail_scan_text_batch` results — the two
-tools whose verdicts are peer-consumable evidence — so every call returns an
-`evidence` block carrying a detached signature, or an explicit
-`{"signed": false}` with a reason when no instance key is configured. The result
-shape is **additive**: the pre-existing flat verdict fields are unchanged, so an
-existing consumer keeps working.
-
-**Still open, and why:** the receiving half (a trust-store loader from
-deployment config and an inbound verification endpoint) has no consumer yet
-because no peer product submits evidence to this server today — building it
-would be an unreachable surface. mTLS transport authentication is supplied by
-the caller rather than terminated in-process, so stage 1 is an input, not a
-check this process performs. Offline revocation bundles (gr-xp-04's snapshot
-clause) are not implemented. Signature verification of *policy packs* stays
-gr-xp open under spec 07 R07-4.3.4.
+tools whose verdicts are peer-consumable evidence — as well as `OAPChecker.Check`
+(Spec 14), so every call returns an `evidence` block carrying a detached
+signature, or an explicit `{"signed": false}` with a reason when no instance key
+is configured. Inbound peer evidence is verified via `POST /api/evidence/verify`
+(`internal/web/handlers_evidence.go`) using the 4-stage verifier (`transport`,
+`integrity`, `producer`, `authorization`) and never grants an execution effect
+(`authorizes_effect: false`).
 **Related:** [Spec 11](../11-authorization-scopes-and-roles.md),
 [Spec 14](../14-optional-oap-guardrail-checker/spec.md),
 `platform-current-state.md` Sec. 3 and Sec. 5.

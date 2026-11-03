@@ -54,7 +54,7 @@ func APIKeyAuthWithRegistry(cfg *config.Config, auditLogger *audit.Logger, regis
 			// can no longer drift. A route that is not declared public is
 			// authenticated (deny by default).
 			path := c.Path()
-			if ExposureFor(method, path, requestPath) == ExposurePublic {
+			if ExposureForConfig(cfg, method, path, requestPath) == ExposurePublic {
 				return next(c)
 			}
 
@@ -292,7 +292,7 @@ func RateLimitMiddleware(limiter *cache.DistributedRateLimiter, cfg *config.Conf
 			// Spec 12 Sec. 3.1: the same declared exposure registry APIKeyAuth uses.
 			// A route that is not declared public is authenticated, so the rate
 			// limiter can no longer keep a private skip list of its own.
-			if ExposureFor(c.Request().Method, path, requestPath) == ExposurePublic {
+			if ExposureForConfig(cfg, c.Request().Method, path, requestPath) == ExposurePublic {
 				return next(c)
 			}
 

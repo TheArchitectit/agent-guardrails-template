@@ -38,6 +38,7 @@ const (
 	ConflictIntersection ConflictStrategy = "intersection"
 	ConflictUnion        ConflictStrategy = "union"
 	ConflictEscalate     ConflictStrategy = "escalate"
+	ConflictMajority     ConflictStrategy = "majority"
 )
 
 // DecisionIncomplete is reported when at least one configured step could not

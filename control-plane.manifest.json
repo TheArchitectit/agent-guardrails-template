@@ -9,7 +9,7 @@
     {
       "id": "policy-engine",
       "version": "1.2.0",
-      "digest": "sha256:df775ba4174c45b158675f953d52ea1344593451632e08cd3775ec5f7b594cc4",
+      "digest": "sha256:f7383db6898586caa68732e5ad9bfbc4b0eefb6b4591c16bcb379d0aa1e823b9",
       "source_paths": [
         "mcp-server/internal/guardrails/engine.go",
         "mcp-server/internal/guardrails/policy_pack.go",
@@ -49,7 +49,7 @@
     {
       "id": "content-filter",
       "version": "1.1.0",
-      "digest": "sha256:ebe1c19adedfcbd61852fecfc8a848e33203dda4ad886bfc9f1ba5e9cfadea3c",
+      "digest": "sha256:6ef03a55fa714cd53dfd33f338454d99c399be964d4103260c163d147b1ddb3a",
       "source_paths": [
         "mcp-server/internal/guardrails/content_filter.go",
         "mcp-server/internal/guardrails/content_filter_backends.go",
@@ -71,7 +71,7 @@
     {
       "id": "sandbox-isolation",
       "version": "1.0.5",
-      "digest": "sha256:c888b5a3b12e6500eaa2ff54b8bb4d5b6f89a996287b37849fac24c918668765",
+      "digest": "sha256:3ab1af0a31df975ad5f8be3a35c3eccef6d4d5ffa7229ae16175f57b5b8378cf",
       "source_paths": [
         "mcp-server/internal/guardrails/sandbox.go",
         "mcp-server/internal/guardrails/sandbox_config.go",

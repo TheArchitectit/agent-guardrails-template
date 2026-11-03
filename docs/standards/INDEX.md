@@ -68,11 +68,11 @@ Defines hooks and interfaces for integrating with external logging systems.
 - Error handling
 
 ### api-specifications.md
-Guidance on choosing between OpenAPI and OpenSpec for API documentation.
+Guidance on choosing between OpenAPI and OpenSpec for API and behavioral specification documentation.
 
 **Key sections:**
 - OpenAPI overview and use cases
-- OpenSpec overview and use cases
+- OpenSpec overview, official docs (https://openspec.dev, https://openspec.dev/docs, https://github.com/Fission-AI/OpenSpec), and use cases
 - When to use each format
 - Hybrid approach guidance
 - Template files

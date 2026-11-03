@@ -193,6 +193,23 @@ func (m *SandboxManager) Config() SandboxConfig {
 	return *m.config.Clone()
 }
 
+// ReloadConfig validates and atomically replaces the active sandbox
+// configuration (Spec 03 Sec. 3.2/3.3 hot-reload). An invalid configuration is
+// rejected before mutation so the prior policy table stays in force.
+func (m *SandboxManager) ReloadConfig(cfg *SandboxConfig) error {
+	if cfg == nil {
+		return fmt.Errorf("sandbox config is nil")
+	}
+	candidate := cfg.Clone()
+	if err := candidate.Validate(); err != nil {
+		return err
+	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.config = candidate
+	return nil
+}
+
 // DefaultLimits returns the manager's global default limits.
 //
 // This is the fallback an execution with no declared policy uses. Without it

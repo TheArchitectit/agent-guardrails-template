@@ -269,3 +269,40 @@ func TestExecutionTimeTracked(t *testing.T) {
 		t.Errorf("unexpected execution time: %v", res.ExecutionTime)
 	}
 }
+
+func TestSandboxManager_ReloadConfigAndPathConfinement(t *testing.T) {
+	mgr := NewSandboxManager(nil, slog.Default())
+
+	// Invalid config reload must fail and preserve existing config.
+	badCfg := DefaultSandboxConfig()
+	badCfg.GlobalDefaults.Memory.MaxMB = -1
+	if err := mgr.ReloadConfig(badCfg); err == nil {
+		t.Fatal("expected invalid sandbox config reload to fail")
+	}
+	if err := mgr.ReloadConfig(nil); err == nil {
+		t.Fatal("expected nil sandbox config reload to fail")
+	}
+
+	// Valid config reload updates tool policy atomically.
+	goodCfg := DefaultSandboxConfig()
+	customLimits := goodCfg.GlobalDefaults
+	customLimits.Memory.MaxMB = 128
+	customLimits.CPU.MaxPercent = 25
+	customLimits.Disk.MaxWriteMB = 16
+	customLimits.Time.MaxSeconds = 5
+	customLimits.Time.MaxWallSeconds = 10
+	customLimits.Network.Enabled = false
+	goodCfg.ToolPolicies["custom_tool"] = SandboxPolicy{
+		DefaultLevel:   LevelL1,
+		ResourceLimits: customLimits,
+	}
+	if err := mgr.ReloadConfig(goodCfg); err != nil {
+		t.Fatalf("ReloadConfig(goodCfg): %v", err)
+	}
+	reloadedCfg := mgr.Config()
+	lvl, lim := (&reloadedCfg).ResolveToolPolicy("custom_tool")
+	if lvl != LevelL1 || lim.Memory.MaxMB != 128 {
+		t.Fatalf("expected custom_tool L1/128MB after reload, got %s/%dMB", lvl, lim.Memory.MaxMB)
+	}
+}
+

@@ -229,6 +229,41 @@ func (e *Engine) ReloadInjectionPatterns() error {
 	return e.pipeline.ReloadPatterns()
 }
 
+// ReloadContentFilter reloads the content filter configuration from path
+// (Spec 02 Sec. 3.2). A failed reload leaves the prior configuration active.
+func (e *Engine) ReloadContentFilter(path string) error {
+	if e == nil || e.filter == nil {
+		return fmt.Errorf("content filter is not configured; nothing to reload")
+	}
+	cfg, err := LoadContentConfig(path)
+	if err != nil {
+		return err
+	}
+	return e.filter.ReloadConfig(cfg)
+}
+
+// ReloadSandboxConfig reloads the sandbox configuration from path (Spec 03
+// Sec. 3.2). A failed reload leaves the prior configuration active.
+func (e *Engine) ReloadSandboxConfig(path string) error {
+	if e == nil || e.sandbox == nil {
+		return fmt.Errorf("sandbox manager is not configured; nothing to reload")
+	}
+	cfg, err := LoadSandboxConfigFromYAML(path)
+	if err != nil {
+		return err
+	}
+	return e.sandbox.ReloadConfig(cfg)
+}
+
+// ClassifyContentStream runs incremental streaming classification on chunks
+// (Spec 02 streaming mode), short-circuiting immediately on a block decision.
+func (e *Engine) ClassifyContentStream(ctx context.Context, chunks <-chan string, direction ContentDirection) (*ClassificationResult, error) {
+	if e == nil || e.filter == nil {
+		return nil, fmt.Errorf("content filter is not configured")
+	}
+	return e.filter.ClassifyStream(ctx, chunks, direction)
+}
+
 // Stop releases background resources owned by the engine (cache prune loop, etc.).
 func (e *Engine) Stop() {
 	if e.filter != nil {

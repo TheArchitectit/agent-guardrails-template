@@ -11,6 +11,7 @@ package evidence
 import (
 	"crypto/ed25519"
 	"crypto/rand"
+	"encoding/base64"
 	"errors"
 	"strings"
 	"testing"
@@ -444,3 +445,59 @@ func TestOnlyPassIsTerminal(t *testing.T) {
 		t.Fatal("pass is not terminal")
 	}
 }
+
+// gr-xp-03 & gr-xp-04: Out-of-band JSON trust store and offline revocation
+// snapshot with freshness window (expired snapshot fails closed).
+func TestLoadTrustStoreJSONAndRevocationSnapshotFreshness(t *testing.T) {
+	now := time.Date(2026, 10, 18, 6, 0, 0, 0, time.UTC)
+	inst := newInstance(t, "guardrails")
+	pubB64 := base64.StdEncoding.EncodeToString(inst.PublicKey())
+
+	trustJSON := []byte(`{
+		"keys": [{
+			"producer_id": "guardrails",
+			"public_key_base64": "` + pubB64 + `",
+			"audience": "devgate",
+			"direction": "outbound",
+			"not_before": "2026-10-18T05:00:00Z",
+			"not_after": "2026-10-18T07:00:00Z"
+		}]
+	}`)
+	store, err := LoadTrustStoreJSON(trustJSON)
+	if err != nil {
+		t.Fatalf("LoadTrustStoreJSON: %v", err)
+	}
+
+	// Fresh revocation snapshot revoking this key ID -> verification fails with ReasonKeyRevoked.
+	revJSON := []byte(`{
+		"issued_at": "2026-10-18T05:30:00Z",
+		"expires_at": "2026-10-18T06:30:00Z",
+		"revoked_key_ids": ["` + inst.KeyID() + `"]
+	}`)
+	snap, err := LoadRevocationSnapshotJSON(revJSON)
+	if err != nil {
+		t.Fatalf("LoadRevocationSnapshotJSON: %v", err)
+	}
+	revokedStore, err := store.ApplyRevocationSnapshot(snap, now)
+	if err != nil {
+		t.Fatalf("ApplyRevocationSnapshot(fresh): %v", err)
+	}
+	v, err := NewVerifier(revokedStore, nil, func() time.Time { return now })
+	if err != nil {
+		t.Fatalf("NewVerifier: %v", err)
+	}
+	payload := []byte(`{"checks":[]}`)
+	env := baseEnvelope(inst, payload, now)
+	sig := mustSign(t, inst, env)
+	verdict := v.Verify(env, sig, payload, true, nil)
+	if verdict.Verified || verdict.ReasonCode != ReasonKeyRevoked {
+		t.Fatalf("expected revoked key rejection, got verified=%v code=%s", verdict.Verified, verdict.ReasonCode)
+	}
+
+	// Stale revocation snapshot past expires_at must fail closed.
+	staleNow := time.Date(2026, 10, 18, 6, 45, 0, 0, time.UTC)
+	if _, err := store.ApplyRevocationSnapshot(snap, staleNow); err == nil {
+		t.Fatal("expected expired revocation snapshot to fail closed")
+	}
+}
+

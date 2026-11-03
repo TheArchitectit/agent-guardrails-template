@@ -14,10 +14,14 @@ import (
 	"crypto/subtle"
 	"encoding/base64"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
+
+	"github.com/thearchitectit/guardrail-mcp/internal/secretfile"
 )
 
 // Stage names, reported in the verdict.
@@ -336,4 +340,127 @@ func NewVerifier(trust *TrustStore, replay *ReplayGuard, now func() time.Time) (
 // boundary rather than a convenience.
 func ConstantTimeEqualStrings(a, b string) bool {
 	return subtle.ConstantTimeCompare([]byte(a), []byte(b)) == 1
+}
+
+// TrustRecordJSON is the on-disk JSON representation of one out-of-band peer
+// trust entry (Spec 15 gr-xp-03/gr-xp-04).
+type TrustRecordJSON struct {
+	ProducerID      string    `json:"producer_id"`
+	PublicKeyBase64 string    `json:"public_key_base64"`
+	Audience        string    `json:"audience"`
+	Direction       Direction `json:"direction"`
+	NotBefore       time.Time `json:"not_before"`
+	NotAfter        time.Time `json:"not_after"`
+	Revoked         bool      `json:"revoked,omitempty"`
+}
+
+// TrustStoreJSON is the top-level JSON document for an out-of-band trust store.
+type TrustStoreJSON struct {
+	Keys []TrustRecordJSON `json:"keys"`
+}
+
+// LoadTrustStoreJSON parses and validates an out-of-band peer trust store JSON
+// document (Spec 15 gr-xp-03).
+func LoadTrustStoreJSON(raw []byte) (*TrustStore, error) {
+	var doc TrustStoreJSON
+	if err := json.Unmarshal(raw, &doc); err != nil {
+		return nil, fmt.Errorf("parse trust store JSON: %w", err)
+	}
+	records := make([]Trust, 0, len(doc.Keys))
+	for i, k := range doc.Keys {
+		pubBytes, err := base64.StdEncoding.DecodeString(strings.TrimSpace(k.PublicKeyBase64))
+		if err != nil {
+			return nil, fmt.Errorf("trust record %d (%s): invalid base64 public key: %w", i, k.ProducerID, err)
+		}
+		records = append(records, Trust{
+			ProducerID: strings.TrimSpace(k.ProducerID),
+			PublicKey:  ed25519.PublicKey(pubBytes),
+			Audience:   strings.TrimSpace(k.Audience),
+			Direction:  k.Direction,
+			NotBefore:  k.NotBefore,
+			NotAfter:   k.NotAfter,
+			Revoked:    k.Revoked,
+		})
+	}
+	return NewTrustStore(records)
+}
+
+// LoadTrustStoreFile loads an out-of-band trust store from a restricted
+// owner-only file (Spec 15 gr-xp-03, Spec 17 R17-06).
+func LoadTrustStoreFile(path string) (*TrustStore, error) {
+	data, err := secretfile.Read(path)
+	if err != nil {
+		return nil, fmt.Errorf("read trust store file: %w", err)
+	}
+	return LoadTrustStoreJSON(data)
+}
+
+// RevocationSnapshot is an offline-verifiable revocation list with a bounded
+// freshness window (Spec 15 gr-xp-04). When the snapshot is past ExpiresAt,
+// ApplyRevocationSnapshot fails closed rather than verifying against stale
+// revocation state.
+type RevocationSnapshot struct {
+	IssuedAt       time.Time `json:"issued_at"`
+	ExpiresAt      time.Time `json:"expires_at"`
+	RevokedKeyIDs  []string  `json:"revoked_key_ids"`
+	RevokedMakers  []string  `json:"revoked_producers,omitempty"`
+}
+
+// LoadRevocationSnapshotJSON parses a JSON revocation snapshot.
+func LoadRevocationSnapshotJSON(raw []byte) (*RevocationSnapshot, error) {
+	var snap RevocationSnapshot
+	if err := json.Unmarshal(raw, &snap); err != nil {
+		return nil, fmt.Errorf("parse revocation snapshot JSON: %w", err)
+	}
+	if snap.IssuedAt.IsZero() || snap.ExpiresAt.IsZero() || !snap.ExpiresAt.After(snap.IssuedAt) {
+		return nil, errors.New("revocation snapshot requires valid issued_at and expires_at (expires_at > issued_at)")
+	}
+	return &snap, nil
+}
+
+// LoadRevocationSnapshotFile reads a revocation snapshot from an owner-only file.
+func LoadRevocationSnapshotFile(path string) (*RevocationSnapshot, error) {
+	data, err := secretfile.Read(path)
+	if err != nil {
+		return nil, fmt.Errorf("read revocation snapshot file: %w", err)
+	}
+	return LoadRevocationSnapshotJSON(data)
+}
+
+// ApplyRevocationSnapshot returns a new immutable TrustStore with all keys in
+// snap marked Revoked. If now is outside [snap.IssuedAt, snap.ExpiresAt], it
+// fails closed with an error so an expired offline revocation snapshot cannot
+// silently leave a revoked key active (Spec 15 gr-xp-04).
+func (t *TrustStore) ApplyRevocationSnapshot(snap *RevocationSnapshot, now time.Time) (*TrustStore, error) {
+	if t == nil {
+		return nil, errors.New("trust store is nil")
+	}
+	if snap == nil {
+		return nil, errors.New("revocation snapshot is nil")
+	}
+	if snap.IssuedAt.IsZero() || snap.ExpiresAt.IsZero() || !snap.ExpiresAt.After(snap.IssuedAt) {
+		return nil, errors.New("revocation snapshot has an invalid freshness window")
+	}
+	if now.Before(snap.IssuedAt) {
+		return nil, errors.New("revocation snapshot issued_at is in the future")
+	}
+	if now.After(snap.ExpiresAt) {
+		return nil, errors.New("revocation snapshot is past expires_at; failing closed on stale revocation state")
+	}
+	revokedIDs := make(map[string]bool, len(snap.RevokedKeyIDs))
+	for _, id := range snap.RevokedKeyIDs {
+		revokedIDs[strings.TrimSpace(id)] = true
+	}
+	revokedProducers := make(map[string]bool, len(snap.RevokedMakers))
+	for _, p := range snap.RevokedMakers {
+		revokedProducers[strings.TrimSpace(p)] = true
+	}
+	byKeyID := make(map[string]Trust, len(t.byKeyID))
+	for id, rec := range t.byKeyID {
+		if revokedIDs[id] || revokedProducers[rec.ProducerID] {
+			rec.Revoked = true
+		}
+		byKeyID[id] = rec
+	}
+	return &TrustStore{byKeyID: byKeyID}, nil
 }

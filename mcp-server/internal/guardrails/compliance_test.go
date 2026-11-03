@@ -174,3 +174,40 @@ func TestEvidenceCollector_CollectEvidence(t *testing.T) {
 		}
 	})
 }
+
+func TestComplianceReporter_ExportAndGapRecords(t *testing.T) {
+	mapper, err := NewEmbeddedComplianceMapper()
+	if err != nil {
+		t.Fatalf("NewEmbeddedComplianceMapper: %v", err)
+	}
+	reporter := NewComplianceReporter(mapper, slog.Default())
+	probes := ProbeSet{
+		"audit_logging": func(_ context.Context) (FeatureStatus, string) {
+			return FeatureActive, "audit active"
+		},
+	}
+	art, err := reporter.GenerateMeasuredReport(context.Background(), "eu_ai_act", probes)
+	if err != nil {
+		t.Fatalf("GenerateMeasuredReport: %v", err)
+	}
+	if len(art.GapRecords) == 0 {
+		t.Fatal("expected structured compliance_gaps records on partial probe coverage")
+	}
+
+	tmpDir := t.TempDir()
+	jsonPath, err := reporter.ExportArtifact(art, tmpDir, FormatJSON)
+	if err != nil {
+		t.Fatalf("ExportArtifact JSON: %v", err)
+	}
+	if !strings.HasSuffix(jsonPath, ".json") {
+		t.Fatalf("expected .json export path, got %q", jsonPath)
+	}
+	mdPath, err := reporter.ExportArtifact(art, tmpDir, FormatMarkdown)
+	if err != nil {
+		t.Fatalf("ExportArtifact Markdown: %v", err)
+	}
+	if !strings.HasSuffix(mdPath, ".markdown") && !strings.HasSuffix(mdPath, ".md") {
+		t.Fatalf("expected markdown export path, got %q", mdPath)
+	}
+}
+

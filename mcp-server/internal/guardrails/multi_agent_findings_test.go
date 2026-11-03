@@ -186,3 +186,81 @@ func TestResolveConflicts_PriorityTieBreak(t *testing.T) {
 		t.Errorf("tie should break to lexicographically smallest agent (alpha), got %q", res.ResolvedOutput)
 	}
 }
+
+func TestResolveConflicts_MajorityStrategy(t *testing.T) {
+	outputs := []AgentOutput{
+		{AgentID: "a1", Output: "plan-a", Actions: []string{"read", "verify"}},
+		{AgentID: "a2", Output: "plan-a", Actions: []string{"read", "deploy"}},
+		{AgentID: "a3", Output: "plan-b", Actions: []string{"read", "verify"}},
+	}
+	res := ResolveConflicts(outputs, ConflictMajority)
+	if !res.Resolved {
+		t.Fatal("expected majority resolution to succeed when 2/3 agree")
+	}
+	if res.ResolutionMethod != string(ConflictMajority) {
+		t.Fatalf("resolution method = %q, want majority", res.ResolutionMethod)
+	}
+	if res.ResolvedOutput != "read\nverify" {
+		t.Fatalf("resolved output = %q, want 'read\\nverify'", res.ResolvedOutput)
+	}
+	if len(res.Conflicts) != 1 || res.Conflicts[0] != "deploy" {
+		t.Fatalf("expected minority action 'deploy' in conflicts, got %v", res.Conflicts)
+	}
+
+	// No majority when 3 agents all propose distinct actions.
+	noMaj := []AgentOutput{
+		{AgentID: "a1", Actions: []string{"act1"}},
+		{AgentID: "a2", Actions: []string{"act2"}},
+		{AgentID: "a3", Actions: []string{"act3"}},
+	}
+	res2 := ResolveConflicts(noMaj, ConflictMajority)
+	if res2.Resolved {
+		t.Fatal("expected Resolved=false when no action has >50% majority")
+	}
+}
+
+func TestMultiAgent_Sec53TransitiveDelegationAndCrossAgentInjection(t *testing.T) {
+	// Spec 04 Sec. 5.3: 3-hop constraint inheritance (root -> planner -> worker)
+	// must prevent any hop from downgrading root's critical constraint.
+	rootConstraints := []AgentConstraint{
+		{ID: "no-prod-drop", Name: "forbid drop table", Severity: "critical"},
+		{ID: "audit-all", Name: "audit tool calls", Severity: "high"},
+	}
+	hop1 := ResolveConstraints("planner", "root", rootConstraints, []AgentConstraint{
+		{ID: "no-prod-drop", Name: "weaker", Severity: "medium"}, // attempt downgrade at hop 1
+	})
+	if !hop1.DowngradePrevented {
+		t.Fatal("expected hop 1 downgrade attempt to be prevented")
+	}
+	hop2 := ResolveConstraints("worker", "planner", hop1.MergedConstraints, []AgentConstraint{
+		{ID: "no-prod-drop", Name: "weaker-still", Severity: "low"}, // attempt downgrade at hop 2
+		{ID: "audit-all", Name: "skip-audit", Severity: ""},         // attempt empty severity override
+	})
+	if !hop2.DowngradePrevented {
+		t.Fatal("expected hop 2 downgrade attempt to be prevented")
+	}
+	for _, c := range hop2.MergedConstraints {
+		if c.ID == "no-prod-drop" && c.Severity != "critical" {
+			t.Fatalf("root critical constraint was downgraded across hops to %q", c.Severity)
+		}
+		if c.ID == "audit-all" && c.Severity != "high" {
+			t.Fatalf("root high constraint was downgraded across hops to %q", c.Severity)
+		}
+	}
+
+	// Cross-agent output injection blocked by safety chain before reaching downstream agent.
+	chain := NewSafetyChain(SafetyChainDefinition{
+		ID:        "inter-agent-chain",
+		OnFailure: OnFailureBlockAndEscalate,
+		Steps: []ChainStep{
+			{Validator: "four_laws", Action: ActionBlock},
+		},
+	}, []SafetyValidator{
+		NewFourLawsValidator(nil),
+	}, nil)
+	chainRes := chain.Execute(context.Background(), "worker", "rm -rf / --no-preserve-root", "inter-agent delegation", "planner")
+	if chainRes.Passed || chainRes.Decision == "allow" {
+		t.Fatalf("expected malicious inter-agent output to be blocked by chain, got decision=%q", chainRes.Decision)
+	}
+}
+

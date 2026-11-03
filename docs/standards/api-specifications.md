@@ -61,35 +61,39 @@ BEST FOR:
 
 ### What is OpenSpec?
 
-OpenSpec is a specification format that may offer different capabilities or focus areas compared to OpenAPI. (Note: If referring to a specific OpenSpec project, details would go here.)
+OpenSpec is a spec-driven development framework for AI-assisted and multi-agent software engineering that organizes proposals, requirements (`SHALL`/`MUST`), scenarios (`WHEN`/`THEN`), and change tasks in structured Markdown under `openspec/` or `docs/specs/`.
 
-```yaml
-# OpenSpec example structure (hypothetical)
-openspec: 1.0.0
-info:
-  title: API Name
-  version: 1.0.0
-operations:
-  - name: getResource
-    path: /resource/{id}
-    method: GET
+Official OpenSpec resources:
+- Project site: https://openspec.dev
+- Documentation: https://openspec.dev/docs
+- Source repository: https://github.com/Fission-AI/OpenSpec
+
+```markdown
+# Local illustration of an OpenSpec requirement block
+### Requirement: Bounded evidence verification
+The verifier SHALL validate transport, integrity, producer trust, and authorization as distinct stages.
+
+#### Scenario: untrusted producer key
+- **WHEN** an artifact is signed by a key absent from the provisioned trust store
+- **THEN** verification fails closed with `producer_untrusted`
 ```
 
 ### OpenSpec Strengths
 
 ```
 BEST FOR:
-- Specific use cases where OpenSpec excels
-- Projects already using OpenSpec
-- Integration with OpenSpec-specific tools
-- Non-REST API patterns
+- Spec-driven development and architectural change proposals
+- Behavioral requirement and scenario tracking (`WHEN`/`THEN`)
+- Multi-agent and security gate conformance verification
+- Non-REST architectural contracts and cross-product boundaries
 ```
 
 ### OpenSpec Tooling
 
 | Tool | Purpose |
 |------|---------|
-| [OpenSpec tools] | [Purposes] |
+| OpenSpec CLI (`openspec`) | Initialize, validate, and archive spec changes (https://github.com/Fission-AI/OpenSpec) |
+| Repo spec gates | Enforce requirement coverage, link integrity, and line caps |
 
 ---
 

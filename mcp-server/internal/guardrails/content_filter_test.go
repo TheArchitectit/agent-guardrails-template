@@ -215,3 +215,84 @@ func TestContentFilter_UpdateRulesInvalidatesCache(t *testing.T) {
 		t.Error("after UpdateRules override to allow, cached stale block must be gone")
 	}
 }
+
+func TestContentFilter_ClassifyStreamShortCircuitsOnBlock(t *testing.T) {
+	// Dynamic classifier that flags S10 once "HATE_TRIGGER" appears in text.
+	backend := &fakeClassifier{
+		name:      "stream-fake",
+		available: true,
+		scores:    map[string]float64{"S10": 0.05},
+	}
+	cf := NewContentFilter([]SemanticClassifier{backend}, nil)
+	defer cf.Stop()
+
+	// Replace backend with one that inspects the accumulated buffer.
+	streamBackend := &dynamicStreamClassifier{}
+	cf = NewContentFilter([]SemanticClassifier{streamBackend}, nil)
+	defer cf.Stop()
+
+	ch := make(chan string, 4)
+	ch <- "Hello safe prefix "
+	ch <- "HATE_TRIGGER mid-stream "
+	ch <- "trailing chunk that should not be read"
+	close(ch)
+
+	res, err := cf.ClassifyStream(context.Background(), ch, DirectionOutput)
+	if err != nil {
+		t.Fatalf("ClassifyStream: %v", err)
+	}
+	if res.Safe || !res.IsBlocked() {
+		t.Fatalf("expected stream to block on trigger chunk, got Safe=%v", res.Safe)
+	}
+	if streamBackend.calls != 2 {
+		t.Fatalf("expected short-circuit after 2nd chunk, got %d calls", streamBackend.calls)
+	}
+}
+
+type dynamicStreamClassifier struct {
+	calls int
+}
+
+func (d *dynamicStreamClassifier) Name() string                      { return "dynamic-stream" }
+func (d *dynamicStreamClassifier) Available(_ context.Context) bool { return true }
+func (d *dynamicStreamClassifier) Classify(_ context.Context, text string) (map[string]float64, error) {
+	d.calls++
+	if len(text) > 20 {
+		return map[string]float64{"S10": 0.95}, nil
+	}
+	return map[string]float64{"S10": 0.01}, nil
+}
+
+func TestContentFilter_MultiBackendFailoverAndReloadConfig(t *testing.T) {
+	primaryDown := &fakeClassifier{name: "llama-guard-down", available: false}
+	secondaryErr := &fakeClassifier{name: "openai-err", available: true, err: errors.New("503 upstream")}
+	tertiaryOK := newAvailableClassifier("perspective-ok", map[string]float64{"S11": 0.1})
+
+	cf := NewContentFilter([]SemanticClassifier{primaryDown, secondaryErr, tertiaryOK}, nil)
+	defer cf.Stop()
+
+	res, err := cf.Classify(context.Background(), "benign text", DirectionInput)
+	if err != nil {
+		t.Fatalf("Classify failover: %v", err)
+	}
+	if !res.Safe {
+		t.Fatalf("expected tertiary backend to classify safe, got Safe=false")
+	}
+	if res.Backend != "perspective-ok" {
+		t.Fatalf("expected backend perspective-ok, got %q", res.Backend)
+	}
+
+	// ReloadConfig with updated policy rules clears cache and applies new config.
+	newCfg := DefaultFilterConfig()
+	newCfg.Policies = []PolicyRule{{
+		ID:        "strict-s11",
+		Overrides: []PolicyOverride{{Category: "S11", Action: ActionBlock, Description: "strict"}},
+	}}
+	if err := cf.ReloadConfig(newCfg); err != nil {
+		t.Fatalf("ReloadConfig: %v", err)
+	}
+	if err := cf.ReloadConfig(nil); err == nil {
+		t.Fatal("expected nil config reload to fail")
+	}
+}
+

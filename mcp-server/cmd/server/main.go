@@ -711,18 +711,31 @@ policyPacksDone:
 		}
 	}()
 
-	// Spec 01 Sec. 4.2: "Blocklists are hot-reloaded (SIGHUP or file watcher)",
-	// and .env.example documents "send SIGHUP". Until now SIGHUP was not
-	// handled at all — the documented reload path did not exist.
+	// Spec 01 Sec. 4.2, Spec 02 Sec. 3.2, Spec 03 Sec. 3.2: hot-reload blocklists,
+	// content filter config, and sandbox config on SIGHUP.
 	reload := make(chan os.Signal, 1)
 	signal.Notify(reload, syscall.SIGHUP)
 	go func() {
 		for range reload {
 			if err := engine.ReloadInjectionPatterns(); err != nil {
 				slog.Error("injection blocklist reload failed; the prior pattern set remains in force", "error", err)
-				continue
+			} else {
+				slog.Info("injection blocklists reloaded (SIGHUP)")
 			}
-			slog.Info("injection blocklists reloaded (SIGHUP)")
+			if cfg.ContentFilterConfigFile != "" {
+				if err := engine.ReloadContentFilter(cfg.ContentFilterConfigFile); err != nil {
+					slog.Error("content filter reload failed; the prior config remains in force", "error", err)
+				} else {
+					slog.Info("content filter config reloaded (SIGHUP)")
+				}
+			}
+			if cfg.SandboxConfigFile != "" {
+				if err := engine.ReloadSandboxConfig(cfg.SandboxConfigFile); err != nil {
+					slog.Error("sandbox config reload failed; the prior config remains in force", "error", err)
+				} else {
+					slog.Info("sandbox config reloaded (SIGHUP)")
+				}
+			}
 		}
 	}()
 

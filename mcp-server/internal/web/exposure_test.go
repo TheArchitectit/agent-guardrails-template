@@ -187,3 +187,33 @@ func TestExposureRegistryPublicSetIsReviewed(t *testing.T) {
 		}
 	}
 }
+
+// TestExposureForConfigNarrowsOperationalRoutesInPublicAndProduction verifies
+// Spec 12 Sec. 3.2: /metrics, /docs, and /openapi.yaml are narrowed to
+// ExposureAuthenticated when ProductionMode is true or DeploymentProfile is
+// "public", while /health/live and /health/ready remain public probes.
+func TestExposureForConfigNarrowsOperationalRoutesInPublicAndProduction(t *testing.T) {
+	localCfg := &config.Config{DeploymentProfile: "local", ProductionMode: false}
+	prodCfg := &config.Config{DeploymentProfile: "local", ProductionMode: true}
+	publicCfg := &config.Config{DeploymentProfile: "public", ProductionMode: false}
+
+	for _, p := range []string{"/metrics", "/docs", "/openapi.yaml"} {
+		if got := ExposureForConfig(localCfg, http.MethodGet, p, p); got != ExposurePublic {
+			t.Errorf("local profile %s: got %q, want public", p, got)
+		}
+		if got := ExposureForConfig(prodCfg, http.MethodGet, p, p); got != ExposureAuthenticated {
+			t.Errorf("ProductionMode %s: got %q, want authenticated", p, got)
+		}
+		if got := ExposureForConfig(publicCfg, http.MethodGet, p, p); got != ExposureAuthenticated {
+			t.Errorf("public profile %s: got %q, want authenticated", p, got)
+		}
+	}
+
+	// Liveness and readiness probes stay public across profiles.
+	for _, p := range []string{"/health/live", "/health/ready"} {
+		if got := ExposureForConfig(publicCfg, http.MethodGet, p, p); got != ExposurePublic {
+			t.Errorf("public profile probe %s: got %q, want public", p, got)
+		}
+	}
+}
+

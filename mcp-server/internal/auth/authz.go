@@ -632,8 +632,8 @@ func ClassifyREST(method, requestPath string) ActionRequest {
 			Scopes: RequiredScopeForKind(ActionRead, "rest"),
 		}
 	case http.MethodPost:
-		// updates/check is a validate-class check.
-		if p == "/api/updates/check" || strings.HasPrefix(p, "/api/v1/policy/") {
+		// updates/check and evidence/verify are validate-class checks.
+		if p == "/api/updates/check" || p == "/api/evidence/verify" || strings.HasPrefix(p, "/api/v1/policy/") {
 			return ActionRequest{
 				Name: name, Kind: ActionValidate, Resource: resource,
 				Scopes: RequiredScopeForKind(ActionValidate, "rest"),
@@ -661,7 +661,7 @@ func restResourceFromPath(p string) string {
 		id := parts[2]
 		// skip non-ID subpaths
 		switch id {
-		case "search", "sync", "status", "orphans", "check", "upload":
+		case "search", "sync", "status", "orphans", "check", "upload", "verify":
 			return ""
 		}
 		if id != "" && len(id) <= 128 {
