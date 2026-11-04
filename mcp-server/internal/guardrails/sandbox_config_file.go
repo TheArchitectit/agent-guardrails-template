@@ -255,6 +255,22 @@ type sandboxLimitsYAML struct {
 		MaxSeconds     *int `yaml:"max_seconds"`
 		MaxWallSeconds *int `yaml:"max_wall_seconds"`
 	} `yaml:"time"`
+	// The two capability-matrix dimensions sandbox-isolation-levels names
+	// beyond filesystem/network/process. Every scalar here is a pointer for
+	// the reason the header of this block gives: an omitted switch must be
+	// distinguishable from an explicit false, and an omitted bound from an
+	// explicit 0 — especially here, where 0 is the STRICTEST MaxSecrets
+	// (inject none) rather than "no bound".
+	Secrets *struct {
+		AllowedEnv           []string `yaml:"allowed_env"`
+		AllowCredentialFiles *bool    `yaml:"allow_credential_files"`
+		MaxSecrets           *int     `yaml:"max_secrets"`
+	} `yaml:"secrets"`
+	StatePersistence *struct {
+		Allowed        *bool    `yaml:"allowed"`
+		MaxPersistedMB *int     `yaml:"max_persisted_mb"`
+		PersistPaths   []string `yaml:"persist_paths"`
+	} `yaml:"state_persistence"`
 }
 
 // toLimits overlays the declared fields on base. A field that is absent keeps
@@ -310,6 +326,31 @@ func (s *sandboxLimitsYAML) toLimits(base ResourceLimits) (ResourceLimits, error
 		}
 		if s.Time.MaxWallSeconds != nil {
 			out.Time.MaxWallSeconds = *s.Time.MaxWallSeconds
+		}
+	}
+	if s.Secrets != nil {
+		// Absent keeps the base allowlist; present (even empty) replaces it.
+		// An operator who writes `allowed_env: []` means "no environment", and
+		// silently inheriting the base would grant one.
+		if s.Secrets.AllowedEnv != nil {
+			out.Secrets.AllowedEnv = append([]string(nil), s.Secrets.AllowedEnv...)
+		}
+		if s.Secrets.AllowCredentialFiles != nil {
+			out.Secrets.AllowCredentialFiles = *s.Secrets.AllowCredentialFiles
+		}
+		if s.Secrets.MaxSecrets != nil {
+			out.Secrets.MaxSecrets = *s.Secrets.MaxSecrets
+		}
+	}
+	if s.StatePersistence != nil {
+		if s.StatePersistence.Allowed != nil {
+			out.StatePersistence.Allowed = *s.StatePersistence.Allowed
+		}
+		if s.StatePersistence.MaxPersistedMB != nil {
+			out.StatePersistence.MaxPersistedMB = *s.StatePersistence.MaxPersistedMB
+		}
+		if s.StatePersistence.PersistPaths != nil {
+			out.StatePersistence.PersistPaths = append([]string(nil), s.StatePersistence.PersistPaths...)
 		}
 	}
 	return out, nil

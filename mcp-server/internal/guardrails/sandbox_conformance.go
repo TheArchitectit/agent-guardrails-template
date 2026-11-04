@@ -123,40 +123,80 @@ type SandboxCertificationReport struct {
 
 // TierToSandboxLevel maps each canonical named tier to the underlying
 // SandboxLevel and baseline ResourceLimits enforced by SandboxManager.
+//
+// The two dimensions sandbox-isolation-levels names beyond filesystem/network/
+// process — SECRETS and STATE PERSISTENCE — are set explicitly for every tier
+// here. They were absent from ResourceLimits entirely until 2026-11-03, so the
+// requirement "each with an explicit capability matrix covering filesystem,
+// network, process, secrets, and state persistence" was marked EXERCISED on a
+// matrix that had three of its five columns.
+//
+// On the ordering of the secrets cell: AllSandboxTiers returns the tiers in
+// ascending containment strength (observer < restricted < contained <
+// ephemeral), which orders the ISOLATION MECHANISM, not what the box permits.
+// A stronger box may safely permit a more dangerous thing — a credential file
+// is safe to mount inside a cap-drop=ALL, no-new-privileges container with an
+// allowlisted egress proxy (contained), and is NOT safe to mount inside a bare
+// L1 namespace where anything the workload forks can read it (restricted). The
+// matrix therefore grants credential files only at contained, and grants no
+// secret values at all at observer (read-only inspection) or ephemeral
+// (throwaway scratch).
 func TierToSandboxLevel(tier SandboxTier) (SandboxLevel, ResourceLimits, error) {
 	defaults := DefaultSandboxConfig().GlobalDefaults
 	switch tier {
 	case TierObserver:
 		// Observer: read-only inspection tier, zero writable host mounts,
-		// network disabled.
+		// network disabled. Inspects; holds no credentials; leaves nothing.
 		lim := cloneLimits(defaults)
 		lim.Disk.ReadWritePaths = []string{"/tmp"}
 		lim.Disk.ReadOnlyPaths = []string{"/workspace", "/etc", "/usr", "/bin"}
 		lim.Network.Enabled = false
 		lim.Network.AllowedHosts = nil
+		lim.Secrets.AllowedEnv = []string{"PATH", "HOME", "LANG"}
+		lim.Secrets.AllowCredentialFiles = false
+		lim.Secrets.MaxSecrets = 0
+		lim.StatePersistence.Allowed = false
+		lim.StatePersistence.MaxPersistedMB = 0
+		lim.StatePersistence.PersistPaths = nil
 		return LevelL1, lim, nil
 	case TierRestricted:
 		// Restricted: L1 namespace isolation, bounded writable /workspace,
-		// allowlisted network only.
+		// allowlisted network only. May receive a few DECLARED secret values;
+		// never a credential file (see the ordering note above).
 		lim := cloneLimits(defaults)
 		lim.Disk.ReadWritePaths = []string{"/tmp", "/workspace"}
 		lim.Disk.ReadOnlyPaths = []string{"/etc", "/usr", "/bin", "/sbin"}
 		lim.Network.Enabled = true
 		lim.Network.AllowedHosts = []string{"github.com", "*.github.com"}
+		lim.Secrets.AllowedEnv = []string{"PATH", "HOME", "LANG"}
+		lim.Secrets.AllowCredentialFiles = false
+		lim.Secrets.MaxSecrets = 4
+		lim.StatePersistence.Allowed = true
+		lim.StatePersistence.MaxPersistedMB = 32
+		lim.StatePersistence.PersistPaths = []string{"/workspace"}
 		return LevelL1, lim, nil
 	case TierContained:
 		// Contained: L2 rootless container isolation with read-only rootfs,
-		// cap-drop=ALL, no-new-privileges, and allowlisted egress proxy.
+		// cap-drop=ALL, no-new-privileges, and allowlisted egress proxy. The
+		// hardening is what makes a mounted credential file acceptable here
+		// and nowhere else.
 		lim := cloneLimits(defaults)
 		lim.Disk.ReadWritePaths = []string{"/tmp", "/workspace"}
 		lim.Disk.ReadOnlyPaths = []string{"/etc", "/usr", "/bin", "/sbin"}
 		lim.Network.Enabled = true
 		lim.Network.AllowedHosts = []string{"github.com"}
 		lim.Process.MaxProcesses = 128
+		lim.Secrets.AllowedEnv = []string{"PATH", "HOME", "LANG"}
+		lim.Secrets.AllowCredentialFiles = true
+		lim.Secrets.MaxSecrets = 8
+		lim.StatePersistence.Allowed = true
+		lim.StatePersistence.MaxPersistedMB = 128
+		lim.StatePersistence.PersistPaths = []string{"/workspace"}
 		return LevelL2, lim, nil
 	case TierEphemeral:
 		// Ephemeral: L2 rootless container isolation with zero host writable
-		// mounts (tmpfs scratch only), network=none, and tight pids/time bounds.
+		// mounts (tmpfs scratch only), network=none, and tight pids/time
+		// bounds. Strictest posture: no secrets, nothing outlives the run.
 		lim := cloneLimits(defaults)
 		lim.Disk.ReadWritePaths = []string{"/tmp"}
 		lim.Disk.ReadOnlyPaths = []string{"/usr", "/bin"}
@@ -166,6 +206,12 @@ func TierToSandboxLevel(tier SandboxTier) (SandboxLevel, ResourceLimits, error) 
 		lim.Process.MaxProcesses = 64
 		lim.Time.MaxSeconds = 30
 		lim.Time.MaxWallSeconds = 60
+		lim.Secrets.AllowedEnv = []string{"PATH"}
+		lim.Secrets.AllowCredentialFiles = false
+		lim.Secrets.MaxSecrets = 0
+		lim.StatePersistence.Allowed = false
+		lim.StatePersistence.MaxPersistedMB = 0
+		lim.StatePersistence.PersistPaths = nil
 		return LevelL2, lim, nil
 	default:
 		return "", ResourceLimits{}, fmt.Errorf("unknown sandbox tier %q", tier)
@@ -255,23 +301,52 @@ func CheckPathContainment(targetPath string, mode string, limits ResourceLimits)
 
 // CheckSecretContainment verifies whether an environment variable or secret
 // file access is blocked by the tier's containment policy.
+//
+// The tier's declared Secrets cell is the authority. The caller's allowedEnv is
+// what the WORKLOAD asked for, and a name is permitted only when it appears in
+// both: a secret the tier does not grant is stripped regardless of what the
+// workload declared, and a secret the tier does grant still has to have been
+// declared for this workload. Before 2026-11-03 the tier's cell did not exist,
+// so the fixture's own list was the only allowlist and the report could certify
+// a tier whose limits said nothing about secrets at all.
 func CheckSecretContainment(secretEnv string, targetPath string, allowedEnv []string, limits ResourceLimits) (bool, string) {
 	if targetPath != "" {
 		if blocked, reason := CheckPathContainment(targetPath, "read", limits); !blocked {
-			return false, fmt.Sprintf("secret path %q was readable under limits", targetPath)
+			// The mount would allow the read. The secrets cell decides whether
+			// a credential file may be read at all on this tier.
+			if !limits.Secrets.AllowCredentialFiles {
+				return true, fmt.Sprintf("secret path %q would be readable under the mount plan, but tier denies credential files (secrets.allow_credential_files=false)", targetPath)
+			}
+			return false, fmt.Sprintf("secret path %q was readable under limits (credential files allowed on this tier)", targetPath)
 		} else if secretEnv == "" {
 			return true, reason
 		}
 	}
 	if secretEnv != "" {
-		for _, allowed := range allowedEnv {
-			if strings.EqualFold(strings.TrimSpace(allowed), strings.TrimSpace(secretEnv)) {
-				return false, fmt.Sprintf("secret env %q was present in allowedEnv", secretEnv)
-			}
+		name := strings.TrimSpace(secretEnv)
+		if !envNameAllowed(name, limits.Secrets.AllowedEnv) {
+			return true, fmt.Sprintf("undeclared secret env %q stripped by sandbox environment scrubber (tier allows only %v)", secretEnv, limits.Secrets.AllowedEnv)
 		}
-		return true, fmt.Sprintf("undeclared secret env %q stripped by sandbox environment scrubber (only %v permitted)", secretEnv, allowedEnv)
+		if !envNameAllowed(name, allowedEnv) {
+			return true, fmt.Sprintf("secret env %q is inside the tier allowlist %v but this workload never declared it", secretEnv, limits.Secrets.AllowedEnv)
+		}
+		if limits.Secrets.MaxSecrets <= 0 {
+			return true, fmt.Sprintf("secret env %q is declared but tier injects no secret values (secrets.max_secrets=0)", secretEnv)
+		}
+		return false, fmt.Sprintf("secret env %q is declared and within the tier allowlist", secretEnv)
 	}
 	return true, "undeclared secret access blocked"
+}
+
+// envNameAllowed reports whether name appears in the allowlist, case-insensitive
+// the way environment variable names are compared on the platforms this runs.
+func envNameAllowed(name string, allow []string) bool {
+	for _, a := range allow {
+		if strings.EqualFold(strings.TrimSpace(a), name) {
+			return true
+		}
+	}
+	return false
 }
 
 // evaluateEscapeFixture runs one escape fixture against the tier's enforcement

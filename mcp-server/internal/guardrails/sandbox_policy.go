@@ -104,12 +104,35 @@ func mergeLimits(global, policy ResourceLimits) ResourceLimits {
 	if policy.Time.MaxWallSeconds > 0 {
 		out.Time.MaxWallSeconds = policy.Time.MaxWallSeconds
 	}
+	// Secrets/state cell: the list-valued fields inherit the way the path sets
+	// do (a policy states only what it changes). The three switches below are
+	// explicit.
+	if len(policy.Secrets.AllowedEnv) > 0 {
+		out.Secrets.AllowedEnv = append([]string(nil), policy.Secrets.AllowedEnv...)
+	}
+	if policy.StatePersistence.MaxPersistedMB > 0 {
+		out.StatePersistence.MaxPersistedMB = policy.StatePersistence.MaxPersistedMB
+	}
+	if len(policy.StatePersistence.PersistPaths) > 0 {
+		out.StatePersistence.PersistPaths = append([]string(nil), policy.StatePersistence.PersistPaths...)
+	}
 
 	// Explicit, never inherited: a policy that does not ask for network does
 	// not get any, even when the global default enables it for a specific
 	// tool family. Without this the `git` default (network on) would silently
 	// hand network to every inheriting policy.
 	out.Network.Enabled = policy.Network.Enabled
+
+	// Same rule for the three security switches the secrets/state cells carry.
+	// false is the safe reading of an absent value, so inheriting a true from
+	// the global would hand every policy a capability its own declaration
+	// never asked for. Note the asymmetry with the numeric bounds above:
+	// MaxSecrets is a switch ("may any secret value be injected") rather than a
+	// bound to raise, because 0 means NONE, which is the strictest setting —
+	// the opposite of MaxWriteMB where 0 means unbounded.
+	out.Secrets.AllowCredentialFiles = policy.Secrets.AllowCredentialFiles
+	out.Secrets.MaxSecrets = policy.Secrets.MaxSecrets
+	out.StatePersistence.Allowed = policy.StatePersistence.Allowed
 
 	return out
 }

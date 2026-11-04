@@ -49,6 +49,47 @@ type ResourceLimits struct {
 		MaxSeconds     int `yaml:"max_seconds"`      // Process execution timeout
 		MaxWallSeconds int `yaml:"max_wall_seconds"` // Maximum wall-clock time
 	} `yaml:"time"`
+
+	// Secrets is the fourth capability-matrix dimension named by
+	// sandbox-isolation-levels ("filesystem, network, process, secrets, and
+	// state persistence"). Until 2026-11-03 the matrix had no secrets cell at
+	// all: ResourceLimits carried filesystem (Disk), network and process, and
+	// the closure table nonetheless marked the requirement EXERCISED.
+	Secrets struct {
+		// AllowedEnv is the COMPLETE list of environment variable names the
+		// workload may observe. Everything else the parent holds — every
+		// credential-shaped variable — is dropped before exec by
+		// scrubEnvironment. An empty list means the workload gets no
+		// environment at all; PATH is granted explicitly, never implicitly.
+		AllowedEnv []string `yaml:"allowed_env"`
+		// AllowCredentialFiles permits reads of mounted credential files.
+		// false — the safe reading of an absent value, matching
+		// Network.Enabled — denies them even when a mount would allow the
+		// read.
+		AllowCredentialFiles bool `yaml:"allow_credential_files"`
+		// MaxSecrets bounds how many secret VALUES may be injected into the
+		// workload (0 = none may be injected). Explicit, never inherited:
+		// absence means "no secrets", which is the safe reading.
+		MaxSecrets int `yaml:"max_secrets"`
+	} `yaml:"secrets"`
+
+	// StatePersistence is the fifth capability-matrix dimension named by
+	// sandbox-isolation-levels. It answers a question the Disk paths cannot:
+	// not "where may the workload write" but "may anything it writes outlive
+	// the run".
+	StatePersistence struct {
+		// Allowed declares whether any state may outlive the workload run.
+		// false — the safe reading of an absent value — means the run is
+		// ephemeral: writes go to bounded scratch that dies with the process.
+		Allowed bool `yaml:"allowed"`
+		// MaxPersistedMB bounds the bytes of state that may outlive the run
+		// (0 = none, even when Allowed is true). Only meaningful when Allowed
+		// is true; follows the MaxWriteMB inheritance rule (>0 overrides).
+		MaxPersistedMB int `yaml:"max_persisted_mb"`
+		// PersistPaths names the only directories where state may outlive the
+		// run. Empty means none, even when Allowed is true.
+		PersistPaths []string `yaml:"persist_paths"`
+	} `yaml:"state_persistence"`
 }
 
 // SandboxPolicy defines the default sandbox behavior for a specific tool type.
@@ -101,6 +142,33 @@ func DefaultSandboxConfig() *SandboxConfig {
 				MaxSeconds     int `yaml:"max_seconds"`
 				MaxWallSeconds int `yaml:"max_wall_seconds"`
 			}{MaxSeconds: 300, MaxWallSeconds: 600},
+			Secrets: struct {
+				AllowedEnv           []string `yaml:"allowed_env"`
+				AllowCredentialFiles bool     `yaml:"allow_credential_files"`
+				MaxSecrets           int      `yaml:"max_secrets"`
+			}{
+				// A minimal NON-secret baseline. PATH is granted explicitly
+				// (never implicitly) so a workload can find binaries; HOME and
+				// LANG are the usual harmless pair the escape fixtures already
+				// treat as declared. Every other name — AWS_*, *_API_KEY,
+				// OPENAI_API_KEY, the lot — is stripped by scrubEnvironment.
+				AllowedEnv:           []string{"PATH", "HOME", "LANG"},
+				AllowCredentialFiles: false,
+				MaxSecrets:           0,
+			},
+			StatePersistence: struct {
+				Allowed        bool     `yaml:"allowed"`
+				MaxPersistedMB int      `yaml:"max_persisted_mb"`
+				PersistPaths   []string `yaml:"persist_paths"`
+			}{
+				// Absent-by-default posture: a run leaves nothing behind
+				// unless a policy says otherwise. This is the reading that
+				// matches Network.Enabled's rule (false is the safe reading of
+				// a missing value).
+				Allowed:        false,
+				MaxPersistedMB: 0,
+				PersistPaths:   nil,
+			},
 		},
 		ToolPolicies: map[string]SandboxPolicy{
 			"bash": {
@@ -164,6 +232,8 @@ func cloneLimits(in ResourceLimits) ResourceLimits {
 	out.Disk.ReadOnlyPaths = append([]string(nil), in.Disk.ReadOnlyPaths...)
 	out.Disk.ReadWritePaths = append([]string(nil), in.Disk.ReadWritePaths...)
 	out.Network.AllowedHosts = append([]string(nil), in.Network.AllowedHosts...)
+	out.Secrets.AllowedEnv = append([]string(nil), in.Secrets.AllowedEnv...)
+	out.StatePersistence.PersistPaths = append([]string(nil), in.StatePersistence.PersistPaths...)
 	return out
 }
 
@@ -219,6 +289,20 @@ func (c *SandboxConfig) Validate() error {
 	if c.GlobalDefaults.Disk.MaxWriteMB < 0 {
 		return fmt.Errorf("sandbox max_write_mb must be >= 0")
 	}
+	if c.GlobalDefaults.Secrets.MaxSecrets < 0 {
+		return fmt.Errorf("sandbox max_secrets must be >= 0")
+	}
+	if c.GlobalDefaults.StatePersistence.MaxPersistedMB < 0 {
+		return fmt.Errorf("sandbox max_persisted_mb must be >= 0")
+	}
+	if err := validateSecretEnvNames(c.GlobalDefaults.Secrets.AllowedEnv); err != nil {
+		return fmt.Errorf("sandbox allowed_env: %w", err)
+	}
+	for _, p := range c.GlobalDefaults.StatePersistence.PersistPaths {
+		if verr := validateMountPath(p); verr != nil {
+			return fmt.Errorf("sandbox persist_paths: %w", verr)
+		}
+	}
 	if c.Image != "" {
 		if err := validateImageRef(c.Image); err != nil {
 			return err
@@ -250,6 +334,39 @@ func (c *SandboxConfig) Validate() error {
 		}
 		if policy.ResourceLimits.Disk.MaxWriteMB < 0 {
 			return fmt.Errorf("tool policy %q: max_write_mb must be >= 0", name)
+		}
+		if policy.ResourceLimits.Secrets.MaxSecrets < 0 {
+			return fmt.Errorf("tool policy %q: max_secrets must be >= 0", name)
+		}
+		if policy.ResourceLimits.StatePersistence.MaxPersistedMB < 0 {
+			return fmt.Errorf("tool policy %q: max_persisted_mb must be >= 0", name)
+		}
+		if err := validateSecretEnvNames(policy.ResourceLimits.Secrets.AllowedEnv); err != nil {
+			return fmt.Errorf("tool policy %q: allowed_env: %w", name, err)
+		}
+		for _, p := range policy.ResourceLimits.StatePersistence.PersistPaths {
+			if verr := validateMountPath(p); verr != nil {
+				return fmt.Errorf("tool policy %q: persist_paths: %w", name, verr)
+			}
+		}
+	}
+	return nil
+}
+
+// validateSecretEnvNames refuses an allowed_env entry that cannot name an
+// environment variable. An empty or `=`-bearing entry would silently match
+// nothing (or worse, everything the parser mis-splits), so the allowlist would
+// look declared while denying or granting the wrong names.
+func validateSecretEnvNames(names []string) error {
+	for _, n := range names {
+		if strings.TrimSpace(n) == "" {
+			return fmt.Errorf("entry must not be empty")
+		}
+		if strings.ContainsAny(n, "=\x00") {
+			return fmt.Errorf("entry %q must not contain '=' or NUL", n)
+		}
+		if strings.TrimSpace(n) != n {
+			return fmt.Errorf("entry %q has leading or trailing whitespace", n)
 		}
 	}
 	return nil

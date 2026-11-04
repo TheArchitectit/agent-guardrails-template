@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"os"
 	"os/exec"
 	"regexp"
 	"strconv"
@@ -331,6 +332,11 @@ func (m *SandboxManager) execL0(ctx context.Context, command string, limits Reso
 		return nil, lerr
 	}
 	cmd := exec.CommandContext(ctx, launcher, largs...)
+	// Secrets cell enforcement: the child sees ONLY the names the limits
+	// declare. Left unset, cmd.Run hands the child the parent's entire
+	// environment — the undeclared-secret escape the conformance report
+	// claimed was already stripped.
+	cmd.Env = ScrubEnvironment(os.Environ(), limits)
 	stdout := newBoundedCapture(MaxCapturedOutputBytes)
 	stderr := newBoundedCapture(MaxCapturedOutputBytes)
 	cmd.Stdout = stdout
@@ -383,6 +389,9 @@ func (m *SandboxManager) execL1(ctx context.Context, command string, limits Reso
 	defer cancel()
 
 	cmd := exec.CommandContext(ctx, "unshare", args...)
+	// Secrets cell enforcement, same rule as execL0: the namespace does not
+	// scrub environment variables, so anything not declared is dropped here.
+	cmd.Env = ScrubEnvironment(os.Environ(), limits)
 	stdout := newBoundedCapture(MaxCapturedOutputBytes)
 	stderr := newBoundedCapture(MaxCapturedOutputBytes)
 	cmd.Stdout = stdout
@@ -550,6 +559,17 @@ func (m *SandboxManager) execL2(ctx context.Context, command string, limits Reso
 		return nil, err
 	}
 	args = append(args, mountArgs...)
+
+	// Secrets cell enforcement at L2. The CONTAINER already starts with a clean
+	// environment (podman/docker copy nothing from the host unless `-e`/`--env`
+	// says so), so unlike execL0/execL1 there is no inheritance to scrub here —
+	// and scrubbing cmd.Env instead would break rootless podman itself, which
+	// needs HOME/XDG_RUNTIME_DIR to find its own config. What was missing is
+	// that the matrix cell was never APPLIED: the container's env was whatever
+	// the image ships, not what the tier declares. Forward exactly the declared
+	// names, by name only, so a value never lands in argv and `ps` cannot
+	// re-print it.
+	args = append(args, containerEnvArgs(limits)...)
 
 	// Use configurable image, fallback to alpine
 	image := m.configSnapshot().Image
