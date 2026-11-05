@@ -14,7 +14,12 @@ permissions:
 jobs:
   release:
     name: Publish the tagged release
-    runs-on: devgate
+    # GitHub-hosted, per Spec 19 R19-13: only team-validation-fleet.yml may use
+    # the self-hosted UCS03 label, and that job must carry no write scope. This
+    # job needs `contents: write` to publish the release, so it cannot join it.
+    # `devgate` matched no runner this repo registers and left the publisher
+    # queued forever.
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout the tag
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8  # v5.0.0
