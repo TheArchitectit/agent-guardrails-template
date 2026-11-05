@@ -6,6 +6,8 @@ Release notes and testing guidance.
 
 | Version | Document | Notes |
 |---------|----------|-------|
+| v3.8.1 | [v3.8.1.md](v3.8.1.md) | Release workflows routed to a runner that exists |
+| v3.8.0 | [v3.8.0.md](v3.8.0.md) | Evidence API, sandbox isolation, release automation |
 | v3.7.1 | [v3.7.1.md](v3.7.1.md) | README rewrite; corrected the tool count to 37 |
 | v3.7.0 | [v3.7.0.md](v3.7.0.md) | Six 2026 guardrail subsystems; L0–L2 sandbox |
 | v3.5.0 | [v3.5.0.md](v3.5.0.md) | |

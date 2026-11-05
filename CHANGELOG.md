@@ -6,6 +6,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [3.8.1] - 2026-11-05
+
+### Fixed
+
+- **The release workflows could not schedule.** `Release Published` and
+  `Release Coverage` declared `runs-on: devgate`, a label no runner in this
+  repository carries. Both runs queued indefinitely while the other six
+  workflows in the same push completed, so v3.8.0 never received its GitHub
+  Release. Both jobs now run on `ubuntu-latest`. Spec 19 R19-13 reserves the
+  self-hosted `guardrails-ucs03` label for `team-validation-fleet.yml`, which
+  must carry no write scope, while publishing needs `contents: write`.
+
+### Added
+
+- GitHub Release for **v3.8.0**, published from its existing annotated tag to
+  close the gap the unschedulable publisher left behind.
+
 ## [3.8.0] - 2026-11-05
 
 ### Added
