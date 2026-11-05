@@ -6,6 +6,52 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [3.8.0] - 2026-11-05
+
+### Added
+
+- **Cross-product evidence verification** through the authenticated
+  `POST /api/evidence/verify` route, including trust-store, signed-evidence, and
+  revocation-snapshot checks. Evidence remains bounded authorization context,
+  never an OpenAgentPlatform effect grant.
+- **Sandbox secret and state-persistence handling**: declared secret names are
+  scrubbed from L0/L1 execution environments, selected environment variables
+  can be forwarded to rootless L2, and the checked-in capability manifest now
+  covers the implemented state-persistence cells.
+- Guardrail implementations for injection detection, streaming content
+  filtering, L0–L2 sandboxing, multi-agent conflict resolution, provenance
+  chains and caches, and an observe-only OAP checker library.
+- **Release Published** and **Release Coverage** workflows: annotated-tag
+  publishing validates the tagged commit, `VERSION`, and dated changelog notes;
+  `main` must be covered by its declared release.
+- Site material and shared agent-guidance skills for the current repository.
+
+### Changed
+
+- The web exposure boundary narrows unauthenticated metrics, documentation, and
+  OpenAPI access under the production/public deployment modes.
+- README status tables now distinguish wired behavior, optional configuration,
+  library-only helpers, and proposed controls rather than conflating them.
+- Root and MCP-server version references now follow the released `VERSION`.
+
+### Known boundaries
+
+- Injection L4 LLM self-check is not implemented; enabling it fails closed.
+- Redis-backed provenance caching and system-prompt provenance augmentation are
+  implemented helpers without production selection or call-site wiring. The
+  engine uses the in-memory provenance cache.
+- The OAP checker is a tested library, not a registered MCP tool or REST route.
+- Spec 12's exposure boundary remains proposed beyond the implemented narrowing;
+  this release does not claim every proposed control is enforced.
+
+### Release history
+
+- This is the first v3.x release made from current `main`. The old v3.7.1 tag is
+  on a separate development line and is not this release's diff base. See
+  [detailed v3.8.0 notes](docs/releases/v3.8.0.md).
+
+---
+
 ## [3.7.1] - 2026-08-23
 
 ### Changed

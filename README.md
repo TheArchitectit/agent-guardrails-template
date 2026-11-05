@@ -2,7 +2,7 @@
 
 Agent Guardrails is a Go MCP/REST service and a set of integration materials for AI-assisted software development. It provides validation tools, advisory agent instructions, policy material, and a web/API surface. It does **not** automatically intercept every action an AI host takes, and a client integration is not blocking unless a tested host hook or CI gate proves that behavior.
 
-[![Version](https://img.shields.io/badge/version-v3.7.1-blue.svg)](./CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-v3.8.0-blue.svg)](./CHANGELOG.md)
 [![Go](https://img.shields.io/badge/Go-1.25%2B-00ADD8?style=flat&logo=go&logoColor=white)](https://go.dev/)
 [![License](https://img.shields.io/badge/License-BSD--3--Clause-blue.svg)](./LICENSE)
 [![Powered by Atlas Cloud](https://www.atlascloud.ai/oss-program/powered-by-atlas-cloud.svg)](https://www.atlascloud.ai/?ref=F6TYTG)
@@ -15,7 +15,10 @@ This is an active engineering repository, not a finished security product. The s
 |---|---|---|
 | MCP and REST | Go service with bearer-protected `/mcp`, REST routes, health endpoints, web UI, and team tools such as `guardrail_team_health` | The server does not intercept actions an assistant never submits |
 | Validation | Rule-based bash, file, and git validation tools are available | Tool availability is not host-level enforcement |
-| Guardrail engines | Content classification tools exist; some engines require optional runtime configuration | Injection, sandbox, provenance, multi-agent, and compliance libraries are not automatically active protection |
+| Guardrail engines | Injection checks, streaming content filtering, L0–L2 sandbox execution, multi-agent conflict resolution, provenance tools, and compliance mapping are implemented at varying integration depths; optional classifier backends require configuration | Constructing L4 LLM self-check fails closed because it is not implemented; an engine or helper's existence is not automatic host-level enforcement |
+| Sandbox isolation | Declared secret names are scrubbed from direct/namespace execution environments, selected variables can be forwarded to rootless L2, and the capability matrix includes state persistence | These mechanisms do not make every execution sandboxed; callers must select and configure a sandbox level |
+| Cross-product evidence | Authenticated policy checks cover `POST /api/evidence/verify`, with trust-store and revocation-snapshot validation | Evidence verification never grants an OpenAgentPlatform effect; the OAP checker remains library-only, without an MCP or REST route |
+| Provenance | Chain, ledger, and MCP tools are available; the engine uses the in-memory cache | Redis cache selection and system-prompt augmentation are library helpers without production wiring |
 | Outbound webhooks | Webhook delivery enforces an SSRF policy at delivery time — non-public destinations, redirects, and private/loopback dial attempts are refused (`internal/notifications`, tested) | This covers the webhook dispatch path only; it is not a general egress firewall |
 | Authorization | Credentials resolve to scoped principals; scope × role × resource intersection is enforced and tested on web REST and the MCP full path | Credential lifecycle/rotation and some decision-audit rows are not yet exercised end to end |
 | Integrations | Copilot, IDE, Pi, and other client material exists at mixed maturity | Every client/server pair is not yet contract-tested |
@@ -106,7 +109,9 @@ This project is sponsored by [Atlas Cloud for Open Source](https://www.atlasclou
 
 ## Version and history
 
-The repository baseline is v3.7.1; current `main` includes subsequent security specifications and remediation planning. Treat [`CHANGELOG.md`](CHANGELOG.md) and the source-verified baseline as separate: release notes describe historical releases, while the baseline describes current wiring.
+The current release is **v3.8.0**. `VERSION`, the annotated tag, the GitHub Release, and the dated [`CHANGELOG.md`](CHANGELOG.md) section describe the same `main` commit; see [the detailed release notes](docs/releases/v3.8.0.md). The tag-triggered publisher is idempotent, and **Release Coverage** rejects unreleased product commits on `main`.
+
+The v3.7.1 notes and tag belong to a separate historical development line; they are not an ancestor or diff base for the current-main v3.8.0 release. Treat [`CHANGELOG.md`](CHANGELOG.md) and the source-verified baseline as complementary: release notes describe shipped changes, while the baseline distinguishes wired behavior from conditional, library-only, and proposed work.
 
 ## License and support
 
