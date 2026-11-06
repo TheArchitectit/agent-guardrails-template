@@ -617,6 +617,8 @@ an SSE-based client config, you need to update it — see **Migration Notes** be
 
 ## [Unreleased]
 
+## [3.8.2] - 2026-11-06
+
 ### Changed
 - OpenSpec: archived the four routed aiggp-03/04/05/06 packages (5/5 tasks
   each). Their deltas are published as six specs (`categories-and-actions`,
