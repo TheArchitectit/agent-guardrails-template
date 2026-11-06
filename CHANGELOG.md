@@ -617,6 +617,14 @@ an SSE-based client config, you need to update it — see **Migration Notes** be
 
 ## [Unreleased]
 
+### Changed
+- OpenSpec: archived the four routed aiggp-03/04/05/06 packages (5/5 tasks
+  each). Their deltas are published as six specs (`categories-and-actions`,
+  `evidence-and-conformance`, `isolation-levels`, `conformance-and-evidence`,
+  `policy-and-conformance`, `provenance-records`), 15 total, each with a
+  written Purpose and a `Status: CLOSED` line. INDEX.md no longer lists change
+  packages; strict validation 15 passed, 0 failed.
+
 ### Added
 
 - **QUICK_SETUP.md** - 5-minute setup guide for getting started quickly

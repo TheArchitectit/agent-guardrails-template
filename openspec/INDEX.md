@@ -18,17 +18,6 @@
 | [`semantic-filtering-categories-and-actions/spec.md`](specs/semantic-filtering-categories-and-actions/spec.md) | Semantic Filtering Categories and Actions | **CLOSED** | Status: CLOSED (EXERCISED 3) |
 | [`semantic-filtering-evidence-and-conformance/spec.md`](specs/semantic-filtering-evidence-and-conformance/spec.md) | Semantic Filtering Evidence and Conformance | **CLOSED** | Status: CLOSED (EXERCISED 3) |
 
-## Change packages (`openspec/changes/`)
-
-**4 packages**
-
-| Change | Tasks | Spec deltas | Notes |
-|---|---|---|---|
-| [`aiggp-03-prompt-injection-defense`](changes/aiggp-03-prompt-injection-defense/proposal.md) | **5/5** | 2 | L1/L2/L3 pipeline, MCP tools, Ed25519 evidence, and 6-category adversarial + benign conformance runner (`injection_conformance.go`) exercised |
-| [`aiggp-04-semantic-content-filtering`](changes/aiggp-04-semantic-content-filtering/proposal.md) | **5/5** | 2 | S1-S15 taxonomy, backends, config loader, conformance runner, version-bump invalidation, and drift monitor (`content_filter_conformance.go`) exercised |
-| [`aiggp-05-runtime-sandbox-isolation`](changes/aiggp-05-runtime-sandbox-isolation/proposal.md) | **5/5** | 2 | L1/L2 confinement, live capability probe, MCP tools, and 4-tier escape-fixture certification suite (`sandbox_conformance.go`) exercised |
-| [`aiggp-06-indirect-injection-provenance`](changes/aiggp-06-indirect-injection-provenance/proposal.md) | **5/5** | 2 | Sanitization-before-scan, trust-class policy, MCP provenance tools, and multi-hop append-only provenance chain + ledger ancestry query (`provenance_chain.go`) exercised |
-
 ## Reading the status
 
 - **CLOSED** -- every requirement row is `EXERCISED`: implementation present
