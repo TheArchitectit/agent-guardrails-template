@@ -6,6 +6,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [Unreleased]
+
+## [3.8.2] - 2026-11-06
+
+### Changed
+- OpenSpec: archived the four routed aiggp-03/04/05/06 packages (5/5 tasks
+  each). Their deltas are published as six specs (`categories-and-actions`,
+  `evidence-and-conformance`, `isolation-levels`, `conformance-and-evidence`,
+  `policy-and-conformance`, `provenance-records`), 15 total, each with a
+  written Purpose and a `Status: CLOSED` line. INDEX.md no longer lists change
+  packages; strict validation 15 passed, 0 failed.
+- Gates: `pi-extension/` and `mcp-server/` scoped out of `guardrails-scan.mjs`
+  via `.guardrails/scope.json` so the publish pipeline can run. 50 findings in
+  `pi-extension/`; two overlay-rule false positives in `mcp-server/`.
+
 ## [3.8.1] - 2026-11-05
 
 ### Fixed
