@@ -6,6 +6,17 @@ on:
   push:
     branches: [main, master]
 
+# The PR-comment step posts the Regression Guard summary with the default
+# GITHUB_TOKEN, which needs explicit issues:write; without this block the
+# comment step 403s ("Resource not accessible by integration") on every PR,
+# failing the job on PRs while main pushes stay green because the comment
+# steps are pull_request-gated and never run there. Everything else in the
+# job only needs read access.
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
 jobs:
   regression-check:
     runs-on: ubuntu-latest
