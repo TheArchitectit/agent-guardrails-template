@@ -6,6 +6,10 @@
 
 ---
 
+## If you embed instead of copy
+
+The steps below describe the copy-in mode: advisory files are written into the target repository. If you want the framework's own gates, CI, and self-update path available under version control, embed the repository itself as a submodule checkout instead — see [submodule embedding & consumer wiring](submodule-and-consumer-wiring.md).
+
 ## Overview
 
 This document provides step-by-step instructions for applying the agent guardrails framework to repositories in different scenarios.

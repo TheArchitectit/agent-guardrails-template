@@ -10,6 +10,7 @@ For a flat file listing, see [toc.md](toc.md); for an overview, start at the
 |---------|----------|
 | setup, install, quick start | [getting-started/quick-setup.md](docs/getting-started/quick-setup.md) |
 | apply, existing repo, adopt | [getting-started/how-to-apply.md](docs/getting-started/how-to-apply.md) |
+| submodule, embed, vendored, consume | [getting-started/submodule-and-consumer-wiring.md](docs/getting-started/submodule-and-consumer-wiring.md) |
 | four laws, guardrails, forbidden, halt | [getting-started/agent-guardrails.md](docs/getting-started/agent-guardrails.md) |
 
 ## Architecture & design

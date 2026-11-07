@@ -19,6 +19,7 @@ Flat listing of documentation in this repo. For keyword lookup, see
 ### getting-started/
 - [quick-setup.md](docs/getting-started/quick-setup.md)
 - [how-to-apply.md](docs/getting-started/how-to-apply.md)
+- [submodule-and-consumer-wiring.md](docs/getting-started/submodule-and-consumer-wiring.md)
 - [agent-guardrails.md](docs/getting-started/agent-guardrails.md)
 
 ### architecture/

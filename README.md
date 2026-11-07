@@ -69,7 +69,7 @@ bash scripts/guardrails-cli.sh init /path/to/project
 bash scripts/guardrails-cli.sh doctor /path/to/project
 ```
 
-This writes only the files recorded in the target project's manifest. `doctor` reports `UNKNOWN` when the local server is unavailable. The integration is advisory and does not block an agent. See [Copilot integration](integrations/copilot/README.md) and [how to apply the project](docs/getting-started/how-to-apply.md).
+This writes only the files recorded in the target project's manifest. `doctor` reports `UNKNOWN` when the local server is unavailable. The integration is advisory and does not block an agent. See [Copilot integration](integrations/copilot/README.md) and [how to apply the project](docs/getting-started/how-to-apply.md). For embedding this repo as a submodule checkout instead of copying files, see [submodule embedding & consumer wiring](docs/getting-started/submodule-and-consumer-wiring.md).
 
 ## Repository layout
 
