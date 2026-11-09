@@ -6,6 +6,7 @@ Release notes and testing guidance.
 
 | Version | Document | Notes |
 |---------|----------|-------|
+| v3.8.3 | [v3.8.3.md](v3.8.3.md) | Submodule embedding guide; PR-comment permissions; changelog de-duplication |
 | v3.8.2 | [v3.8.2.md](v3.8.2.md) | OpenSpec archive of aiggp-03/04/05/06; scan scoping |
 | v3.8.1 | [v3.8.1.md](v3.8.1.md) | Release workflows routed to a runner that exists |
 | v3.8.0 | [v3.8.0.md](v3.8.0.md) | Evidence API, sandbox isolation, release automation |

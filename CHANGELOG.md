@@ -8,6 +8,33 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [3.8.3] - 2026-11-09
+
+### Added
+
+- Docs: **submodule embedding & consumer wiring guide**
+  (`docs/getting-started/submodule-and-consumer-wiring.md`). It states the two
+  consumption modes (copy-in advisory files vs. a vendored submodule checkout),
+  gives the embed procedure, the scope lesson, coexistence with a second
+  framework gate submodule (DevGate), living with the pin, and how to verify
+  the wiring. `README.md`, `docs/getting-started/how-to-apply.md`,
+  `index-map.md` and `toc.md` link to it.
+
+### Fixed
+
+- CI: `regression-guard.yml` grants `issues: write` and `pull-requests: write`
+  for its PR-comment step. Without an explicit `permissions:` block the job
+  token is read-only outside main pushes, so every `pull_request` run ended
+  with `Resource not accessible by integration` (403) even when every
+  regression gate inside the job passed. Main pushes were unaffected because
+  the comment steps are `pull_request`-gated.
+
+- `CHANGELOG.md` no longer carries a second, misplaced `## [3.8.2]` section
+  below the 3.6.0 notes (a stray copy left by the re-tag commit `d8e4ecd`,
+  which added the heading twice) and no longer repeats its own history from
+  `3.8.2` onward. The file now reads in a single order: version headings
+  newest-first; a release heading names one section only.
+
 ## [3.8.2] - 2026-11-06
 
 ### Changed
@@ -627,56 +654,6 @@ an SSE-based client config, you need to update it — see **Migration Notes** be
 - **CLAUDE.md** - Added Agent-GDUI-2026 initialization context and quick links
 - **INDEX_MAP.md** - Added 2026 document entries, categories, and cross-references
 - **HEADER_MAP.md** - Added section-level mappings for all 2026 documents
-
----
-
-## [Unreleased]
-
-## [3.8.2] - 2026-11-06
-
-### Changed
-- OpenSpec: archived the four routed aiggp-03/04/05/06 packages (5/5 tasks
-  each). Their deltas are published as six specs (`categories-and-actions`,
-  `evidence-and-conformance`, `isolation-levels`, `conformance-and-evidence`,
-  `policy-and-conformance`, `provenance-records`), 15 total, each with a
-  written Purpose and a `Status: CLOSED` line. INDEX.md no longer lists change
-  packages; strict validation 15 passed, 0 failed.
-
-### Added
-
-- **QUICK_SETUP.md** - 5-minute setup guide for getting started quickly
-  - TL;DR 3-step quick start
-  - Detailed setup instructions for all AI tools
-  - What happens automatically explanation
-  - Daily usage patterns
-  - Troubleshooting section
-  - Configuration examples
-
-- **PROMPTING_GUIDE.md** - Master guide for writing effective prompts
-  - Golden rules for prompting
-  - 5 prompt templates (Feature, Bug Fix, Code Review, Refactoring, Documentation)
-  - 5 common patterns with examples
-  - 5 advanced techniques
-  - Examples by use case (API, Frontend, Database, DevOps)
-  - Anti-patterns to avoid
-  - Troubleshooting section
-
-### Changed
-
-- **README.md** - Updated with new guides in Documentation section
-  - Added QUICK_SETUP.md and PROMPTING_GUIDE.md to Core Documents table
-  - Updated "Start Here" section with links to new guides
-  - Added star indicators (⭐) for most important documents
-
-- **INDEX_MAP.md** - Added entries for new documents
-  - quick-setup → QUICK_SETUP.md
-  - prompting → PROMPTING_GUIDE.md
-
-- **TOC.md** - Added new files to Root Files section
-  - QUICK_SETUP.md: 5-minute setup guide
-  - PROMPTING_GUIDE.md: Master prompting techniques
-
----
 
 ## [2.9.0] - 2026-05-08
 
