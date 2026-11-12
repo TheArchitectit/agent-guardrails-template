@@ -8,6 +8,29 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [3.8.4] - 2026-11-12
+
+### Added
+
+- **`PREVENT-SUB-001` blocks tooling submodules from being committed into a
+  consumer repo.** A change to `.gitmodules` that names
+  `agent-guardrails-template` (or `DevGate-Agentic-Framework`) is a `critical`
+  pattern violation. The tooling checkout is local-only: run the gates from it
+  on disk and push only the consumer's own code fixes.
+
+### Changed
+
+- **The embedding guide describes the contract the rule enforces, not the one
+  it forbids.**
+  `docs/getting-started/submodule-and-consumer-wiring.md` instructed consumers
+  to `git submodule add … .agent-guardrails` and commit the registration —
+  exactly what `PREVENT-SUB-001` now rejects — and v3.8.3 shipped that as the
+  embed mode's contract. The guide now records the embed mode as **blocked by
+  the new rule**, keeps the copy-in mode as the supported path, and describes
+  the local, untracked checkout as the way to keep the framework's gates
+  available without committing them. `README.md`'s version section points at
+  the new release notes.
+
 ## [3.8.3] - 2026-11-09
 
 ### Added

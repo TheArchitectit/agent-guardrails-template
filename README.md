@@ -2,7 +2,7 @@
 
 Agent Guardrails is a Go MCP/REST service and a set of integration materials for AI-assisted software development. It provides validation tools, advisory agent instructions, policy material, and a web/API surface. It does **not** automatically intercept every action an AI host takes, and a client integration is not blocking unless a tested host hook or CI gate proves that behavior.
 
-[![Version](https://img.shields.io/badge/version-v3.8.3-blue.svg)](./CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-v3.8.4-blue.svg)](./CHANGELOG.md)
 [![Go](https://img.shields.io/badge/Go-1.25%2B-00ADD8?style=flat&logo=go&logoColor=white)](https://go.dev/)
 [![License](https://img.shields.io/badge/License-BSD--3--Clause-blue.svg)](./LICENSE)
 [![Powered by Atlas Cloud](https://www.atlascloud.ai/oss-program/powered-by-atlas-cloud.svg)](https://www.atlascloud.ai/?ref=F6TYTG)
@@ -69,7 +69,7 @@ bash scripts/guardrails-cli.sh init /path/to/project
 bash scripts/guardrails-cli.sh doctor /path/to/project
 ```
 
-This writes only the files recorded in the target project's manifest. `doctor` reports `UNKNOWN` when the local server is unavailable. The integration is advisory and does not block an agent. See [Copilot integration](integrations/copilot/README.md) and [how to apply the project](docs/getting-started/how-to-apply.md). For embedding this repo as a submodule checkout instead of copying files, see [submodule embedding & consumer wiring](docs/getting-started/submodule-and-consumer-wiring.md).
+This writes only the files recorded in the target project's manifest. `doctor` reports `UNKNOWN` when the local server is unavailable. The integration is advisory and does not block an agent. See [Copilot integration](integrations/copilot/README.md) and [how to apply the project](docs/getting-started/how-to-apply.md). For keeping this repo as a **local, untracked** tooling checkout instead of copying files — and why a committed submodule is now blocked — see [submodule embedding & consumer wiring](docs/getting-started/submodule-and-consumer-wiring.md).
 
 ## Repository layout
 
@@ -109,9 +109,9 @@ This project is sponsored by [Atlas Cloud for Open Source](https://www.atlasclou
 
 ## Version and history
 
-The current release is **v3.8.3**. `VERSION`, the annotated tag, the GitHub Release, and the dated [`CHANGELOG.md`](CHANGELOG.md) section describe the same `main` commit; see [the detailed release notes](docs/releases/v3.8.3.md). The tag-triggered publisher is idempotent, and **Release Coverage** rejects unreleased product commits on `main`.
+The current release is **v3.8.4**. `VERSION`, the annotated tag, the GitHub Release, and the dated [`CHANGELOG.md`](CHANGELOG.md) section describe the same `main` commit; see [the detailed release notes](docs/releases/v3.8.4.md). The tag-triggered publisher is idempotent, and **Release Coverage** rejects unreleased product commits on `main`.
 
-The v3.7.1 notes and tag belong to a separate historical development line; they are not an ancestor or diff base for the current-main v3.8.3 release. Treat [`CHANGELOG.md`](CHANGELOG.md) and the source-verified baseline as complementary: release notes describe shipped changes, while the baseline distinguishes wired behavior from conditional, library-only, and proposed work.
+The v3.7.1 notes and tag belong to a separate historical development line; they are not an ancestor or diff base for the current-main v3.8.4 release. Treat [`CHANGELOG.md`](CHANGELOG.md) and the source-verified baseline as complementary: release notes describe shipped changes, while the baseline distinguishes wired behavior from conditional, library-only, and proposed work.
 
 ## License and support
 

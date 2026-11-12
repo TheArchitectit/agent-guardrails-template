@@ -6,9 +6,9 @@
 
 ---
 
-## If you embed instead of copy
+## If you keep a tooling checkout instead of copy
 
-The steps below describe the copy-in mode: advisory files are written into the target repository. If you want the framework's own gates, CI, and self-update path available under version control, embed the repository itself as a submodule checkout instead — see [submodule embedding & consumer wiring](submodule-and-consumer-wiring.md).
+The steps below describe the copy-in mode: advisory files are written into the target repository. If you want the framework's own gates available next to the consumer without copying them, keep a **local, untracked** checkout of this repository — a committed submodule is blocked by `PREVENT-SUB-001` — see [submodule embedding & consumer wiring](submodule-and-consumer-wiring.md).
 
 ## Overview
 
