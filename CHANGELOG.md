@@ -8,6 +8,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **`Release Coverage` can see merge commits.** Its reports-only exemption
+  listed changed files with `git diff-tree --no-commit-id --name-only -r HEAD`,
+  which returns nothing for a merge without `-m`, so a merge that brought only
+  `docs/qa/fleet-sweeps/*` and `docs/qa/spec-sweeps/*` never reached the
+  exemption and fell through to `::error::HEAD is not release <tag>`. The
+  exemption now diffs against `HEAD^1` (where `main` was), which is the right
+  question on a merge and identical on an ordinary commit. The same defect
+  fired on AIGGP `af0f102` on 2026-11-12 and is fixed there in `v1.3.18`;
+  this template's copy carried the identical command.
+
 ## [3.8.4] - 2026-11-12
 
 ### Added

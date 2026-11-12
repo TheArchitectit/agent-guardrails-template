@@ -6,6 +6,7 @@ Release notes and testing guidance.
 
 | Version | Document | Notes |
 |---------|----------|-------|
+| v3.8.5 | [v3.8.5.md](v3.8.5.md) | Release Coverage sees merge commits; reports-only exemption diffs against HEAD^1 |
 | v3.8.4 | [v3.8.4.md](v3.8.4.md) | PREVENT-SUB-001 blocks committed tooling submodules; embedding guide reconciled |
 | v3.8.3 | [v3.8.3.md](v3.8.3.md) | Submodule embedding guide; PR-comment permissions; changelog de-duplication |
 | v3.8.2 | [v3.8.2.md](v3.8.2.md) | OpenSpec archive of aiggp-03/04/05/06; scan scoping |
