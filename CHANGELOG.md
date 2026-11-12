@@ -8,6 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [3.8.5] - 2026-11-12
+
 ### Fixed
 
 - **`Release Coverage` can see merge commits.** Its reports-only exemption
