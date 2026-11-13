@@ -8,12 +8,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [3.8.10] - 2026-11-13
+
 ### Fixed
 
 - **The README and release notes now name the live release.** v3.8.8 shipped
   without a `docs/releases/v3.8.8.md` note, and the README still pointed at
-  v3.8.7. Both are now current, so `VERSION`, the tag, the changelog section and
-  the README badge agree for anyone reading `main`.
+  v3.8.7; both are now current.
+- **`VERSION` and this changelog agree with the tag.** The pinned `.devgate`
+  deploy script recognises only package manifests, so tagging v3.8.9 published
+  that tree without bumping `VERSION` or folding this section. v3.8.10 carries
+  the same tree with the version truth corrected; no product or gate code
+  differs between v3.8.9 and v3.8.10.
 
 ## [3.8.8] - 2026-11-13
 

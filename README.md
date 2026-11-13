@@ -2,7 +2,7 @@
 
 Agent Guardrails is a Go MCP/REST service and a set of integration materials for AI-assisted software development. It provides validation tools, advisory agent instructions, policy material, and a web/API surface. It does **not** automatically intercept every action an AI host takes, and a client integration is not blocking unless a tested host hook or CI gate proves that behavior.
 
-[![Version](https://img.shields.io/badge/version-v3.8.8-blue.svg)](./CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-v3.8.10-blue.svg)](./CHANGELOG.md)
 [![Go](https://img.shields.io/badge/Go-1.25%2B-00ADD8?style=flat&logo=go&logoColor=white)](https://go.dev/)
 [![License](https://img.shields.io/badge/License-BSD--3--Clause-blue.svg)](./LICENSE)
 [![Powered by Atlas Cloud](https://www.atlascloud.ai/oss-program/powered-by-atlas-cloud.svg)](https://www.atlascloud.ai/?ref=F6TYTG)
@@ -109,9 +109,9 @@ This project is sponsored by [Atlas Cloud for Open Source](https://www.atlasclou
 
 ## Version and history
 
-The current release is **v3.8.8**. `VERSION`, the annotated tag, the GitHub Release, and the dated [`CHANGELOG.md`](CHANGELOG.md) section describe the same `main` commit; see [the detailed release notes](docs/releases/v3.8.8.md). The tag-triggered publisher is idempotent, and **Release Coverage** rejects unreleased product commits on `main` — its reports-only exemption diffs against `HEAD^1`, so a merge that brought only generated sweep reports is skipped rather than mistaken for an unreleased product state.
+The current release is **v3.8.10**. `VERSION`, the annotated tag, the GitHub Release, and the dated [`CHANGELOG.md`](CHANGELOG.md) section describe the same `main` commit; see [the detailed release notes](docs/releases/v3.8.10.md). The tag-triggered publisher is idempotent, and **Release Coverage** rejects unreleased product commits on `main` — its reports-only exemption diffs against `HEAD^1`, so a merge that brought only generated sweep reports is skipped rather than mistaken for an unreleased product state.
 
-The v3.7.1 notes and tag belong to a separate historical development line; they are not an ancestor or diff base for the current-main v3.8.8 release. Treat [`CHANGELOG.md`](CHANGELOG.md) and the source-verified baseline as complementary: release notes describe shipped changes, while the baseline distinguishes wired behavior from conditional, library-only, and proposed work.
+The v3.7.1 notes and tag belong to a separate historical development line; they are not an ancestor or diff base for the current-main v3.8.10 release. Treat [`CHANGELOG.md`](CHANGELOG.md) and the source-verified baseline as complementary: release notes describe shipped changes, while the baseline distinguishes wired behavior from conditional, library-only, and proposed work.
 
 ## License and support
 
