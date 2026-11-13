@@ -8,6 +8,36 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [3.8.7] - 2026-11-13
+
+### Fixed
+
+- **`Secret Validation` no longer fails on a clean scan.** The scan itself ran
+  on the UCS03 runner and found nothing — gitleaks logged `no leaks found`
+  and exited 0 — and then `gitleaks-action`'s SARIF artifact upload threw
+  `The rootDirectory: /home/runner is not a parent directory of the file:
+  /_work/agent-guardrails-template/agent-guardrails-template/results.sarif`.
+  The action passes `process.env.HOME` as the artifact root, which is an
+  ancestor of the workspace on GitHub-hosted runners and is not on ours. The
+  step now sets `GITLEAKS_ENABLE_UPLOAD_ARTIFACT: "false"`, which turns off
+  exactly that upload; the scan and its `--exit-code=2` gate are unchanged and
+  nothing in this repo ingests the SARIF. The first red run was `d3ec374`.
+- **`Release Published` can actually publish on the fleet.** The publisher
+  shelled out to `gh release create` / `gh release view`, and the UCS03
+  runner image ships the Actions runner and the gate toolchain but no `gh`
+  binary — the tag-triggered run for `v3.8.6` died with
+  `/_work/_temp/…sh: line 50: gh: command not found` (exit 127) **after**
+  writing its notes, so `v3.8.6` reached `main` tagged but unpublished.
+  Publishing now uses the REST API through `python3`/`urllib` with the same
+  idempotent contract: an existing release is success and its URL is printed,
+  a create is followed by a read-back that must return the release, and a
+  concurrent `already_exists` is treated as success.
+
+### Changed
+
+- `v3.8.7` carries both fixes; it does not repoint or re-create the `v3.8.6`
+  tag, which stays exactly where it was published.
+
 ## [3.8.6] - 2026-11-13
 
 ### Changed
