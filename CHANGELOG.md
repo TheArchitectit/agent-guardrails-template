@@ -8,6 +8,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [3.8.8] - 2026-11-13
+
+### Added
+
+- **The daily external-audit digest records now live on `main`.**
+  `docs/qa/audit-digest/` carries the one-record-per-digest-day notes that had
+  accumulated on the `chore/external-audit` branch since October. Documentation
+  only; no gate or runtime behaviour changed.
+
 ## [3.8.7] - 2026-11-13
 
 ### Fixed
