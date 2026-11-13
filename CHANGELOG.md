@@ -8,6 +8,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **The README and release notes now name the live release.** v3.8.8 shipped
+  without a `docs/releases/v3.8.8.md` note, and the README still pointed at
+  v3.8.7. Both are now current, so `VERSION`, the tag, the changelog section and
+  the README badge agree for anyone reading `main`.
+
 ## [3.8.8] - 2026-11-13
 
 ### Added
