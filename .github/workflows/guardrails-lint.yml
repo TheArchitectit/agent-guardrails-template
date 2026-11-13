@@ -31,8 +31,9 @@ permissions:
 
 jobs:
   check-scope-boundaries:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     name: Check Change Scope
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64, guardrails-ucs03]
 
     steps:
       - name: Checkout code
@@ -77,8 +78,9 @@ jobs:
           fi
 
   check-forbidden-files:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     name: Check for Forbidden Files
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64, guardrails-ucs03]
 
     steps:
       - name: Checkout code
@@ -112,8 +114,9 @@ jobs:
           python3 scripts/test_check_forbidden_files.py
 
   validate-commit-messages:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     name: Validate Commit Messages
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64, guardrails-ucs03]
 
     steps:
       - name: Checkout code
@@ -172,8 +175,9 @@ jobs:
           fi
 
   check-ai-attribution:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     name: Check AI Attribution
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64, guardrails-ucs03]
 
     steps:
       - name: Checkout code
@@ -219,9 +223,9 @@ jobs:
 
   guardrails-summary:
     name: Generate Compliance Summary
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64, guardrails-ucs03]
     needs: [check-scope-boundaries, check-forbidden-files, validate-commit-messages, check-ai-attribution]
-    if: always()
+    if: (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && (always())
 
     steps:
       - name: Generate summary

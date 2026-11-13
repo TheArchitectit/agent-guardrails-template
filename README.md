@@ -2,7 +2,7 @@
 
 Agent Guardrails is a Go MCP/REST service and a set of integration materials for AI-assisted software development. It provides validation tools, advisory agent instructions, policy material, and a web/API surface. It does **not** automatically intercept every action an AI host takes, and a client integration is not blocking unless a tested host hook or CI gate proves that behavior.
 
-[![Version](https://img.shields.io/badge/version-v3.8.5-blue.svg)](./CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-v3.8.6-blue.svg)](./CHANGELOG.md)
 [![Go](https://img.shields.io/badge/Go-1.25%2B-00ADD8?style=flat&logo=go&logoColor=white)](https://go.dev/)
 [![License](https://img.shields.io/badge/License-BSD--3--Clause-blue.svg)](./LICENSE)
 [![Powered by Atlas Cloud](https://www.atlascloud.ai/oss-program/powered-by-atlas-cloud.svg)](https://www.atlascloud.ai/?ref=F6TYTG)
@@ -22,7 +22,7 @@ This is an active engineering repository, not a finished security product. The s
 | Outbound webhooks | Webhook delivery enforces an SSRF policy at delivery time — non-public destinations, redirects, and private/loopback dial attempts are refused (`internal/notifications`, tested) | This covers the webhook dispatch path only; it is not a general egress firewall |
 | Authorization | Credentials resolve to scoped principals; scope × role × resource intersection is enforced and tested on web REST and the MCP full path | Credential lifecycle/rotation and some decision-audit rows are not yet exercised end to end |
 | Integrations | Copilot, IDE, Pi, and other client material exists at mixed maturity | Every client/server pair is not yet contract-tested |
-| CI | Hosted PR checks; trusted-main validation on the repo-scoped UCS03 Podman runner; security-matrix jobs (fail-closed registry, MCP full-path authz, secret redaction, webhook SSRF, mutation-kill) on protected-branch pushes; Gitleaks secret validation with a reviewed baseline; pattern-based regression gates | Green CI does not prove every runtime guardrail is wired; the full-history Gitleaks scan still exits 1 on real-looking findings that are deliberately not allowlisted pending rotation |
+| CI | Every workflow runs on the repo-scoped UCS03 Podman runner (`guardrails-ucs03`); same-repository PRs run there behind a per-job fork guard, so fork PRs are skipped before runner assignment; trusted-main validation keeps its `refs/heads/main` guard; security-matrix jobs (fail-closed registry, MCP full-path authz, secret redaction, webhook SSRF, mutation-kill) on protected-branch pushes; Gitleaks secret validation with a reviewed baseline; pattern-based regression gates | Green CI does not prove every runtime guardrail is wired; the full-history Gitleaks scan still exits 1 on real-looking findings that are deliberately not allowlisted pending rotation |
 
 The tool registry contains a core set plus conditional tools. The registry maximum is not the live startup inventory; configuration and initialization determine what is actually exposed. See the [tool reference](docs/mcp-server/tools-reference.md) and [gap reconciliation](docs/specs/guardrail-gaps-2026/STATUS.md). Security-row status (WIRED / EXERCISED / NOT_EXERCISED / NOT_RUN) is reconciled against source per sprint in [docs/sprints/](docs/sprints/).
 
@@ -109,9 +109,9 @@ This project is sponsored by [Atlas Cloud for Open Source](https://www.atlasclou
 
 ## Version and history
 
-The current release is **v3.8.5**. `VERSION`, the annotated tag, the GitHub Release, and the dated [`CHANGELOG.md`](CHANGELOG.md) section describe the same `main` commit; see [the detailed release notes](docs/releases/v3.8.5.md). The tag-triggered publisher is idempotent, and **Release Coverage** rejects unreleased product commits on `main` — its reports-only exemption diffs against `HEAD^1`, so a merge that brought only generated sweep reports is skipped rather than mistaken for an unreleased product state.
+The current release is **v3.8.6**. `VERSION`, the annotated tag, the GitHub Release, and the dated [`CHANGELOG.md`](CHANGELOG.md) section describe the same `main` commit; see [the detailed release notes](docs/releases/v3.8.6.md). The tag-triggered publisher is idempotent, and **Release Coverage** rejects unreleased product commits on `main` — its reports-only exemption diffs against `HEAD^1`, so a merge that brought only generated sweep reports is skipped rather than mistaken for an unreleased product state.
 
-The v3.7.1 notes and tag belong to a separate historical development line; they are not an ancestor or diff base for the current-main v3.8.5 release. Treat [`CHANGELOG.md`](CHANGELOG.md) and the source-verified baseline as complementary: release notes describe shipped changes, while the baseline distinguishes wired behavior from conditional, library-only, and proposed work.
+The v3.7.1 notes and tag belong to a separate historical development line; they are not an ancestor or diff base for the current-main v3.8.6 release. Treat [`CHANGELOG.md`](CHANGELOG.md) and the source-verified baseline as complementary: release notes describe shipped changes, while the baseline distinguishes wired behavior from conditional, library-only, and proposed work.
 
 ## License and support
 

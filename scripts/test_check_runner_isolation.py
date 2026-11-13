@@ -2,14 +2,17 @@
 """Red-on-drift self-test for scripts/check_runner_isolation.py (Spec 19 R19-13).
 
 Every case below is a shape this gate must refuse, taken from the requirement's
-own words rather than invented: fork code on the private pool, the label in the
-wrong file, a missing main guard, an inherited token, an unbounded concurrency
-group, a shared cache, a foreign checkout, and cleanup that is absent or not
-last. Each one is measured PASS->FAIL against a tree that otherwise passes, so a
-green run cannot come from a gate that never exercises its assertion.
+own words rather than invented: a GitHub-hosted label, an undecidable
+`runs-on` expression, a pull_request workflow whose jobs lack the fork guard, an
+inverted fork guard that would skip every push, `pull_request_target`, a missing
+main guard on the trusted workflow, an inherited token, an unbounded
+concurrency group, a shared cache, a foreign checkout, and cleanup that is
+absent or not last. Each one is measured PASS->FAIL against a tree that
+otherwise passes, so a green run cannot come from a gate that never exercises
+its assertion.
 
-Non-vacuity is proved separately: zero workflows, zero pull_request workflows and
-zero self-hosted jobs each FAIL instead of reporting a clean scan of nothing.
+Non-vacuity is proved separately: zero workflows, zero pull_request workflows
+and zero fleet jobs each FAIL instead of reporting a clean scan of nothing.
 
 Run with: python -m pytest scripts/test_check_runner_isolation.py -v
 Or: python scripts/test_check_runner_isolation.py
@@ -49,21 +52,50 @@ jobs:
         run: echo ok
 %s""" % (PINNED, CLEANUP)
 
-HOSTED = """\
+FLEET_PR = """\
 name: Team Validation
 on:
   push:
     branches: [main]
   pull_request:
     branches: [main]
+permissions:
+  contents: read
 jobs:
   validate:
-    runs-on: ubuntu-latest
+    if: %s
+    runs-on: [self-hosted, Linux, X64, guardrails-ucs03]
     steps:
       - uses: %s # v4.4.0
       - name: Test
         run: echo ok
-""" % PINNED
+""" % (gate.FORK_GUARD, PINNED)
+
+GUARD_LINE = "    if: %s\n" % gate.FORK_GUARD
+
+PUSH_ONLY_FLEET = """\
+name: Release
+on:
+  push:
+    branches: [main]
+jobs:
+  release:
+    runs-on: [self-hosted, Linux, X64, guardrails-ucs03]
+    steps:
+      - run: echo ok
+"""
+
+HOSTED_PR = """\
+name: Hosted
+on:
+  pull_request:
+    branches: [main]
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo ok
+"""
 
 
 def _write(root: Path, rel: str, body: str) -> None:
@@ -74,7 +106,7 @@ def _write(root: Path, rel: str, body: str) -> None:
 
 def _tree(root: Path) -> None:
     _write(root, gate.TRUSTED_WORKFLOW, TRUSTED)
-    _write(root, ".github/workflows/team-validation.yml", HOSTED)
+    _write(root, ".github/workflows/team-validation.yml", FLEET_PR)
 
 
 class CleanTreePasses(unittest.TestCase):
@@ -82,16 +114,16 @@ class CleanTreePasses(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d)
             _tree(root)
-            files, pr, sh, violations = gate.scan(root)
+            files, pr, fleet, violations = gate.scan(root)
             self.assertEqual(violations, [])
-            self.assertEqual((files, pr, sh), (2, 1, 1))
+            self.assertEqual((files, pr, fleet), (2, 1, 2))
 
     def test_main_runs_the_gate_against_this_repository(self):
         repo = Path(__file__).resolve().parent.parent
-        _, pr, sh, violations = gate.scan(repo)
+        _, pr, fleet, violations = gate.scan(repo)
         self.assertEqual(violations, [], violations)
         self.assertGreater(pr, 0)
-        self.assertEqual(sh, 1)
+        self.assertGreater(fleet, 0)
 
 
 class NonVacuity(unittest.TestCase):
@@ -105,41 +137,29 @@ class NonVacuity(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d)
             _write(root, gate.TRUSTED_WORKFLOW, TRUSTED)
-            _write(
-                root,
-                ".github/workflows/other.yml",
-                "name: Other\non:\n  push:\n    branches: [main]\n"
-                "jobs:\n  j:\n    runs-on: ubuntu-latest\n    steps:\n"
-                "      - run: echo ok\n",
-            )
+            _write(root, ".github/workflows/release.yml", PUSH_ONLY_FLEET)
             self.assertEqual(gate.main(["--repo", str(root)]), gate.EXIT_VIOLATIONS)
 
-    def test_zero_self_hosted_jobs_fails(self):
+    def test_zero_fleet_jobs_fails(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d)
-            _write(root, ".github/workflows/team-validation.yml", HOSTED)
+            _write(root, ".github/workflows/team-validation.yml", HOSTED_PR)
             self.assertEqual(gate.main(["--repo", str(root)]), gate.EXIT_VIOLATIONS)
 
 
 class TrustedLaneViolations(unittest.TestCase):
-    def _violations(self, trusted: str = TRUSTED, hosted: str = HOSTED):
+    def _violations(self, trusted: str = TRUSTED, pr: str = FLEET_PR):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d)
             _write(root, gate.TRUSTED_WORKFLOW, trusted)
-            _write(root, ".github/workflows/team-validation.yml", hosted)
+            _write(root, ".github/workflows/team-validation.yml", pr)
             return gate.scan(root)[3]
 
-    def test_label_in_wrong_file_fails(self):
-        v = self._violations(
-            hosted=HOSTED.replace("ubuntu-latest", "[self-hosted, Linux, X64, guardrails-ucs03]")
-        )
-        self.assertTrue(any("may only be used by" in x for x in v), v)
-
-    def test_pull_request_workflow_reaching_self_hosted_fails(self):
-        trusted = TRUSTED.replace("    branches: [main]\npermissions",
-                                  "    branches: [main]\n  pull_request:\n    branches: [main]\npermissions")
-        v = self._violations(trusted=trusted)
-        self.assertTrue(any("fork code must never reach" in x for x in v), v)
+    def test_fleet_label_in_another_file_is_allowed(self):
+        # The owner's routing change: every workflow runs on the fleet, so the
+        # label is no longer confined to one file. A same-repo PR run on the
+        # fleet with the guard is the intended shape.
+        self.assertEqual(self._violations(), [])
 
     def test_missing_main_guard_fails(self):
         v = self._violations(
@@ -176,6 +196,16 @@ class TrustedLaneViolations(unittest.TestCase):
     def test_shared_cache_fails(self):
         v = self._violations(
             trusted=TRUSTED.replace(
+                "      - name: Test\n",
+                "      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830\n"
+                "      - name: Test\n",
+            )
+        )
+        self.assertTrue(any("shared action cache" in x for x in v), v)
+
+    def test_shared_cache_fails_in_any_fleet_workflow(self):
+        v = self._violations(
+            pr=FLEET_PR.replace(
                 "      - name: Test\n",
                 "      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830\n"
                 "      - name: Test\n",
@@ -226,30 +256,78 @@ class TrustedLaneViolations(unittest.TestCase):
         self.assertTrue(any("not the last step" in x for x in v), v)
 
 
-class HostedRuleViolations(unittest.TestCase):
-    def test_expression_runner_in_pull_request_fails(self):
-        with tempfile.TemporaryDirectory() as d:
-            root = Path(d)
-            _write(root, gate.TRUSTED_WORKFLOW, TRUSTED)
-            _write(
-                root,
-                ".github/workflows/team-validation.yml",
-                HOSTED.replace("runs-on: ubuntu-latest", "runs-on: ${{ inputs.runner }}"),
-            )
-            v = gate.scan(root)[3]
-            self.assertTrue(any("is an expression" in x for x in v), v)
+class ForkGuardViolations(unittest.TestCase):
+    """A pull_request workflow may use the fleet only behind the fork guard."""
 
-    def test_unrecognised_label_in_pull_request_fails(self):
+    def _violations(self, workflow: str):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d)
             _write(root, gate.TRUSTED_WORKFLOW, TRUSTED)
-            _write(
-                root,
-                ".github/workflows/team-validation.yml",
-                HOSTED.replace("runs-on: ubuntu-latest", "runs-on: my-custom-pool"),
+            _write(root, ".github/workflows/team-validation.yml", workflow)
+            return gate.scan(root)[3]
+
+    def test_missing_fork_guard_fails(self):
+        v = self._violations(FLEET_PR.replace(GUARD_LINE, ""))
+        self.assertTrue(any("lacks the fork guard" in x for x in v), v)
+
+    def test_wrong_fork_guard_operator_fails(self):
+        # `&&` in place of `||` would skip every push run; it is not a guard.
+        v = self._violations(FLEET_PR.replace(GUARD_LINE, GUARD_LINE.replace("||", "&&")))
+        self.assertTrue(any("lacks the fork guard" in x for x in v), v)
+
+    def test_every_job_needs_the_guard(self):
+        two_jobs = FLEET_PR.replace(
+            "      - name: Test\n        run: echo ok\n",
+            "      - name: Test\n        run: echo ok\n"
+            "  unguarded:\n"
+            "    runs-on: [self-hosted, Linux, X64, guardrails-ucs03]\n"
+            "    steps:\n"
+            "      - run: echo second\n",
+        )
+        v = self._violations(two_jobs)
+        self.assertTrue(any("unguarded" in x and "lacks the fork guard" in x for x in v), v)
+
+    def test_pull_request_target_fails(self):
+        v = self._violations(
+            FLEET_PR.replace("  pull_request:\n", "  pull_request_target:\n")
+        )
+        self.assertTrue(any("pull_request_target" in x for x in v), v)
+
+
+class FleetRoutingViolations(unittest.TestCase):
+    def _violations(self, workflow: str):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            _write(root, gate.TRUSTED_WORKFLOW, TRUSTED)
+            _write(root, ".github/workflows/team-validation.yml", workflow)
+            return gate.scan(root)[3]
+
+    def test_hosted_label_fails(self):
+        v = self._violations(
+            FLEET_PR.replace(
+                "runs-on: [self-hosted, Linux, X64, guardrails-ucs03]",
+                "runs-on: ubuntu-latest",
             )
-            v = gate.scan(root)[3]
-            self.assertTrue(any("not a literal GitHub-hosted label" in x for x in v), v)
+        )
+        self.assertTrue(any("GitHub-hosted label" in x for x in v), v)
+
+    def test_expression_runner_fails(self):
+        v = self._violations(
+            FLEET_PR.replace(
+                "runs-on: [self-hosted, Linux, X64, guardrails-ucs03]",
+                "runs-on: ${{ inputs.runner }}",
+            )
+        )
+        self.assertTrue(any("is an expression" in x for x in v), v)
+
+    def test_unrecognised_label_fails(self):
+        v = self._violations(
+            FLEET_PR.replace(
+                "runs-on: [self-hosted, Linux, X64, guardrails-ucs03]",
+                "runs-on: my-custom-pool",
+            )
+        )
+        self.assertTrue(any("does not target the fleet" in x for x in v), v)
 
 
 class Attestation(unittest.TestCase):

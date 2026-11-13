@@ -14,9 +14,9 @@ permissions:
 jobs:
   coverage:
     name: Main is a tagged, documented release
-    # GitHub-hosted, per Spec 19 R19-13. `devgate` matched no runner this repo
-    # registers (only `guardrails-ucs03` is here), so this gate never ran.
-    runs-on: ubuntu-latest
+    # Fleet-routed like every other workflow here. `devgate` matched no runner
+    # this repo registers (only `guardrails-ucs03` is here), so the gate never ran.
+    runs-on: [self-hosted, Linux, X64, guardrails-ucs03]
     steps:
       - name: Checkout main and tags
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8  # v5.0.0

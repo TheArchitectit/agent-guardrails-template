@@ -8,6 +8,42 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [3.8.6] - 2026-11-13
+
+### Changed
+
+- **Every workflow runs on the repo-scoped UCS03 runner.** All jobs in all
+  eight workflows now target `[self-hosted, Linux, X64, guardrails-ucs03]`;
+  no GitHub-hosted label remains. Same-repository pull requests run on the
+  fleet too, behind the canonical job-level fork guard
+  (`github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository`),
+  which GitHub evaluates **before** assigning a runner — so a fork PR's jobs
+  are skipped rather than dispatched and contributor code never executes on
+  the private pool. `pull_request_target` is refused outright.
+- **Spec 19 R19-13 revised to describe that posture.** The requirement now
+  states that all CI MUST run on `guardrails-ucs03`, that same-repository PRs
+  MAY run there only with the guard on every job, and that
+  `pull_request_target` MUST NOT be used. The isolation clauses — clean
+  checkout, no cross-repository reuse, least-privilege token, bounded
+  concurrency, post-job cleanup, recorded attestation — are unchanged.
+- **`check_runner_isolation.py` rewritten to enforce it.** The old gate
+  required PR workflows to stay hosted and the fleet label to appear in
+  exactly one file. It now requires: every job on the fleet; the contiguous
+  fork guard on every job of every `pull_request` workflow (an inverted `||`
+  → `&&` is not a guard); no `pull_request_target`; no expression `runs-on:`;
+  the trusted workflow's `refs/heads/main` guard, least-privilege
+  permissions, bounded concurrency and final cleanup; no cache, checkout
+  `path:` or foreign `repository:` in **any** fleet job; and non-vacuity over
+  files, PR workflows and fleet jobs. Its self-test grew from 27 to 32 cases.
+
+### Fixed
+
+- **Stale hosted-runner prose.** `docs/platform-current-state.md`,
+  `docs/specs/19-implementation-notes.md`, `README.md`, and the comments in
+  `release.yml`, `release-coverage.yml` and `regression-guard.yml` still said
+  PRs and forks ran on GitHub-hosted runners. They now describe the actual
+  routing and guard.
+
 ## [3.8.5] - 2026-11-12
 
 ### Fixed

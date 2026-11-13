@@ -3,10 +3,12 @@
 
 Spec 19 R19-13, verbatim:
 
-    PRs and forks MUST execute on GitHub-hosted runners as in
-    `team-validation.yml`. Only trusted `main` validation MAY use the
-    self-hosted UCS03 label from `team-validation-fleet.yml`. The UCS03 job MUST
-    be repo-scoped and isolated: clean checkout, no cross-repository
+    All CI MUST execute on the repository's own UCS03 runner
+    (`guardrails-ucs03`); GitHub-hosted runners MUST NOT be used.
+    Same-repository pull requests MAY run on the fleet only when every job
+    carries a fork guard evaluated before runner assignment, so fork PR code
+    never executes on it; `pull_request_target` MUST NOT be used. The UCS03
+    job MUST be repo-scoped and isolated: clean checkout, no cross-repository
     workspace/artifact/cache/credential reuse, least-privilege token, no
     production credentials, bounded concurrency, and post-job cleanup. A runner
     label alone is not isolation evidence. Release acceptance MUST include an
@@ -20,25 +22,34 @@ workspace, a cache, or a token with a previous job on the same host.
 
 What is checked, per file and per job:
 
-1. **Untrusted triggers never reach the self-hosted runner.** A workflow that
-   declares `pull_request` may only have GitHub-hosted jobs. An expression
-   `runs-on:` (e.g. `${{ inputs.runner }}`) is a VIOLATION rather than an
-   assumption, because the value is not decidable at review time and a matrix
-   or input can resolve it to the self-hosted label.
-2. **The self-hosted label appears in exactly one file, in a `main`-only job.**
-   Any other file, any job without a `refs/heads/main` guard, or a workflow that
-   also declares `pull_request` is a VIOLATION.
-3. **The trusted job's isolation posture is declared, not implied.** It must
-   declare least-privilege `permissions` (no `write` scope, nothing omitted),
-   a `concurrency` group with an explicit `cancel-in-progress` (bounded
-   concurrency), a checkout with no `path:` and no `repository:` (a shared
-   workspace path or a foreign repository is precisely the cross-repository
-   reuse the requirement forbids), no `actions/cache` use (a cache on a
-   persistent host is shared across runs and across repositories by key), and a
-   final `if: always()` cleanup step (post-job cleanup).
+1. **All CI runs on the repo-scoped UCS03 fleet.** Every job must target the
+   `guardrails-ucs03` label. A literal GitHub-hosted label (`ubuntu-*`,
+   `windows-*`, `macos-*`) is a VIOLATION, and so is an expression `runs-on:`
+   (e.g. `${{ inputs.runner }}`), because its value is not decidable at review
+   time.
+2. **Fork code never reaches the fleet.** Same-repository pull requests run on
+   the fleet, but every job in a workflow that declares `pull_request` MUST
+   carry the fork guard
+
+       github.event_name != 'pull_request' ||
+       github.event.pull_request.head.repo.full_name == github.repository
+
+   which GitHub evaluates before assigning a runner, so a fork PR's jobs are
+   skipped rather than dispatched. `pull_request_target` is a VIOLATION
+   outright: it runs a base-repository workflow with a PR-controlled checkout
+   and a writable token.
+3. **The trusted-main job's isolation posture is declared, not implied.** The
+   job in `team-validation-fleet.yml` must declare least-privilege
+   `permissions` (no `write` scope, nothing omitted), a `concurrency` group
+   with an explicit `cancel-in-progress` (bounded concurrency), a checkout with
+   no `path:` and no `repository:`, no `actions/cache` use (a cache on a
+   persistent host is restored across runs and repositories by key), and a
+   final `if: always()` cleanup step (post-job cleanup). The no-cache and
+   repo-scoped-checkout rules apply to every fleet job, not only the trusted
+   one.
 4. **Non-vacuity.** Zero workflow files, zero `pull_request` workflows, or zero
-   self-hosted jobs each FAIL. A green run must mean the rules were exercised
-   against a tree that actually contains what they govern.
+   fleet jobs each FAIL. A green run must mean the rules were exercised against
+   a tree that actually contains what they govern.
 
 Clause 5 (isolation probe / recorded host attestation) cannot be decided by
 reading YAML, so it is not faked here: `scripts/runner_isolation_probe.py` runs
@@ -63,12 +74,23 @@ EXIT_USAGE = 2
 
 WORKFLOW_DIR = Path(".github") / "workflows"
 
-# The single workflow permitted to use the self-hosted runner.
+# The workflow whose job must carry the full isolation posture and the host
+# attestation (R19-13 clause 3 / clause 5).
 TRUSTED_WORKFLOW = ".github/workflows/team-validation-fleet.yml"
-# The label that identifies the trusted host pool.
+# The label that identifies the fleet host pool. Every job targets it.
 TRUSTED_LABEL = "guardrails-ucs03"
-# GitHub-hosted runner label prefixes. Anything else is undecidable offline.
+# GitHub-hosted runner label prefixes. Any of these is a violation.
 HOSTED_PREFIXES = ("ubuntu-", "windows-", "macos-")
+
+# Read by GitHub BEFORE a runner is assigned. A job carrying this condition is
+# skipped for fork pull requests, so untrusted contribution code never reaches
+# the fleet. The gate requires the canonical contiguous expression rather than
+# accepting "something about forks": an inverted operator (`&&`) would skip
+# every push run and must not pass as a guard.
+FORK_GUARD = (
+    "github.event_name != 'pull_request' || "
+    "github.event.pull_request.head.repo.full_name == github.repository"
+)
 
 # Scopes a read-only validation job never needs. `contents: read` is the whole
 # requirement; anything else must be justified by a reviewer, not inherited.
@@ -122,11 +144,17 @@ def _as_labels(runs_on: object) -> list[str]:
     return []
 
 
-def _is_self_hosted(labels: list[str]) -> bool:
-    return any(
-        label.strip() == TRUSTED_LABEL or label.strip() == "self-hosted"
-        for label in labels
-    )
+def _on_fleet(labels: list[str]) -> bool:
+    """True when the job targets the fleet label (directly or in a list)."""
+    return any(label.strip() == TRUSTED_LABEL for label in labels)
+
+
+def _normalise(expr: object) -> str:
+    return " ".join(str(expr or "").split())
+
+
+def _fork_guarded(job: dict) -> bool:
+    return _normalise(FORK_GUARD) in _normalise(job.get("if"))
 
 
 def _is_literal_hosted(labels: list[str]) -> bool:
@@ -193,10 +221,47 @@ def check_permissions(doc: dict, job: dict, where: str) -> list[str]:
     return problems
 
 
+def check_reuse(job: dict, where: str) -> list[str]:
+    """No cross-repository reuse in any job that runs on the fleet.
+
+    A shared action cache on a persistent host is restored across runs and
+    repositories by key, and a checkout `path:`/`repository:` is shared or
+    foreign workspace state rather than a repo-scoped checkout.
+    """
+    problems: list[str] = []
+    for step in _steps(job):
+        uses = _step_uses(step)
+        label = f"{where}: step `{_step_name(step) or uses or '<unnamed>'}`"
+
+        if uses.startswith("actions/cache"):
+            problems.append(
+                f"{label}: uses a shared action cache — on a persistent host a "
+                f"cache key can be restored across runs and repositories "
+                f"(R19-13)"
+            )
+        if uses.startswith("actions/checkout"):
+            with_ = step.get("with") or {}
+            if not isinstance(with_, dict):
+                with_ = {}
+            if "path" in with_:
+                problems.append(
+                    f"{label}: checkout sets `path: {with_['path']}` — a "
+                    f"non-default workspace path is shared state, not a "
+                    f"repo-scoped checkout (R19-13)"
+                )
+            if "repository" in with_:
+                problems.append(
+                    f"{label}: checkout pulls `repository: "
+                    f"{with_['repository']}` — cross-repository checkout in "
+                    f"a fleet job (R19-13)"
+                )
+    return problems
+
+
 def check_trusted_job(
     doc: dict, job: dict, triggers: set[str], where: str
 ) -> list[str]:
-    """Isolation posture of the one job allowed on the self-hosted pool."""
+    """Isolation posture of the attested trusted-main job."""
     problems: list[str] = []
 
     guard = str(job.get("if") or "")
@@ -205,12 +270,6 @@ def check_trusted_job(
             f"{where}: runs on the self-hosted pool without a "
             f"`refs/heads/main` guard (`if: {guard or '<absent>'}`) — an "
             f"untrusted ref would then execute on the private host (R19-13)"
-        )
-    if "pull_request" in triggers:
-        problems.append(
-            f"{where}: workflow declares `pull_request` and also uses the "
-            f"self-hosted pool — fork code must never reach the private "
-            f"runner (R19-13)"
         )
     if "push" not in triggers:
         problems.append(
@@ -237,32 +296,7 @@ def check_trusted_job(
         problems.append(f"{where}: job has no steps (R19-13)")
         return problems
 
-    for step in steps:
-        uses = _step_uses(step)
-        label = f"{where}: step `{_step_name(step) or uses or '<unnamed>'}`"
-
-        if uses.startswith("actions/cache"):
-            problems.append(
-                f"{label}: uses a shared action cache — on a persistent host a "
-                f"cache key can be restored across runs and repositories "
-                f"(R19-13)"
-            )
-        if uses.startswith("actions/checkout"):
-            with_ = step.get("with") or {}
-            if not isinstance(with_, dict):
-                with_ = {}
-            if "path" in with_:
-                problems.append(
-                    f"{label}: checkout sets `path: {with_['path']}` — a "
-                    f"non-default workspace path is shared state, not a "
-                    f"repo-scoped checkout (R19-13)"
-                )
-            if "repository" in with_:
-                problems.append(
-                    f"{label}: checkout pulls `repository: "
-                    f"{with_['repository']}` — cross-repository checkout in "
-                    f"the trusted job (R19-13)"
-                )
+    problems.extend(check_reuse(job, where))
 
     names = [_step_name(s) for s in steps]
     cleanup = [
@@ -289,11 +323,11 @@ def check_trusted_job(
 
 
 def scan(repo: Path) -> tuple[int, int, int, list[str]]:
-    """Return (workflows, pull_request_workflows, self_hosted_jobs, violations)."""
+    """Return (workflows, pull_request_workflows, fleet_jobs, violations)."""
     files = workflow_files(repo)
     violations: list[str] = []
     pr_workflows = 0
-    self_hosted_jobs = 0
+    fleet_jobs = 0
 
     for wf in files:
         rel = wf.relative_to(repo).as_posix()
@@ -307,8 +341,15 @@ def scan(repo: Path) -> tuple[int, int, int, list[str]]:
             continue
 
         triggers = _triggers(doc)
-        if "pull_request" in triggers or "pull_request_target" in triggers:
+        is_pr = "pull_request" in triggers
+        if is_pr:
             pr_workflows += 1
+        if "pull_request_target" in triggers:
+            violations.append(
+                f"{rel}: declares `pull_request_target` — it runs a "
+                f"base-repository workflow against PR-controlled code with a "
+                f"writable token and must not be used (R19-13)"
+            )
 
         for job_id, job in _jobs(doc).items():
             if not isinstance(job, dict):
@@ -316,34 +357,40 @@ def scan(repo: Path) -> tuple[int, int, int, list[str]]:
             where = f"{rel}:{job_id}"
             labels = _as_labels(job.get("runs-on"))
 
-            if _is_self_hosted(labels):
-                self_hosted_jobs += 1
-                if rel != TRUSTED_WORKFLOW:
-                    violations.append(
-                        f"{where}: `runs-on: {labels}` — the self-hosted pool "
-                        f"may only be used by {TRUSTED_WORKFLOW} (R19-13)"
-                    )
-                    continue
-                violations.extend(check_trusted_job(doc, job, triggers, where))
+            if _has_expression(labels):
+                violations.append(
+                    f"{where}: `runs-on: {labels}` is an expression — its "
+                    f"value cannot be reviewed, and an input can resolve it to "
+                    f"a private or cloud runner (R19-13)"
+                )
+                continue
+            if _is_literal_hosted(labels):
+                violations.append(
+                    f"{where}: `runs-on: {labels}` is a GitHub-hosted label — "
+                    f"all CI must run on the repo-scoped UCS03 fleet (R19-13)"
+                )
+                continue
+            if not _on_fleet(labels):
+                violations.append(
+                    f"{where}: `runs-on: {labels}` does not target the fleet "
+                    f"label `{TRUSTED_LABEL}` (R19-13)"
+                )
                 continue
 
-            if "pull_request" in triggers or "pull_request_target" in triggers:
-                if _has_expression(labels):
-                    violations.append(
-                        f"{where}: `runs-on: {labels}` is an expression in a "
-                        f"pull_request workflow — its value cannot be reviewed, "
-                        f"and an input can resolve it to a private runner "
-                        f"(R19-13)"
-                    )
-                elif not _is_literal_hosted(labels):
-                    violations.append(
-                        f"{where}: `runs-on: {labels}` is not a literal "
-                        f"GitHub-hosted label in a pull_request workflow — "
-                        f"fork code must run on hosted infrastructure "
-                        f"(R19-13)"
-                    )
+            fleet_jobs += 1
+            violations.extend(check_reuse(job, where))
 
-    return len(files), pr_workflows, self_hosted_jobs, violations
+            if is_pr and not _fork_guarded(job):
+                violations.append(
+                    f"{where}: workflow declares `pull_request` and this job "
+                    f"lacks the fork guard (`if: {job.get('if') or '<absent>'}`) "
+                    f"— a fork PR would execute on the private runner (R19-13)"
+                )
+
+            if rel == TRUSTED_WORKFLOW:
+                violations.extend(check_trusted_job(doc, job, triggers, where))
+
+    return len(files), pr_workflows, fleet_jobs, violations
 
 
 def check_attestation(path: Path) -> list[str]:
@@ -410,7 +457,7 @@ def main(argv: list[str]) -> int:
     args = ap.parse_args(argv)
 
     repo = Path(args.repo).resolve()
-    files, pr_workflows, self_hosted_jobs, violations = scan(repo)
+    files, pr_workflows, fleet_jobs, violations = scan(repo)
 
     if files == 0:
         print(
@@ -422,16 +469,16 @@ def main(argv: list[str]) -> int:
     if pr_workflows == 0:
         print(
             f"R19-13 FAIL: {files} workflow(s) but none declares `pull_request` "
-            f"— the hosted-runner rule was never exercised (no vacuous green)",
+            f"— the fork-guard rule was never exercised (no vacuous green)",
             file=sys.stderr,
         )
         return EXIT_VIOLATIONS
-    if self_hosted_jobs == 0:
+    if fleet_jobs == 0:
         print(
-            f"R19-13 FAIL: no self-hosted job found, so the trusted-lane rules "
-            f"were not exercised against the tree (no vacuous green). If the "
-            f"self-hosted lane was retired, remove this assertion deliberately "
-            f"rather than letting it pass on an empty set.",
+            f"R19-13 FAIL: no job targets the fleet label `{TRUSTED_LABEL}`, so "
+            f"the fleet rules were not exercised against the tree (no vacuous "
+            f"green). If the fleet lane was retired, remove this assertion "
+            f"deliberately rather than letting it pass on an empty set.",
             file=sys.stderr,
         )
         return EXIT_VIOLATIONS
@@ -446,10 +493,10 @@ def main(argv: list[str]) -> int:
         return EXIT_VIOLATIONS
 
     print(
-        f"R19-13 OK: {files} workflow(s), {pr_workflows} pull_request "
-        f"workflow(s) on hosted runners, {self_hosted_jobs} self-hosted job in "
-        f"{TRUSTED_WORKFLOW} with least-privilege permissions, bounded "
-        f"concurrency and post-job cleanup"
+        f"R19-13 OK: {files} workflow(s), {fleet_jobs} job(s) on `{TRUSTED_LABEL}`, "
+        f"{pr_workflows} pull_request workflow(s) with a fork guard on every job, "
+        f"and {TRUSTED_WORKFLOW} with least-privilege permissions, bounded "
+        "concurrency, repo-scoped checkout and post-job cleanup"
         + (f"; attestation verified at {args.attestation}" if args.attestation else "")
     )
     return EXIT_OK

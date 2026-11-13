@@ -18,8 +18,9 @@ permissions:
 
 jobs:
   check-doc-length:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     name: Document line cap (500) and exemptions
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64, guardrails-ucs03]
 
     steps:
       - name: Checkout code
@@ -40,8 +41,9 @@ jobs:
         run: python3 scripts/test_check_doc_length.py
 
   check-broken-links:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     name: Internal Markdown links
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64, guardrails-ucs03]
 
     steps:
       - name: Checkout code
@@ -54,8 +56,9 @@ jobs:
         run: bash scripts/check-doc-links.sh .
 
   check-required-sections:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     name: Check Required Sections
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64, guardrails-ucs03]
 
     steps:
       - name: Checkout code
@@ -94,8 +97,9 @@ jobs:
           fi
 
   check-trailing-whitespace:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     name: Check Formatting
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64, guardrails-ucs03]
 
     steps:
       - name: Checkout code

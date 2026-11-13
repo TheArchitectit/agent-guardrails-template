@@ -89,26 +89,33 @@ workspace, a cache, a token, or a tree with an earlier job on the same host.
 **Fixed with one gate and one probe, split along the line between what can be
 read and what must be measured.**
 
-`scripts/check_runner_isolation.py` reads the definitions and enforces six
-properties, fail-closed and non-vacuous:
+`scripts/check_runner_isolation.py` reads the definitions and enforces the
+properties below, fail-closed and non-vacuous:
 
-- **Fork code never reaches the private pool.** A workflow declaring
-  `pull_request` may only have GitHub-hosted jobs. An expression `runs-on:`
-  (e.g. `${{ inputs.runner }}`) is a violation rather than an assumption,
+- **All CI runs on the fleet.** Every job must target `guardrails-ucs03`. A
+  literal GitHub-hosted label (`ubuntu-*`, `windows-*`, `macos-*`) is a
+  violation, and so is an expression `runs-on:` (e.g. `${{ inputs.runner }}`),
   because its value is not decidable at review time and an input can resolve it
-  to the self-hosted label.
-- **The label appears in exactly one file**, in a job guarded by
-  `refs/heads/main`.
+  elsewhere.
+- **Fork code never reaches the private pool.** A workflow declaring
+  `pull_request` must carry the canonical fork guard on *every* job:
+  `github.event_name != 'pull_request' ||
+  github.event.pull_request.head.repo.full_name == github.repository`. GitHub
+  evaluates a job-level `if:` before assigning a runner, so a fork PR's jobs are
+  skipped rather than dispatched. The contiguous expression is required — an
+  inverted `&&` would skip every push and must not pass as a guard.
+  `pull_request_target` is a violation outright.
+- **The trusted job keeps a `refs/heads/main` guard** and a `push` trigger.
 - **Least-privilege token** — an explicit `permissions` block with no write
   scope. An omitted block is refused, because the omission resolves to the
   repository default rather than to the read-only token the job should hold.
 - **Bounded concurrency** — a `concurrency.group` with `cancel-in-progress`
   declared, not implied.
-- **No cross-repository reuse** — no `actions/cache` (a cache on a persistent
-  host is restored by key across runs and repositories), no checkout `path:`,
-  no checkout `repository:`.
-- **Cleanup last** — an `if: always()` cleanup step, and it must be the final
-  step, because cleanup that runs before other work does not clean up after it.
+- **No cross-repository reuse in any fleet job** — no `actions/cache` (a cache
+  on a persistent host is restored by key across runs and repositories), no
+  checkout `path:`, no checkout `repository:`.
+- **Cleanup last** — the trusted job ends with an `if: always()` cleanup step,
+  because cleanup that runs before other work does not clean up after it.
 
 `scripts/runner_isolation_probe.py` runs **inside the trusted job** and measures
 the host: the workspace is a single git top-level at the run's commit; its
@@ -135,14 +142,19 @@ mode `0o775`) and **passed** a genuinely isolated workspace
 (`_work`-shaped, `0o700`, one repo, matching HEAD). Both records were then fed
 to `--attestation` and produced the corresponding verdict from the gate.
 
-**Evidence.** `scripts/test_check_runner_isolation.py` — 27 cases (13 trusted-lane
-and hosted-runner rules, 7 attestation shapes, 3 non-vacuity cases, plus the
-main-tree run). `scripts/test_runner_isolation_probe.py` — 14 cases over **real
-git trees** built by the test, covering each property in both directions and all
-three exit codes. **Red-on-drift proven four ways against the real workflows**,
-each measured `EXIT=0 → EXIT=1` then restored: cleanup step removed; `contents:
-read` → `write`; `pull_request` added to the trusted workflow; the `main` guard
-removed. No gate was weakened and no check was skipped.
+**Evidence.** `scripts/test_check_runner_isolation.py` — 32 cases (trusted-lane
+and reuse rules, fork-guard and routing rules, 8 attestation shapes, 3
+non-vacuity cases, plus the main-tree run). `scripts/test_runner_isolation_probe.py`
+— 14 cases over **real git trees** built by the test, covering each property in
+both directions and all three exit codes. **Red-on-drift proven against the real
+workflows**, each mutation measured `EXIT=0 → EXIT=1` then restored: cleanup
+step removed; `contents: read` → `write`; the `main` guard removed; a fleet job
+routed to `ubuntu-latest`; the fork guard deleted from one workflow's jobs; the
+guard's `||` inverted to `&&`; `pull_request_target` substituted for
+`pull_request`. When the owner's routing change first landed, `pull_request`
+added to the trusted workflow was itself a mutation the old gate caught; under
+the revised R19-13 it is allowed only because every job there carries the fork
+guard. No gate was weakened and no check was skipped.
 
 **Wired.** `regression-guard.yml` runs the gate + self-test on every push and PR
 (step "Runner trust and repository isolation (Spec 19 R19-13)").

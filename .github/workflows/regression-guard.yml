@@ -19,7 +19,8 @@ permissions:
 
 jobs:
   regression-check:
-    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, Linux, X64, guardrails-ucs03]
     name: Check for Potential Regressions
 
     steps:
@@ -115,14 +116,15 @@ jobs:
 
       - name: Runner trust and repository isolation (Spec 19 R19-13)
         run: |
-          # Spec 19 R19-13: fork code must never reach the private runner, the
-          # self-hosted label may appear only in the trusted-main workflow, and
-          # that job must declare least-privilege permissions, bounded
-          # concurrency and post-job cleanup. A runner label alone is not
-          # isolation evidence (the host probe runs in that job and the record
-          # is validated there). Fail-closed, non-vacuous: zero workflows, zero
-          # pull_request workflows and zero self-hosted jobs each FAIL rather
-          # than pass on an empty set.
+          # Spec 19 R19-13: every job runs on the repo-scoped fleet, fork code
+          # must never reach it (a workflow declaring `pull_request` needs the
+          # canonical fork guard on every job; `pull_request_target` is
+          # forbidden), and the trusted-main job must declare least-privilege
+          # permissions, bounded concurrency and post-job cleanup. A runner
+          # label alone is not isolation evidence (the host probe runs in that
+          # job and the record is validated there). Fail-closed, non-vacuous:
+          # zero workflows, zero pull_request workflows and zero fleet jobs each
+          # FAIL rather than pass on an empty set.
           python -m pip install --quiet pyyaml
           python scripts/check_runner_isolation.py --repo .
           python scripts/test_check_runner_isolation.py

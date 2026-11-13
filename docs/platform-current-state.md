@@ -208,14 +208,16 @@ client/server pair; label all others experimental or illustrative.
 
 ### CI workflows currently present
 
-- `team-validation.yml`: pull-request and manual validation on GitHub-hosted
-  runners. Runs fixture-based team validation/status, Python unit tests with
+- `team-validation.yml`: pull-request and manual validation on the repo-scoped
+  UCS03 rootless-Podman runner (`guardrails-ucs03`). Every job carries the fork
+  guard, so a fork pull request's jobs are skipped by GitHub before a runner is
+  assigned. Runs fixture-based team validation/status, Python unit tests with
   coverage upload, Go race tests/build, and team-cli build. It does not start
   Postgres/Redis, run migrations, launch containers, or test MCP transport
   end-to-end.
 - `team-validation-fleet.yml`: trusted `main` pushes and manual dispatch on
   the repo-scoped UCS03 rootless-Podman runner (`guardrails-ucs03`). It has a
-  hard `refs/heads/main` guard; pull requests, including forks, remain hosted.
+  hard `refs/heads/main` guard.
   The pinned runner base plus GCC definition is versioned at
   `ci/runner/Containerfile.ucs03`.
 - `secret-validation.yml`: Gitleaks history scan; `.env` files fail, while
@@ -241,18 +243,24 @@ GitLab/Jenkins files are copy templates, not active GitHub workflows; they
 contain stale assumptions such as root `requirements.txt` and Go 1.21 versus
 the server module's Go 1.25.5.
 
-The regular PR/secret/regression workflows stay on `ubuntu-latest`. Trusted
-main validation is now routed to `ucs03-guardrails`, a repo-scoped rootless
-Podman runner with the distinct `guardrails-ucs03` label. It was registered
-and observed online; its first end-to-end workflow run passed. The host-side
-runner image includes GCC for CGO race tests, defined reproducibly in
-`ci/runner/Containerfile.ucs03` and based on a pinned Actions runner digest.
+Every regular PR, secret and regression workflow runs on `ucs03-guardrails`,
+a repo-scoped rootless Podman runner with the distinct `guardrails-ucs03`
+label; GitHub-hosted runners are not used anywhere in this repository. The
+runner was registered and observed online; its first end-to-end workflow run
+passed. The host-side runner image includes GCC for CGO race tests, defined
+reproducibly in `ci/runner/Containerfile.ucs03` and based on a pinned Actions
+runner digest.
 
 This routing is an explicit owner choice despite this being a public repo.
-Fork pull requests do not run on UCS03, protecting the private fleet network
-from untrusted contribution code. The fleet workflow itself also requires
-`refs/heads/main`, including for manual dispatch. No runner registration token
-or other fleet secret is stored in this repository.
+Fork pull requests never execute on UCS03: a job-level fork guard
+(`github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository`)
+is evaluated before runner assignment, so a fork PR's jobs are skipped rather
+than dispatched, which protects the private fleet network from untrusted
+contribution code. `pull_request_target` is not used anywhere.
+`scripts/check_runner_isolation.py` (R19-13) enforces the routing, the guard on
+every job of every `pull_request` workflow, the trusted workflow's
+`refs/heads/main` guard, and the no-cross-repository-reuse rules. No runner
+registration token or other fleet secret is stored in this repository.
 
 CI green means those particular jobs passed. It does not prove unwired
 subsystems enforce anything, the full client ecosystem interoperates, a

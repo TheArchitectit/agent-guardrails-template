@@ -5,16 +5,21 @@ on:
   # without the negative-control matrix passing on a supported runner.
   push:
     branches: [main, master]
-  # Pull requests, including forks, stay on GitHub-hosted runners so
-  # untrusted contribution code never runs inside the private UCS03 network.
+  # Same-repository pull requests run on the UCS03 fleet like every other
+  # event; each job carries a fork guard, so a fork PR is skipped on GitHub's
+  # side and never dispatched to the private pool.
   pull_request:
     branches: [main, master]
-  # Manual runs on arbitrary refs also stay on the hosted runner.
+  # Manual runs on arbitrary refs likewise execute on the fleet.
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   validate-teams:
-    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, Linux, X64, guardrails-ucs03]
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
@@ -52,7 +57,8 @@ jobs:
           path: teams-export.json
 
   test-python:
-    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, Linux, X64, guardrails-ucs03]
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
@@ -118,7 +124,8 @@ jobs:
           files: ./coverage.xml
 
   test-go:
-    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, Linux, X64, guardrails-ucs03]
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
@@ -179,7 +186,8 @@ jobs:
           done
 
   build-cli:
-    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, Linux, X64, guardrails-ucs03]
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
@@ -210,7 +218,8 @@ jobs:
   # R19-03 / R19-05: web middleware fail-closed on a configured-invalid
   # registry, plus registered/legacy authorization on the real REST surface.
   security-matrix-web-failclosed:
-    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, Linux, X64, guardrails-ucs03]
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
@@ -229,7 +238,8 @@ jobs:
   # (allow AND deny + zero side effect) and the live revocation-propagation
   # bound driven through both the web and MCP httptest paths.
   security-matrix-mcp-fullpath-authz:
-    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, Linux, X64, guardrails-ucs03]
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
@@ -246,7 +256,8 @@ jobs:
 
   # R19-05: credential registry fail-closed and lifecycle rows.
   security-matrix-registry-failclosed:
-    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, Linux, X64, guardrails-ucs03]
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
@@ -267,7 +278,8 @@ jobs:
   # secret-bearing config field and in tool arguments, and asserts the canary
   # never appears in logs, audit records, error responses, or serialized output.
   security-matrix-secret-redaction:
-    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, Linux, X64, guardrails-ucs03]
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
@@ -306,7 +318,8 @@ jobs:
   # unique-local destinations, and non-http(s) schemes, while accepting public
   # https. A policy-denied destination is the failed outcome.
   security-matrix-webhook-ssrf:
-    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, Linux, X64, guardrails-ucs03]
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
@@ -328,7 +341,8 @@ jobs:
   # entry fails config validation closed. Every assertion drives the real Echo
   # IPExtractor / config.Validate, not a helper call.
   security-matrix-clientip-trust:
-    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, Linux, X64, guardrails-ucs03]
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
@@ -351,7 +365,8 @@ jobs:
   # while an absent registry is skipped; a disabled or unexercised policy engine
   # is never an enforcement PASS; and evidence carries only bounded reason codes.
   security-matrix-readiness-lifecycle:
-    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, Linux, X64, guardrails-ucs03]
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
@@ -374,7 +389,8 @@ jobs:
   # catch-all file/SPA fallback is refused (404), so OPTIONS cannot declare an
   # arbitrary path. Every assertion drives the real router + middleware chain.
   security-matrix-cors-preflight:
-    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, Linux, X64, guardrails-ucs03]
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
@@ -395,7 +411,8 @@ jobs:
   # default); APIKeyAuth and RateLimitMiddleware derive their skip set from the
   # same registry; the static-asset rule stays method- and prefix-constrained.
   security-matrix-exposure-registry:
-    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, Linux, X64, guardrails-ucs03]
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
@@ -418,7 +435,8 @@ jobs:
   # encoded/path-normalized forms do not bypass, and that undeclared routes are
   # not served. Two positive controls keep the row non-vacuous.
   security-matrix-static-asset-bypass:
-    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, Linux, X64, guardrails-ucs03]
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
@@ -439,7 +457,8 @@ jobs:
   # (/web/../<file>, encoded and double-encoded forms) cannot reach a file
   # outside the root, and that the shell and real assets still serve.
   security-matrix-spa-confinement:
-    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, Linux, X64, guardrails-ucs03]
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
@@ -460,7 +479,8 @@ jobs:
   # and that a resource read is authorized by the same principal decision model
   # as a tool call over the real StreamableHTTP endpoint (allow AND deny).
   security-matrix-resource-permission:
-    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, Linux, X64, guardrails-ucs03]
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
@@ -485,7 +505,8 @@ jobs:
   # ID, action, outcome, reason code, policy version) is written — never a raw
   # key or hashAPIKey-as-identity.
   security-matrix-audit-durability:
-    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, Linux, X64, guardrails-ucs03]
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
@@ -511,7 +532,8 @@ jobs:
   # counts, overlap), a no-op or rejected replacement emits nothing, and the
   # event never carries key material or a credential secret.
   security-matrix-rotation-audit:
-    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, Linux, X64, guardrails-ucs03]
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
@@ -534,7 +556,8 @@ jobs:
   # receiver by a non-reversible fingerprint without leaking the secret. Also
   # proves the applied rotation is recorded as an opaque audit event.
   security-matrix-webhook-rotation:
-    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, Linux, X64, guardrails-ucs03]
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
@@ -557,7 +580,8 @@ jobs:
   # closed. Also proves accepted legacy use is counted (migration measured,
   # not assumed).
   security-matrix-legacy-acceptance:
-    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, Linux, X64, guardrails-ucs03]
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
@@ -580,7 +604,8 @@ jobs:
   # emitted ONLY for a verified public HTTPS origin (TLS enabled + profile
   # `public`) — a header asserting an undeclared posture fails the row.
   security-matrix-security-headers:
-    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, Linux, X64, guardrails-ucs03]
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
@@ -601,7 +626,8 @@ jobs:
   # boundary a plaintext or unverified posture fails startup (verify-full DB,
   # Redis TLS required), while local keeps the isolated-bridge exception.
   security-matrix-storage-transit:
-    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, Linux, X64, guardrails-ucs03]
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
@@ -620,7 +646,8 @@ jobs:
   # deployment must reject known placeholder/default credentials (the shipped
   # Compose fallback is not a production credential).
   security-matrix-default-credentials:
-    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, Linux, X64, guardrails-ucs03]
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
@@ -641,7 +668,8 @@ jobs:
   # missing/permissive/empty file fails startup rather than starting with no
   # credential. The resolved value must still flow through the existing gates.
   security-matrix-secret-sources:
-    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, Linux, X64, guardrails-ucs03]
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
@@ -663,7 +691,8 @@ jobs:
   # sealed value read with no key configured — or a tampered one — is refused
   # rather than used as a signing key.
   security-matrix-webhook-atrest:
-    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, Linux, X64, guardrails-ucs03]
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
@@ -685,7 +714,8 @@ jobs:
   # (PPROF_UNTIL), and — outside the local profile — an explicit
   # no-proxy-route attestation. A misconfigured debug endpoint fails startup.
   security-matrix-debug-binding:
-    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, Linux, X64, guardrails-ucs03]
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
@@ -706,7 +736,8 @@ jobs:
   # strings.Repeat("x", 64)) must be refused at both the config gate and the
   # registry load boundary; a nonlocal/production profile must clear >=256 bits.
   security-matrix-verifier-key-strength:
-    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, Linux, X64, guardrails-ucs03]
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
@@ -729,7 +760,8 @@ jobs:
   # paths alone never satisfy the gate, and an operator JSON assertion with no
   # named positive/negative probe is not evidence.
   security-matrix-ingress-posture:
-    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, Linux, X64, guardrails-ucs03]
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
@@ -752,7 +784,8 @@ jobs:
   # (buildSnapshot), on the reload and rotation paths too, and the bound is
   # published so a silent change fails the build.
   security-matrix-credential-validity:
-    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, Linux, X64, guardrails-ucs03]
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
@@ -780,7 +813,8 @@ jobs:
   # refuses to write a set the loader would reject, and revokes to denial
   # inside the published 60s bound.
   security-matrix-credential-issuance:
-    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, Linux, X64, guardrails-ucs03]
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
@@ -834,7 +868,8 @@ jobs:
   # (scripts/check-doc-links.sh) against a scratch tree and requires a broken
   # internal Markdown link to flip it PASS->FAIL.
   security-matrix-mutation-kill:
-    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, Linux, X64, guardrails-ucs03]
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
@@ -863,7 +898,8 @@ jobs:
   # the red path, both in this one invocation. Named as its own row so drift
   # fails CI with a spec-21 label rather than being buried inside `go test ./...`.
   security-matrix-tool-schema-handler:
-    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, Linux, X64, guardrails-ucs03]
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
@@ -886,7 +922,8 @@ jobs:
   # promotion retention, divergent runs of one evaluation) and the config gate
   # that fails startup when the configured posture cannot meet the requirement.
   security-matrix-controlplane-evidence-retention:
-    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, Linux, X64, guardrails-ucs03]
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 

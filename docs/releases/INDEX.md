@@ -6,6 +6,7 @@ Release notes and testing guidance.
 
 | Version | Document | Notes |
 |---------|----------|-------|
+| v3.8.6 | [v3.8.6.md](v3.8.6.md) | All CI on the UCS03 fleet; per-job fork guard; R19-13 and its gate rewritten |
 | v3.8.5 | [v3.8.5.md](v3.8.5.md) | Release Coverage sees merge commits; reports-only exemption diffs against HEAD^1 |
 | v3.8.4 | [v3.8.4.md](v3.8.4.md) | PREVENT-SUB-001 blocks committed tooling submodules; embedding guide reconciled |
 | v3.8.3 | [v3.8.3.md](v3.8.3.md) | Submodule embedding guide; PR-comment permissions; changelog de-duplication |

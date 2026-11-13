@@ -38,9 +38,10 @@ commit. The current repository does not yet provide that contract:
   its line-count and link jobs are therefore not an unconditional same-commit
   release gate. Required documentation results must also cover push/release refs.
 - `.github/workflows/team-validation-fleet.yml:15-20` is a trusted `main`-only
-  self-hosted UCS03 job. `.github/workflows/team-validation.yml:3-15` keeps PRs,
-  including forks, on GitHub-hosted runners; this separation is required for
-  isolation and must not be weakened.
+  self-hosted UCS03 job. `.github/workflows/team-validation.yml:3-15` also runs
+  on the UCS03 fleet; every job carries the fork guard, so a fork PR's jobs are
+  skipped by GitHub before a runner is assigned and untrusted code never
+  executes on the private host.
 - Go is split across `mcp-server/go.mod`, `cmd/team-cli/go.mod`, and
   `examples/go/go.mod`; no `go.work` was found. Current team validation tests
   `mcp-server`, builds `cmd/team-cli`, and omits `examples/go`; neither build
@@ -120,7 +121,8 @@ resource-boundary tests.
 ### R19-01 — Required same-commit matrix
 
 The external required-check policy MUST require every applicable matrix row in Sec. 3
-on PRs (including forks on hosted runners), pushes to protected `main`, and
+on PRs (same-repository PRs on the UCS03 fleet behind the fork guard; fork PRs
+are skipped before runner assignment), pushes to protected `main`, and
 release-candidate tags or manual release dispatches bound to an immutable SHA.
 The solo maintainer configures and records the required-check list in GitHub
 branch/ruleset settings **outside** the editable workflow YAML; if those
@@ -358,13 +360,29 @@ there is no implicit green default.
 
 ### R19-13 — Runner trust and repository isolation
 
-PRs and forks MUST execute on GitHub-hosted runners as in `team-validation.yml`.
-Only trusted `main` validation MAY use the self-hosted UCS03 label from
-`team-validation-fleet.yml`. The UCS03 job MUST be repo-scoped and isolated:
-clean checkout, no cross-repository workspace/artifact/cache/credential reuse,
-least-privilege token, no production credentials, bounded concurrency, and
-post-job cleanup. A runner label alone is not isolation evidence. Release
-acceptance MUST include an isolation probe or recorded host attestation.
+All CI MUST execute on the repository's own UCS03 runner
+(`guardrails-ucs03`); GitHub-hosted runners MUST NOT be used.
+Same-repository pull requests MAY run on the fleet only when every job
+carries a fork guard evaluated before runner assignment, so fork PR code
+never executes on it; `pull_request_target` MUST NOT be used. The UCS03
+job MUST be repo-scoped and isolated: clean checkout, no cross-repository
+workspace/artifact/cache/credential reuse, least-privilege token, no
+production credentials, bounded concurrency, and post-job cleanup. A runner
+label alone is not isolation evidence. Release acceptance MUST include an
+isolation probe or recorded host attestation.
+
+The fork guard is a job-level `if:` that GitHub evaluates before it assigns a
+runner:
+
+```yaml
+if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+```
+
+A fork PR therefore matches no job and nothing is dispatched to the private
+pool. The guard is required on *every* job of a workflow that declares
+`pull_request`, because one unguarded job is enough to run contributor code on
+the host. `scripts/check_runner_isolation.py` enforces this along with the
+routing, reuse and non-vacuity rules.
 
 ### R19-14 — Path-filter safeguards
 
@@ -425,8 +443,9 @@ SKIP. Green unrelated checks cannot override a failed security row.
 Rollout is staged: (1) implement external required-check names and report-only
 classification without changing authorization behavior; (2) add deterministic
 positive/negative fixtures and mutation kill tests; (3) run the full matrix on a
-non-production environment and hosted PR path; (4) prove UCS03 repo isolation on
-trusted `main`; (5) enable branch/release blocking for the exact commit; and
+non-production environment and the same-repository PR path on the fleet behind
+the fork guard; (4) prove UCS03 repo isolation on the fleet; (5) enable
+branch/release blocking for the exact commit; and
 (6) observe one complete release cycle before tightening defaults. Rollback is to
 the last known-good restrictive gate configuration; if gate integrity is unknown,
 stop protected traffic rather than restoring permissive fallback.
