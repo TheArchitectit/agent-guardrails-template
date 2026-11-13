@@ -33,7 +33,12 @@ set -eu
 
 root="${1:-.}"
 
-files=$(find "$root" -name '*.md' -type f 2>/dev/null | grep -v node_modules | grep -v '/\.git/' || true)
+# Scope: the template's own tree. `.devgate` is a pinned submodule — a separate
+# repository with its own docs gates — and on a persistent self-hosted
+# runner a job that checked it out leaves it behind for later jobs, which
+# made this gate's result depend on workspace history (2026-11-13: one
+# broken link inside the submodule turned the template gate red).
+files=$(find "$root" -name '*.md' -type f 2>/dev/null | grep -v node_modules | grep -v '/\.git/' | grep -v '/\.devgate/' || true)
 
 if [ -z "$files" ]; then
     echo "DOC LINKS: FAIL — no Markdown files found under '$root' (non-vacuous scan required)"
