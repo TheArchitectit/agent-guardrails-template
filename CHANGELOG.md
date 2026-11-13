@@ -8,6 +8,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [3.8.11] - 2026-11-13
+
+### Fixed
+
+- **The docs and secret scans no longer read the pinned `.devgate` submodule.**
+  On a persistent self-hosted runner, a job that checked out submodules leaves
+  `.devgate` populated for later jobs. The docs link check then scanned 730
+  files instead of 513 and failed on a link inside the submodule, and the
+  secret pattern scan reported the submodule's synthetic canaries
+  (`PLANTED_SECRET = "…"` in its own test) and `TOKEN="$APP_TOKEN"` idioms as
+  template findings. Both checks now exclude `.devgate`, which is a separate
+  repository with its own gates; the template's own tree is unchanged
+  (995 internal links across 513 files resolve, and neither failing pattern
+  matches in-tree).
+
 ## [3.8.10] - 2026-11-13
 
 ### Fixed
