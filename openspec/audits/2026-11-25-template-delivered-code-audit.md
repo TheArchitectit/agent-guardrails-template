@@ -9,7 +9,7 @@ The prior requirement trace covers all 44 main requirements. This review matched
 - OpenSpec 2.2.0 strict validation passed 57 current items and 12 archives.
 - Exact published Windows launcher passed startup and rerun. The isolated test verified fresh migrations, reserved-character PostgreSQL configuration, loopback readiness, and volume-preserving teardown and restart.
 - A fresh Linux Go run used the canonical Git bytes, full repository fixtures and tool dependencies. There were 899 test records, with 897 passed, two skipped and zero failed. The runner reported skips for `TestL2ActuallyRunsWithTheShippedDefaults` and `TestGenerateDriftAllowlist`.
-- A clean locked Pi install at `cd118c7` produced 196 passed and one failure. The bridge test could not load `@modelcontextprotocol/sdk/client/index.js`. PKG-01 tracks this dependency gap.
+- A clean locked Pi install at `cd118c7` produced 196 passed and one failure. The bridge test could not load `@modelcontextprotocol/sdk/client/index.js`. PKG-01 resolved that gap in a follow-up. The development suite passed all 199 tests and the packed standalone smoke passed without the SDK. [Archived evidence](../changes/archive/2026-11-25-pkg01-declare-pi-mcp-sdk-dev-dependency/evidence.md)
 
 ## Established guardrails requirements
 
@@ -145,7 +145,7 @@ The table records each tracked change at the audited revision. Task totals come 
 | [ops03-verify-multi-instance-revocation](../changes/ops03-verify-multi-instance-revocation/tasks.md) | Active | 0/3 | 1 | — |
 | [ops04-rehearse-operational-recovery](../changes/ops04-rehearse-operational-recovery/tasks.md) | Active | 0/3 | 1 | — |
 | [package-team-cli-python-backend](../changes/package-team-cli-python-backend/tasks.md) | Active | 0/3 | 1 | — |
-| [pkg01-declare-pi-mcp-sdk-dev-dependency](../changes/pkg01-declare-pi-mcp-sdk-dev-dependency/tasks.md) | Active | 0/4 | 1 | — |
+| [pkg01-declare-pi-mcp-sdk-dev-dependency](https://github.com/TheArchitectit/agent-guardrails-template/blob/30b63f63c0462809269a0c9aa9fd64515210cc20/openspec/changes/pkg01-declare-pi-mcp-sdk-dev-dependency/tasks.md) | Active | 0/4 | 1 | — |
 | [pkg02-align-pi-package-name](../changes/pkg02-align-pi-package-name/tasks.md) | Active | 0/4 | 1 | — |
 | [preserve-hidden-agent-install-paths](../changes/preserve-hidden-agent-install-paths/tasks.md) | Active | 0/3 | 1 | — |
 | [reconcile-devgate-pin-ownership](../changes/reconcile-devgate-pin-ownership/tasks.md) | Active | 0/4 | 1 | — |
