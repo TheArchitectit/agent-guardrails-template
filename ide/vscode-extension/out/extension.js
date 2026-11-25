@@ -37,6 +37,7 @@ async function activate(context) {
     outputChannel = vscode.window.createOutputChannel('Guardrail');
     outputChannel.appendLine('Guardrail extension activated');
     client = new client_1.GuardrailClient(outputChannel);
+    await client.updateConfiguration(context);
     diagnostics = new diagnostics_1.GuardrailDiagnostics(client, outputChannel);
     statusBar = new statusBar_1.GuardrailStatusBar(client);
     (0, commands_1.registerCommands)(context, client, diagnostics, statusBar, outputChannel);
@@ -74,7 +75,7 @@ function registerEventHandlers(context, client, diagnostics) {
     }));
     context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(async (e) => {
         if (e.affectsConfiguration('guardrail')) {
-            await client.updateConfiguration();
+            await client.updateConfiguration(context);
             await testConnection();
         }
     }));
