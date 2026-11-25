@@ -2,10 +2,12 @@
 
 ## 1. Align package identity
 
-- [ ] 1.1 Update README installation examples and `install.mjs` usage/help to `@architectit/pi-guardrails`; retain the manifest name and `pi-guardrails` install directory.
-- [ ] 1.2 Add a package-identity test that asserts manifest, README, and installer help use the same canonical identity and that no install example refers to `@thearchitectit/pi-guardrails`.
+- [x] 1.1 Update README installation examples and `install.mjs` usage/help to `@architectit/pi-guardrails`; retain the manifest name and `pi-guardrails` install directory.
+- [x] 1.2 Add a package-identity test that asserts manifest, README, and installer help use the same canonical identity and that no install example refers to `@thearchitectit/pi-guardrails`.
 
 ## 2. Verify packaging and help output
 
 - [ ] 2.1 From `pi-extension/`, run `npm ci && npm test && npm pack --json --dry-run`; verify package metadata is `@architectit/pi-guardrails`.
-- [ ] 2.2 Run `install.mjs --help` with a temporary `HOME`; assert the printed `npx` identity matches metadata and the smoke test does not touch the real user home.
+- [x] 2.2 Run `install.mjs --help` with a temporary `HOME`; assert the printed `npx` identity matches metadata and the smoke test does not touch the real user home.
+
+Task 2.1 remains unchecked because the full test suite did not pass; see `evidence.md` for the exact result. The dry-run pack portion passed independently.
