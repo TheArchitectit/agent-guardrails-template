@@ -7,5 +7,5 @@
 
 ## 2. Verify scan outcome and cleanup
 
-- [ ] 2.1 Run a known-clean fixture and a separate safe synthetic-detection fixture; verify the expected outcomes and that logs expose no fixture value or credential.
+- [x] 2.1 Run a known-clean fixture and a separate safe synthetic-detection fixture; verify the expected outcomes and that logs expose no fixture value or credential. (Local v8.24.3 CLI only; pinned action installer remains unverified.)
 - [x] 2.2 Verify push/PR range, full-history checkout, licensed behavior, scan-step `GITHUB_TOKEN`/`GITLEAKS_LICENSE` inputs, read-only permission scope, scan arguments, `--exit-code=2`, and disabled SARIF upload remain unchanged; verify the pinned action resolves its binary under the explicit job-owned `TMPDIR` and cleanup removes only that directory.

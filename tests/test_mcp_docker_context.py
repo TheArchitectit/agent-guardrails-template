@@ -43,7 +43,10 @@ class DockerContextTests(unittest.TestCase):
     def test_inspector_commands_use_absolute_dockerfile_and_unstarted_command(self) -> None:
         context = Path("/tmp/mcp-context-fixture")
         build = inspector_build_argv(context, "mcp-context-check:test")
-        self.assertEqual(build[build.index("--file") + 1], str(context / "Dockerfile"))
+        self.assertEqual(
+            build[build.index("--file") + 1],
+            str((context / "Dockerfile").resolve()),
+        )
         self.assertTrue(Path(build[build.index("--file") + 1]).is_absolute())
         self.assertEqual(
             inspector_create_argv("mcp-context-check:test"),

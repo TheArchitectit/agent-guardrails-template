@@ -196,14 +196,9 @@ jobs:
           # Get commit messages in PR
           git log --format=%s "origin/${{ github.base_ref }}..HEAD" > commit_messages.txt
 
-          # Check for conventional commit bug fix markers
-          BUG_FIX_COUNT=$(grep -cE "^(fix|bugfix|hotfix)(\(.+\))?:" commit_messages.txt || true)
-
-          echo "bug_fix_count=$BUG_FIX_COUNT" >> $GITHUB_OUTPUT
-
+          BUG_FIX_COUNT=$(bash .github/scripts/count-bug-fix-commits.sh commit_messages.txt)
           if [ "$BUG_FIX_COUNT" -gt 0 ]; then
             echo "Detected $BUG_FIX_COUNT bug fix commit(s)"
-            echo "commits=$(cat commit_messages.txt)" >> $GITHUB_OUTPUT
           fi
 
       - name: Check for Regression Tests
