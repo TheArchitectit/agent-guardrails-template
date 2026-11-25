@@ -21,6 +21,9 @@ metadata have additional reproducible gaps in the audit.
 Several numbered design specifications also retain historical status claims
 that need owner-accepted reconciliation against current code and named tests
 (`LEGACY-01`).
+The dated govulncheck scan also reports source-reachable findings across four
+modules and the Go standard library. Its output does not provide standardized
+severity data (`QA-05`).
 
 ## Change
 

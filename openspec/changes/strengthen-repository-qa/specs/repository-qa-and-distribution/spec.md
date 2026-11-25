@@ -56,6 +56,14 @@ report development and runtime dependency results separately.
 - **THEN** the report records the advisory date and affected dependency scope,
   and CI exposes the result for review
 
+#### Scenario: Go advisory reports source-reachable findings
+
+- **WHEN** govulncheck reports findings with source call paths in a supported
+  module or toolchain
+- **THEN** the report records the database date, affected modules, and
+  reachability tier without inferring severity or exploitability from absent
+  advisory fields
+
 ### Requirement: CI inputs match repository contents
 
 CI jobs SHALL install dependencies from a manifest that exists at the declared

@@ -9,6 +9,9 @@
   with timezone-aware UTC serialization and retain JSON compatibility.
 - [ ] [QA-04] Review npm advisory results against the locked development
   dependencies and add an automated advisory check with date-stamped results.
+- [ ] [QA-05] Review the dated govulncheck findings, update source-reachable
+  dependencies and toolchain as appropriate, then rerun and retain the scan
+  result with reachability tiers.
 - [ ] [CI-01] Correct GitLab dependency installation inputs so configured jobs
   reference a dependency manifest present at the declared path.
 - [ ] [CI-02] Align GitLab and Jenkins Go toolchain configuration with the MCP

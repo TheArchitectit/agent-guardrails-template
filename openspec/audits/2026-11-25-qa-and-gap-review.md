@@ -33,6 +33,8 @@ bound closure claims to the old Go tests.
 |---|---|---|
 | Python repository suites | 300/300 passed | 268 tests in `scripts/` plus 32 example tests passed; 68 subtests passed. Coverage was 55.24% (4,240/7,675 lines). Python 3.12 emitted 363 deprecation warnings, primarily from naive `datetime.utcnow()` use. |
 | Go builds | 3/3 passed | MCP server, team CLI, and example builds passed on the pinned source. |
+| MCP Go race suite | All packages passed | `go test ./... -race -count=1` with Go 1.25.5 and scoped umask 0022; 370.726 seconds, including mutationkill. A restricted-loopback run was blocked by the sandbox's `httptest` socket restriction; the successful run used allowed local loopback. |
+| Go test floors | Above declared minima | MCP server: 894 test functions / floor 250; team CLI: 9 / floor 8; examples: 11 / floor 10. |
 | Team CLI/examples tests | Passed | The team CLI and example test targets passed. |
 | File-permission QA fixtures | Environment-sensitive | Four direct auth/config/secretfile fixtures request mode 0644 and are created as 0600 under default umask 0077. A downstream mutation baseline also depends on one fixture. All direct mode fixtures pass under scoped umask 0022. This is fixture portability evidence; the private 0600 mode is not a production secret permission defect. |
 | actionlint | Passed | Version 1.7.7 accepted the workflow files with the custom private-runner label recognized. |
@@ -47,6 +49,7 @@ bound closure claims to the old Go tests.
 | Pi extension unit suite | 196 pass, 1 fail | `npm ci` succeeded in a temporary copy. One MCP bridge test cannot resolve `@modelcontextprotocol/sdk`, which is not declared in the package manifest. A temporary writable `HOME` resolved five session-store environment failures. |
 | Pi extension with documented SDK supplied | 197 pass | Adding the documented SDK version in a temporary copy allowed all tests to pass; it appeared as extraneous because the package manifest does not declare it. |
 | npm dependency advisory snapshot | Pi: 9 dev package entries (3 moderate, 4 high, 2 critical); VS Code: 14 dev package entries (4 moderate, 10 high) | Results from unchanged lockfiles against advisory data checked 2026-11-25. `npm audit --omit=dev` reported zero for both manifests. No CI advisory enforcement was found. Counts are package entries, not unique vulnerabilities or production reachability claims. |
+| Go dependency advisory scan | 45 source-reachable findings across four modules and the Go standard library; 19 additional imported-package findings and 39 required-module findings had no apparent call path | Official govulncheck v1.10.0, Go 1.25.5, vulnerability database modified 2026-11-24. The three tiers report 103 unique IDs overall. Output does not provide standardized severity/CVSS. Representative traced findings include Echo v4.13.3 and Go 1.25.5 standard library. No Go advisory gate was found in CI; the Makefile offers a manual `vuln` target. These are scan reachability results, not production exploitability conclusions. |
 | VS Code extension compile | Passed | Locked `npm ci` and `npm run compile` in a temporary copy. |
 | MCP web static checks | Passed | `node --check` over `mcp-server/web/js/**/*.js`; Python stdlib HTMLParser parsed both static HTML entry points. No MCP web package manifest or lockfile exists. |
 
@@ -113,6 +116,7 @@ vulnerabilities.
 | `QA-02` | Four direct auth/config/secretfile mode fixtures request 0644 and become 0600 under 0077; all direct mode fixtures pass under scoped 0022. A downstream mutation baseline also depends on one fixture. | [`strengthen-repository-qa`](../changes/strengthen-repository-qa/proposal.md) |
 | `QA-03` | Python 3.12 test run emits 363 deprecation warnings, primarily for naive `datetime.utcnow()` usage. | [`strengthen-repository-qa`](../changes/strengthen-repository-qa/proposal.md) |
 | `QA-04` | Current npm advisories identify affected development dependency entries in Pi and VS Code lockfiles; no CI advisory enforcement is evidenced. Runtime dependency audit reported zero for both. | [`strengthen-repository-qa`](../changes/strengthen-repository-qa/proposal.md) |
+| `QA-05` | Dated govulncheck identifies 45 source-reachable findings across four modules and Go standard library, plus 58 findings without apparent call paths; no CI advisory gate is evidenced. | [`strengthen-repository-qa`](../changes/strengthen-repository-qa/proposal.md) |
 | `CI-01` | GitLab jobs invoke `pip install -r requirements.txt`, but the referenced root manifest is absent. | [`strengthen-repository-qa`](../changes/strengthen-repository-qa/proposal.md) |
 | `CI-02` | GitLab and Jenkins set Go 1.21 while `mcp-server/go.mod` declares 1.25.5; automatic toolchain acquisition may affect reproducibility, but mismatch alone does not prove failure. | [`strengthen-repository-qa`](../changes/strengthen-repository-qa/proposal.md) |
 | `DIST-01` | Team CLI installation places only the Go binary; its Python backend path is checkout-relative unless explicitly configured. | [`strengthen-repository-qa`](../changes/strengthen-repository-qa/proposal.md) |
@@ -197,7 +201,7 @@ resolution in order:
    manifest (`INV-01`, `ARC-01`, `QA-01`).
 2. Close reproducibility, dependency review, and integration issues in CI, installed CLI, IDE
    clients, package setup, and deployment (`CI-01`, `CI-02`, `DIST-01`,
-   `QA-04`, `IDE-01` through `IDE-03`, `INSTALL-01`, `INSTALL-02`, `PKG-01`, `PKG-02`,
+   `QA-04`, `QA-05`, `IDE-01` through `IDE-03`, `INSTALL-01`, `INSTALL-02`, `PKG-01`, `PKG-02`,
    `DEPLOY-01`, `LEGACY-01`).
 3. Produce version-bound runtime, classifier, action-boundary, evidence, and
    release-gate verification (`RUN-01` through `RUN-06`).
