@@ -11,20 +11,12 @@ import (
 // Uses sync.Map for concurrent access without lock contention
 var regexCache sync.Map
 
-// cachedRegex wraps a compiled regex with metadata
-type cachedRegex struct {
-	re         *regexp.Regexp
-	lastAccess time.Time
-}
-
 // CompilePattern retrieves or compiles a regex pattern with caching and size limits.
 // Use this instead of regexp.Compile to prevent ReDoS and avoid recompilation.
 func CompilePattern(pattern string) (*regexp.Regexp, error) {
 	// Fast path: check cache first
 	if cached, ok := regexCache.Load(pattern); ok {
-		cr := cached.(*cachedRegex)
-		cr.lastAccess = time.Now()
-		return cr.re, nil
+		return cached.(*regexp.Regexp), nil
 	}
 
 	// Slow path: compile and cache
@@ -33,13 +25,9 @@ func CompilePattern(pattern string) (*regexp.Regexp, error) {
 		return nil, fmt.Errorf("invalid regex pattern: %w", err)
 	}
 
-	// Store in cache
-	regexCache.Store(pattern, &cachedRegex{
-		re:         re,
-		lastAccess: time.Now(),
-	})
-
-	return re, nil
+	// Publish one immutable compiled expression for concurrent misses.
+	cached, _ := regexCache.LoadOrStore(pattern, re)
+	return cached.(*regexp.Regexp), nil
 }
 
 // SafeRegex performs regex matching with timeout protection
@@ -126,5 +114,5 @@ func MatchPattern(pattern string, input string) (bool, error) {
 
 // ClearRegexCache clears the regex cache (useful for testing or memory pressure)
 func ClearRegexCache() {
-	regexCache = sync.Map{}
+	regexCache.Clear()
 }
