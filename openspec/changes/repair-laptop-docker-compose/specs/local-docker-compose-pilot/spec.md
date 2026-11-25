@@ -63,3 +63,45 @@ The default laptop pilot teardown SHALL stop and remove its containers and netwo
 - **GIVEN** the laptop pilot is running with named data volumes
 - **WHEN** the documented default teardown command runs
 - **THEN** containers and network stop while both volumes remain available for a later restart
+
+### Requirement: Standalone Windows launcher uses a pinned source archive
+The Windows pilot SHALL be runnable from a single PowerShell script without requiring Git or an existing repository checkout. It SHALL download the exact approved source revision, verify the expected archive SHA-256 before extraction, and install only the Compose project inputs under a user-local versioned directory.
+
+#### Scenario: Standalone source bootstrap
+- **GIVEN** the user has PowerShell, Docker Desktop, and network access to the official GitHub archive host but no repository checkout or Git installation
+- **WHEN** the standalone launcher runs
+- **THEN** it downloads the archive for revision `ba9ff630b24821507d6c93c6c6117ac7be4e9b1e`, verifies SHA-256 `4f09f073c0e0c3c2706365c4444a752820efb7c44178b777b1d4a1c81f2ffa` before extraction, and installs the Compose file and MCP build context under `%LOCALAPPDATA%\GuardrailsLaptopPilot`
+
+### Requirement: Windows launcher is repeatable without replacing pilot data
+The launcher SHALL create its synthetic env file with create-new semantics, validate and reuse its own matching env file on restart, and preserve all pilot volumes. It SHALL reject unexpected ambient Compose overrides and containers with conflicting ownership labels.
+
+#### Scenario: Launcher reruns with its own pilot state
+- **GIVEN** the versioned source and valid synthetic env file created by this launcher already exist
+- **WHEN** the user runs the launcher again
+- **THEN** it reuses the existing source and credentials, does not print secret values, and leaves named volumes available
+
+#### Scenario: Existing credentials or containers are not owned by the launcher
+- **GIVEN** the dedicated env file is malformed or a fixed-name container belongs to a different Compose project
+- **WHEN** the launcher checks local pilot state
+- **THEN** it stops without replacing credentials or taking over the container
+
+### Requirement: Windows launcher targets only the local Docker Desktop Linux engine
+The launcher SHALL use an explicit `desktop-linux` context whose endpoint is Docker Desktop's local Windows Linux-engine named pipe, verify that the engine reports Linux, and start the installed Docker Desktop app when it is stopped. It SHALL not change Docker context or container mode.
+
+#### Scenario: Docker Desktop is stopped
+- **GIVEN** the `desktop-linux` context resolves to Docker Desktop's local Linux named pipe but the engine is not ready
+- **WHEN** the launcher starts the pilot
+- **THEN** it starts the standard Docker Desktop application and waits up to five minutes for the local Linux engine before Compose actions
+
+### Requirement: Launcher checks effective local policy before startup
+Before container startup the launcher SHALL render and inspect Compose configuration without revealing credentials, then verify source revision, local profile and attestation, credential wiring, and IPv4 loopback-only port publications. After startup it SHALL check the active port bindings and application readiness.
+
+#### Scenario: Rendered configuration matches pilot policy
+- **GIVEN** ambient variables cannot override the selected synthetic env file
+- **WHEN** the launcher validates Compose configuration
+- **THEN** it confirms the expected build revision, synthetic credential sources, local deployment profile, local bridge attestation, and ports 8080 and 8081 on `127.0.0.1` before `up`
+
+#### Scenario: Started pilot is ready on loopback
+- **GIVEN** Compose health-aware startup succeeds
+- **WHEN** the launcher checks the active bindings and readiness endpoint
+- **THEN** both services ports map to IPv4 loopback and `http://127.0.0.1:8081/health/ready` returns HTTP 200
