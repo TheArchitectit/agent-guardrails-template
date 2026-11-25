@@ -9,7 +9,7 @@
     "<name>:<tag>, or the registry manifest API), confirm the digest, update this",
     "file and every manifest in the same commit, and record the review date."
   ],
-  "reviewed": "2026-10-15",
+  "reviewed": "2026-11-25",
   "owner": "Project maintainer (solo-maintainer)",
   "images": {
     "docker.io/library/redis:7-alpine": {
@@ -20,8 +20,8 @@
       "digest": "sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea",
       "role": "service (compose database)"
     },
-    "docker.io/library/golang:1.25-alpine": {
-      "digest": "sha256:1ae0735f00daffa3aaf1363a5184c0d2dc55c78e3db4ec70241cdac97bf84b59",
+    "docker.io/library/golang:1.26.11-alpine": {
+      "digest": "sha256:ecb67f987aa1a57794c91d19ade7ae0209f2f0f5496aaef9e6ae85ddf92d02ab",
       "role": "build base (Dockerfile builder stage)"
     },
     "gcr.io/distroless/static:nonroot": {

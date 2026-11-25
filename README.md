@@ -49,7 +49,8 @@ The products are not merged by implication. Cross-product evidence is proposed, 
 
 ## Evaluate the repository locally
 
-For source validation, use Go 1.25.5 as declared by `mcp-server/go.mod`:
+For source validation, use the exact Go version declared by `mcp-server/go.mod`
+(`1.26.11` at this revision):
 
 ```sh
 git clone https://github.com/TheArchitectit/agent-guardrails-template.git
