@@ -132,7 +132,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
-          go-version: '1.25'
+          go-version-file: mcp-server/go.mod
           cache-dependency-path: |
             mcp-server/go.sum
             cmd/team-cli/go.sum
@@ -194,7 +194,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
-          go-version: '1.25'
+          go-version-file: mcp-server/go.mod
 
       - name: Build CLI
         run: |
@@ -226,7 +226,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
-          go-version: '1.25'
+          go-version-file: mcp-server/go.mod
           cache-dependency-path: mcp-server/go.sum
 
       - name: Web fail-closed middleware + REST authorization row
@@ -246,7 +246,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
-          go-version: '1.25'
+          go-version-file: mcp-server/go.mod
           cache-dependency-path: mcp-server/go.sum
 
       - name: MCP full-path authz + live revocation bound row
@@ -264,7 +264,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
-          go-version: '1.25'
+          go-version-file: mcp-server/go.mod
           cache-dependency-path: mcp-server/go.sum
 
       - name: Registry fail-closed + lifecycle row
@@ -286,7 +286,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
-          go-version: '1.25'
+          go-version-file: mcp-server/go.mod
           cache-dependency-path: mcp-server/go.sum
 
       - name: Secret-leak / redaction row
@@ -326,7 +326,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
-          go-version: '1.25'
+          go-version-file: mcp-server/go.mod
           cache-dependency-path: mcp-server/go.sum
 
       - name: Webhook URL SSRF guard row
@@ -349,7 +349,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
-          go-version: '1.25'
+          go-version-file: mcp-server/go.mod
           cache-dependency-path: mcp-server/go.sum
 
       - name: Client-IP trust boundary row
@@ -373,7 +373,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
-          go-version: '1.25'
+          go-version-file: mcp-server/go.mod
           cache-dependency-path: mcp-server/go.sum
 
       - name: Readiness and lifecycle row
@@ -397,7 +397,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
-          go-version: '1.25'
+          go-version-file: mcp-server/go.mod
           cache-dependency-path: mcp-server/go.sum
 
       - name: CORS posture and declared-preflight row
@@ -419,7 +419,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
-          go-version: '1.25'
+          go-version-file: mcp-server/go.mod
           cache-dependency-path: mcp-server/go.sum
 
       - name: Declared exposure registry row
@@ -443,7 +443,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
-          go-version: '1.25'
+          go-version-file: mcp-server/go.mod
           cache-dependency-path: mcp-server/go.sum
 
       - name: Static-asset bypass controls row
@@ -465,7 +465,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
-          go-version: '1.25'
+          go-version-file: mcp-server/go.mod
           cache-dependency-path: mcp-server/go.sum
 
       - name: Web UI shell path-confinement row
@@ -487,7 +487,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
-          go-version: '1.25'
+          go-version-file: mcp-server/go.mod
           cache-dependency-path: mcp-server/go.sum
 
       - name: Resource permission matrix + per-resource authorization row
@@ -513,7 +513,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
-          go-version: '1.25'
+          go-version-file: mcp-server/go.mod
           cache-dependency-path: mcp-server/go.sum
 
       - name: MCP decision/effect audit durability row
@@ -540,7 +540,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
-          go-version: '1.25'
+          go-version-file: mcp-server/go.mod
           cache-dependency-path: mcp-server/go.sum
 
       - name: Credential rotation operator-audit row
@@ -564,7 +564,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
-          go-version: '1.25'
+          go-version-file: mcp-server/go.mod
           cache-dependency-path: mcp-server/go.sum
 
       - name: Webhook signing-key rotation row
@@ -588,7 +588,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
-          go-version: '1.25'
+          go-version-file: mcp-server/go.mod
           cache-dependency-path: mcp-server/go.sum
 
       - name: Legacy-acceptance removal switch row
@@ -612,7 +612,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
-          go-version: '1.25'
+          go-version-file: mcp-server/go.mod
           cache-dependency-path: mcp-server/go.sum
 
       - name: Security headers + HSTS posture row
@@ -634,7 +634,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
-          go-version: '1.25'
+          go-version-file: mcp-server/go.mod
           cache-dependency-path: mcp-server/go.sum
 
       - name: Storage transit posture row
@@ -654,7 +654,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
-          go-version: '1.25'
+          go-version-file: mcp-server/go.mod
           cache-dependency-path: mcp-server/go.sum
 
       - name: Default-credential rejection row
@@ -676,7 +676,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
-          go-version: '1.25'
+          go-version-file: mcp-server/go.mod
           cache-dependency-path: mcp-server/go.sum
 
       - name: Secret-source row
@@ -699,7 +699,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
-          go-version: '1.25'
+          go-version-file: mcp-server/go.mod
           cache-dependency-path: mcp-server/go.sum
 
       - name: Webhook signing-material at-rest encryption row
@@ -722,7 +722,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
-          go-version: '1.25'
+          go-version-file: mcp-server/go.mod
           cache-dependency-path: mcp-server/go.sum
 
       - name: Debug endpoint posture row
@@ -744,7 +744,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
-          go-version: '1.25'
+          go-version-file: mcp-server/go.mod
           cache-dependency-path: mcp-server/go.sum
 
       - name: Verifier-key strength row
@@ -768,7 +768,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
-          go-version: '1.25'
+          go-version-file: mcp-server/go.mod
           cache-dependency-path: mcp-server/go.sum
 
       - name: Ingress posture row
@@ -792,7 +792,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
-          go-version: '1.25'
+          go-version-file: mcp-server/go.mod
           cache-dependency-path: mcp-server/go.sum
 
       - name: Credential validity bound row
@@ -821,7 +821,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
-          go-version: '1.25'
+          go-version-file: mcp-server/go.mod
           cache-dependency-path: mcp-server/go.sum
 
       - name: Credential issuance and authoring row
@@ -876,7 +876,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
-          go-version: '1.25'
+          go-version-file: mcp-server/go.mod
           cache-dependency-path: mcp-server/go.sum
 
       - name: Mutation-kill control row
@@ -906,7 +906,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
-          go-version: '1.25'
+          go-version-file: mcp-server/go.mod
           cache-dependency-path: mcp-server/go.sum
 
       - name: Tool schema/handler conformance row
@@ -930,7 +930,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
-          go-version: '1.25'
+          go-version-file: mcp-server/go.mod
           cache-dependency-path: mcp-server/go.sum
 
       - name: Control-plane evidence retention row

@@ -49,7 +49,7 @@ Deployment host (or local VM)
 
 ### Prerequisites
 
-- Go 1.25+
+- Go 1.26.11, as declared by `go.mod`
 - Podman or Docker
 - PostgreSQL 16 (if running without compose)
 - Redis 7 (if running without compose)

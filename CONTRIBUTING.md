@@ -14,7 +14,7 @@ Guidelines for contributing to the Agent Guardrails Template and its MCP server.
 
 | Tool | Version | Purpose |
 |------|---------|---------|
-| Go | 1.25+ | MCP server (primary language) |
+| Go | 1.26.11, as declared by `mcp-server/go.mod` | MCP server (primary language) |
 | Docker or Podman | recent | Container dev / dep runs |
 | PostgreSQL | 16+ | Database (or use the compose stack) |
 | Redis | 7+ | Cache (or use the compose stack) |

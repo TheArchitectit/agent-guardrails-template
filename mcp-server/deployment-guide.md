@@ -13,7 +13,7 @@ This guide provides step-by-step instructions for deploying the Guardrail MCP Se
 - RHEL or compatible Linux distribution
 - Podman or Docker installed
 - Access to deployment server via SSH
-- Go 1.25+ (for building from source)
+- Go 1.26.11, as declared by `mcp-server/go.mod` (for building from source)
 - PostgreSQL 16 (or use containerized version)
 - Redis 7 (or use containerized version)
 
