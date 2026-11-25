@@ -1,4 +1,8 @@
-"""Regression coverage for Regression Guard step output records."""
+"""Regression test for failure FAIL-b7cf877c.
+
+GitHub Actions rejected multiple commit subjects written as one output record.
+The workflow now exposes only the numeric repair count.
+"""
 
 from __future__ import annotations
 
@@ -7,7 +11,7 @@ import subprocess
 from pathlib import Path
 
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
+REPO_ROOT = Path(__file__).resolve().parents[2]
 HELPER = REPO_ROOT / ".github/scripts/count-bug-fix-commits.sh"
 WORKFLOW = REPO_ROOT / ".github/workflows/regression-guard.yml"
 

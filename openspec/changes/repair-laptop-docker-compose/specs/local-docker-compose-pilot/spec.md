@@ -85,7 +85,7 @@ The Windows pilot SHALL be runnable from a single PowerShell script without requ
 #### Scenario: Standalone source bootstrap
 - **GIVEN** the user has PowerShell, Docker Desktop, and network access to the official GitHub archive host but no repository checkout or Git installation
 - **WHEN** the standalone launcher runs
-- **THEN** it downloads the archive for revision `ba9ff630b24821507d6c93c6c6117ac7be4e9b1e`, verifies SHA-256 `4f09f073c0e0c3c2706365c4444a75282040efb7c44178b777b1d4a1c81f2ffa` before extraction, and installs the Compose file and MCP build context under `%LOCALAPPDATA%\GuardrailsLaptopPilot`
+- **THEN** it downloads the archive for revision `2d71e714ae06a6a7b639cf16bd388b6736143104`, verifies SHA-256 `cd7756d0e6baa84af622faa20a1f20cc0d180e8b1eb4df97a0dc1b75accc879f` before extraction, and installs the Compose file and MCP build context under `%LOCALAPPDATA%\GuardrailsLaptopPilot`
 
 ### Requirement: Windows launcher is repeatable without replacing pilot data
 The launcher SHALL create its synthetic env file with create-new semantics, validate and reuse its own matching env file on restart, and preserve all pilot volumes. It SHALL reject unexpected ambient Compose overrides and containers with conflicting ownership labels.

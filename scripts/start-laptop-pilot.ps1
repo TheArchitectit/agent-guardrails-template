@@ -4,8 +4,9 @@ param()
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 
-$Revision = 'ba9ff630b24821507d6c93c6c6117ac7be4e9b1e'
-$ArchiveSha256 = '4f09f073c0e0c3c2706365c4444a75282040efb7c44178b777b1d4a1c81f2ffa'
+$Revision = '2d71e714ae06a6a7b639cf16bd388b6736143104'
+$PreviousRevision = 'ba9ff630b24821507d6c93c6c6117ac7be4e9b1e'
+$ArchiveSha256 = 'cd7756d0e6baa84af622faa20a1f20cc0d180e8b1eb4df97a0dc1b75accc879f'
 $PilotHome = Join-Path $env:LOCALAPPDATA 'GuardrailsLaptopPilot'
 $SourcePath = Join-Path $PilotHome ("s-{0}" -f $Revision)
 $SourceMarker = Join-Path $SourcePath '.pilot-source-revision'
@@ -46,43 +47,73 @@ function New-PilotSecret {
     'Aa0' + [Convert]::ToBase64String($bytes).TrimEnd('=').Replace('+', '-').Replace('/', '_')
 }
 
-function Ensure-PilotEnvironment {
+function Read-PilotEnvironment([string]$Path, [string]$ExpectedRevision) {
+    $values = @{}
+    foreach ($line in [System.IO.File]::ReadAllLines($Path)) {
+        if ([string]::IsNullOrWhiteSpace($line)) { continue }
+        $separator = $line.IndexOf('=')
+        if ($separator -lt 1) { Stop-Pilot 'The existing pilot env file is malformed and was left unchanged.' }
+        $key = $line.Substring(0, $separator)
+        if ($values.ContainsKey($key)) { Stop-Pilot 'The existing pilot env file has duplicate keys and was left unchanged.' }
+        $values[$key] = $line.Substring($separator + 1)
+    }
+    $expectedKeys = @('DB_USER', 'DB_NAME', 'DB_PASSWORD', 'REDIS_PASSWORD', 'MCP_API_KEY', 'IDE_API_KEY', 'JWT_SECRET', 'DEPLOYMENT_PROFILE', 'DEPLOYMENT_BIND_ATTESTATION', 'GIT_COMMIT')
+    if (@($values.Keys | Where-Object { $_ -cnotin $expectedKeys }).Count -ne 0 -or @($expectedKeys | Where-Object { -not $values.ContainsKey($_) -or [string]::IsNullOrWhiteSpace($values[$_]) }).Count -ne 0) {
+        Stop-Pilot 'The existing pilot env file is incomplete or has unexpected keys. It was left unchanged.'
+    }
+    if ($values.DB_USER -ne 'guardrail' -or $values.DB_NAME -ne 'guardrails' -or $values.GIT_COMMIT -ne $ExpectedRevision -or
+        $values.DEPLOYMENT_PROFILE -ne 'local' -or $values.DEPLOYMENT_BIND_ATTESTATION -ne 'isolated-local-bridge:host-loopback-publish') {
+        Stop-Pilot 'The existing pilot env file does not match its pinned local pilot revision. It was left unchanged.'
+    }
+    foreach ($key in @('DB_PASSWORD', 'REDIS_PASSWORD', 'MCP_API_KEY', 'IDE_API_KEY', 'JWT_SECRET')) {
+        if ($values[$key] -notmatch '^Aa0[A-Za-z0-9_-]{43}$') { Stop-Pilot 'The existing pilot env file does not contain valid generated synthetic credentials. It was left unchanged.' }
+    }
+    return $values
+}
+
+function Ensure-PilotEnvironment([string[]]$KnownPilotVolumes) {
     if (Test-Path -LiteralPath $PilotEnv) {
-        $values = @{}
-        foreach ($line in [System.IO.File]::ReadAllLines($PilotEnv)) {
-            if ([string]::IsNullOrWhiteSpace($line)) { continue }
-            $separator = $line.IndexOf('=')
-            if ($separator -lt 1) { Stop-Pilot 'The existing pilot env file is malformed and was left unchanged.' }
-            $key = $line.Substring(0, $separator)
-            if ($values.ContainsKey($key)) { Stop-Pilot 'The existing pilot env file has duplicate keys and was left unchanged.' }
-            $values[$key] = $line.Substring($separator + 1)
-        }
-        $expectedKeys = @('DB_USER', 'DB_NAME', 'DB_PASSWORD', 'REDIS_PASSWORD', 'MCP_API_KEY', 'IDE_API_KEY', 'JWT_SECRET', 'DEPLOYMENT_PROFILE', 'DEPLOYMENT_BIND_ATTESTATION', 'GIT_COMMIT')
-        if (@($values.Keys | Where-Object { $_ -notin $expectedKeys }).Count -ne 0 -or @($expectedKeys | Where-Object { -not $values.ContainsKey($_) -or [string]::IsNullOrWhiteSpace($values[$_]) }).Count -ne 0) {
-            Stop-Pilot 'The existing pilot env file is incomplete or has unexpected keys. It was left unchanged.'
-        }
-        if ($values.DB_USER -ne 'guardrail' -or $values.DB_NAME -ne 'guardrails' -or $values.GIT_COMMIT -ne $Revision -or
-            $values.DEPLOYMENT_PROFILE -ne 'local' -or $values.DEPLOYMENT_BIND_ATTESTATION -ne 'isolated-local-bridge:host-loopback-publish') {
-            Stop-Pilot 'The existing pilot env file does not match this pinned local pilot. It was left unchanged.'
-        }
-        foreach ($key in @('DB_PASSWORD', 'REDIS_PASSWORD', 'MCP_API_KEY', 'IDE_API_KEY', 'JWT_SECRET')) {
-            if ($values[$key] -notmatch '^Aa0[A-Za-z0-9_-]{43}$') { Stop-Pilot 'The existing pilot env file does not contain valid generated synthetic credentials. It was left unchanged.' }
-        }
+        [void](Read-PilotEnvironment $PilotEnv $Revision)
         return
     }
 
-    $lines = @(
-        'DB_USER=guardrail'
-        'DB_NAME=guardrails'
-        ("DB_PASSWORD={0}" -f (New-PilotSecret))
-        ("REDIS_PASSWORD={0}" -f (New-PilotSecret))
-        ("MCP_API_KEY={0}" -f (New-PilotSecret))
-        ("IDE_API_KEY={0}" -f (New-PilotSecret))
-        ("JWT_SECRET={0}" -f (New-PilotSecret))
-        'DEPLOYMENT_PROFILE=local'
-        'DEPLOYMENT_BIND_ATTESTATION=isolated-local-bridge:host-loopback-publish'
-        ("GIT_COMMIT={0}" -f $Revision)
-    )
+    $priorValues = $null
+    $priorEnv = Join-Path $PilotHome ("pilot-{0}.env" -f $PreviousRevision)
+    if ($PreviousRevision -ne $Revision -and (Test-Path -LiteralPath $priorEnv)) {
+        $priorValues = Read-PilotEnvironment $priorEnv $PreviousRevision
+    } elseif (@($KnownPilotVolumes).Count -gt 0) {
+        Stop-Pilot 'Existing pilot data volumes were found, but no validated matching credentials are available. The volumes were left unchanged.'
+    }
+
+    if ($null -ne $priorValues) {
+        # Preserve database and service credentials across a source repin. The
+        # prior file remains untouched; the new revision gets a create-new copy.
+        $lines = @(
+            ("DB_USER={0}" -f $priorValues.DB_USER)
+            ("DB_NAME={0}" -f $priorValues.DB_NAME)
+            ("DB_PASSWORD={0}" -f $priorValues.DB_PASSWORD)
+            ("REDIS_PASSWORD={0}" -f $priorValues.REDIS_PASSWORD)
+            ("MCP_API_KEY={0}" -f $priorValues.MCP_API_KEY)
+            ("IDE_API_KEY={0}" -f $priorValues.IDE_API_KEY)
+            ("JWT_SECRET={0}" -f $priorValues.JWT_SECRET)
+            ("DEPLOYMENT_PROFILE={0}" -f $priorValues.DEPLOYMENT_PROFILE)
+            ("DEPLOYMENT_BIND_ATTESTATION={0}" -f $priorValues.DEPLOYMENT_BIND_ATTESTATION)
+            ("GIT_COMMIT={0}" -f $Revision)
+        )
+    } else {
+        $lines = @(
+            'DB_USER=guardrail'
+            'DB_NAME=guardrails'
+            ("DB_PASSWORD={0}" -f (New-PilotSecret))
+            ("REDIS_PASSWORD={0}" -f (New-PilotSecret))
+            ("MCP_API_KEY={0}" -f (New-PilotSecret))
+            ("IDE_API_KEY={0}" -f (New-PilotSecret))
+            ("JWT_SECRET={0}" -f (New-PilotSecret))
+            'DEPLOYMENT_PROFILE=local'
+            'DEPLOYMENT_BIND_ATTESTATION=isolated-local-bridge:host-loopback-publish'
+            ("GIT_COMMIT={0}" -f $Revision)
+        )
+    }
     $stream = [System.IO.File]::Open($PilotEnv, [System.IO.FileMode]::CreateNew, [System.IO.FileAccess]::Write, [System.IO.FileShare]::None)
     $writer = [System.IO.StreamWriter]::new($stream, [System.Text.UTF8Encoding]::new($false))
     try { foreach ($line in $lines) { $writer.WriteLine($line) } } finally { $writer.Dispose() }
@@ -192,16 +223,26 @@ function Assert-NoConflictingContainers {
     }
 }
 
+function Get-PilotVolumes {
+    $volumes = & docker @ContextArgs volume ls --filter ("label=com.docker.compose.project={0}" -f $ProjectName) --format '{{.Name}}' 2>$null
+    if ($LASTEXITCODE -ne 0) { Stop-Pilot 'Could not verify existing pilot volume ownership.' }
+    $allNames = & docker @ContextArgs volume ls --format '{{.Name}}' 2>$null
+    if ($LASTEXITCODE -ne 0) { Stop-Pilot 'Could not verify expected pilot volume names.' }
+    $expectedNames = @(("{0}_pg_data" -f $ProjectName), ("{0}_redis_data" -f $ProjectName))
+    $volumes += @($allNames | Where-Object { $_ -cin $expectedNames })
+    return @($volumes | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Sort-Object -Unique)
+}
+
 try {
     if ($env:OS -ne 'Windows_NT' -or [string]::IsNullOrWhiteSpace($env:LOCALAPPDATA)) { Stop-Pilot 'This launcher requires Windows and a user LOCALAPPDATA directory.' }
     Assert-NoAmbientOverrides
     New-Item -ItemType Directory -Force -Path $PilotHome | Out-Null
     $SourcePath = Ensure-PinnedSource
     $ComposePath = Join-Path $SourcePath 'docker-compose.yml'
-    $PilotEnv = Join-Path $PilotHome ("pilot-{0}.env" -f $Revision)
-    Ensure-PilotEnvironment
     Ensure-LocalDocker
     Assert-NoConflictingContainers
+    $knownPilotVolumes = Get-PilotVolumes
+    Ensure-PilotEnvironment $knownPilotVolumes
 
     Push-Location $SourcePath
     try {
@@ -216,6 +257,23 @@ try {
         $portSpecs = @($service.ports)
         if ($portSpecs.Count -ne 2 -or @($portSpecs | Where-Object { $_.host_ip -ne '127.0.0.1' -or $_.target -notin @(8080, 8081) -or $_.published -notin @('8080', '8081') }).Count -ne 0) { Stop-Pilot 'Rendered Compose ports did not match the expected loopback-only pilot ports.' }
         if ($service.environment.DB_PASSWORD -ne $config.services.postgres.environment.POSTGRES_PASSWORD -or $service.environment.REDIS_PASSWORD -ne $config.services.redis.environment.REDIS_PASSWORD) { Stop-Pilot 'Rendered service credential sources did not match the synthetic pilot environment.' }
+        $migration = $config.services.migrate
+        if ($null -eq $migration -or $migration.entrypoint -notcontains '/run-migrations' -or
+            $migration.environment.MIGRATION_DATABASE_URL -ne 'postgres://postgres:5432' -or
+            $migration.networks.PSObject.Properties.Name -notcontains 'guardrails-net' -or
+            $service.networks.PSObject.Properties.Name -notcontains 'guardrails-net' -or
+            $migration.depends_on.postgres.condition -ne 'service_healthy' -or
+            $service.depends_on.migrate.condition -ne 'service_completed_successfully' -or
+            $migration.environment.PGUSER -ne $config.services.postgres.environment.POSTGRES_USER -or
+            $migration.environment.PGPASSWORD -ne $config.services.postgres.environment.POSTGRES_PASSWORD -or
+            $migration.environment.PGDATABASE -ne $config.services.postgres.environment.POSTGRES_DB -or
+            $migration.environment.PGSSLMODE -ne $service.environment.DB_SSLMODE -or
+            $migration.image -ne $service.image) {
+            Stop-Pilot 'Rendered Compose migration ordering, credential source, or shared network did not match the pilot contract.'
+        }
+        foreach ($dependency in @('postgres', 'redis', 'mcp-server')) {
+            if ($config.services.$dependency.networks.PSObject.Properties.Name -notcontains 'guardrails-net') { Stop-Pilot 'All pilot services must share the isolated guardrails bridge.' }
+        }
 
         Invoke-DockerCompose @('up', '--wait', '--wait-timeout', '300', '-d', '--build')
         $mcpBind = & docker @ContextArgs compose --project-name $ProjectName --env-file $PilotEnv -f $ComposePath port mcp-server 8080

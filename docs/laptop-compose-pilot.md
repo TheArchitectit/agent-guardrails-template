@@ -22,7 +22,34 @@ For a one-command run without installing Git or cloning a repository, run [`scri
 & .\scripts\start-laptop-pilot.ps1
 ```
 
-The launcher downloads only the Compose file and `mcp-server` tree from the pinned public revision `ba9ff630b24821507d6c93c6c6117ac7be4e9b1e`, checks the archive SHA-256, and installs it under `%LOCALAPPDATA%\GuardrailsLaptopPilot`. It reuses that versioned source and its dedicated synthetic env file on rerun. It preserves the pilot env file and data volumes for restart. If Docker Desktop is installed but its local Linux engine is stopped, the launcher starts the standard Docker Desktop app and waits up to five minutes; it does not switch container modes or select another daemon. It verifies the rendered policy, health-aware startup, active loopback bindings, and HTTP readiness before reporting success. The current running recovery uses the documented local derivative overlay; pinned-source acceptance remains open. See the [pilot evidence](../openspec/changes/repair-laptop-docker-compose/evidence.md).
+The launcher downloads only the Compose file and `mcp-server` tree from published revision `2d71e714ae06a6a7b639cf16bd388b6736143104`, verifies archive SHA-256 `cd7756d0e6baa84af622faa20a1f20cc0d180e8b1eb4df97a0dc1b75accc879f`, and installs it under `%LOCALAPPDATA%\GuardrailsLaptopPilot`. It reuses that versioned source and its dedicated synthetic env file on rerun. It preserves the pilot env file and data volumes for restart. If Docker Desktop is installed but its local Linux engine is stopped, the launcher starts the standard Docker Desktop app and waits up to five minutes; it does not switch container modes or select another daemon. It verifies the rendered policy, health-aware startup, active loopback bindings, and HTTP readiness before reporting success. The current running recovery uses the documented local derivative overlay; exact launcher acceptance remains open. See the [pilot evidence](../openspec/changes/repair-laptop-docker-compose/evidence.md).
+
+When a future source repin is released, the launcher validates the immediately prior revision's env file and creates a new revision-specific file containing the same credentials and updated source metadata. It leaves the prior file untouched. If pilot data volumes exist without a valid current or immediately prior env file, it stops without generating replacement credentials.
+
+## Isolated TPL-39 verification
+
+To verify a new local change while preserving the recovered `guardrails-laptop-pilot` stack, use the repository checkout and a fresh synthetic env file. The verification Compose overlay assigns distinct container names; the unique project name creates a separate bridge and separate named volumes. Use distinct host ports and an image tag as shown below. Do not use the standalone launcher for this check until its source revision and archive checksum have been repinned to the published fix commit.
+
+Create a new env file under Local AppData with the create-new synthetic credential procedure in the next section. Add these non-secret settings to the generated lines before writing the file:
+
+```powershell
+    'VERSION=tpl39-verify'
+    'MCP_PORT=18080'
+    'WEB_PORT=18081'
+```
+
+From the repository root, render without exposing interpolated values and start the isolated project:
+
+```powershell
+$Project = 'guardrails-tpl39-verify'
+$ComposeFiles = @('-f', '.\docker-compose.yml', '-f', '.\docker-compose.tpl39-verification.yml')
+docker compose -p $Project --env-file $PilotEnv @ComposeFiles config --quiet
+docker compose -p $Project --env-file $PilotEnv @ComposeFiles up --wait --wait-timeout 300 -d --build
+```
+
+Confirm `postgres`, `redis`, `migrate`, and `mcp-server` are healthy or successfully completed, verify `127.0.0.1:18080` and `127.0.0.1:18081`, and request `http://127.0.0.1:18081/health/ready` for HTTP 200. The migration service must exit successfully after applying and verifying the checked-in schema manifest; MCP starts only after that completion. This validation project has distinct container names and `guardrails-tpl39-verify_*` volumes. Stop it with `docker compose -p $Project --env-file $PilotEnv @ComposeFiles down`; do not use `--volumes`.
+
+The launcher and OpenSpec scenario now pin published source revision `2d71e714ae06a6a7b639cf16bd388b6736143104` and archive SHA-256 `cd7756d0e6baa84af622faa20a1f20cc0d180e8b1eb4df97a0dc1b75accc879f`. Exact launcher acceptance against the recovered pilot remains pending until this launcher update is published and a coordinated rollback window is available.
 
 `docker version` must show both Client and Server sections. If it does not, start or repair Docker Desktop before continuing. Before building, ensure `mcp-server` contains no real credentials or other private files: that directory is the Docker build context. The separate TPL-33 build-context hygiene item remains open, and this pilot does not add a context allowlist.
 

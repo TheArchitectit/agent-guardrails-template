@@ -69,3 +69,80 @@ checksums. Named volumes `guardrails-laptop-pilot_pg_data` and
 `guardrails-laptop-pilot_redis_data`, created at 09:45:35 Central, remain
 mounted and preserved. The recovered pilot stack is running. Pinned-launcher
 acceptance and teardown remain open.
+
+## Local implementation and isolated verification plan — 2026-11-25
+
+The local source now assigns PostgreSQL, Redis, the one-shot `migrate` service,
+and MCP to the same explicit `guardrails-net`. The migration job invokes the
+checked-in `scripts/run_migrations.go` binary built into the MCP image; it
+receives its DSN from the runtime environment, waits for healthy PostgreSQL,
+and MCP waits for successful job completion as well as healthy PostgreSQL and
+Redis. The root service keeps its established default container names.
+
+Startup now evaluates the full readiness dependency report using candidate
+READY lifecycle semantics before publishing `READY`. The public readiness
+handler still evaluates the actual lifecycle, so it remains non-2xx while the
+server is STARTING and returns HTTP 200 only after READY is published.
+
+Daemonless Compose rendering and policy inspection passed with the verification
+overlay: all four services share `guardrails-net`, migration ordering and DSN
+wiring are present, ports use `127.0.0.1:18080` and `127.0.0.1:18081`, and
+container names are distinct. OpenSpec strict validation and PowerShell parser
+validation passed. The Windows host has no Go toolchain, so focused Go tests
+were run in a pinned Go 1.26.11 container with the checkout mounted read-only;
+`go test ./internal/config ./internal/web` passed.
+
+The isolated Windows acceptance procedure is in `docs/laptop-compose-pilot.md`
+and uses project `guardrails-tpl39-verify`, overlay
+`docker-compose.tpl39-verification.yml`, and a fresh synthetic env file. The
+standalone launcher remains pinned to its previously published validated
+revision. Its source pin and archive SHA-256 must be updated only in a
+follow-up after the implementation commit is actually public and the archive
+hash is computed from that immutable revision.
+
+## Isolated Windows acceptance — 2026-11-25
+
+Before the successful run, the first isolated build caught an ambiguous
+`/app/migrations` binary path: the source tree already contains a directory of
+that name, so the final image entrypoint resolved to a directory. The binary
+now builds to `/app/run-migrations`, the build verifies it is executable, the
+final image copies it to `/run-migrations`, and Compose overrides the image
+entrypoint. A network-isolated `--help` invocation confirmed the copied
+executable runs.
+
+The clean `up --build` run used explicit `desktop-linux`, project
+`guardrails-tpl39-verify`, distinct container names, ports 18080/18081, and
+fresh project-scoped volumes. Its synthetic PostgreSQL password included URI
+reserved punctuation. The migration service exited 0; its ledger had 19 clean
+rows through version 019, 19 distinct checksums, and no dirty rows. MCP and
+PostgreSQL/Redis health checks were healthy. The readiness endpoint returned
+HTTP 200 with lifecycle `READY`, `ready: true`, and seven checks. Published
+ports were confirmed on IPv4 loopback only. This reserved-character run also
+revealed that MCP's separate connection URL builder needed percent-encoded
+userinfo; that fix and its focused evidence are in the separate
+`encode-postgres-connection-credentials` OpenSpec change (TPL-42).
+
+Preflight and post-run inspection showed the recovered original project
+containers retained their baseline IDs and healthy states, and its two named
+volumes retained their original creation times and project labels. The original
+project was not changed. The successful isolated candidate and its volumes are
+left running for independent review. The parent independently confirmed
+healthy status, migration completion, schema ledger, loopback publications,
+HTTP 200 readiness, and unchanged original containers/volumes at 10:44:56 CT.
+
+After that review, `docker compose down` was run only for
+`guardrails-tpl39-verify`, without `--volumes`. Its Postgres and Redis volume
+names, creation timestamps, and Compose labels were unchanged. The exact same
+project/env inputs were then restarted with `up --build`; the migration job
+reported no pending migrations, verified its six required tables, and exited
+0. The ledger remained 19 clean rows through 019 with 19 distinct checksums.
+The restarted MCP and dependencies were healthy, and readiness again returned
+HTTP 200 with lifecycle `READY`. The original project remained unchanged. The
+standalone launcher now pins published source revision
+`2d71e714ae06a6a7b639cf16bd388b6736143104` with archive SHA-256
+`cd7756d0e6baa84af622faa20a1f20cc0d180e8b1eb4df97a0dc1b75accc879f`.
+The prior env revision is explicitly `ba9ff630b24821507d6c93c6c6117ac7be4e9b1e`;
+mock upgrade and fail-closed controls pass. The parent verified the exact public
+codeload archive hash (3,732,332 bytes). The exact repinned launcher run remains
+open until the launcher change is published and a coordinated rollback window
+is approved. The recovered original project and volumes remain untouched.
