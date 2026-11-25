@@ -96,6 +96,7 @@ finding, canonical requirement, acceptance scenarios, and implementation tasks.
 | `TPL-48` | Verified locally and archived | CI/QA maintainers | Commit attribution reads each complete event-scoped Git message and fails on unreadable records. All six Linux Git fixtures passed, including large messages. | [Archived TPL-48 evidence](../changes/archive/2026-11-25-fix-commit-attribution-record-parsing/evidence.md) |
 | `TPL-49` | Verified locally and archived | QA/OpenSpec maintainers | Seven section-sign glyphs in three proposals failed the pinned DevGate charset gate. The corrected citations preserve their section ranges. The clean candidate and all 13 charset controls passed. | [Archived TPL-49 evidence](../changes/archive/2026-11-25-normalize-audit-proposal-text/evidence.md) |
 | `TPL-50` | Verified locally and archived | CI maintainers | All 45 visible GitHub jobs and the dependent summary passed their applicable laptop checks. Hosted runner assignment and reporting integrations are tracked separately. | [Archived TPL-50 evidence](../changes/archive/2026-11-25-verify-draft-workflows-locally/evidence.md) |
+| `TPL-51` | Verified and archived | MCP validation maintainers | The local legacy Jenkins command exposed simultaneous regex cache writes. The native regression failed on the old cache and passed repeatedly after immutable publication and in-place clearing. | [Archived concurrency evidence](../changes/archive/2026-11-25-repair-validation-regex-cache-concurrency/evidence.md) |
 
 ## Pilot sequencing
 
