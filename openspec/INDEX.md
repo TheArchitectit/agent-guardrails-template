@@ -30,5 +30,8 @@
 
 ## Audit snapshots
 
+- [Current item register and individual OpenSpec changes (2026-11-25)](audits/2026-11-25-template-gap-register.md)
+- [Published, active, archived, and coded review at `943bcf6`](audits/2026-11-25-template-open-closed-coded.md)
+- [QA re-audit at `943bcf6`](audits/2026-11-25-template-qa-reaudit.md)
 - [QA and OpenSpec gap review (2026-11-25)](audits/2026-11-25-qa-and-gap-review.md)
 - [OpenSpec requirement-to-code traceability companion (2026-11-25)](audits/2026-11-25-openspec-traceability.md)
