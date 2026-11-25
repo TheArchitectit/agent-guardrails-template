@@ -8,7 +8,8 @@ stages:
 
 variables:
   PYTHON_VERSION: "3.11"
-  GO_VERSION: "1.21"
+  GO_VERSION: "1.26.11"
+  GOTOOLCHAIN: "local"
 
 # Validate team configurations
 validate_teams:
@@ -40,8 +41,10 @@ test_go:
   stage: test
   image: golang:$GO_VERSION
   script:
+    - go version
+    - test "$(go env GOVERSION)" = "go$GO_VERSION" || { echo "Required Go $GO_VERSION, got $(go env GOVERSION)" >&2; exit 1; }
     - cd mcp-server
-    - go test ./... -v -race -coverprofile=coverage.out
+    - go test -timeout=30m ./... -v -race -coverprofile=coverage.out
     - go tool cover -func=coverage.out
   artifacts:
     paths:

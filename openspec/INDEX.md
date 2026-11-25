@@ -6,7 +6,7 @@
 > `Status:` line. Run the pinned strict spec validator after editing. Never
 > merge rows by short slug or infer status from archive task checkboxes.
 
-**38 specs** — CLOSED 16 | PARTIAL 0 | OPEN 0 | UNKNOWN 22
+**39 specs** — CLOSED 16 | PARTIAL 0 | OPEN 0 | UNKNOWN 23
 
 | Spec path | Title | Status | Evidence |
 |---|---|---|---|
@@ -23,6 +23,7 @@
 | [`ide-client-initialization/spec.md`](specs/ide-client-initialization/spec.md) | ide-client-initialization Specification | **UNKNOWN** | No status or closure table |
 | [`indirect-injection-provenance-records/spec.md`](specs/indirect-injection-provenance-records/spec.md) | Provenance Records | **CLOSED** | Status: CLOSED (EXERCISED 3) |
 | [`isolation-levels/spec.md`](specs/isolation-levels/spec.md) | isolation-levels Specification | **CLOSED** | Status: CLOSED (EXERCISED 3) |
+| [`legacy-ci-go-toolchain-selection/spec.md`](specs/legacy-ci-go-toolchain-selection/spec.md) | legacy-ci-go-toolchain-selection Specification | **UNKNOWN** | No status or closure table |
 | [`local-docker-compose-pilot/spec.md`](specs/local-docker-compose-pilot/spec.md) | local-docker-compose-pilot Specification | **UNKNOWN** | No status or closure table |
 | [`local-draft-ci-evidence/spec.md`](specs/local-draft-ci-evidence/spec.md) | local-draft-ci-evidence Specification | **UNKNOWN** | No status or closure table |
 | [`mcp-docker-context/spec.md`](specs/mcp-docker-context/spec.md) | mcp-docker-context Specification | **UNKNOWN** | No status or closure table |
@@ -60,7 +61,7 @@
   a documentation gap, not a claim that the work is unfinished.
 
 The audit snapshot at `943bcf6` contained 15 specs (the eight verbose paths and
-seven short paths). This later inventory contains 38 paths as archived
+seven short paths). This later inventory contains 39 paths as archived
 changes added specifications; every added path remains independently listed.
 See the [2026-11-25 template inventory evidence](changes/archive/2026-11-25-inv01-canonical-openspec-inventory/evidence.md)
 for the count reconciliation and the historically distinct AIGGP specs.

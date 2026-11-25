@@ -6,7 +6,8 @@ pipeline {
 
     environment {
         PYTHON_VERSION = '3.11'
-        GO_VERSION = '1.21'
+        MCP_GO_VERSION = '1.26.11'
+        CLI_GO_VERSION = '1.23.2'
         PROJECT_NAME = 'team-tools'
     }
 
@@ -58,8 +59,19 @@ pipeline {
             steps {
                 script {
                     sh """
+                        set -eu
+                        export GOTOOLCHAIN=go${env.MCP_GO_VERSION}+path
+                        if ! selected=\$(go env GOVERSION 2>&1); then
+                            echo "Required Go ${env.MCP_GO_VERSION} unavailable: \$selected" >&2
+                            exit 1
+                        fi
+                        [ "\$selected" = "go${env.MCP_GO_VERSION}" ] || {
+                            echo "Required Go ${env.MCP_GO_VERSION}, got \$selected" >&2
+                            exit 1
+                        }
+                        go version
                         cd mcp-server
-                        go test ./... -v -race
+                        go test -timeout=30m ./... -v -race
                     """
                 }
             }
@@ -69,6 +81,17 @@ pipeline {
             steps {
                 script {
                     sh """
+                        set -eu
+                        export GOTOOLCHAIN=go${env.CLI_GO_VERSION}+path
+                        if ! selected=\$(go env GOVERSION 2>&1); then
+                            echo "Required Go ${env.CLI_GO_VERSION} unavailable: \$selected" >&2
+                            exit 1
+                        fi
+                        [ "\$selected" = "go${env.CLI_GO_VERSION}" ] || {
+                            echo "Required Go ${env.CLI_GO_VERSION}, got \$selected" >&2
+                            exit 1
+                        }
+                        go version
                         cd cmd/team-cli
                         make build
                     """
