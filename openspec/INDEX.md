@@ -27,3 +27,8 @@
 - **OPEN** -- no requirement reaches `EXERCISED`.
 - **UNKNOWN** -- no closure table and no `Status:` line. A documentation gap,
   not a claim the work is unfinished. Fix by adding the closure table.
+
+## Audit snapshots
+
+- [QA and OpenSpec gap review (2026-11-25)](audits/2026-11-25-qa-and-gap-review.md)
+- [OpenSpec requirement-to-code traceability companion (2026-11-25)](audits/2026-11-25-openspec-traceability.md)
