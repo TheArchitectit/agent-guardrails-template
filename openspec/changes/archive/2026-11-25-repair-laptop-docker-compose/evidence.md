@@ -146,3 +146,28 @@ mock upgrade and fail-closed controls pass. The parent verified the exact public
 codeload archive hash (3,732,332 bytes). The exact repinned launcher run remains
 open until the launcher change is published and a coordinated rollback window
 is approved. The recovered original project and volumes remain untouched.
+
+## Published launcher acceptance on Windows
+
+On 2026-11-25 at 10:58 Central, the launcher in commit
+40fc79e5c7bdfcf196f64fba15426fa74cd75453 exited 0 on the Windows laptop using the local Docker Desktop
+Linux engine. It downloaded and verified the public archive of revision
+2d71e714ae06a6a7b639cf16bd388b6736143104 with SHA-256
+cd7756d0e6baa84af622faa20a1f20cc0d180e8b1eb4df97a0dc1b75accc879f and built the source image.
+
+The launcher created its new revision-specific env file using the same five
+synthetic credential values from the prior revision. The prior file stayed
+byte-for-byte unchanged. The original PostgreSQL and Redis volume names,
+creation timestamps, and project labels also stayed unchanged.
+
+The migration job exited 0. The ledger contained versions 001–019 with
+19 distinct checksums and no dirty rows. Independent Docker inspection found
+PostgreSQL, Redis, and MCP healthy. Windows and Docker confirmed publications
+on 127.0.0.1 at ports 8080 and 8081, and both TCP connections succeeded. GET
+http://127.0.0.1:8081/health/ready returned HTTP 200. The published image
+replaced the local recovery image.
+
+A second run of the exact launcher exited 0, reused the installed source, and
+left the new env file unchanged. The operator pilot remains healthy and
+running with its original volumes. The separate isolated project verified
+teardown and restart with volume retention.

@@ -1,6 +1,6 @@
 # Windows laptop Compose pilot
 
-This is a local pilot for disposable synthetic data. It is not a production deployment or evidence that production/OPS requirements are closed. The pinned launcher run exposed network, schema migration, and readiness lifecycle gaps. A local-only derivative image and Compose overlay subsequently reached healthy status and HTTP 200, but pinned-source acceptance remains open. See the [TPL-39 evidence](../openspec/changes/repair-laptop-docker-compose/evidence.md).
+Use this Windows pilot with disposable synthetic data. The published launcher passed startup and rerun on Docker Desktop. The [TPL-39 evidence](../openspec/changes/archive/2026-11-25-repair-laptop-docker-compose/evidence.md) records the live checks.
 
 ## Prerequisites
 
@@ -22,13 +22,13 @@ For a one-command run without installing Git or cloning a repository, run [`scri
 & .\scripts\start-laptop-pilot.ps1
 ```
 
-The launcher downloads only the Compose file and `mcp-server` tree from published revision `2d71e714ae06a6a7b639cf16bd388b6736143104`, verifies archive SHA-256 `cd7756d0e6baa84af622faa20a1f20cc0d180e8b1eb4df97a0dc1b75accc879f`, and installs it under `%LOCALAPPDATA%\GuardrailsLaptopPilot`. It reuses that versioned source and its dedicated synthetic env file on rerun. It preserves the pilot env file and data volumes for restart. If Docker Desktop is installed but its local Linux engine is stopped, the launcher starts the standard Docker Desktop app and waits up to five minutes; it does not switch container modes or select another daemon. It verifies the rendered policy, health-aware startup, active loopback bindings, and HTTP readiness before reporting success. The current running recovery uses the documented local derivative overlay; exact launcher acceptance remains open. See the [pilot evidence](../openspec/changes/repair-laptop-docker-compose/evidence.md).
+The launcher downloads the repository archive for published revision `2d71e714ae06a6a7b639cf16bd388b6736143104`, verifies archive SHA-256 `cd7756d0e6baa84af622faa20a1f20cc0d180e8b1eb4df97a0dc1b75accc879f`, and stages the Compose file and MCP module under `%LOCALAPPDATA%\GuardrailsLaptopPilot`. It reuses that versioned source and its dedicated synthetic env file on rerun. It preserves the pilot env file and data volumes for restart. If Docker Desktop is installed but its local Linux engine is stopped, the launcher starts the standard Docker Desktop app and waits up to five minutes; it does not switch container modes or select another daemon. It verifies the rendered policy, health-aware startup, active loopback bindings, and HTTP readiness before reporting success.
 
 When a future source repin is released, the launcher validates the immediately prior revision's env file and creates a new revision-specific file containing the same credentials and updated source metadata. It leaves the prior file untouched. If pilot data volumes exist without a valid current or immediately prior env file, it stops without generating replacement credentials.
 
 ## Isolated TPL-39 verification
 
-To verify a new local change while preserving the recovered `guardrails-laptop-pilot` stack, use the repository checkout and a fresh synthetic env file. The verification Compose overlay assigns distinct container names; the unique project name creates a separate bridge and separate named volumes. Use distinct host ports and an image tag as shown below. Do not use the standalone launcher for this check until its source revision and archive checksum have been repinned to the published fix commit.
+To verify a new local change while preserving the running `guardrails-laptop-pilot` stack, use the repository checkout and a fresh synthetic env file. The verification Compose overlay assigns distinct container names; the unique project name creates a separate bridge and separate named volumes. Use distinct host ports and an image tag as shown below. The standalone launcher uses the operator project and its standard loopback ports.
 
 Create a new env file under Local AppData with the create-new synthetic credential procedure in the next section. Add these non-secret settings to the generated lines before writing the file:
 
