@@ -77,21 +77,13 @@ func (s *Server) validateFile(c echo.Context) error {
 func (s *Server) validateSelection(c echo.Context) error {
 	ctx := c.Request().Context()
 
-	var req struct {
-		Selection   string `json:"selection"`
-		FilePath    string `json:"file_path"`
-		ProjectSlug string `json:"project_slug,omitempty"`
-		Language    string `json:"language,omitempty"`
-		StartLine   int    `json:"start_line"`
-		EndLine     int    `json:"end_line"`
-	}
-
-	if err := c.Bind(&req); err != nil {
+	var payload selectionPayloadFields
+	if err := c.Bind(&payload); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid request body"})
 	}
-
-	if req.Selection == "" {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "selection is required"})
+	req, payloadErr := resolveSelectionPayload(payload)
+	if payloadErr != "" {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": payloadErr})
 	}
 
 	// Get active rules for the project
@@ -136,6 +128,57 @@ func (s *Server) validateSelection(c echo.Context) error {
 		"end_line":      req.EndLine,
 		"rules_checked": len(rules),
 	})
+}
+
+type selectionValidationRequest struct {
+	Selection   string `json:"selection"`
+	FilePath    string `json:"file_path"`
+	ProjectSlug string `json:"project_slug,omitempty"`
+	Language    string `json:"language,omitempty"`
+	StartLine   int    `json:"start_line"`
+	EndLine     int    `json:"end_line"`
+}
+
+type selectionPayloadFields struct {
+	SelectionRaw json.RawMessage `json:"selection"`
+	CodeRaw      json.RawMessage `json:"code"`
+	FilePath     string          `json:"file_path"`
+	ProjectSlug  string          `json:"project_slug,omitempty"`
+	Language     string          `json:"language,omitempty"`
+	StartLine    int             `json:"start_line"`
+	EndLine      int             `json:"end_line"`
+}
+
+func resolveSelectionPayload(fields selectionPayloadFields) (selectionValidationRequest, string) {
+	req := selectionValidationRequest{
+		FilePath: fields.FilePath, ProjectSlug: fields.ProjectSlug,
+		Language: fields.Language, StartLine: fields.StartLine, EndLine: fields.EndLine,
+	}
+	hasSelection := fields.SelectionRaw != nil
+	hasCode := fields.CodeRaw != nil
+	var selection, legacyCode string
+	if hasSelection {
+		if err := json.Unmarshal(fields.SelectionRaw, &selection); err != nil {
+			return req, "invalid request body"
+		}
+	}
+	if hasCode {
+		if err := json.Unmarshal(fields.CodeRaw, &legacyCode); err != nil {
+			return req, "invalid request body"
+		}
+	}
+	if hasSelection && hasCode && selection != legacyCode {
+		return req, "selection and code must match"
+	}
+	if hasSelection {
+		req.Selection = selection
+	} else if hasCode {
+		req.Selection = legacyCode
+	}
+	if req.Selection == "" {
+		return req, "selection is required"
+	}
+	return req, ""
 }
 
 func (s *Server) getIDERules(c echo.Context) error {

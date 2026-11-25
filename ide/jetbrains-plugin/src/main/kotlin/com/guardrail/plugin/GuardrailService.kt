@@ -86,7 +86,7 @@ class GuardrailService : PersistentStateComponent<GuardrailSettings> {
         }
 
         val requestBody = gson.toJson(mapOf(
-            "code" to code,
+            "selection" to code,
             "language" to language
         )).toRequestBody(JSON_MEDIA_TYPE)
 

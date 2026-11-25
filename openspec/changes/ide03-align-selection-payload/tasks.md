@@ -2,8 +2,8 @@
 
 ## 1. Define a compatible handler contract
 
-- [ ] 1.1 Make `selection` canonical; accept legacy `code` only when `selection` is absent; reject conflicting dual-field values with HTTP 400. Do not silently normalize source text.
-- [ ] 1.2 Add Go handler tests for `selection` only (accepted), `code` only (accepted during migration), equal dual fields (accepted), conflicting fields (400), and missing/empty fields (400). Verify with `cd mcp-server && go test ./internal/web -run 'TestValidateSelectionPayload' -count=1`.
+- [x] 1.1 Make `selection` canonical; accept legacy `code` only when `selection` is absent; reject conflicting dual-field values with HTTP 400. Do not silently normalize source text.
+- [x] 1.2 Add Go handler tests for `selection` only (accepted), `code` only (accepted during migration), equal dual fields (accepted), conflicting fields (400), and missing/empty fields (400). Verified with the targeted Go tests and a disposable PostgreSQL-backed Echo route fixture.
 
 ## 2. Migrate and verify IDE clients
 
