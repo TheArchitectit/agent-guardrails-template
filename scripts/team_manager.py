@@ -17,12 +17,29 @@ import tempfile
 import traceback
 from dataclasses import dataclass, asdict
 from copy import deepcopy
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import time
 import statistics
 import warnings
 from typing import Any, List, Optional, Dict
+
+
+def _utc_now() -> datetime:
+    """Return the current instant as timezone-aware UTC."""
+    return datetime.now(timezone.utc)
+
+
+def _as_utc(value: datetime) -> datetime:
+    """Treat legacy naive values as UTC and normalize aware values."""
+    if value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value.astimezone(timezone.utc)
+
+
+def _utc_isoformat(value: datetime) -> str:
+    """Serialize a UTC instant with the established terminal ``Z`` suffix."""
+    return value.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
 
 # FUNC-005: Batch operations support
 try:
@@ -54,7 +71,7 @@ class StructuredLogger:
     def log(self, event_type: str, details: Dict, level: str = "info") -> None:
         """Log a structured JSON event."""
         log_entry = {
-            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "timestamp": _utc_isoformat(_utc_now()),
             "level": level.upper(),
             "component": self.component,
             "event": event_type,
@@ -408,7 +425,7 @@ class PerformanceMetrics:
         start_time = time.time()
         self._current_operations[operation] = start_time
         log_entry = {
-            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "timestamp": _utc_isoformat(_utc_now()),
             "level": "INFO",
             "component": "performance_metrics",
             "event": "operation_started",
@@ -423,7 +440,7 @@ class PerformanceMetrics:
         start_time = self._current_operations.pop(operation, end_time)
         duration_ms = (end_time - start_time) * 1000
         metric_entry = {
-            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "timestamp": _utc_isoformat(_utc_now()),
             "project": self.project_name,
             "operation": operation,
             "duration_ms": round(duration_ms, 2),
@@ -434,7 +451,7 @@ class PerformanceMetrics:
             metric_entry["error_type"] = error_type
         self._append_metric(metric_entry)
         log_entry = {
-            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "timestamp": _utc_isoformat(_utc_now()),
             "level": "INFO" if success else "ERROR",
             "component": "performance_metrics",
             "event": "operation_completed",
@@ -472,8 +489,8 @@ class PerformanceMetrics:
                     try:
                         entry = json.loads(line)
                         if since:
-                            entry_time = datetime.fromisoformat(entry["timestamp"].replace("Z", "+00:00"))
-                            if entry_time < since:
+                            entry_time = _as_utc(datetime.fromisoformat(entry["timestamp"].replace("Z", "+00:00")))
+                            if entry_time < _as_utc(since):
                                 continue
                         if operation and entry.get("operation") != operation:
                             continue
@@ -520,13 +537,13 @@ class PerformanceMetrics:
 
     def get_report(self, days: int = 7) -> Dict[str, Any]:
         """Generate a performance report."""
-        since = datetime.utcnow() - timedelta(days=days)
+        since = _utc_now() - timedelta(days=days)
         all_metrics = self.load_metrics(since=since)
         report = {
-            "generated_at": datetime.utcnow().isoformat() + "Z",
+            "generated_at": _utc_isoformat(_utc_now()),
             "project": self.project_name,
             "time_window_days": days,
-            "since": since.isoformat() + "Z",
+            "since": _utc_isoformat(since),
             "overall": self.get_operation_stats(since=since),
             "by_operation": {}
         }
@@ -543,7 +560,7 @@ class PerformanceMetrics:
                 with open(output_path, 'w') as f:
                     json.dump(report, f, indent=2)
             elif format == "csv":
-                since = datetime.utcnow() - timedelta(days=days)
+                since = _utc_now() - timedelta(days=days)
                 metrics = self.load_metrics(since=since)
                 with open(output_path, 'w', newline='') as f:
                     if metrics:
@@ -1103,7 +1120,7 @@ class AuditLogger:
             user_context: Optional user context for RBAC info
         """
         entry = {
-            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "timestamp": _utc_isoformat(_utc_now()),
             "project": self.project_name,
             "user": self._get_user_id(user_context),
             "role": user_context.role if user_context else "system",
@@ -1156,12 +1173,12 @@ class AuditLogger:
 
                         # Apply filters
                         if start_time:
-                            entry_time = datetime.fromisoformat(entry["timestamp"].replace("Z", "+00:00"))
-                            if entry_time < start_time:
+                            entry_time = _as_utc(datetime.fromisoformat(entry["timestamp"].replace("Z", "+00:00")))
+                            if entry_time < _as_utc(start_time):
                                 continue
                         if end_time:
-                            entry_time = datetime.fromisoformat(entry["timestamp"].replace("Z", "+00:00"))
-                            if entry_time > end_time:
+                            entry_time = _as_utc(datetime.fromisoformat(entry["timestamp"].replace("Z", "+00:00")))
+                            if entry_time > _as_utc(end_time):
                                 continue
                         if user and entry.get("user") != user:
                             continue
@@ -2818,7 +2835,7 @@ class TeamManager:
         health = {
             "status": "healthy",
             "checks": {},
-            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "timestamp": _utc_isoformat(_utc_now()),
             "version": "1.0.0"
         }
 
@@ -2883,7 +2900,7 @@ class TeamManager:
 
         # Check 4: JSON serialization
         try:
-            test_data = {"test": True, "timestamp": datetime.utcnow().isoformat()}
+            test_data = {"test": True, "timestamp": _utc_isoformat(_utc_now())}
             json.dumps(test_data)
             health["checks"]["json"] = {
                 "status": "pass"
@@ -3072,7 +3089,7 @@ def main():
     validate_project_name(args.project)
 
     # Create logger for main and generate request_id if not provided
-    request_id = args.request_id or f"tm-{datetime.utcnow().strftime('%Y%m%d%H%M%S')}-{os.getpid()}"
+    request_id = args.request_id or f"tm-{_utc_now().strftime('%Y%m%d%H%M%S')}-{os.getpid()}"
     cli_logger = StructuredLogger("team_manager_cli", request_id)
     cli_logger.info("cli_start", {"command": args.command, "project": args.project})
 
@@ -3431,7 +3448,7 @@ def main():
         else:
             if args.operation:
                 stats = manager.performance_metrics.get_operation_stats(
-                    operation=args.operation, since=datetime.utcnow() - timedelta(days=args.days)
+                    operation=args.operation, since=_utc_now() - timedelta(days=args.days)
                 )
                 print(f"\n📊 Performance Report: {args.operation}")
                 print(f"{'='*50}")

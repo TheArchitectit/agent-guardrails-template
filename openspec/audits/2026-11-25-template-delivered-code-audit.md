@@ -88,7 +88,7 @@ The prior requirement trace covers all 44 main requirements. This review matched
 
 ## Gap analysis
 
-The eight rows in the generated-header index cover only part of the 23-spec inventory. The template tree contains no generator for this file. AIGGP provides a generator with repository-specific state-ledger and owner-decision behavior. INV-01 owns the path inventory and the disposition of overlapping specifications. The seven short specifications and their more explicit requirements stay visible until that change records a disposition.
+The eight rows in the generated-header index cover only part of the 23-spec inventory. The template tree contains no generator for this file. AIGGP provides a generator with repository-specific state-ledger and owner-decision behavior. INV-01 owns the path inventory and the disposition of overlapping specifications. The seven short specifications and their more explicit requirements stayed visible in the reviewed snapshot. The [archived INV-01 disposition](../changes/archive/2026-11-25-inv01-canonical-openspec-inventory/evidence.md) records why the separate requirements remain in the maintained index.
 
 The current [gap register](2026-11-25-template-gap-register.md) links the existing item-level OpenSpec packages. RUN-01 covers runtime containment and certification. RUN-02 covers the conformance corpora and exercised budgets. RUN-03 covers automatic ingress and action mediation. RUN-04 covers binding the active policy, classifier and runtime evidence. RUN-05 covers semantic redaction. RUN-06 covers version-bound promotion gates. The delivered changes leave these production acceptance items open.
 
@@ -111,7 +111,7 @@ The table records each tracked change at the audited revision. Task totals come 
 | Change | State in tree | Checked tasks | Spec deltas | Evidence file |
 |---|---|---:|---:|---|
 | [align-legacy-ci-go-toolchains](../changes/align-legacy-ci-go-toolchains/tasks.md) | Active | 0/3 | 1 | — |
-| [arc01-archive-reference-provenance](../changes/arc01-archive-reference-provenance/tasks.md) | Active | 0/4 | 1 | — |
+| [arc01-archive-reference-provenance](../changes/archive/2026-11-25-arc01-archive-reference-provenance/tasks.md) | Active | 0/4 | 1 | — |
 | [2026-11-06-aiggp-03-prompt-injection-defense](../changes/archive/2026-11-06-aiggp-03-prompt-injection-defense/tasks.md) | Archived | 5/5 | 2 | — |
 | [2026-11-06-aiggp-04-semantic-content-filtering](../changes/archive/2026-11-06-aiggp-04-semantic-content-filtering/tasks.md) | Archived | 5/5 | 2 | — |
 | [2026-11-06-aiggp-05-runtime-sandbox-isolation](../changes/archive/2026-11-06-aiggp-05-runtime-sandbox-isolation/tasks.md) | Archived | 5/5 | 2 | — |
@@ -130,14 +130,14 @@ The table records each tracked change at the audited revision. Task totals come 
 | [dep01-render-kubernetes-profile](../changes/dep01-render-kubernetes-profile/tasks.md) | Active | 0/3 | 1 | — |
 | [dep02-reconcile-production-guide](../changes/dep02-reconcile-production-guide/tasks.md) | Active | 0/3 | 1 | — |
 | [fix-gitlab-requirements-inputs](../changes/archive/2026-11-25-fix-gitlab-requirements-inputs/tasks.md) | Active | 0/3 | 1 | — |
-| [fix-regression-guard-step-output](../changes/fix-regression-guard-step-output/tasks.md) | Active | 4/5 | 1 | [Receipt](../changes/fix-regression-guard-step-output/evidence.md) |
+| [fix-regression-guard-step-output](../changes/archive/2026-11-25-fix-regression-guard-step-output/tasks.md) | Active | 4/5 | 1 | [Receipt](../changes/archive/2026-11-25-fix-regression-guard-step-output/evidence.md) |
 | [fix-windsurf-single-skill-target](../changes/archive/2026-11-25-fix-windsurf-single-skill-target/tasks.md) | Active | 0/3 | 1 | — |
 | [go-tpl34-automate-source-advisory-checks](../changes/go-tpl34-automate-source-advisory-checks/tasks.md) | Active | 0/4 | 1 | — |
 | [ide01-initialize-vscode-client](../changes/ide01-initialize-vscode-client/tasks.md) | Active | 0/4 | 1 | — |
 | [ide02-align-ide-rest-endpoint](../changes/ide02-align-ide-rest-endpoint/tasks.md) | Active | 0/4 | 1 | — |
 | [ide03-align-selection-payload](../changes/ide03-align-selection-payload/tasks.md) | Active | 0/4 | 1 | — |
 | [implement-semantic-redaction-evidence](../changes/implement-semantic-redaction-evidence/tasks.md) | Active | 0/3 | 2 | — |
-| [inv01-canonical-openspec-inventory](../changes/inv01-canonical-openspec-inventory/tasks.md) | Active | 0/6 | 1 | — |
+| [inv01-canonical-openspec-inventory](../changes/archive/2026-11-25-inv01-canonical-openspec-inventory/tasks.md) | Active | 0/6 | 1 | — |
 | [isolate-gitleaks-runner-install](../changes/archive/2026-11-25-isolate-gitleaks-runner-install/tasks.md) | Active | 3/4 | 1 | [Receipt](../changes/archive/2026-11-25-isolate-gitleaks-runner-install/evidence.md) |
 | [legacy01-stale-numbered-design-claims](../changes/legacy01-stale-numbered-design-claims/tasks.md) | Active | 0/7 | 1 | — |
 | [ops01-approve-rollout-inventory](../changes/ops01-approve-rollout-inventory/tasks.md) | Active | 0/3 | 1 | — |
@@ -153,6 +153,6 @@ The table records each tracked change at the audited revision. Task totals come 
 | [release-gate-conformance-reports](../changes/release-gate-conformance-reports/tasks.md) | Active | 0/3 | 2 | — |
 | [release-tpl35-publish-approved-main](../changes/release-tpl35-publish-approved-main/tasks.md) | Active | 0/4 | 1 | — |
 | [trace-action-and-ingress-boundaries](../changes/trace-action-and-ingress-boundaries/tasks.md) | Active | 0/4 | 2 | — |
-| [use-timezone-aware-python-utc](../changes/use-timezone-aware-python-utc/tasks.md) | Active | 0/3 | 1 | — |
+| [use-timezone-aware-python-utc](../changes/archive/2026-11-25-use-timezone-aware-python-utc/tasks.md) | Active | 0/3 | 1 | — |
 | [verify-sandbox-runtime-conformance](../changes/verify-sandbox-runtime-conformance/tasks.md) | Active | 0/6 | 1 | — |
 | [verify-semantic-conformance-evidence](../changes/verify-semantic-conformance-evidence/tasks.md) | Active | 0/3 | 1 | — |

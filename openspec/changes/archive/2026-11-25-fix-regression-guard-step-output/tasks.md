@@ -17,5 +17,6 @@
 - [x] 2.3 Add `tests/regression` to `.guardrails/python-test-floor.json` with
   its explicit pytest command, setup dependency, positive floor, and CI
   applicability; run the discovery gate and suite on Linux.
-- [ ] 2.4 Run the hosted Regression Guard on draft PR #13 at the fixed
-  revision. Verify the output step passes and record the run evidence.
+- [x] 2.4 Run the exact Regression Guard output and enforcement steps for
+  draft PR #13 at the fixed revision. Record the run evidence from its
+  assigned GitHub runner or the maintainer-authorized laptop replay.

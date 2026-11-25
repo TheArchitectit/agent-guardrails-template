@@ -12,6 +12,7 @@ import shutil
 import sys
 import tempfile
 import unittest
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 # Add parent directory to path to import team_manager
@@ -19,7 +20,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from scripts.team_manager import (
     TeamManager, Role, Team, validate_project_name, validate_project_path,
-    UserContext, StructuredLogger, PermissionDenied
+    UserContext, StructuredLogger, AuditLogger, PerformanceMetrics, PermissionDenied
 )
 
 
@@ -772,6 +773,79 @@ class TestStructuredLogger(unittest.TestCase):
         self.assertEqual(log_entry["level"], "INFO")
         self.assertEqual(log_entry["details"]["key"], "value")
         self.assertEqual(log_entry["request_id"], "test-123")
+        self.assertTrue(log_entry["timestamp"].endswith("Z"))
+        parsed_timestamp = datetime.fromisoformat(log_entry["timestamp"].replace("Z", "+00:00"))
+        self.assertEqual(parsed_timestamp.utcoffset(), timedelta(0))
+
+
+class TestTeamManagerUtcTimestamps(unittest.TestCase):
+    """Compatibility checks for persisted UTC timestamps and comparisons."""
+
+    def test_audit_timestamp_keeps_existing_z_shape_and_filters(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            audit = AuditLogger("test-project", Path(temp_dir))
+            audit.log_action("fixture", {"key": "value"})
+            entry = json.loads(audit.audit_file.read_text(encoding="utf-8"))
+
+            self.assertEqual(set(entry), {"timestamp", "project", "user", "role", "action", "details"})
+            self.assertTrue(entry["timestamp"].endswith("Z"))
+            parsed_timestamp = datetime.fromisoformat(entry["timestamp"].replace("Z", "+00:00"))
+            self.assertEqual(parsed_timestamp.utcoffset(), timedelta(0))
+            matches = audit.query_audit_log(
+                start_time=datetime.now(timezone.utc) - timedelta(minutes=1),
+                end_time=datetime.now(timezone.utc) + timedelta(minutes=1),
+            )
+            self.assertEqual([row["action"] for row in matches], ["fixture"])
+
+    def test_health_check_timestamp_keeps_z_shape(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            manager = TeamManager(
+                "test-project",
+                Path(temp_dir) / "test-project.json",
+                create_admin_context(),
+                create_test_logger(),
+            )
+
+            health = manager.health_check()
+
+            self.assertTrue(health["timestamp"].endswith("Z"))
+            parsed_timestamp = datetime.fromisoformat(
+                health["timestamp"].replace("Z", "+00:00")
+            )
+            self.assertEqual(parsed_timestamp.utcoffset(), timedelta(0))
+
+    def test_metric_report_keeps_timestamp_keys_and_z_serialization(self):
+        import io
+        from contextlib import redirect_stderr
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            metrics = PerformanceMetrics("test-project", Path(temp_dir))
+            with redirect_stderr(io.StringIO()):
+                metrics.start_operation("refresh")
+                metric = metrics.end_operation("refresh")
+            report = metrics.get_report(days=1)
+
+            self.assertEqual(
+                set(metric),
+                {"timestamp", "project", "operation", "duration_ms", "success", "context"},
+            )
+            for value in (metric["timestamp"], report["generated_at"], report["since"]):
+                self.assertTrue(value.endswith("Z"))
+                parsed_timestamp = datetime.fromisoformat(value.replace("Z", "+00:00"))
+                self.assertEqual(parsed_timestamp.utcoffset(), timedelta(0))
+            self.assertEqual(report["overall"]["count"], 1)
+
+    def test_legacy_naive_metric_timestamp_is_interpreted_as_utc(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            metrics = PerformanceMetrics("test-project", Path(temp_dir))
+            metrics.metrics_file.write_text(
+                json.dumps({"timestamp": "2026-11-25T10:00:00", "operation": "legacy"}) + "\n",
+                encoding="utf-8",
+            )
+
+            loaded = metrics.load_metrics(since=datetime(2026, 11, 25, 9, tzinfo=timezone.utc))
+
+            self.assertEqual([row["operation"] for row in loaded], ["legacy"])
 
 
 if __name__ == "__main__":

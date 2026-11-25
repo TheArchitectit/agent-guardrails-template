@@ -128,6 +128,7 @@ safety guardrail systems.
 
 | Keyword | Document |
 |---------|----------|
+| OpenSpec catalog, canonical spec paths, status evidence | [OpenSpec index](openspec/INDEX.md) |
 | spec status, spec vs shipped, what actually shipped | [specs/guardrail-gaps-2026/STATUS.md](docs/specs/guardrail-gaps-2026/STATUS.md) |
 | prompt injection, injection defense, LLM security | [specs/guardrail-gaps-2026/01-prompt-injection-defense.md](docs/specs/guardrail-gaps-2026/01-prompt-injection-defense.md) |
 | content filtering, semantic safety, llama guard, moderation | [specs/guardrail-gaps-2026/02-semantic-content-filtering.md](docs/specs/guardrail-gaps-2026/02-semantic-content-filtering.md) |

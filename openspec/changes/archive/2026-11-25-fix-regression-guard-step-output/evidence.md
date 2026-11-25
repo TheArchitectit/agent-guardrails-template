@@ -34,8 +34,15 @@ Pytest emitted a cache-write warning because the checkout was mounted read-only;
 the test itself passed. No repository cache or source file was written by the
 container run.
 
-## Remaining verification
+## Local workflow verification
 
-Hosted rerun on draft PR #13 after this inventory correction is still pending.
-The tasks remain open until the hosted Python discovery/test-floor and
-Regression Guard checks pass at the corrected revision.
+The maintainer authorized laptop execution for unassigned checks. Replay
+used base `943bcf65055128e338b696dc40d74e79ac33449e` and exact draft head
+`1ff334b04a7e5b70eb3ae1fc2519ac06d2e26e1a`. The original workflow's bug-fix
+output, regression test discovery, failure registry, and final enforcement
+steps passed. The enforced PR regression test branch ran. The Team
+Validation Python job also ran all enumerated suites and verified their
+collection floors.
+
+The GitHub run remained queued and the PR-comment action requires GitHub's
+runtime. TPL-50 records the local assignment and GitHub-only steps.
