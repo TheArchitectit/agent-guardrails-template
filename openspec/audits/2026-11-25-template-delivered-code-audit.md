@@ -129,7 +129,7 @@ The table records each tracked change at the audited revision. Task totals come 
 | [bind-decision-evidence-context](../changes/bind-decision-evidence-context/tasks.md) | Active | 0/3 | 1 | — |
 | [dep01-render-kubernetes-profile](../changes/dep01-render-kubernetes-profile/tasks.md) | Active | 0/3 | 1 | — |
 | [dep02-reconcile-production-guide](../changes/dep02-reconcile-production-guide/tasks.md) | Active | 0/3 | 1 | — |
-| [fix-gitlab-requirements-inputs](../changes/fix-gitlab-requirements-inputs/tasks.md) | Active | 0/3 | 1 | — |
+| [fix-gitlab-requirements-inputs](../changes/archive/2026-11-25-fix-gitlab-requirements-inputs/tasks.md) | Active | 0/3 | 1 | — |
 | [fix-regression-guard-step-output](../changes/fix-regression-guard-step-output/tasks.md) | Active | 4/5 | 1 | [Receipt](../changes/fix-regression-guard-step-output/evidence.md) |
 | [fix-windsurf-single-skill-target](../changes/fix-windsurf-single-skill-target/tasks.md) | Active | 0/3 | 1 | — |
 | [go-tpl34-automate-source-advisory-checks](../changes/go-tpl34-automate-source-advisory-checks/tasks.md) | Active | 0/4 | 1 | — |
@@ -138,7 +138,7 @@ The table records each tracked change at the audited revision. Task totals come 
 | [ide03-align-selection-payload](../changes/ide03-align-selection-payload/tasks.md) | Active | 0/4 | 1 | — |
 | [implement-semantic-redaction-evidence](../changes/implement-semantic-redaction-evidence/tasks.md) | Active | 0/3 | 2 | — |
 | [inv01-canonical-openspec-inventory](../changes/inv01-canonical-openspec-inventory/tasks.md) | Active | 0/6 | 1 | — |
-| [isolate-gitleaks-runner-install](../changes/isolate-gitleaks-runner-install/tasks.md) | Active | 3/4 | 1 | [Receipt](../changes/isolate-gitleaks-runner-install/evidence.md) |
+| [isolate-gitleaks-runner-install](../changes/archive/2026-11-25-isolate-gitleaks-runner-install/tasks.md) | Active | 3/4 | 1 | [Receipt](../changes/archive/2026-11-25-isolate-gitleaks-runner-install/evidence.md) |
 | [legacy01-stale-numbered-design-claims](../changes/legacy01-stale-numbered-design-claims/tasks.md) | Active | 0/7 | 1 | — |
 | [ops01-approve-rollout-inventory](../changes/ops01-approve-rollout-inventory/tasks.md) | Active | 0/3 | 1 | — |
 | [ops02-verify-external-consumer](../changes/ops02-verify-external-consumer/tasks.md) | Active | 0/3 | 1 | — |

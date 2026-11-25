@@ -12,8 +12,8 @@ The audit distinguishes a wired multi-agent registry and safety-chain engine fro
 
 ## Scope mapping
 
-- Primary source: `docs/specs/guardrail-gaps-2026/04-multi-agent-safety-policies.md`, §§2.2–2.3 and 3.1.
-- Runtime status source: `docs/specs/guardrail-gaps-2026/STATUS.md`, §04. It records chain loading/wiring, conflict strategies, and remaining non-implemented `agent_registry`/`cross_agent_policies` YAML as separate facts.
+- Primary source: `docs/specs/guardrail-gaps-2026/04-multi-agent-safety-policies.md`, Sec. 2.2 to Sec. 2.3 and Sec. 3.1.
+- Runtime status source: `docs/specs/guardrail-gaps-2026/STATUS.md`, Sec. 04. It records chain loading/wiring, conflict strategies, and remaining non-implemented `agent_registry`/`cross_agent_policies` YAML as separate facts.
 - Related standard requirements: `classification-and-mediation/fail-closed destructive boundaries` (RUN-03) covers generic action interception; TPL-46 specifically covers multi-agent registry, conflict resolution, and safety-chain MCP requests. TPL-44 covers the separate Pi host path.
 
 ## Capabilities

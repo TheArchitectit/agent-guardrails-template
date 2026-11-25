@@ -41,8 +41,7 @@ pipeline {
             steps {
                 script {
                     sh """
-                        pip install -r requirements.txt
-                        pip install pytest pytest-cov
+                        python3 -m pip install -r requirements.txt
                         pytest scripts/ -v --cov=scripts --cov-report=xml
                     """
                 }
