@@ -1,6 +1,6 @@
 # Windows laptop Compose pilot
 
-This is a local pilot for disposable synthetic data. It is not a production deployment or evidence that production/OPS requirements are closed. Container startup has not been run as part of this change; follow these steps on the target Windows laptop and record the result separately.
+This is a local pilot for disposable synthetic data. It is not a production deployment or evidence that production/OPS requirements are closed. The pinned launcher run exposed network, schema migration, and readiness lifecycle gaps. A local-only derivative image and Compose overlay subsequently reached healthy status and HTTP 200, but pinned-source acceptance remains open. See the [TPL-39 evidence](../openspec/changes/repair-laptop-docker-compose/evidence.md).
 
 ## Prerequisites
 
@@ -22,7 +22,7 @@ For a one-command run without installing Git or cloning a repository, run [`scri
 & .\scripts\start-laptop-pilot.ps1
 ```
 
-The launcher downloads only the Compose file and `mcp-server` tree from the pinned public revision `ba9ff630b24821507d6c93c6c6117ac7be4e9b1e`, checks the archive SHA-256, and installs it under `%LOCALAPPDATA%\GuardrailsLaptopPilot`. It reuses that versioned source and its dedicated synthetic env file on rerun. It preserves the pilot env file and data volumes for restart. If Docker Desktop is installed but its local Linux engine is stopped, the launcher starts the standard Docker Desktop app and waits up to five minutes; it does not switch container modes or select another daemon. The launcher verifies the rendered Compose policy internally, starts the stack with health-aware waiting, checks loopback ports and HTTP readiness, then prints status and endpoints only. Windows startup still must be observed and recorded as live evidence under TPL-39.
+The launcher downloads only the Compose file and `mcp-server` tree from the pinned public revision `ba9ff630b24821507d6c93c6c6117ac7be4e9b1e`, checks the archive SHA-256, and installs it under `%LOCALAPPDATA%\GuardrailsLaptopPilot`. It reuses that versioned source and its dedicated synthetic env file on rerun. It preserves the pilot env file and data volumes for restart. If Docker Desktop is installed but its local Linux engine is stopped, the launcher starts the standard Docker Desktop app and waits up to five minutes; it does not switch container modes or select another daemon. It verifies the rendered policy, health-aware startup, active loopback bindings, and HTTP readiness before reporting success. The current running recovery uses the documented local derivative overlay; pinned-source acceptance remains open. See the [pilot evidence](../openspec/changes/repair-laptop-docker-compose/evidence.md).
 
 `docker version` must show both Client and Server sections. If it does not, start or repair Docker Desktop before continuing. Before building, ensure `mcp-server` contains no real credentials or other private files: that directory is the Docker build context. The separate TPL-33 build-context hygiene item remains open, and this pilot does not add a context allowlist.
 

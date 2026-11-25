@@ -51,10 +51,20 @@ The laptop pilot SHALL start the MCP service only after PostgreSQL and Redis rep
 - **WHEN** Compose evaluates the MCP service startup dependency
 - **THEN** the MCP service is not started until both dependencies are healthy
 
+#### Scenario: Database migrations complete before the application starts
+- **GIVEN** PostgreSQL is healthy but the pilot database is not at the schema version required by MCP
+- **WHEN** Compose starts the pilot application
+- **THEN** a one-shot migration job applies and verifies the checked-in migrations through the required schema version before MCP starts
+
 #### Scenario: Application readiness is checked
 - **GIVEN** the services have started
 - **WHEN** the pilot readiness check requests `http://127.0.0.1:8081/health/ready`
 - **THEN** readiness succeeds only when the endpoint returns HTTP 200
+
+#### Scenario: Startup dependency checks do not depend on published lifecycle readiness
+- **GIVEN** all startup dependencies and required schema checks pass while the application lifecycle is `STARTING`
+- **WHEN** the application evaluates whether it can transition to `READY`
+- **THEN** it evaluates those dependency checks independently of the published readiness state, transitions to `READY`, and continues to require HTTP 200 for the readiness endpoint
 
 ### Requirement: Pilot teardown preserves named data volumes
 The default laptop pilot teardown SHALL stop and remove its containers and network without deleting named Postgres or Redis volumes.
@@ -70,7 +80,7 @@ The Windows pilot SHALL be runnable from a single PowerShell script without requ
 #### Scenario: Standalone source bootstrap
 - **GIVEN** the user has PowerShell, Docker Desktop, and network access to the official GitHub archive host but no repository checkout or Git installation
 - **WHEN** the standalone launcher runs
-- **THEN** it downloads the archive for revision `ba9ff630b24821507d6c93c6c6117ac7be4e9b1e`, verifies SHA-256 `4f09f073c0e0c3c2706365c4444a752820efb7c44178b777b1d4a1c81f2ffa` before extraction, and installs the Compose file and MCP build context under `%LOCALAPPDATA%\GuardrailsLaptopPilot`
+- **THEN** it downloads the archive for revision `ba9ff630b24821507d6c93c6c6117ac7be4e9b1e`, verifies SHA-256 `4f09f073c0e0c3c2706365c4444a75282040efb7c44178b777b1d4a1c81f2ffa` before extraction, and installs the Compose file and MCP build context under `%LOCALAPPDATA%\GuardrailsLaptopPilot`
 
 ### Requirement: Windows launcher is repeatable without replacing pilot data
 The launcher SHALL create its synthetic env file with create-new semantics, validate and reuse its own matching env file on restart, and preserve all pilot volumes. It SHALL reject unexpected ambient Compose overrides and containers with conflicting ownership labels.
