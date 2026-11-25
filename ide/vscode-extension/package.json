@@ -92,8 +92,8 @@
         },
         "guardrail.serverUrl": {
           "type": "string",
-          "default": "http://localhost:8095",
-          "description": "Guardrail MCP server URL",
+          "default": "http://localhost:8081",
+          "description": "Guardrail REST server URL",
           "scope": "resource"
         },
         "guardrail.apiKey": {
@@ -148,7 +148,7 @@
     "watch": "tsc -watch -p ./",
     "pretest": "npm run compile && npm run lint",
     "lint": "eslint src --ext ts",
-    "test": "node ../../tests/regression/test_vscode_extension_initialization_regression_FAIL_4c35b1a8.js",
+    "test": "node ../../tests/regression/test_vscode_extension_initialization_regression_FAIL_4c35b1a8.js && node ../../tests/regression/test_vscode_configure_override_regression_FAIL-a01027ef.js",
     "package": "vsce package",
     "publish": "vsce publish"
   },

@@ -39,7 +39,7 @@ class GuardrailClient {
         }
         this.config = {
             enabled: config.get('enabled', true),
-            serverUrl: config.get('serverUrl', 'http://localhost:8095'),
+            serverUrl: config.get('serverUrl', 'http://localhost:8081'),
             apiKey: apiKey,
             projectSlug: config.get('projectSlug', ''),
             validateOnSave: config.get('validateOnSave', true),

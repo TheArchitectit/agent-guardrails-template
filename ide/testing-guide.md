@@ -55,7 +55,7 @@ Press `F5` in VS Code to launch Extension Development Host.
 2. Open any file (e.g., `test.js`)
 3. Check status bar for shield icon
 4. Click shield → "Configure Connection"
-5. Enter server URL: `http://localhost:8095`
+5. Enter REST server URL: `http://localhost:8081`
 6. Enter API key from your server
 7. Click "Test Connection"
 
@@ -294,7 +294,7 @@ cd mcp-server
 docker-compose -f deploy/podman-compose.yml up -d
 
 # Verify running
-curl http://localhost:8095/health/ready
+curl http://localhost:8081/health/ready
 
 # Get API key
 cat .env | grep IDE_API_KEY

@@ -20,7 +20,7 @@ export class GuardrailClient {
         }
         this.config = {
             enabled: config.get<boolean>('enabled', true),
-            serverUrl: config.get<string>('serverUrl', 'http://localhost:8095'),
+            serverUrl: config.get<string>('serverUrl', 'http://localhost:8081'),
             apiKey: apiKey,
             projectSlug: config.get<string>('projectSlug', ''),
             validateOnSave: config.get<boolean>('validateOnSave', true),

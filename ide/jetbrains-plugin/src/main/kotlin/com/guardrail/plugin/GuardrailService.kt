@@ -14,7 +14,7 @@ import java.io.IOException
 import java.util.concurrent.TimeUnit
 
 data class GuardrailSettings(
-    var serverUrl: String = "http://localhost:8095",
+    var serverUrl: String = "http://localhost:8081",
     // SECURITY NOTE: API key is stored in plain text in IDE settings.
     // For production use, migrate to PasswordSafe:
     // https://plugins.jetbrains.com/docs/intellij/persisting-sensitive-data.html

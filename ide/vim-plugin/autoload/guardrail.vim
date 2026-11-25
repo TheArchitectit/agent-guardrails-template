@@ -331,7 +331,7 @@ function! guardrail#OpenConfig()
   call append(line('$'), [
     \ '',
     \ '" Guardrail Configuration',
-    \ 'let g:guardrail_server_url = "http://localhost:8095"',
+    \ 'let g:guardrail_server_url = "http://localhost:8081"',
     \ 'let g:guardrail_api_key = ""',
     \ 'let g:guardrail_project_slug = ""',
     \ 'let g:guardrail_enabled = 1',

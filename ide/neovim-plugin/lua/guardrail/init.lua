@@ -1,7 +1,7 @@
 local M = {}
 
 M.config = {
-  server_url = "http://localhost:8095",
+  server_url = "http://localhost:8081",
   api_key = "",
   project_slug = "",
   enabled = true,

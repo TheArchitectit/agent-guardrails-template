@@ -63,8 +63,8 @@ function registerCommands(context, client, diagnostics, statusBar, outputChannel
     }), vscode.commands.registerCommand('guardrail.configure', async () => {
         const config = vscode.workspace.getConfiguration('guardrail');
         const serverUrl = await vscode.window.showInputBox({
-            prompt: 'Guardrail MCP Server URL',
-            value: config.get('serverUrl', 'http://localhost:8095'),
+            prompt: 'Guardrail REST Server URL',
+            value: config.get('serverUrl', 'http://localhost:8081'),
             validateInput: (value) => {
                 try {
                     new URL(value);
@@ -96,7 +96,7 @@ function registerCommands(context, client, diagnostics, statusBar, outputChannel
         if (apiKey !== undefined) {
             await context.secrets.store('guardrail.apiKey', apiKey);
         }
-        client.updateConfiguration(context);
+        await client.updateConfiguration(context);
         const connected = await client.testConnection();
         if (connected) {
             statusBar.setConnected();

@@ -61,7 +61,7 @@ cd ide/jetbrains-plugin
   dependencies = { 'nvim-lua/plenary.nvim' },
   config = function()
     require('guardrail').setup({
-      server_url = 'http://localhost:8095',
+      server_url = 'http://localhost:8081',
       api_key = 'your-api-key',
     })
   end
@@ -175,7 +175,7 @@ IDE Extensions
 │   ├── Signs (inline indicators)
 │   ├── Location List
 │   └── Commands (5 commands)
-└── MCP Server (Port 8095)
+└── Guardrail REST server (Port 8081; MCP transport remains on 8080)
     ├── /ide/validate/file
     ├── /ide/validate/selection
     └── /ide/health
@@ -210,7 +210,7 @@ FAQ and reference links for testers: [testing-guide-faq.md](./testing-guide-faq.
 ```jsonc
 // ~/.guardrail/config.jsonc
 {
-  "server_url": "http://localhost:8095",
+  "server_url": "http://localhost:8081",
   "api_key": "your-api-key",
   "project_slug": "my-project",
   "enabled": true,
@@ -224,7 +224,7 @@ FAQ and reference links for testers: [testing-guide-faq.md](./testing-guide-faq.
 ```json
 {
   "guardrail.enabled": true,
-  "guardrail.serverUrl": "http://localhost:8095",
+  "guardrail.serverUrl": "http://localhost:8081",
   "guardrail.apiKey": "your-api-key",
   "guardrail.projectSlug": "my-project",
   "guardrail.validateOnSave": true,
@@ -236,7 +236,7 @@ FAQ and reference links for testers: [testing-guide-faq.md](./testing-guide-faq.
 
 ```lua
 require('guardrail').setup({
-  server_url = 'http://localhost:8095',
+  server_url = 'http://localhost:8081',
   api_key = 'your-api-key',
   project_slug = 'my-project',
   enabled = true,
@@ -248,7 +248,7 @@ require('guardrail').setup({
 ### Vim Configuration
 
 ```vim
-let g:guardrail_server_url = 'http://localhost:8095'
+let g:guardrail_server_url = 'http://localhost:8081'
 let g:guardrail_api_key = 'your-api-key'
 let g:guardrail_project_slug = 'my-project'
 let g:guardrail_enabled = 1
