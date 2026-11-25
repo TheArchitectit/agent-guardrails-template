@@ -4,7 +4,7 @@
 
 - VS Code 1.60.0 or higher
 - Node.js 16.x or higher (for building from source)
-- Running Guardrail MCP Server (default: http://localhost:8095)
+- Running Guardrail REST server (default: http://localhost:8081; MCP transport default: http://localhost:8080)
 
 ## Installation Methods
 
@@ -52,7 +52,7 @@ After installation, configure the extension:
 1. Open Command Palette (Ctrl+Shift+P / Cmd+Shift+P)
 2. Run **Guardrail: Configure Connection**
 3. Set:
-   - **Server URL**: Your MCP server URL (default: http://localhost:8095)
+   - **Server URL**: REST server URL (default: http://localhost:8081)
    - **API Key**: Your authentication key (if required)
    - **Project Slug**: Your project identifier
 
@@ -61,7 +61,7 @@ Or edit `settings.json` directly:
 ```json
 {
   "guardrail.enabled": true,
-  "guardrail.serverUrl": "http://localhost:8095",
+  "guardrail.serverUrl": "http://localhost:8081",
   "guardrail.apiKey": "your-api-key",
   "guardrail.projectSlug": "your-project",
   "guardrail.validateOnSave": true

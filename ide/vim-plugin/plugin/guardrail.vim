@@ -8,7 +8,7 @@ endif
 let g:loaded_guardrail = 1
 
 " Default configuration
-let g:guardrail_server_url = get(g:, 'guardrail_server_url', 'http://localhost:8095')
+let g:guardrail_server_url = get(g:, 'guardrail_server_url', 'http://localhost:8081')
 let g:guardrail_api_key = get(g:, 'guardrail_api_key', '')
 let g:guardrail_project_slug = get(g:, 'guardrail_project_slug', '')
 let g:guardrail_enabled = get(g:, 'guardrail_enabled', 1)

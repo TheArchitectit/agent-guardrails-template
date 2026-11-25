@@ -26,7 +26,7 @@ Real-time guardrail validation for Neovim with native LSP-like diagnostics.
   dependencies = { "nvim-lua/plenary.nvim" },
   config = function()
     require("guardrail").setup({
-      server_url = "http://localhost:8095",
+      server_url = "http://localhost:8081",
       api_key = "your-api-key",
       project_slug = "your-project",
       validate_on_save = true,
@@ -44,7 +44,7 @@ use {
   requires = { "nvim-lua/plenary.nvim" },
   config = function()
     require("guardrail").setup({
-      server_url = "http://localhost:8095",
+      server_url = "http://localhost:8081",
       api_key = "your-api-key",
       project_slug = "your-project",
     })
@@ -60,7 +60,7 @@ Plug 'TheArchitectit/agent-guardrails-template', { 'rtp': 'ide/neovim-plugin', '
 
 lua << EOF
 require("guardrail").setup({
-  server_url = "http://localhost:8095",
+  server_url = "http://localhost:8081",
   api_key = "your-api-key",
   project_slug = "your-project",
 })
@@ -74,7 +74,7 @@ Default configuration:
 ```lua
 require("guardrail").setup({
   -- Connection
-  server_url = "http://localhost:8095",
+  server_url = "http://localhost:8081",
   api_key = nil,
   project_slug = nil,
 

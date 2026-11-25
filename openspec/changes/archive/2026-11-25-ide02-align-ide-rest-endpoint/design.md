@@ -20,7 +20,8 @@ The server config defaults `WEB_PORT` to 8081; its README identifies web UI, RES
 
 - Use `http://localhost:8081` as the REST default in VS Code, JetBrains, Vim, Neovim, and their setup examples.
 - Keep each integration's explicit URL setting or variable authoritative when supplied.
-- Add a static consistency test for all four clients plus a Go handler test proving the route is served. The static test must report each mismatch rather than pass on an empty file set.
+- Await VS Code's asynchronous SecretStorage-backed configuration refresh before Configure probes readiness, so the first request cannot use the previous endpoint.
+- Add a static consistency test for all four clients plus a Go handler test proving the production route is served. Add a deferred SecretStorage regression test for the VS Code Configure path. The static test must report each mismatch rather than pass on an empty file set.
 
 ## Risks / Trade-offs
 

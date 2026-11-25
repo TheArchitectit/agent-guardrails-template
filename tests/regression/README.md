@@ -19,6 +19,7 @@ Regression tests:
 ```
 test_<module>_regression_<failure_id>.py (Python)
 test_<module>_regression_<failure_id>.js (Node.js)
+test_<module>_regression_<failure_id>.sh (POSIX shell wrapper)
 
 Examples:
 - test_parser_regression_FAIL_abc123de.py
@@ -115,7 +116,9 @@ tests/regression/
 ├── README.md (this file)
 ├── test_parser_regression_FAIL_abc123de.py
 ├── test_api_regression_FAIL_def456gh.py
-└── test_config_regression_FAIL_ghi789jk.py
+├── test_config_regression_FAIL_ghi789jk.py
+├── test_vscode_configure_override_regression_FAIL-a01027ef.js
+└── test_ide_rest_endpoint_contract_regression_FAIL-4490ed64.sh
 ```
 
 ---

@@ -55,7 +55,7 @@ This initiative will create native IDE extensions for popular development enviro
               │
        ┌──────▼──────────────────────────────┐
        │     Guardrail MCP Server            │
-       │     (Port 8095 - IDE API)           │
+       │     (REST / IDE API on Port 8081)   │
        └─────────────────────────────────────┘
 ```
 
@@ -237,7 +237,7 @@ All IDEs use the same configuration structure:
     },
     {
       "name": "Local",
-      "url": "http://localhost:8095",
+      "url": "http://localhost:8081",
       "apiKey": "dev-key",
       "default": false
     }

@@ -54,7 +54,7 @@ Settings → Tools → Guardrail:
 
 | Setting | Default | Description |
 |---------|---------|-------------|
-| Server URL | http://localhost:8095 | MCP server endpoint |
+| Server URL | http://localhost:8081 | REST server endpoint |
 | API Key | (empty) | Authentication key |
 | Project Slug | (empty) | Project identifier |
 | Validate on Save | true | Run validation on file save |

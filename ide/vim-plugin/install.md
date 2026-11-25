@@ -62,7 +62,7 @@ Add to `.vimrc`:
 
 ```vim
 " Required settings
-let g:guardrail_server_url = 'http://localhost:8095'
+let g:guardrail_server_url = 'http://localhost:8081'
 let g:guardrail_project_slug = 'your-project'
 
 " Optional settings
@@ -117,7 +117,7 @@ let g:airline_section_x = airline#section#create(['guardrail'])
 1. Install the plugin
 2. Set required config in `.vimrc`:
    ```vim
-   let g:guardrail_server_url = 'http://localhost:8095'
+   let g:guardrail_server_url = 'http://localhost:8081'
    let g:guardrail_project_slug = 'my-project'
    ```
 3. Reload Vim or run `:source ~/.vimrc`
