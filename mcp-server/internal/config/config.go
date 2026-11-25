@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"math"
+	"net/url"
 	"regexp"
 	"strings"
 	"time"
@@ -833,8 +834,8 @@ func ValidateTimeout(name string, value, min, max time.Duration) error {
 
 // DatabaseURL returns the PostgreSQL connection string
 func (c *Config) DatabaseURL() string {
-	return fmt.Sprintf("postgresql://%s:%s@%s:%d/%s?sslmode=%s&connect_timeout=%d",
-		c.DBUser, c.DBPassword, c.DBHost, c.DBPort, c.DBName, c.DBSSLMode,
+	return fmt.Sprintf("postgresql://%s@%s:%d/%s?sslmode=%s&connect_timeout=%d",
+		url.UserPassword(c.DBUser, c.DBPassword).String(), c.DBHost, c.DBPort, c.DBName, c.DBSSLMode,
 		int(c.DBConnectTimeout.Seconds()))
 }
 

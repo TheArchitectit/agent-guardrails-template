@@ -58,6 +58,30 @@ services:
       retries: 5
       start_period: 30s
 
+  migrate:
+    image: guardrail-mcp:${VERSION:-latest}
+    build:
+      context: ./mcp-server
+      dockerfile: deploy/Dockerfile
+      args:
+        - VERSION=${VERSION:-dev}
+        - BUILD_TIME=${BUILD_TIME:-unknown}
+        - GIT_COMMIT=${GIT_COMMIT:-unknown}
+    entrypoint: ["/run-migrations"]
+    working_dir: /app
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - MIGRATION_DATABASE_URL=postgres://postgres:5432
+      - PGUSER=${DB_USER:-guardrail}
+      - PGPASSWORD=${DB_PASSWORD:-changeme}
+      - PGDATABASE=${DB_NAME:-guardrails}
+      - PGSSLMODE=${DB_SSLMODE:-disable}
+    networks:
+      - guardrails-net
+
   mcp-server:
     build:
       context: ./mcp-server
@@ -74,6 +98,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     ports:
       - "127.0.0.1:${MCP_PORT:-8080}:8080"
       - "127.0.0.1:${WEB_PORT:-8081}:8081"
@@ -126,6 +152,8 @@ services:
       - ENABLE_METRICS=${ENABLE_METRICS:-true}
       - ENABLE_AUDIT_LOGGING=${ENABLE_AUDIT_LOGGING:-true}
       - ENABLE_CACHE=${ENABLE_CACHE:-true}
+    networks:
+      - guardrails-net
     healthcheck:
       test: ["CMD", "/server", "--health-check"]
       interval: 30s

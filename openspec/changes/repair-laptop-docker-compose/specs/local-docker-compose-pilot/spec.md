@@ -54,7 +54,12 @@ The laptop pilot SHALL start the MCP service only after PostgreSQL and Redis rep
 #### Scenario: Database migrations complete before the application starts
 - **GIVEN** PostgreSQL is healthy but the pilot database is not at the schema version required by MCP
 - **WHEN** Compose starts the pilot application
-- **THEN** a one-shot migration job applies and verifies the checked-in migrations through the required schema version before MCP starts
+- **THEN** a one-shot job from the same versioned MCP image applies and verifies the checked-in migrations through the required schema version using a protected runtime environment source, and MCP starts only after successful completion
+
+#### Scenario: Pilot services share the isolated application bridge
+- **GIVEN** the root Compose pilot is rendered
+- **WHEN** Compose creates PostgreSQL, Redis, the migration job, and MCP
+- **THEN** all four services attach to the same explicitly declared `guardrails-net` bridge and host publications remain loopback-only
 
 #### Scenario: Application readiness is checked
 - **GIVEN** the services have started
@@ -94,6 +99,22 @@ The launcher SHALL create its synthetic env file with create-new semantics, vali
 - **GIVEN** the dedicated env file is malformed or a fixed-name container belongs to a different Compose project
 - **WHEN** the launcher checks local pilot state
 - **THEN** it stops without replacing credentials or taking over the container
+
+### Requirement: Windows launcher preserves credentials across source updates
+When source is repinned, the launcher SHALL validate the immediately prior revision's env file and create the new revision's env file with the same credentials using create-new semantics. It SHALL leave the prior env file unchanged.
+
+#### Scenario: Source revision update preserves credentials for existing volumes
+- **GIVEN** the prior pinned revision has a valid launcher-owned env file and its Compose project volumes exist
+- **WHEN** the launcher starts from a newly pinned revision
+- **THEN** it validates the prior file, creates the new revision's env file without overwriting either file, preserves all credential values, and uses the new source revision for the image build
+
+### Requirement: Windows launcher does not replace credentials for existing data
+If project volumes exist without a valid current or immediately prior launcher env file, the launcher SHALL stop without generating new credentials or changing the volumes.
+
+#### Scenario: Existing volumes without validated credentials fail closed
+- **GIVEN** project volumes exist but no valid current or prior launcher env file is available
+- **WHEN** the launcher prepares pilot credentials
+- **THEN** it stops without generating new credentials or changing the volumes
 
 ### Requirement: Windows launcher targets only the local Docker Desktop Linux engine
 The launcher SHALL use an explicit `desktop-linux` context whose endpoint is Docker Desktop's local Windows Linux-engine named pipe, verify that the engine reports Linux, and start the installed Docker Desktop app when it is stopped. It SHALL not change Docker context or container mode.

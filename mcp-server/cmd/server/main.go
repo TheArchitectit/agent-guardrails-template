@@ -672,7 +672,7 @@ policyPacksDone:
 
 	// Lifecycle gate (Spec 18 Sec. 5.2 / R18-12): readiness stays non-ready until
 	// every ordered check passes; only then is the READY state published.
-	if report := webServer.EvaluateReadiness(); report.Ready {
+	if report := webServer.EvaluateStartupReadiness(); report.Ready {
 		webServer.SetLifecycle(web.LifecycleReady)
 		slog.Info("Readiness checks passed; instance is READY")
 	} else {
