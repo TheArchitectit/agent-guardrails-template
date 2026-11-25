@@ -13,7 +13,8 @@ checks, integration findings, and release metadata status.
 
 The 31 earlier findings and seven additional independently actionable findings
 from the initial review each have a full OpenSpec package. The implementation
-pass added TPL-39 for the Windows Docker pilot. The [combined plans](superseded-changes/README.md)
+pass added TPL-39 for the Windows Docker pilot and TPL-40 for Python
+test discovery. The [combined plans](superseded-changes/README.md)
 preserve the earlier grouping and historical checkbox state. QA-05 was the sole
 verified and archived item in the initial review. QA-01 and TPL-32 were
 subsequently implemented and verified during the implementation pass.
@@ -83,6 +84,7 @@ finding, canonical requirement, acceptance scenarios, and implementation tasks.
 | `TPL-37` | Open (import proposal) | Template and AIGGP CI owners | The import branch proposes a second divergent DevGate pin. Verify a single selected AIGGP revision and the consumer checkout path before changing CI ownership. | [reconcile-devgate-pin-ownership](../changes/reconcile-devgate-pin-ownership/proposal.md) |
 | `TPL-38` | Partially verified | Secret scanning and CI maintainers | The Secret Validation job at `943bcf6` failed before scan execution because the installer found a shared Gitleaks temporary path already occupied. | [isolate-gitleaks-runner-install](../changes/isolate-gitleaks-runner-install/proposal.md) |
 | `TPL-39` | Windows runtime pending | Deployment maintainers | Root Compose pointed at the wrong build context. The configuration and runbook are verified without a daemon. | [repair-laptop-docker-compose](../changes/repair-laptop-docker-compose/proposal.md) |
+| `TPL-40` | Verified and archived | QA/CI maintainers | Registered the root Python suite exposed by the hosted discovery gate. Local collection meets the 11-case floor. | [Archived TPL-40 evidence](../changes/archive/2026-11-25-register-root-python-test-suite/evidence.md) |
 
 ## Pilot sequencing
 

@@ -2,6 +2,14 @@
   "description": "Nonzero test floor per Python test suite (Spec 19 R19-10, R19-12). CI discovers collectable test directories from the tree and fails when a suite reports fewer than min_tests collected tests. Discovery is enforced fail-closed by scripts/check_python_tests.py: every directory holding a pytest-collectable file (test_*.py / *_test.py) MUST have a row here (and every row MUST name an existing suite), so a new Python suite cannot escape the Python test run.",
   "suites": [
     {
+      "suite": "tests",
+      "path": "tests",
+      "setup_command": "python3 -m pip install pytest",
+      "test_command": "python3 -m pytest tests/ -v",
+      "min_tests": 11,
+      "applicability": "required always: root regression suite; the daemon-backed Docker context case is collected and conditionally skipped unless explicitly enabled"
+    },
+    {
       "suite": "scripts",
       "path": "scripts",
       "setup_command": "python3 -m pip install pytest pytest-cov pyyaml",
