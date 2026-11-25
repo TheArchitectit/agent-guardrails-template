@@ -1,3 +1,13 @@
 [submodule ".devgate"]
 	path = .devgate
 	url = https://github.com/TheArchitectit/DevGate-Agentic-Framework.git
+
+[submodule "guardrails-control-plane/engines/guardrail-mcp"]
+	path = guardrails-control-plane/engines/guardrail-mcp
+	url = https://github.com/TheArchitectit/guardrail-mcp.git
+[submodule "guardrails-control-plane/engines/devgate"]
+	path = guardrails-control-plane/engines/devgate
+	url = https://github.com/TheArchitectit/DevGate-Agentic-Framework.git
+[submodule "guardrails-control-plane/policy/packs"]
+	path = guardrails-control-plane/policy/packs
+	url = https://github.com/TheArchitectit/guardrail-policy-packs.git
