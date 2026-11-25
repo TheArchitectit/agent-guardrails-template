@@ -1,8 +1,10 @@
 package validation
 
 import (
+	"fmt"
 	"regexp"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 )
@@ -91,6 +93,50 @@ func TestSafeRegex(t *testing.T) {
 				t.Errorf("SafeRegex() = %v, want %v", got, tt.wantMatch)
 			}
 		})
+	}
+}
+
+func TestCompilePatternConcurrentClear(t *testing.T) {
+	ClearRegexCache()
+	const pattern = `^safe-[a-z]+$`
+	const workers = 8
+	const iterations = 500
+	start := make(chan struct{})
+	var wg sync.WaitGroup
+	errs := make(chan error, workers)
+
+	for range workers {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			<-start
+			for range iterations {
+				re, err := CompilePattern(pattern)
+				if err != nil {
+					errs <- err
+					return
+				}
+				if !re.MatchString("safe-token") || re.MatchString("unsafe-token") {
+					errs <- fmt.Errorf("compiled pattern returned an unexpected match result")
+					return
+				}
+			}
+		}()
+	}
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		<-start
+		for range iterations {
+			ClearRegexCache()
+		}
+	}()
+
+	close(start)
+	wg.Wait()
+	close(errs)
+	for err := range errs {
+		t.Error(err)
 	}
 }
 

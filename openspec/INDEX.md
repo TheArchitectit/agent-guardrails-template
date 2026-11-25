@@ -6,7 +6,7 @@
 > `Status:` line. Run the pinned strict spec validator after editing. Never
 > merge rows by short slug or infer status from archive task checkboxes.
 
-**37 specs** — CLOSED 16 | PARTIAL 0 | OPEN 0 | UNKNOWN 21
+**38 specs** — CLOSED 16 | PARTIAL 0 | OPEN 0 | UNKNOWN 22
 
 | Spec path | Title | Status | Evidence |
 |---|---|---|---|
@@ -46,6 +46,7 @@
 | [`semantic-filtering-categories-and-actions/spec.md`](specs/semantic-filtering-categories-and-actions/spec.md) | Semantic Filtering Categories and Actions | **CLOSED** | Status: CLOSED (EXERCISED 3) |
 | [`semantic-filtering-evidence-and-conformance/spec.md`](specs/semantic-filtering-evidence-and-conformance/spec.md) | Semantic Filtering Evidence and Conformance | **CLOSED** | Status: CLOSED (EXERCISED 3) |
 | [`test-fixture-permissions/spec.md`](specs/test-fixture-permissions/spec.md) | test-fixture-permissions Specification | **UNKNOWN** | No status or closure table |
+| [`validation-regex-cache/spec.md`](specs/validation-regex-cache/spec.md) | validation-regex-cache Specification | **UNKNOWN** | No status or closure table |
 | [`vscode-extension-linting/spec.md`](specs/vscode-extension-linting/spec.md) | vscode-extension-linting Specification | **UNKNOWN** | No status or closure table |
 
 ## Reading the status
@@ -59,7 +60,7 @@
   a documentation gap, not a claim that the work is unfinished.
 
 The audit snapshot at `943bcf6` contained 15 specs (the eight verbose paths and
-seven short paths). This later inventory contains 37 paths as archived
+seven short paths). This later inventory contains 38 paths as archived
 changes added specifications; every added path remains independently listed.
 See the [2026-11-25 template inventory evidence](changes/archive/2026-11-25-inv01-canonical-openspec-inventory/evidence.md)
 for the count reconciliation and the historically distinct AIGGP specs.
