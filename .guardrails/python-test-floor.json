@@ -10,6 +10,14 @@
       "applicability": "required always: root regression suite; the daemon-backed Docker context case is collected and conditionally skipped unless explicitly enabled"
     },
     {
+      "suite": "tests/regression",
+      "path": "tests/regression",
+      "setup_command": "python3 -m pip install pytest",
+      "test_command": "python3 -m pytest tests/regression/ -v",
+      "min_tests": 1,
+      "applicability": "required always: committed PR fix regressions consumed by the Regression Guard hard gate"
+    },
+    {
       "suite": "scripts",
       "path": "scripts",
       "setup_command": "python3 -m pip install pytest pytest-cov pyyaml",

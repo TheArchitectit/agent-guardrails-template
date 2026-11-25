@@ -14,5 +14,8 @@
 - [x] 2.1 Run the focused regression and validate the OpenSpec change strictly.
 - [x] 2.2 Confirm the workflow still gates regression-test checks on the
   unchanged `bug_fix_count` output and that no step consumes `commits`.
-- [ ] 2.3 Run the hosted Regression Guard on draft PR #13 at the fixed
+- [x] 2.3 Add `tests/regression` to `.guardrails/python-test-floor.json` with
+  its explicit pytest command, setup dependency, positive floor, and CI
+  applicability; run the discovery gate and suite on Linux.
+- [ ] 2.4 Run the hosted Regression Guard on draft PR #13 at the fixed
   revision. Verify the output step passes and record the run evidence.

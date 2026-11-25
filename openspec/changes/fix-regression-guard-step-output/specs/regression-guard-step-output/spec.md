@@ -21,3 +21,9 @@ value as a single-line `GITHUB_OUTPUT` record.
 - **THEN** `bug_fix_count` equals the number of matching fix subjects and each
   output record is a valid single line
 - **AND** no unused subject-list output is emitted
+
+#### Scenario: regression guard test is included in Python suite execution
+- **GIVEN** the focused regression is stored under `tests/regression/`
+- **WHEN** CI discovers and runs its declared Python test suites
+- **THEN** `tests/regression` has an inventory row with a positive test floor
+  and a command that executes that suite
