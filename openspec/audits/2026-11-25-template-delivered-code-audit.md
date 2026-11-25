@@ -110,7 +110,7 @@ The table records each tracked change at the audited revision. Task totals come 
 
 | Change | State in tree | Checked tasks | Spec deltas | Evidence file |
 |---|---|---:|---:|---|
-| [align-legacy-ci-go-toolchains](../changes/align-legacy-ci-go-toolchains/tasks.md) | Active | 0/3 | 1 | — |
+| [align-legacy-ci-go-toolchains](../changes/archive/2026-11-25-align-legacy-ci-go-toolchains/tasks.md) | Active | 0/3 | 1 | — |
 | [arc01-archive-reference-provenance](../changes/archive/2026-11-25-arc01-archive-reference-provenance/tasks.md) | Active | 0/4 | 1 | — |
 | [2026-11-06-aiggp-03-prompt-injection-defense](../changes/archive/2026-11-06-aiggp-03-prompt-injection-defense/tasks.md) | Archived | 5/5 | 2 | — |
 | [2026-11-06-aiggp-04-semantic-content-filtering](../changes/archive/2026-11-06-aiggp-04-semantic-content-filtering/tasks.md) | Archived | 5/5 | 2 | — |
