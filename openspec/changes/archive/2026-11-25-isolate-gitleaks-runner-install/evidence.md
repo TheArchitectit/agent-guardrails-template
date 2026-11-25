@@ -83,3 +83,8 @@ passed on the combined draft candidate.
 The five GitHub Actions workflows for the published draft head had no assigned
 runner at the 19:03 UTC check. The recorded scanner results come from this
 laptop.
+
+After publication, the native Windows CLI verified the release archive again
+and scanned all 13 commits through draft head
+`547c2dec6a730d68df4e1cac3cef9da0dffdeea4`. Gitleaks 8.24.3 exited 0 with
+zero findings.

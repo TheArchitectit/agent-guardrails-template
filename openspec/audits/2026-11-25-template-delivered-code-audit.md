@@ -131,7 +131,7 @@ The table records each tracked change at the audited revision. Task totals come 
 | [dep02-reconcile-production-guide](../changes/dep02-reconcile-production-guide/tasks.md) | Active | 0/3 | 1 | — |
 | [fix-gitlab-requirements-inputs](../changes/archive/2026-11-25-fix-gitlab-requirements-inputs/tasks.md) | Active | 0/3 | 1 | — |
 | [fix-regression-guard-step-output](../changes/fix-regression-guard-step-output/tasks.md) | Active | 4/5 | 1 | [Receipt](../changes/fix-regression-guard-step-output/evidence.md) |
-| [fix-windsurf-single-skill-target](../changes/fix-windsurf-single-skill-target/tasks.md) | Active | 0/3 | 1 | — |
+| [fix-windsurf-single-skill-target](../changes/archive/2026-11-25-fix-windsurf-single-skill-target/tasks.md) | Active | 0/3 | 1 | — |
 | [go-tpl34-automate-source-advisory-checks](../changes/go-tpl34-automate-source-advisory-checks/tasks.md) | Active | 0/4 | 1 | — |
 | [ide01-initialize-vscode-client](../changes/ide01-initialize-vscode-client/tasks.md) | Active | 0/4 | 1 | — |
 | [ide02-align-ide-rest-endpoint](../changes/ide02-align-ide-rest-endpoint/tasks.md) | Active | 0/4 | 1 | — |
@@ -147,7 +147,7 @@ The table records each tracked change at the audited revision. Task totals come 
 | [package-team-cli-python-backend](../changes/package-team-cli-python-backend/tasks.md) | Active | 0/3 | 1 | — |
 | [pkg01-declare-pi-mcp-sdk-dev-dependency](https://github.com/TheArchitectit/agent-guardrails-template/blob/30b63f63c0462809269a0c9aa9fd64515210cc20/openspec/changes/pkg01-declare-pi-mcp-sdk-dev-dependency/tasks.md) | Active | 0/4 | 1 | — |
 | [pkg02-align-pi-package-name](../changes/pkg02-align-pi-package-name/tasks.md) | Active | 0/4 | 1 | — |
-| [preserve-hidden-agent-install-paths](../changes/preserve-hidden-agent-install-paths/tasks.md) | Active | 0/3 | 1 | — |
+| [preserve-hidden-agent-install-paths](../changes/archive/2026-11-25-preserve-hidden-agent-install-paths/tasks.md) | Active | 0/3 | 1 | — |
 | [reconcile-devgate-pin-ownership](../changes/reconcile-devgate-pin-ownership/tasks.md) | Active | 0/4 | 1 | — |
 | [reconcile-platform-current-state](../changes/reconcile-platform-current-state/tasks.md) | Active | 0/4 | 1 | — |
 | [release-gate-conformance-reports](../changes/release-gate-conformance-reports/tasks.md) | Active | 0/3 | 2 | — |

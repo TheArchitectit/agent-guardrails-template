@@ -114,9 +114,43 @@ def resolve_target(target_root: Optional[str], skill_name: str) -> tuple[Path, P
     else:
         base = REPO_ROOT
     source = REPO_ROOT / repo_path
-    target_dir = base / target_subdir
-    target = target_dir / Path(repo_path).name
+    destination = Path(target_subdir)
+    target = base / destination
+    if target_subdir.endswith(("/", "\\")):
+        target = target / Path(repo_path).name
+    target = _confined_install_target(base, target)
     return source, target
+
+
+def _confined_destination(root: Path, destination: Path) -> Path:
+    """Resolve a destination and reject traversal or symlink escapes from root."""
+    resolved_root = root.resolve()
+    resolved_destination = destination.resolve()
+    try:
+        resolved_destination.relative_to(resolved_root)
+    except ValueError as exc:
+        raise ValueError(f"Destination escapes install root: {destination}") from exc
+    return resolved_destination
+
+
+def _confined_install_target(root: Path, destination: Path) -> Path:
+    """Constrain the resolved parent while preserving an occupied leaf link."""
+    resolved_root = root.resolve()
+    resolved_parent = destination.parent.resolve()
+    try:
+        resolved_parent.relative_to(resolved_root)
+    except ValueError as exc:
+        raise ValueError(f"Destination escapes install root: {destination}") from exc
+    return resolved_parent / destination.name
+
+
+def _normalize_relative_path(path: str) -> Path:
+    """Remove one optional ./ prefix without stripping hidden path components."""
+    normalized = path[2:] if path.startswith("./") else path
+    relative = Path(normalized)
+    if not normalized or relative.is_absolute() or ".." in relative.parts:
+        raise ValueError(f"Invalid relative install path: {path}")
+    return relative
 
 
 def ensure_parent_dirs(path: Path) -> None:
@@ -189,9 +223,12 @@ def clone_skill(path: str, target_root: Optional[str], dry_run: bool) -> bool:
     else:
         base = Path(".")
 
-    # Determine target: strip leading ./ or /
-    safe_path = path.lstrip("./")
-    target = base / safe_path
+    try:
+        safe_path = _normalize_relative_path(path)
+        target = _confined_destination(base, base / safe_path)
+    except (ValueError, OSError) as e:
+        print(f"[ERROR] Invalid destination: {e}")
+        return False
 
     if dry_run:
         print(f"[DRY-RUN] Would download: {RAW_BASE}/{path}")
@@ -234,7 +271,11 @@ def install_skill(name: str, target_root: Optional[str], mode: str, dry_run: boo
         print(f"[INFO] Run --list-skills to see available skills.")
         return False
 
-    source, target = resolve_target(target_root, name)
+    try:
+        source, target = resolve_target(target_root, name)
+    except (ValueError, OSError) as e:
+        print(f"[ERROR] Invalid destination: {e}")
+        return False
 
     if dry_run:
         action = "symlink" if mode == "symlink" else "copy"
@@ -285,7 +326,11 @@ def install_platform(target_root: Optional[str], platform: str, mode: str, dry_r
         base = Path(target_root).resolve()
     else:
         base = REPO_ROOT
-    target = base / config["target_name"]
+    try:
+        target = _confined_install_target(base, base / config["target_name"])
+    except (ValueError, OSError) as e:
+        print(f"[ERROR] Invalid destination: {e}")
+        return False
 
     if dry_run:
         action = "symlink" if mode == "symlink" else "copy"
