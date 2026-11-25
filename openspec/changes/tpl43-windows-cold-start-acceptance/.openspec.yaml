@@ -1,0 +1,3 @@
+schema: spec-driven
+created: 2026-11-25
+goal: Record safe cold-start and persisted-credential acceptance for the isolated Windows Compose pilot.

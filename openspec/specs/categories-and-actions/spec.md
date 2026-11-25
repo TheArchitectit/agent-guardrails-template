@@ -14,7 +14,9 @@ Content categories and their actions SHALL be declared in the policy bundle. A c
 
 #### Scenario: vague category rejected
 
-Given a bundle adding a category with no corpus or failure modes, when the bundle is validated, then validation SHALL FAIL naming the missing fields.
+- **GIVEN** a bundle adding a category with no corpus or failure modes
+- **WHEN** the bundle is validated
+- **THEN** validation SHALL FAIL naming the missing fields.
 
 ### Requirement: named classifier per decision
 
@@ -22,7 +24,9 @@ Every filtering decision SHALL record classifier provider, model, version, and r
 
 #### Scenario: unnamed model
 
-Given a decision emitted without model version, when the envelope is validated, then it SHALL be rejected.
+- **GIVEN** a decision emitted without model version
+- **WHEN** the envelope is validated
+- **THEN** it SHALL be rejected.
 
 ### Requirement: conservative boundary defaults
 
@@ -30,4 +34,6 @@ At send, commit, and publish boundaries, sub-threshold or errored classification
 
 #### Scenario: classifier error at send
 
-Given the classifier times out while evaluating an outbound message, when mediation decides, then the send SHALL be held for escalation.
+- **GIVEN** the classifier times out while evaluating an outbound message
+- **WHEN** mediation decides
+- **THEN** the send SHALL be held for escalation.

@@ -42,27 +42,76 @@ def run_git_command(args: List[str]) -> Tuple[int, str, str]:
         return 1, "", "git command not found"
 
 
-def get_changed_files(staged: bool = True, unstaged: bool = False) -> List[str]:
+def resolve_ci_range(base: str, head: str, merge_base: bool = False) -> Tuple[str, str]:
+    """Resolve and validate the CI comparison endpoints to full commit IDs."""
+    if not base or not head:
+        raise ValueError("both --base and --head are required for a CI range")
+    revisions = []
+    for revision in (base, head):
+        rc, stdout, stderr = run_git_command(
+            ["rev-parse", "--verify", "--end-of-options", f"{revision}^{{commit}}"]
+        )
+        if rc != 0:
+            raise ValueError(f"CI range revision {revision!r} is unavailable: {stderr.strip()}")
+        revisions.append(stdout.strip())
+    base_commit, head_commit = revisions
+    rc, stdout, _ = run_git_command(["rev-parse", "--is-shallow-repository"])
+    if rc != 0 or stdout.strip() == "true":
+        raise ValueError("CI range history is shallow or cannot be verified completely")
+    if merge_base:
+        rc, stdout, stderr = run_git_command(["merge-base", "--all", base_commit, head_commit])
+        common_bases = stdout.split()
+        if rc != 0 or len(common_bases) != 1:
+            detail = stderr.strip() or f"expected one common ancestor, found {len(common_bases)}"
+            raise ValueError(f"CI PR range {base}..{head} has missing or ambiguous history: {detail}")
+        return common_bases[0], head_commit
+    rc, _, stderr = run_git_command(["merge-base", "--is-ancestor", base_commit, head_commit])
+    if rc != 0:
+        detail = "base is not an ancestor of head" if rc == 1 else stderr.strip()
+        raise ValueError(f"CI range {base}..{head} is incomplete or invalid: {detail}")
+    return base_commit, head_commit
+
+
+def get_changed_files(staged: bool = True, unstaged: bool = False,
+                      base: str | None = None, head: str | None = None,
+                      merge_base: bool = False,
+                      resolved_range: Tuple[str, str] | None = None) -> List[str]:
     """Get list of changed files from git."""
+    if base is not None or head is not None:
+        range_base, range_head = resolved_range or resolve_ci_range(base, head, merge_base)
+        rc, stdout, stderr = run_git_command(["diff", "--name-only", "-z", range_base, range_head, "--"])
+        if rc != 0:
+            raise ValueError(f"cannot inspect CI range {base}..{head}: {stderr.strip()}")
+        files = [name for name in stdout.split("\0") if name]
+        if not files:
+            raise ValueError(f"CI range {base}..{head} is empty; refusing a vacuous scan")
+        return files
+
     files = []
 
     if staged:
-        rc, stdout, _ = run_git_command(["diff", "--cached", "--name-only"])
+        rc, stdout, _ = run_git_command(["diff", "--cached", "--name-only", "-z"])
         if rc == 0:
-            files.extend(stdout.strip().split("\n") if stdout.strip() else [])
+            files.extend(stdout.split("\0") if stdout else [])
 
     if unstaged:
-        rc, stdout, _ = run_git_command(["diff", "--name-only"])
+        rc, stdout, _ = run_git_command(["diff", "--name-only", "-z"])
         if rc == 0:
-            files.extend(stdout.strip().split("\n") if stdout.strip() else [])
+            files.extend(stdout.split("\0") if stdout else [])
 
-    return list(set(f for f in files if f))
+    return list(dict.fromkeys(f for f in files if f))
 
 
-def get_diff_content(file_path: str, staged: bool = True) -> str:
+def get_diff_content(file_path: str, staged: bool = True,
+                     base: str | None = None, head: str | None = None) -> str:
     """Get diff content for a specific file."""
+    if base is not None and head is not None:
+        rc, stdout, stderr = run_git_command(["diff", base, head, "--", f":(literal){file_path}"])
+        if rc not in (0, 1):
+            raise ValueError(f"cannot read CI patch for {file_path}: {stderr.strip()}")
+        return stdout
     cmd = ["diff", "--cached"] if staged else ["diff"]
-    rc, stdout, _ = run_git_command(cmd + ["--", file_path])
+    rc, stdout, _ = run_git_command(cmd + ["--", f":(literal){file_path}"])
     return stdout if rc in (0, 1) else ""
 
 
@@ -285,7 +334,10 @@ def run_regression_check(
     rules_path: Path,
     staged: bool = True,
     unstaged: bool = False,
-    verbose: bool = False
+    verbose: bool = False,
+    base: str | None = None,
+    head: str | None = None,
+    merge_base: bool = False,
 ) -> Tuple[int, List[Dict]]:
     """
     Run full regression check.
@@ -300,8 +352,11 @@ def run_regression_check(
     if verbose:
         print(f"Loaded {len(failures)} active failures, {len(rules)} enabled rules")
 
-    # Get changed files
-    changed_files = get_changed_files(staged=staged, unstaged=unstaged)
+    # Resolve CI endpoints once so both path discovery and every patch use the
+    # exact same validated comparison range.
+    committed_range = resolve_ci_range(base, head, merge_base) if base is not None or head is not None else None
+    changed_files = get_changed_files(staged=staged, unstaged=unstaged, base=base, head=head,
+                                      merge_base=merge_base, resolved_range=committed_range)
 
     if not changed_files:
         if verbose:
@@ -325,11 +380,24 @@ def run_regression_check(
             file_issues["failures"] = matching_failures
 
         # Check diff against pattern rules
-        diff = get_diff_content(file_path, staged=staged)
-        if diff:
-            violations = check_diff_against_patterns(diff, rules, file_path)
-            if violations:
-                file_issues["violations"] = violations
+        if committed_range is not None:
+            patches = [get_diff_content(file_path, base=committed_range[0], head=committed_range[1])]
+        else:
+            patches = []
+            if staged:
+                patches.append(get_diff_content(file_path, staged=True))
+            if unstaged:
+                patches.append(get_diff_content(file_path, staged=False))
+        violations = []
+        for patch in patches:
+            if patch:
+                violations.extend(check_diff_against_patterns(patch, rules, file_path))
+        seen_rules = set()
+        for violation in violations:
+            rule_id = violation.get("rule_id")
+            if rule_id not in seen_rules:
+                file_issues["violations"].append(violation)
+                seen_rules.add(rule_id)
 
         if file_issues["failures"] or file_issues["violations"]:
             issues.append(file_issues)
@@ -406,6 +474,10 @@ Examples:
                        help="Check unstaged changes")
     group.add_argument("--all", "-a", action="store_true",
                        help="Check both staged and unstaged changes")
+    parser.add_argument("--base", help="CI base commit (requires --head; fails closed on an empty range)")
+    parser.add_argument("--head", help="CI head commit (requires --base; fails closed on an empty range)")
+    parser.add_argument("--merge-base", action="store_true",
+                        help="For PRs, scan the unique merge-base-to-head range")
 
     # Output options
     parser.add_argument("--pre-commit", action="store_true",
@@ -419,6 +491,13 @@ Examples:
 
     args = parser.parse_args()
 
+    if bool(args.base) != bool(args.head):
+        parser.error("--base and --head must be supplied together")
+    if args.base and (args.unstaged or args.all):
+        parser.error("CI range mode cannot be combined with local diff selectors")
+    if args.merge_base and not args.base:
+        parser.error("--merge-base requires --base and --head")
+
     # Determine what to check
     staged = args.staged and not args.unstaged and not args.all
     unstaged = args.unstaged or args.all
@@ -426,13 +505,20 @@ Examples:
         staged = True
 
     # Run check
-    count, issues = run_regression_check(
-        registry_path=args.registry,
-        rules_path=args.rules,
-        staged=staged,
-        unstaged=unstaged,
-        verbose=args.verbose and not args.quiet
-    )
+    try:
+        count, issues = run_regression_check(
+            registry_path=args.registry,
+            rules_path=args.rules,
+            staged=staged,
+            unstaged=unstaged,
+            verbose=args.verbose and not args.quiet,
+            base=args.base,
+            head=args.head,
+            merge_base=args.merge_base,
+        )
+    except ValueError as exc:
+        print(f"Regression check error: {exc}", file=sys.stderr)
+        sys.exit(2)
 
     # Output results
     if args.json:

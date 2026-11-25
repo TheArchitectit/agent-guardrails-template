@@ -156,6 +156,14 @@ func (s *Server) EvaluateReadiness() ReadinessReport {
 	return s.readiness.Evaluate(s.Lifecycle())
 }
 
+// EvaluateStartupReadiness checks whether the instance can publish READY.
+// The candidate evaluation uses READY lifecycle semantics internally so the
+// current STARTING state does not veto the transition it is meant to gate.
+// The public readiness endpoint continues to observe the actual lifecycle.
+func (s *Server) EvaluateStartupReadiness() ReadinessReport {
+	return s.readiness.Evaluate(LifecycleReady)
+}
+
 // SetControlPlaneProbe installs the Spec 08 R08-4.2.4 measurement.
 //
 // It is a setter rather than a constructor argument because the MCP surface

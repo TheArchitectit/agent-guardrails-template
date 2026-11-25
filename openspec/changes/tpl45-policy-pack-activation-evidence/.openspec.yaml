@@ -1,0 +1,3 @@
+schema: spec-driven
+created: 2026-11-25
+goal: Verify that configured policy packs are actually trusted, activated, and used by runtime enforcement.

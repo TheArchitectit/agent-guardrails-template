@@ -1,0 +1,77 @@
+# Explicitly retain builder and final-stage inputs before exclusions so later
+# deny rules still omit sensitive paths nested under web/ or prevention-rules/.
+!go.mod
+!go.sum
+!**/*.go
+!web/
+!web/**
+!.guardrails/
+!.guardrails/prevention-rules/
+!.guardrails/prevention-rules/**
+
+# VCS metadata
+.git
+.git/**
+**/.git
+**/.git/**
+
+# Local environment and credentials
+.env
+.env.*
+**/.env
+**/.env.*
+*.env
+**/*.env
+*.pem
+**/*.pem
+*.key
+**/*.key
+credentials.json
+**/credentials.json
+secrets.json
+**/secrets.json
+
+# Local data, logs, and caches
+*.db
+**/*.db
+*.sqlite
+**/*.sqlite
+*.sqlite3
+**/*.sqlite3
+*.log
+**/*.log
+logs/
+**/logs/
+.cache/
+**/.cache/
+.pytest_cache/
+**/.pytest_cache/
+__pycache__/
+**/__pycache__/
+.coverage
+.coverage.*
+htmlcov/
+coverage/
+
+# Build and test outputs
+/server
+/bin/
+/dist/
+/build/
+/target/
+*.test
+*.out
+*.prof
+
+# Editor and operating-system files
+.idea/
+**/.idea/
+.vscode/
+**/.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+**/.DS_Store
+Thumbs.db
+**/Thumbs.db

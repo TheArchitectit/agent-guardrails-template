@@ -1,0 +1,4 @@
+schema: spec-driven
+created: 2026-11-25
+goal: Provide a loopback-bound, health-checked local Compose pilot using the
+  existing pinned services.

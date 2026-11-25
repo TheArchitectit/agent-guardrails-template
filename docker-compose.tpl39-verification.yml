@@ -1,0 +1,12 @@
+services:
+  postgres:
+    container_name: ${TPL39_NAME_PREFIX:-guardrails-tpl39-verify}-postgres
+
+  redis:
+    container_name: ${TPL39_NAME_PREFIX:-guardrails-tpl39-verify}-redis
+
+  migrate:
+    container_name: ${TPL39_NAME_PREFIX:-guardrails-tpl39-verify}-migrate
+
+  mcp-server:
+    container_name: ${TPL39_NAME_PREFIX:-guardrails-tpl39-verify}-mcp

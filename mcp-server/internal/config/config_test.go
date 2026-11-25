@@ -1,6 +1,7 @@
 package config
 
 import (
+	"net/url"
 	"strings"
 	"testing"
 	"time"
@@ -365,6 +366,29 @@ func TestConfig_DatabaseURL(t *testing.T) {
 
 	if url != expected {
 		t.Errorf("DatabaseURL() = %q, want %q", url, expected)
+	}
+}
+
+func TestConfig_DatabaseURL_RoundTripsReservedCredentials(t *testing.T) {
+	username := "test:user@name"
+	password := "Aa0:p@ss/word?query#fragment% brackets[]"
+	cfg := &Config{
+		DBUser:           username,
+		DBPassword:       password,
+		DBHost:           "localhost",
+		DBPort:           5432,
+		DBName:           "testdb",
+		DBSSLMode:        "require",
+		DBConnectTimeout: 10 * time.Second,
+	}
+
+	parsed, err := url.Parse(cfg.DatabaseURL())
+	if err != nil {
+		t.Fatal("DatabaseURL() did not produce a parseable PostgreSQL URL")
+	}
+	gotPassword, hasPassword := parsed.User.Password()
+	if !hasPassword || parsed.User.Username() != username || gotPassword != password {
+		t.Fatal("PostgreSQL URL parsing did not recover the original credential fields")
 	}
 }
 

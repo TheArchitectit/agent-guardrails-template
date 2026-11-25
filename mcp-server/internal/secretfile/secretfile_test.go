@@ -64,6 +64,16 @@ func TestReadRejectsNonRegularAndPermissive(t *testing.T) {
 	if err := os.WriteFile(path, []byte("value"), 0o644); err != nil {
 		t.Fatalf("write: %v", err)
 	}
+	if err := os.Chmod(path, 0o644); err != nil {
+		t.Fatalf("chmod: %v", err)
+	}
+	info, err := os.Stat(path)
+	if err != nil {
+		t.Fatalf("stat: %v", err)
+	}
+	if info.Mode().Perm() != 0o644 {
+		t.Fatalf("fixture mode = %#o, want 0644", info.Mode().Perm())
+	}
 	if _, err := Read(path); err == nil {
 		t.Error("a group/world-readable source must be rejected")
 	}

@@ -15,7 +15,7 @@ validate_teams:
   stage: validate
   image: python:$PYTHON_VERSION
   script:
-    - pip install -r requirements.txt
+    - python3 -m pip install -r requirements.txt
     - python3 scripts/team_manager.py --project $CI_PROJECT_NAME validate-size
     - python3 scripts/team_manager.py --project $CI_PROJECT_NAME status
   rules:
@@ -27,8 +27,7 @@ test_python:
   stage: test
   image: python:$PYTHON_VERSION
   script:
-    - pip install -r requirements.txt
-    - pip install pytest pytest-cov
+    - python3 -m pip install -r requirements.txt
     - pytest scripts/ -v --cov=scripts --cov-report=xml
   coverage: '/TOTAL\s+\d+\s+\d+\s+(\d+%)/'
   artifacts:
@@ -53,6 +52,7 @@ deploy_teams:
   stage: deploy
   image: python:$PYTHON_VERSION
   script:
+    - python3 -m pip install -r requirements.txt
     - echo "Team configuration validated and ready for deployment"
     - python3 scripts/team_manager.py --project $CI_PROJECT_NAME export-json --file teams-export.json
   artifacts:

@@ -29,6 +29,10 @@ RUN CGO_ENABLED=1 GOOS=linux go build \
         -X main.gitCommit=${GIT_COMMIT}" \
     -o server ./cmd/server
 
+# Build the explicit, versioned migration job used by the laptop Compose pilot.
+RUN CGO_ENABLED=0 GOOS=linux go build -o /app/run-migrations ./scripts/run_migrations.go
+RUN test -x /app/run-migrations
+
 # Final stage - distroless with ca-certificates for TLS
 FROM gcr.io/distroless/static:nonroot@sha256:e2e927ec666bae08560abb3c55d0659eceabb657f56b6782ab500a9fc7f555e3
 
@@ -41,6 +45,8 @@ USER 65532:65532
 
 # Copy binary
 COPY --from=builder --chown=65532:65532 /app/server /server
+COPY --from=builder --chown=65532:65532 /app/run-migrations /run-migrations
+COPY --from=builder --chown=65532:65532 /app/internal/database/migrations /app/internal/database/migrations
 
 # Copy Web UI files
 COPY --from=builder --chown=65532:65532 /app/web /app/web

@@ -210,6 +210,27 @@ func TestHealthReadyHandlerStatusCodes(t *testing.T) {
 	}
 }
 
+func TestStartupReadinessCanPublishReadyWithoutChangingPublicLifecycle(t *testing.T) {
+	s := &Server{readiness: NewReadinessEvaluator("v", readyDeps()), version: "v"}
+	s.lifecycle.Store(LifecycleStarting)
+
+	report := s.EvaluateStartupReadiness()
+	if !report.Ready {
+		t.Fatalf("healthy startup dependencies must permit READY transition: %+v", report)
+	}
+	if s.Lifecycle() != LifecycleStarting {
+		t.Fatalf("candidate startup evaluation changed lifecycle to %q", s.Lifecycle())
+	}
+
+	ec := echo.New()
+	ec.GET("/health/ready", s.healthReady)
+	rec := httptest.NewRecorder()
+	ec.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/health/ready", nil))
+	if rec.Code != http.StatusServiceUnavailable {
+		t.Fatalf("public readiness must remain non-ready until READY is published, got %d", rec.Code)
+	}
+}
+
 // Spec 08 R08-4.2.4: an unavailable mandatory control-plane component makes
 // the instance not-ready, through the same boolean an orchestrator routes on.
 func TestReadinessBlocksOnUnavailableMandatoryComponent(t *testing.T) {

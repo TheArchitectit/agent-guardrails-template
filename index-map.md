@@ -28,7 +28,7 @@ For a flat file listing, see [toc.md](toc.md); for an overview, start at the
 | api, endpoints, rest | [mcp-server/API.md](mcp-server/api.md) |
 | migration, version upgrade, rollback | [mcp-server/version-migration.md](docs/mcp-server/version-migration.md) |
 | python to go, team manager migration | [mcp-server/python-to-go-migration.md](docs/mcp-server/python-to-go-migration.md) |
-| deployment, docker, podman, compose | [mcp-server/DEPLOYMENT_GUIDE.md](mcp-server/deployment-guide.md) |
+| deployment, docker, podman, compose | [mcp-server/DEPLOYMENT_GUIDE.md](mcp-server/deployment-guide.md); [Windows laptop Compose pilot](docs/laptop-compose-pilot.md) |
 | server readme, setup | [mcp-server/README.md](mcp-server/README.md) |
 
 ## Integrations
@@ -128,6 +128,7 @@ safety guardrail systems.
 
 | Keyword | Document |
 |---------|----------|
+| OpenSpec catalog, canonical spec paths, status evidence | [OpenSpec index](openspec/INDEX.md) |
 | spec status, spec vs shipped, what actually shipped | [specs/guardrail-gaps-2026/STATUS.md](docs/specs/guardrail-gaps-2026/STATUS.md) |
 | prompt injection, injection defense, LLM security | [specs/guardrail-gaps-2026/01-prompt-injection-defense.md](docs/specs/guardrail-gaps-2026/01-prompt-injection-defense.md) |
 | content filtering, semantic safety, llama guard, moderation | [specs/guardrail-gaps-2026/02-semantic-content-filtering.md](docs/specs/guardrail-gaps-2026/02-semantic-content-filtering.md) |

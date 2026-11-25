@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import { resolveMcpEndpoint, MCP_STREAM_PATH, getMcpSdkLoadError } from "./mcp-client.js";
+import { resolveMcpEndpoint, MCP_STREAM_PATH, getMcpSdkLoadError, MCPClient } from "./mcp-client.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 
@@ -73,6 +73,21 @@ describe("mcp-client SDK entrypoints (spec 27)", () => {
     // must not record a load error. A non-null value means an installed
     // package's subpath failed to resolve (the spec 27 defect class).
     expect(getMcpSdkLoadError()).toBeNull();
+  });
+
+  it("loads the published SDK subpaths and initializes a bridge client", async () => {
+    const [{ Client }, { StreamableHTTPClientTransport }, { StdioClientTransport }] = await Promise.all([
+      import("@modelcontextprotocol/sdk/client/index.js"),
+      import("@modelcontextprotocol/sdk/client/streamableHttp.js"),
+      import("@modelcontextprotocol/sdk/client/stdio.js"),
+    ]);
+
+    expect(Client).toBeTypeOf("function");
+    expect(StreamableHTTPClientTransport).toBeTypeOf("function");
+    expect(StdioClientTransport).toBeTypeOf("function");
+    const client = new MCPClient();
+    expect(client.isConnected()).toBe(false);
+    expect(client.getTools()).toEqual([]);
   });
 
   it("resolves the transport to the server's Streamable HTTP /mcp/stream route", () => {

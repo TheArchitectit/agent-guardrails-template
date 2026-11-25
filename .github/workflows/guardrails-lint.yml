@@ -196,24 +196,44 @@ jobs:
           BEFORE_SHA: ${{ github.event.before }}
           REF_SHA: ${{ github.sha }}
         run: |
+          set -euo pipefail
           echo "Checking for AI attribution..."
-          echo ""
-          COMMIT_BODIES=$(scripts/changed_commits.sh --format "%B---COMMIT_SEP---")
-          AI_KEYWORDS="Claude|GPT|Gemini|AI|LLM|Copilot|agent"
-          MISSING_ATTRIBUTION=""
+          if ! COMMIT_SHAS=$(scripts/changed_commits.sh --format "%H"); then
+            echo "::error::Could not compute the event-scoped commit range for AI attribution."
+            exit 1
+          fi
 
-          while IFS= read -r commit; do
-            [ -n "$commit" ] || continue
-            if echo "$commit" | grep -qiE "$AI_KEYWORDS"; then
-              if ! echo "$commit" | grep -qi "Authored by TheArchitectit"; then
-                MISSING_ATTRIBUTION="$MISSING_ATTRIBUTION- Commit may need AI attribution"$'\n'
+          if [ -z "$COMMIT_SHAS" ]; then
+            echo "AI attribution inspection: 0 commits available (empty event range)."
+            exit 0
+          fi
+
+          AI_KEYWORDS="Claude|GPT|Gemini|AI|LLM|Copilot|agent"
+          INSPECTED_COUNT=0
+          MISSING_COUNT=0
+
+          while IFS= read -r commit_sha; do
+            if [[ ! "$commit_sha" =~ ^[0-9a-f]{40}$ ]]; then
+              echo "::error::Invalid commit record from changed_commits.sh; expected a full lowercase SHA-1."
+              exit 1
+            fi
+
+            if ! COMMIT_MESSAGE=$(git show -s --format=%B "$commit_sha"); then
+              echo "::error::Could not read the complete message for commit $commit_sha."
+              exit 1
+            fi
+
+            INSPECTED_COUNT=$((INSPECTED_COUNT + 1))
+            if grep -qiE "$AI_KEYWORDS" <<< "$COMMIT_MESSAGE"; then
+              if ! grep -qiF 'Authored by TheArchitectit' <<< "$COMMIT_MESSAGE"; then
+                echo "NOTE: Commit $commit_sha may need AI attribution."
+                MISSING_COUNT=$((MISSING_COUNT + 1))
               fi
             fi
-          done <<< "$(echo "$COMMIT_BODIES" | tr '---COMMIT_SEP---' '\n')"
+          done <<< "$COMMIT_SHAS"
 
-          if [ -n "$MISSING_ATTRIBUTION" ]; then
-            echo "NOTE: Some commits may need AI attribution:"
-            echo "$MISSING_ATTRIBUTION"
+          echo "AI attribution inspection: $INSPECTED_COUNT commit(s) checked; $MISSING_COUNT may need attribution."
+          if [ "$MISSING_COUNT" -gt 0 ]; then
             echo ""
             echo "If AI assisted with these commits, add:"
             echo "  Authored by TheArchitectit"

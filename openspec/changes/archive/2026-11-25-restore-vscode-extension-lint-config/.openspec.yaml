@@ -1,0 +1,4 @@
+schema: spec-driven
+created: 2026-11-25
+goal: Make the locked extension lint and normal test lifecycle runnable with
+  substantive TypeScript source diagnostics

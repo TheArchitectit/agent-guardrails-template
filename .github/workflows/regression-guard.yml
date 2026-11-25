@@ -168,11 +168,23 @@ jobs:
 
       - name: Run Regression Check
         id: regression_check
+        env:
+          REGRESSION_BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+          REGRESSION_HEAD_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          REGRESSION_USE_MERGE_BASE: ${{ github.event_name == 'pull_request' }}
         run: |
           echo "::group::Regression Check Output"
           # Spec 19 R19-02: nonzero exits must fail the step, never be swallowed.
-          python scripts/regression_check.py --all --json > regression_report.json
-          python scripts/regression_check.py --all
+          # PRs scan merge-base->PR-head; pushes scan event-before->pushed head. The
+          # checker fails closed when either event SHA is missing or its range is empty.
+          test -n "$REGRESSION_BASE_SHA" && test -n "$REGRESSION_HEAD_SHA"
+          if [ "$REGRESSION_USE_MERGE_BASE" = "true" ]; then
+            python scripts/regression_check.py --base "$REGRESSION_BASE_SHA" --head "$REGRESSION_HEAD_SHA" --merge-base --json > regression_report.json
+            python scripts/regression_check.py --base "$REGRESSION_BASE_SHA" --head "$REGRESSION_HEAD_SHA" --merge-base
+          else
+            python scripts/regression_check.py --base "$REGRESSION_BASE_SHA" --head "$REGRESSION_HEAD_SHA" --json > regression_report.json
+            python scripts/regression_check.py --base "$REGRESSION_BASE_SHA" --head "$REGRESSION_HEAD_SHA"
+          fi
           echo "::endgroup::"
 
       - name: Analyze PR for Bug Fix Commits
@@ -184,14 +196,9 @@ jobs:
           # Get commit messages in PR
           git log --format=%s "origin/${{ github.base_ref }}..HEAD" > commit_messages.txt
 
-          # Check for conventional commit bug fix markers
-          BUG_FIX_COUNT=$(grep -cE "^(fix|bugfix|hotfix)(\(.+\))?:" commit_messages.txt || true)
-
-          echo "bug_fix_count=$BUG_FIX_COUNT" >> $GITHUB_OUTPUT
-
+          BUG_FIX_COUNT=$(bash .github/scripts/count-bug-fix-commits.sh commit_messages.txt)
           if [ "$BUG_FIX_COUNT" -gt 0 ]; then
             echo "Detected $BUG_FIX_COUNT bug fix commit(s)"
-            echo "commits=$(cat commit_messages.txt)" >> $GITHUB_OUTPUT
           fi
 
       - name: Check for Regression Tests

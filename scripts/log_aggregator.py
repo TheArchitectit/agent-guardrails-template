@@ -12,9 +12,16 @@ import fcntl
 import json
 import sys
 import re
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Iterator
+
+
+def _as_utc(value: datetime) -> datetime:
+    """Interpret legacy naive timestamps as UTC and normalize aware values."""
+    if value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value.astimezone(timezone.utc)
 
 
 class LogAggregator:
@@ -26,15 +33,24 @@ class LogAggregator:
         self.audit_file = self.teams_dir / "audit.log"
         self.structured_logs_dir = self.teams_dir / "logs"
 
-    def _parse_timestamp(self, ts: str) -> datetime:
+    def _parse_timestamp(self, ts: Any) -> datetime:
         """Parse ISO8601 timestamp."""
+        if not isinstance(ts, str):
+            raise TypeError("timestamp must be a string")
         # Handle both with and without Z suffix
-        ts = ts.replace("Z", "+00:00")
+        ts = ts.replace("Z", "+00:00").replace("z", "+00:00")
         try:
-            return datetime.fromisoformat(ts)
+            return _as_utc(datetime.fromisoformat(ts))
         except ValueError:
             # Try alternate format
-            return datetime.strptime(ts.split("+")[0], "%Y-%m-%dT%H:%M:%S.%f")
+            return _as_utc(datetime.strptime(ts.split("+")[0], "%Y-%m-%dT%H:%M:%S.%f"))
+
+    def _timestamp_sort_key(self, ts: Any) -> tuple:
+        """Sort valid instants first and invalid timestamp values stably last."""
+        try:
+            return (0, self._parse_timestamp(ts))
+        except (TypeError, ValueError):
+            return (1, type(ts).__name__, repr(ts))
 
     def _read_audit_log(self) -> Iterator[Dict[str, Any]]:
         """Read entries from the audit log file."""
@@ -133,9 +149,9 @@ class LogAggregator:
                 return False
             try:
                 entry_time = self._parse_timestamp(ts_str)
-                if since and entry_time < since:
+                if since and entry_time < _as_utc(since):
                     return False
-                if until and entry_time > until:
+                if until and entry_time > _as_utc(until):
                     return False
             except (ValueError, TypeError):
                 return False
@@ -197,8 +213,8 @@ class LogAggregator:
                     if len(results) >= limit:
                         return results
 
-        # Sort by timestamp
-        results.sort(key=lambda x: x.get("timestamp", ""))
+        # Sort by UTC instant so mixed offsets remain chronological.
+        results.sort(key=lambda x: self._timestamp_sort_key(x.get("timestamp", "")))
         return results
 
     def get_summary(self) -> Dict[str, Any]:
@@ -208,6 +224,19 @@ class LogAggregator:
             "structured_logs": {"entries": 0, "levels": {}, "events": set()},
             "time_range": {"oldest": None, "newest": None}
         }
+        range_instants = {"oldest": None, "newest": None}
+
+        def record_time_range(timestamp: Any) -> None:
+            try:
+                instant = self._parse_timestamp(timestamp)
+            except (TypeError, ValueError):
+                return
+            if range_instants["oldest"] is None or instant < range_instants["oldest"]:
+                range_instants["oldest"] = instant
+                summary["time_range"]["oldest"] = timestamp
+            if range_instants["newest"] is None or instant > range_instants["newest"]:
+                range_instants["newest"] = instant
+                summary["time_range"]["newest"] = timestamp
 
         # Analyze audit log
         for entry in self._read_audit_log():
@@ -217,10 +246,7 @@ class LogAggregator:
 
             ts = entry.get("timestamp")
             if ts:
-                if summary["time_range"]["oldest"] is None or ts < summary["time_range"]["oldest"]:
-                    summary["time_range"]["oldest"] = ts
-                if summary["time_range"]["newest"] is None or ts > summary["time_range"]["newest"]:
-                    summary["time_range"]["newest"] = ts
+                record_time_range(ts)
 
         # Analyze structured logs
         for entry in self._read_structured_logs():
@@ -231,10 +257,7 @@ class LogAggregator:
 
             ts = entry.get("timestamp")
             if ts:
-                if summary["time_range"]["oldest"] is None or ts < summary["time_range"]["oldest"]:
-                    summary["time_range"]["oldest"] = ts
-                if summary["time_range"]["newest"] is None or ts > summary["time_range"]["newest"]:
-                    summary["time_range"]["newest"] = ts
+                record_time_range(ts)
 
         # Convert sets to lists for JSON serialization
         summary["audit_log"]["actions"] = list(summary["audit_log"]["actions"])
@@ -277,11 +300,11 @@ class LogAggregator:
 def parse_time_expr(expr: str) -> datetime:
     """Parse time expression like '1h', '30m', '1d'."""
     expr = expr.lower().strip()
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
 
     # Try absolute ISO format first
     try:
-        return datetime.fromisoformat(expr.replace("Z", "+00:00").replace("z", "+00:00"))
+        return _as_utc(datetime.fromisoformat(expr.replace("Z", "+00:00").replace("z", "+00:00")))
     except ValueError:
         pass
 

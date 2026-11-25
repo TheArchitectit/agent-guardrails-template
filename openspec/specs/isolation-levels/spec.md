@@ -14,11 +14,15 @@ The platform SHALL publish exactly the named levels with their filesystem, netwo
 
 #### Scenario: observer attempts write
 
-Given a workload at observer level, when it attempts a filesystem write, then the write SHALL fail and the attempt SHALL be recorded.
+- **GIVEN** a workload at observer level
+- **WHEN** it attempts a filesystem write
+- **THEN** the write SHALL fail and the attempt SHALL be recorded.
 
 #### Scenario: restricted attempts egress
 
-Given a restricted workload, when it attempts a network connection outside its declared egress, then the connection SHALL fail and the attempt SHALL be evidence.
+- **GIVEN** a restricted workload
+- **WHEN** it attempts a network connection outside its declared egress
+- **THEN** the connection SHALL fail and the attempt SHALL be evidence.
 
 ### Requirement: declared level enforcement
 
@@ -26,7 +30,9 @@ A workload SHALL declare its required level in the bundle. The runtime SHALL enf
 
 #### Scenario: host cannot enforce contained
 
-Given a host lacking the container mechanism, when a contained-level workload is requested, then the runtime SHALL refuse with an explicit diagnostic and SHALL NOT run it weaker.
+- **GIVEN** a host lacking the container mechanism
+- **WHEN** a contained-level workload is requested
+- **THEN** the runtime SHALL refuse with an explicit diagnostic and SHALL NOT run it weaker.
 
 ### Requirement: fail-closed containment
 
@@ -34,4 +40,6 @@ Any containment mechanism fault SHALL stop the workload, produce an ERROR verdic
 
 #### Scenario: runtime enforcement error
 
-Given a seccomp or mount failure mid-workload, when the fault occurs, then execution SHALL halt and the run SHALL NOT produce a passing verdict.
+- **GIVEN** a seccomp or mount failure mid-workload
+- **WHEN** the fault occurs
+- **THEN** execution SHALL halt and the run SHALL NOT produce a passing verdict.
