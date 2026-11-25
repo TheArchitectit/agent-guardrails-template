@@ -17,12 +17,14 @@ Regression tests:
 ## Naming Convention
 
 ```
-test_<module>_regression_<failure_id>.py
+test_<module>_regression_<failure_id>.py (Python)
+test_<module>_regression_<failure_id>.js (Node.js)
 
 Examples:
 - test_parser_regression_FAIL_abc123de.py
 - test_api_regression_FAIL_def456gh.py
 - test_config_regression_FAIL_ghi789jk.py
+- test_vscode_extension_initialization_regression_FAIL_4c35b1a8.js
 ```
 
 ---
