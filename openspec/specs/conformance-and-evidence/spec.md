@@ -14,7 +14,9 @@ Each level SHALL certify against a public escape-fixture suite covering filesyst
 
 #### Scenario: network escape succeeds
 
-Given a fixture that reaches a forbidden endpoint, when the suite runs, then the level SHALL be reported non-conformant for that runtime version with the fixture named.
+- **GIVEN** a fixture that reaches a forbidden endpoint
+- **WHEN** the suite runs
+- **THEN** the level SHALL be reported non-conformant for that runtime version with the fixture named.
 
 ### Requirement: isolation in evidence
 
@@ -22,4 +24,6 @@ Every evidence envelope SHALL carry the workload's isolation level and the enfor
 
 #### Scenario: missing level field
 
-Given an envelope without isolation level, when validated, then it SHALL be rejected.
+- **GIVEN** an envelope without isolation level
+- **WHEN** validated
+- **THEN** it SHALL be rejected.

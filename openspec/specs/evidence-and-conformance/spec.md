@@ -14,7 +14,9 @@ Every classification and mediation decision SHALL emit an AIGGP envelope carryin
 
 #### Scenario: classifier swap invalidates claims
 
-Given a module release that changes classifier version without re-running the corpus, when conformance status is queried, then prior pass claims SHALL be reported as stale.
+- **GIVEN** a module release that changes classifier version without re-running the corpus
+- **WHEN** conformance status is queried
+- **THEN** prior pass claims SHALL be reported as stale.
 
 ### Requirement: adversarial conformance corpus
 
@@ -22,7 +24,9 @@ A versioned public corpus SHALL cover at minimum: direct injection, instruction-
 
 #### Scenario: category miss published
 
-Given a corpus category below the bar, when the conformance report is generated, then the category SHALL be listed as failing with fixtures named.
+- **GIVEN** a corpus category below the bar
+- **WHEN** the conformance report is generated
+- **THEN** the category SHALL be listed as failing with fixtures named.
 
 ### Requirement: benign-corpus false-positive budget
 
@@ -30,7 +34,9 @@ The module SHALL declare and meet a false-positive budget on a benign corpus. Re
 
 #### Scenario: budget breach
 
-Given a release candidate exceeding the budget, when the release gate runs, then it SHALL FAIL with the measured rate.
+- **GIVEN** a release candidate exceeding the budget
+- **WHEN** the release gate runs
+- **THEN** it SHALL FAIL with the measured rate.
 
 ### Requirement: auditable redaction
 
@@ -38,7 +44,9 @@ Redacted content SHALL be recorded as a content hash plus category metadata in t
 
 #### Scenario: secret redaction
 
-Given a commit containing a credential, when filtering redacts it, then the envelope SHALL carry the hash and category, and the ledger SHALL contain no plaintext secret.
+- **GIVEN** a commit containing a credential
+- **WHEN** filtering redacts it
+- **THEN** the envelope SHALL carry the hash and category, and the ledger SHALL contain no plaintext secret.
 
 ### Requirement: per-category conformance corpora
 
@@ -46,7 +54,9 @@ Each category SHALL have a versioned detection corpus and benign corpus. Verifie
 
 #### Scenario: false-positive budget breach
 
-Given a category exceeding its benign-corpus budget, when the release gate runs, then it SHALL FAIL with measured rates.
+- **GIVEN** a category exceeding its benign-corpus budget
+- **WHEN** the release gate runs
+- **THEN** it SHALL FAIL with measured rates.
 
 ### Requirement: version-bump invalidation
 
@@ -54,4 +64,6 @@ A classifier version change SHALL invalidate prior conformance claims until the 
 
 #### Scenario: silent upgrade flagged
 
-Given a deployment whose classifier updated without a corpus re-run, when conformance status is queried, then the category SHALL report stale.
+- **GIVEN** a deployment whose classifier updated without a corpus re-run
+- **WHEN** conformance status is queried
+- **THEN** the category SHALL report stale.

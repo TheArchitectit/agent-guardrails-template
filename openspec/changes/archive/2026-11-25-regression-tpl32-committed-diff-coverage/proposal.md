@@ -6,7 +6,7 @@
 
 ## What Changes
 
-- Add explicit base/head range evaluation for PR and main-push CI events, with missing or empty CI ranges failing closed.
+- Add explicit base/head evaluation for PR and main-push CI events. PRs scan the unique merge-base-to-head patch; pushes require before to be an ancestor of head. Missing, shallow, ambiguous, or empty ranges fail closed.
 - Preserve and correctly test staged, unstaged, and combined local modes.
 - Add safe temporary-Git-history tests for committed and working-tree matches plus clean controls.
 

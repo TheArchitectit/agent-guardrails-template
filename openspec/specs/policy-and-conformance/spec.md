@@ -14,7 +14,9 @@ The bundle SHALL be able to express policy on provenance class, including: no de
 
 #### Scenario: destructive action from web content
 
-Given a delete action justified only by fetched third-party content, when policy above is active, then mediation SHALL block and escalate.
+- **GIVEN** a delete action justified only by fetched third-party content
+- **WHEN** policy above is active
+- **THEN** mediation SHALL block and escalate.
 
 ### Requirement: ancestry reconstruction
 
@@ -22,4 +24,6 @@ Given any mediated action, the full provenance ancestry of its justifying conten
 
 #### Scenario: audit query
 
-Given an action from a week ago, when an auditor queries its ancestry, then the result SHALL list every content input with origin class and digest.
+- **GIVEN** an action from a week ago
+- **WHEN** an auditor queries its ancestry
+- **THEN** the result SHALL list every content input with origin class and digest.

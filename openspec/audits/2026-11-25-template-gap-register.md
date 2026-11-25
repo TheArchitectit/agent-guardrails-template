@@ -12,10 +12,11 @@ records implementation paths and test evidence by requirement. The
 checks, integration findings, and release metadata status.
 
 The 31 earlier findings and seven additional independently actionable findings
-each have a full OpenSpec package. The [combined plans](superseded-changes/README.md)
-preserve the earlier grouping and historical checkbox state. QA-05 is the sole
-item in this review with verified implementation and a synced official archive.
-All 37 remaining item plans have unchecked delivery and acceptance tasks.
+from the initial review each have a full OpenSpec package. The implementation
+pass added TPL-39 for the Windows Docker pilot. The [combined plans](superseded-changes/README.md)
+preserve the earlier grouping and historical checkbox state. QA-05 was the sole
+verified and archived item in the initial review. QA-01 and TPL-32 were
+subsequently implemented and verified during the implementation pass.
 
 ## Review procedure
 
@@ -33,7 +34,7 @@ preserve those unresolved baseline failures for QA-01. The completed QA-05
 archive adds one sourced evidence specification. The published count in this
 review branch is 16, and the published baseline under review was 15.
 
-The review branch has 37 active changes with complete planning artifacts. All
+The initial review commit had 37 active changes with complete planning artifacts. All
 37 pass strict change validation, and all five archives pass strict archive
 validation. Full-tree strict validation passes 46 of 53 entries, with the same
 seven baseline spec failures. Each new proposal was peer reviewed against the
@@ -45,7 +46,7 @@ finding, canonical requirement, acceptance scenarios, and implementation tasks.
 |---|---|---|---|---|
 | `INV-01` | Open | OpenSpec maintainers | index says 8 while tree has 15 specs; reconcile all requirement variants and test indexed count equals filesystem inventory | [inv01-canonical-openspec-inventory](../changes/inv01-canonical-openspec-inventory/proposal.md) |
 | `ARC-01` | Open | OpenSpec maintainers | The four 2026-11-06 archive packages publish seven short-slug outputs. The archive README says six, omits `isolation-levels`, and cites a missing retirement record. | [arc01-archive-reference-provenance](../changes/arc01-archive-reference-provenance/proposal.md) |
-| `QA-01` | Open | QA/OpenSpec maintainers | Seven published short-slug specs fail strict scenario validation. The active change artifacts pass. | [qa01-openspec-strict-scenario-structure](../changes/qa01-openspec-strict-scenario-structure/proposal.md) |
+| `QA-01` | Verified and archived | QA/OpenSpec maintainers | Structured 25 scenarios across the seven failing specs. Strict validation passes for the complete tree. | [Archived QA-01 evidence](../changes/archive/2026-11-25-qa01-openspec-strict-scenario-structure/evidence.md) |
 | `QA-02` | Open | Go QA maintainers | Four direct permission fixtures fail under umask 0077; explicit fixture mode and success under 0077/0022 | [make-permission-tests-umask-independent](../changes/make-permission-tests-umask-independent/proposal.md) |
 | `QA-03` | Open | Python QA maintainers | 363 Python deprecation warnings, primarily `datetime.utcnow`; aware timestamps and unchanged JSON keys/terminal Z | [use-timezone-aware-python-utc](../changes/use-timezone-aware-python-utc/proposal.md) |
 | `QA-04` | Open | JS package/QA maintainers | npm audit snapshot: Pi 9 dev entries (3 moderate/4 high/2 critical); VS Code 14 dev (4 moderate/10 high); production-only zero | [audit-javascript-dev-dependencies](../changes/audit-javascript-dev-dependencies/proposal.md) |
@@ -74,13 +75,14 @@ finding, canonical requirement, acceptance scenarios, and implementation tasks.
 | `OPS-02` | Open | Consumer integration owners | local producer/verifier only; no real external consumer acceptance or Gate 4 applicability evidence | [ops02-verify-external-consumer](../changes/ops02-verify-external-consumer/proposal.md) |
 | `OPS-03` | Open | Platform auth/operations | no multi-instance credential revocation propagation/failover record; verify selected replica topology | [ops03-verify-multi-instance-revocation](../changes/ops03-verify-multi-instance-revocation/proposal.md) |
 | `OPS-04` | Open | Platform operations | no selected topology migration/readiness/restore/rollback rehearsal; record outcomes against approved topology | [ops04-rehearse-operational-recovery](../changes/ops04-rehearse-operational-recovery/proposal.md) |
-| `TPL-32` | Open | QA/CI maintainers | `--all` discovers staged and unstaged paths, but regression patch content is read from the cached diff; unstaged-only added content can be skipped. In hosted clean checkout, both diffs are empty, so the committed patch also needs an explicit baseline. | [regression-tpl32-committed-diff-coverage](../changes/regression-tpl32-committed-diff-coverage/proposal.md) |
+| `TPL-32` | Verified and archived | QA/CI maintainers | Committed and local patch scans now use the correct ranges, with passing focused controls. | [Archived TPL-32 evidence](../changes/archive/2026-11-25-regression-tpl32-committed-diff-coverage/evidence.md) |
 | `TPL-33` | Open | MCP build maintainers | The MCP Docker build uses the module directory as context and copies it into the builder. A build-context allow policy needs to account for local-only files. | [docker-tpl33-bound-build-context](../changes/docker-tpl33-bound-build-context/proposal.md) |
 | `TPL-34` | Open | MCP/CI maintainers | The Go advisory scanner has a manual Make target. Active CI lacks a recurring source-level advisory check. | [go-tpl34-automate-source-advisory-checks](../changes/go-tpl34-automate-source-advisory-checks/proposal.md) |
 | `TPL-35` | Open | Release maintainers | Release Coverage rejects main `943bcf6` against the older `v3.8.11` tag. The gate applies the existing tag-at-HEAD contract. | [release-tpl35-publish-approved-main](../changes/release-tpl35-publish-approved-main/proposal.md) |
 | `TPL-36` | Open (import proposal) | Assembly and MCP evidence owners | The import review found two separate composition contracts. Bind the approved assembly pins to the exact build and policy identity reported by Spec 08. | [bind-assembly-to-runtime-evidence](../changes/bind-assembly-to-runtime-evidence/proposal.md) |
 | `TPL-37` | Open (import proposal) | Template and AIGGP CI owners | The import branch proposes a second divergent DevGate pin. Verify a single selected AIGGP revision and the consumer checkout path before changing CI ownership. | [reconcile-devgate-pin-ownership](../changes/reconcile-devgate-pin-ownership/proposal.md) |
-| `TPL-38` | Open | Secret scanning and CI maintainers | The Secret Validation job at `943bcf6` failed before scan execution because the installer found a shared Gitleaks temporary path already occupied. | [isolate-gitleaks-runner-install](../changes/isolate-gitleaks-runner-install/proposal.md) |
+| `TPL-38` | Partially verified | Secret scanning and CI maintainers | The Secret Validation job at `943bcf6` failed before scan execution because the installer found a shared Gitleaks temporary path already occupied. | [isolate-gitleaks-runner-install](../changes/isolate-gitleaks-runner-install/proposal.md) |
+| `TPL-39` | Windows runtime pending | Deployment maintainers | Root Compose pointed at the wrong build context. The configuration and runbook are verified without a daemon. | [repair-laptop-docker-compose](../changes/repair-laptop-docker-compose/proposal.md) |
 
 ## Pilot sequencing
 

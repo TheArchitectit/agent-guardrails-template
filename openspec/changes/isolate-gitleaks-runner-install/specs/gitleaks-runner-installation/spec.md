@@ -6,14 +6,14 @@ Defines isolated, integrity-verified scanner setup and fail-closed execution for
 
 ## ADDED Requirements
 
-### Requirement: CI installs the pinned scanner in job-owned scratch
+### Requirement: CI isolates the pinned action's scanner installation
 
-The Secret Validation job SHALL install and verify its pinned Gitleaks binary in a unique directory owned by that job, using the checksum metadata published for the pinned release, without deleting or replacing shared or pre-existing scratch paths.
+The Secret Validation job SHALL provide the pinned Gitleaks action a unique temporary directory owned by that job, without deleting or replacing shared or pre-existing scratch paths.
 
 #### Scenario: concurrent installers share a temporary parent
 
 - **WHEN** two installers run concurrently with the same `RUNNER_TEMP` parent
-- **THEN** each atomically creates a distinct child directory, verifies v8.24.3 against its published checksum metadata, and neither installer removes or overwrites the other's files
+- **THEN** each atomically creates a distinct child directory and neither action removes or overwrites the other's files
 
 #### Scenario: the former shared path already exists
 
@@ -44,15 +44,15 @@ The replacement scanner SHALL retain the workflow's existing event triggers, ful
 - **WHEN** the workflow runs on a push or same-repository pull request
 - **THEN** it retains full-history checkout, existing scan arguments and inputs, read-only `contents` permission, `--exit-code=2`, and disabled SARIF upload
 
-### Requirement: Scanner path is explicit across workflow steps
+### Requirement: Scanner temporary path is explicit to the action
 
-When installation and scanning use separate workflow steps, the job SHALL make its verified binary available to the scan step through an explicit step-scoped path.
+The job SHALL pass the allocated temporary directory directly to the official action through `TMPDIR`, which the pinned action resolves through Node's `os.tmpdir()` for install and download paths.
 
 #### Scenario: scanner path crosses workflow steps
 
-- **GIVEN** installation and scanning run in separate steps of one job
-- **WHEN** the scan step starts
-- **THEN** it resolves the verified job-owned binary through the workflow-provided step path, without relying on shell-local or runner-global `PATH` state
+- **GIVEN** the official action installs and scans within one workflow step
+- **WHEN** the action resolves its install and download paths
+- **THEN** both paths are beneath the allocated job-owned temporary directory
 
 #### Scenario: clean and detected fixtures are evaluated
 

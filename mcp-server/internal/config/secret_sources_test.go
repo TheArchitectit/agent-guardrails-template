@@ -145,10 +145,20 @@ func TestResolveSecretSourcesFailsClosed(t *testing.T) {
 		if err := os.WriteFile(path, []byte("some-secret-value-000000000000"), 0o644); err != nil {
 			t.Fatalf("write permissive file: %v", err)
 		}
+		if err := os.Chmod(path, 0o644); err != nil {
+			t.Fatalf("chmod permissive file: %v", err)
+		}
+		info, err := os.Stat(path)
+		if err != nil {
+			t.Fatalf("stat permissive file: %v", err)
+		}
+		if info.Mode().Perm() != 0o644 {
+			t.Fatalf("permissive fixture mode = %#o, want 0644", info.Mode().Perm())
+		}
 		cfg := validMinimalConfig()
 		cfg.MCPAPIKey = ""
 		cfg.MCPAPIKeyFile = path
-		err := cfg.ResolveSecretSources()
+		err = cfg.ResolveSecretSources()
 		if err == nil {
 			t.Fatal("a group/world-readable secret file must be rejected")
 		}
@@ -261,6 +271,16 @@ func TestProviderKeysAcceptFileSources(t *testing.T) {
 		path := filepath.Join(dir, "permissive-provider.cred")
 		if err := os.WriteFile(path, []byte("operator-openai-key-01"), 0o644); err != nil {
 			t.Fatalf("write permissive file: %v", err)
+		}
+		if err := os.Chmod(path, 0o644); err != nil {
+			t.Fatalf("chmod permissive file: %v", err)
+		}
+		info, err := os.Stat(path)
+		if err != nil {
+			t.Fatalf("stat permissive file: %v", err)
+		}
+		if info.Mode().Perm() != 0o644 {
+			t.Fatalf("permissive fixture mode = %#o, want 0644", info.Mode().Perm())
 		}
 		cfg = validMinimalConfig()
 		cfg.OpenAIAPIKey = ""

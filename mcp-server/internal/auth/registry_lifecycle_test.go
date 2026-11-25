@@ -276,6 +276,16 @@ func TestSecretFilePermissiveRejected(t *testing.T) {
 	if err := os.WriteFile(regFile, []byte("[]"), 0o644); err != nil {
 		t.Fatalf("write registry file: %v", err)
 	}
+	if err := os.Chmod(regFile, 0o644); err != nil {
+		t.Fatalf("chmod registry file: %v", err)
+	}
+	info, err := os.Stat(regFile)
+	if err != nil {
+		t.Fatalf("stat registry file: %v", err)
+	}
+	if info.Mode().Perm() != 0o644 {
+		t.Fatalf("registry fixture mode = %#o, want 0644", info.Mode().Perm())
+	}
 	if _, err := LoadFromSources("", regFile, testVerifierKey); err == nil || !strings.Contains(err.Error(), "group/world") {
 		t.Fatalf("group/world-readable secret file must be rejected, got %v", err)
 	}

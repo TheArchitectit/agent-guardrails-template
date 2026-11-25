@@ -60,8 +60,8 @@ services:
 
   mcp-server:
     build:
-      context: .
-      dockerfile: mcp-server/deploy/Dockerfile
+      context: ./mcp-server
+      dockerfile: deploy/Dockerfile
       args:
         - VERSION=${VERSION:-dev}
         - BUILD_TIME=${BUILD_TIME:-unknown}
