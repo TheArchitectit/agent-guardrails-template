@@ -6,7 +6,7 @@
 > `Status:` line. Run the pinned strict spec validator after editing. Never
 > merge rows by short slug or infer status from archive task checkboxes.
 
-**40 specs** — CLOSED 16 | PARTIAL 0 | OPEN 0 | UNKNOWN 24
+**41 specs** — CLOSED 16 | PARTIAL 0 | OPEN 0 | UNKNOWN 25
 
 | Spec path | Title | Status | Evidence |
 |---|---|---|---|
@@ -33,6 +33,7 @@
 | [`openspec-strict-validation/spec.md`](specs/openspec-strict-validation/spec.md) | openspec-strict-validation Specification | **UNKNOWN** | No status or closure table |
 | [`pi-mcp-sdk-development/spec.md`](specs/pi-mcp-sdk-development/spec.md) | pi-mcp-sdk-development Specification | **UNKNOWN** | No status or closure table |
 | [`platform-skill-file-destinations/spec.md`](specs/platform-skill-file-destinations/spec.md) | platform-skill-file-destinations Specification | **UNKNOWN** | No status or closure table |
+| [`platform-state-evidence/spec.md`](specs/platform-state-evidence/spec.md) | platform-state-evidence Specification | **UNKNOWN** | No status or closure table |
 | [`policy-and-conformance/spec.md`](specs/policy-and-conformance/spec.md) | policy-and-conformance Specification | **CLOSED** | Status: CLOSED (EXERCISED 2) |
 | [`postgres-connection-credential-encoding/spec.md`](specs/postgres-connection-credential-encoding/spec.md) | postgres-connection-credential-encoding Specification | **UNKNOWN** | No status or closure table |
 | [`prompt-injection-classification-and-mediation/spec.md`](specs/prompt-injection-classification-and-mediation/spec.md) | Prompt Injection Classification and Mediation | **CLOSED** | Status: CLOSED (EXERCISED 3) |
