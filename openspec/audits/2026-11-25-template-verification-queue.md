@@ -30,8 +30,8 @@ identifies the owning change and its acceptance tasks.
 - [x] DIST-01. Install the Team CLI and its Python backend into temporary
   prefixes, then verify external-directory invocation and uninstall ownership.
 - [ ] DIST-02. Reconcile advertised Team CLI output modes and verify the installed JSON contract.
-- [ ] QA-04. Re-run the Pi and VS Code lockfile-backed audits and record the
-  separate production and development results for review.
+- [x] QA-04. Re-ran Pi and VS Code lockfile-backed audits. See the [dated audit](../changes/audit-javascript-dev-dependencies/evidence/2026-11-25/audit.md).
+  Maintainer package dispositions remain open in the owning change.
 
 Run the task-specific local checks and the pinned strict OpenSpec validator.
 Record exact commit and test evidence with the owning change. Use available

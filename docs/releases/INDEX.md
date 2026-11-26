@@ -38,3 +38,13 @@ code changes invalidate them. Counts such as "35 tools" in v3.3.0 and
 v3.4.0 describe the server as it stood at that release. For the current
 tool surface see
 [../mcp-server/tools-reference.md](../mcp-server/tools-reference.md).
+
+## JavaScript dependency advisory review
+
+Before citing an audit as release evidence, complete this review:
+
+- [ ] Run the repeatable procedure in [`scripts/audit-javascript-dev-dependencies.mjs`](../../scripts/audit-javascript-dev-dependencies.mjs) and retain its date, package-tree lock identity, and tool versions.
+- [ ] Review both full and `--omit=dev` results in the [dated report](../../openspec/changes/audit-javascript-dev-dependencies/evidence/2026-11-25/audit.md).
+- [ ] Record a dated maintainer disposition and owner for each package row before citing the audit.
+
+The report's adjacent JSON files are the raw npm outputs. A zero `--omit=dev` result does not establish reachability, exploitability, or a release policy decision. No severity threshold or automatic release block is implied.
