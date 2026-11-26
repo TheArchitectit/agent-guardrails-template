@@ -17,6 +17,7 @@ repositories {
 dependencies {
     intellijPlatform {
         create("IC", "2023.3.2")
+        instrumentationTools()
     }
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("com.google.code.gson:gson:2.10.1")

@@ -7,6 +7,7 @@ import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.Messages
+import com.intellij.psi.PsiDocumentManager
 
 class ValidateSelectionAction : AnAction() {
     override fun actionPerformed(e: AnActionEvent) {
@@ -26,7 +27,8 @@ class ValidateSelectionAction : AnAction() {
         }
 
         val selectedText = selectionModel.selectedText ?: return
-        val language = editor.document.language?.id ?: ""
+        val language = PsiDocumentManager.getInstance(project)
+            .getPsiFile(editor.document)?.language?.id ?: ""
 
         val result = service.validateSelection(selectedText, language)
 
