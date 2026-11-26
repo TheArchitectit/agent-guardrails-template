@@ -8,3 +8,7 @@ Verification ran in the isolated Windows worktree at merged baseline `6ca7b12249
 - `install.mjs --help` with `HOME` and `USERPROFILE` set to a fresh temporary directory: passed; output showed `npx @architectit/pi-guardrails` and the `pi-guardrails` extension path under that temporary home. The `.pi` directory was not created.
 - Independent registry readback by the coordinating agent: `https://registry.npmjs.org/@architectit%2fpi-guardrails/latest` returned HTTP 200 with `name=@architectit/pi-guardrails`, version `0.2.0`. No registry `npx` command was run and nothing was published.
 - `npx --yes @fission-ai/openspec@2.2.0 validate --all --strict`: passed, 67 items, 0 failures. OpenSpec emitted an engine warning because this run used Node 20; validation completed successfully.
+
+## Linux Docker verification
+
+A native Linux Docker checkout of commit `296b7533471a88d5bd0eab94346a846a5f2e75b3` completed `npm ci`, all 200 tests across 24 files, and `npm pack --json --dry-run`. The optional MCP SDK test passed. The dry-run package name was `@architectit/pi-guardrails`, and the installer help printed that identity with an empty temporary home directory.
