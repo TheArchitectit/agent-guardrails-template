@@ -6,7 +6,7 @@
 > `Status:` line. Run the pinned strict spec validator after editing. Never
 > merge rows by short slug or infer status from archive task checkboxes.
 
-**43 specs** — CLOSED 16 | PARTIAL 0 | OPEN 0 | UNKNOWN 27
+**44 specs** — CLOSED 17 | PARTIAL 0 | OPEN 0 | UNKNOWN 27
 
 | Spec path | Title | Status | Evidence |
 |---|---|---|---|
@@ -19,6 +19,7 @@
 | [`evidence-and-conformance/spec.md`](specs/evidence-and-conformance/spec.md) | evidence-and-conformance Specification | **CLOSED** | Status: CLOSED (EXERCISED 6) |
 | [`gitlab-python-job-dependencies/spec.md`](specs/gitlab-python-job-dependencies/spec.md) | gitlab-python-job-dependencies Specification | **UNKNOWN** | No status or closure table |
 | [`gitleaks-runner-installation/spec.md`](specs/gitleaks-runner-installation/spec.md) | gitleaks-runner-installation Specification | **UNKNOWN** | No status or closure table |
+| [`go-advisory-automation/spec.md`](specs/go-advisory-automation/spec.md) | go-advisory-automation Specification | **CLOSED** | Status: CLOSED (EXERCISED 1) |
 | [`go-advisory-evidence/spec.md`](specs/go-advisory-evidence/spec.md) | go-advisory-evidence Specification | **CLOSED** | Status: CLOSED (EXERCISED 1) |
 | [`ide-client-initialization/spec.md`](specs/ide-client-initialization/spec.md) | ide-client-initialization Specification | **UNKNOWN** | No status or closure table |
 | [`ide-rest-endpoint/spec.md`](specs/ide-rest-endpoint/spec.md) | ide-rest-endpoint Specification | **UNKNOWN** | No status or closure table |

@@ -23,6 +23,9 @@ you don't get blindsided by error messages:
 
 The full walkthrough is in [DEPLOYMENT_GUIDE.md](./deployment-guide.md).
 
+For the recurring Go vulnerability scan, local command, and reachability policy,
+see [Go advisory checks](./docs/go-advisory-checks.md).
+
 ## Architecture
 
 ```

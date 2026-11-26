@@ -21,6 +21,10 @@ QA-05 records Go 1.26.11 and zero source-reachable findings at a dated database 
 
 - Read the Go version from `mcp-server/go.mod`; pin the govulncheck tool version in the workflow and use a maintained vulnerability database.
 - Consume structured `govulncheck -json` output. Source-call-path findings and analyzer/database/toolchain failures fail CI; imported-only and module-only findings are reported separately under the approved policy.
+- Require the govulncheck JSON config to declare source mode and symbol scan level, plus a nonempty SBOM `roots` list. Progress messages are informational and do not count as package-analysis evidence.
+- Classify each finding from its first trace frame (`function` means source-call-path; `package` without `function` means imported-package; neither means module-only). Upload only advisory IDs, package names, and reachability classes; omit function traces and source locations.
+- Require every finding ID to resolve to an OSV record in the completed stream. In pinned v1.10.0 source mode, raw OSV records are emitted before findings; unreferenced OSV records remain valid because records can apply to a module without matching its selected version.
+- Run the classifier fixtures directly in this workflow. The repository's general Python discovery scope intentionally excludes `mcp-server/` due existing scanner findings there, so the new tests must not rely on that inventory to execute them.
 - Unit-test the result classifier with sanitized fixtures representing source-call-path, imported-only, module-only, malformed output, database error, and zero analyzed packages. Require evidence that at least one package was analyzed before an all-clear result.
 
 ## Risks / Trade-offs
