@@ -103,9 +103,12 @@ here.
 
 - Postgres stores rules, failures, webhook configuration/deliveries, task
   attempts, halt events, uncertainty, and agent lifecycle state through
-  dedicated stores. Although startup constructs an audit logger, it does not
-  attach a Postgres audit store in the inspected path; do not assume all
-  `slog`/audit events persist to Postgres.
+  dedicated stores. In the inspected server startup path, after connecting to
+  Postgres, `main.go` attaches `database.NewAuditStore(db)` to the audit logger
+  and logs whether a durable store is configured
+  (`mcp-server/cmd/server/main.go:139-140`). This source wiring establishes
+  the store attachment in that path. Operational durability and the coverage
+  of individual `slog` events require integration evidence.
 - Redis supports cache/rate-limit functions.
 - Team projects are a separate file-backed subsystem using
   `.teams/<project>.json`; they do not share the MCP server’s Postgres team

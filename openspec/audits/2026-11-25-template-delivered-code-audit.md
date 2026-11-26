@@ -149,7 +149,7 @@ The table records each tracked change at the audited revision. Task totals come 
 | [pkg02-align-pi-package-name](../changes/pkg02-align-pi-package-name/tasks.md) | Active | 0/4 | 1 | — |
 | [preserve-hidden-agent-install-paths](../changes/archive/2026-11-25-preserve-hidden-agent-install-paths/tasks.md) | Active | 0/3 | 1 | — |
 | [reconcile-devgate-pin-ownership](../changes/reconcile-devgate-pin-ownership/tasks.md) | Active | 0/4 | 1 | — |
-| [reconcile-platform-current-state](../changes/reconcile-platform-current-state/tasks.md) | Active | 0/4 | 1 | — |
+| [reconcile-platform-current-state](../changes/archive/2026-11-25-reconcile-platform-current-state/tasks.md) | Archived | 4/4 | 1 | [Receipt](../changes/archive/2026-11-25-reconcile-platform-current-state/evidence.md) |
 | [release-gate-conformance-reports](../changes/release-gate-conformance-reports/tasks.md) | Active | 0/3 | 2 | — |
 | [release-tpl35-publish-approved-main](../changes/release-tpl35-publish-approved-main/tasks.md) | Active | 0/4 | 1 | — |
 | [trace-action-and-ingress-boundaries](../changes/trace-action-and-ingress-boundaries/tasks.md) | Active | 0/4 | 2 | — |
