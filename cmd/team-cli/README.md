@@ -274,7 +274,7 @@ On Linux or macOS, run the temporary-prefix parity check with Go and Python
 installed:
 
 ```bash
-bash ./test-install.sh
+bash ../../tests/regression/test_team_cli_backend_distribution.sh
 ```
 
 It exercises both installation paths from an unrelated working directory,

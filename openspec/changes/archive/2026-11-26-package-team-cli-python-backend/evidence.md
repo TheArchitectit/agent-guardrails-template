@@ -51,3 +51,5 @@ backend from a separate working directory.
 
 The [DIST-02 output contract](../../reconcile-team-cli-output-contract/proposal.md)
 tracks the observed JSON status error and verifies advertised formats.
+
+The final [install regression harness](../../../../tests/regression/test_team_cli_backend_distribution.sh) is stored under the repository regression suite.

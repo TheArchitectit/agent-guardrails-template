@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-CLI_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd -- "$CLI_DIR/../.." && pwd)"
+REPO_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)"
+CLI_DIR="$REPO_ROOT/cmd/team-cli"
 BUILT_BINARY="$CLI_DIR/team"
 if [[ -e "$BUILT_BINARY" ]]; then
   echo "refusing to overwrite existing build output: $BUILT_BINARY" >&2
