@@ -315,9 +315,11 @@ anomaly middleware passes through); `internal/config/trusted_proxies_test.go`
 verbatim. Mutation-kill case `clientip-stance-trusts-every-peer` proves the
 suite flips PASS→FAIL when the stance is neutered.
 
-**Remaining in this spec (not addressed here):** the shared exposure registry
-(Sec. 3.1/Sec. 3.2) and the `public`-profile `/metrics` auth decision (Sec. 3.2) — the
-latter is an operator contract (scrape client) and stays an owner decision.
+**Status correction (2026-11-25):** the shared exposure registry in Sec. 3.1
+was implemented and tested in the dated Sec. 10 note below. The public-route
+re-decision in Sec. 3.2, including the `public`-profile `/metrics` auth
+contract, remains an owner decision as recorded in Sec. 7 and the later
+implementation notes.
 
 ## 9. Implementation note — Sec. 3.3.2 CORS production rejection + Sec. 3.3.4 declared-route preflight (2026-10-16)
 

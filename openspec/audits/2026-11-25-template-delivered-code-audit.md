@@ -139,7 +139,7 @@ The table records each tracked change at the audited revision. Task totals come 
 | [implement-semantic-redaction-evidence](../changes/implement-semantic-redaction-evidence/tasks.md) | Active | 0/3 | 2 | — |
 | [inv01-canonical-openspec-inventory](../changes/archive/2026-11-25-inv01-canonical-openspec-inventory/tasks.md) | Active | 0/6 | 1 | — |
 | [isolate-gitleaks-runner-install](../changes/archive/2026-11-25-isolate-gitleaks-runner-install/tasks.md) | Active | 3/4 | 1 | [Receipt](../changes/archive/2026-11-25-isolate-gitleaks-runner-install/evidence.md) |
-| [legacy01-stale-numbered-design-claims](../changes/legacy01-stale-numbered-design-claims/tasks.md) | Active | 0/7 | 1 | — |
+| [legacy01-stale-numbered-design-claims](../changes/archive/2026-11-26-legacy01-stale-numbered-design-claims/tasks.md) | Archived | 7/7 | 1 | [Receipt](../changes/archive/2026-11-26-legacy01-stale-numbered-design-claims/evidence.md) |
 | [ops01-approve-rollout-inventory](../changes/ops01-approve-rollout-inventory/tasks.md) | Active | 0/3 | 1 | — |
 | [ops02-verify-external-consumer](../changes/ops02-verify-external-consumer/tasks.md) | Active | 0/3 | 1 | — |
 | [ops03-verify-multi-instance-revocation](../changes/ops03-verify-multi-instance-revocation/tasks.md) | Active | 0/3 | 1 | — |
