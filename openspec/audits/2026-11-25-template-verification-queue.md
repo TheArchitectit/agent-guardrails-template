@@ -16,9 +16,10 @@ identifies the owning change and its acceptance tasks.
 
 ## Architecture acceptance
 
-- [ ] TPL-49. Authorize every enabled optional MCP and REST path.
-- [ ] TPL-50. Qualify supported MCP session topologies.
-- [ ] TPL-51. Qualify shared document access across organization scopes.
+- [ ] TPL-52. Authorize every enabled optional MCP and REST path.
+- [ ] TPL-53. Qualify supported MCP session topologies.
+- [ ] TPL-54. Qualify shared document access across organization scopes.
+- [x] TPL-55. Reconcile the active audit identifiers while preserving archived mappings.
 
 ## Following batch
 

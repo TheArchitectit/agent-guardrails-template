@@ -116,6 +116,7 @@ The [integration audit](2026-11-25-template-future-integration-audit.md) records
 
 | ID | Evidence gap | OpenSpec |
 |---|---|---|
-| `TPL-49` | The optional Vision dispatch runs ahead of the common MCP authorization and decision audit. Vision REST has its own registration group. An adopter needs a verified decision boundary for every enabled path. | [Proposal](../changes/tpl49-enforce-optional-surface-authorization/proposal.md) |
-| `TPL-50` | Session state is process-local and the existing Kubernetes example requests two replicas. Adopters require a route and restart contract for each supported profile. | [Proposal](../changes/tpl50-qualify-mcp-session-topology/proposal.md) |
-| `TPL-51` | The generic document store supports ID, slug, category and full-text paths. Those paths do not establish the current source permission and trusted organization isolation required for a shared document service. | [Proposal](../changes/tpl51-qualify-organization-scoped-documents/proposal.md) |
+| `TPL-52` | The optional Vision dispatch runs ahead of the common MCP authorization and decision audit. Vision REST has its own registration group. An adopter needs a verified decision boundary for every enabled path. | [Proposal](../changes/tpl52-enforce-optional-surface-authorization/proposal.md) |
+| `TPL-53` | Session state is process-local and the existing Kubernetes example requests two replicas. Adopters require a route and restart contract for each supported profile. | [Proposal](../changes/tpl53-qualify-mcp-session-topology/proposal.md) |
+| `TPL-54` | The generic document store supports ID, slug, category and full-text paths. Those paths do not establish the current source permission and trusted organization isolation required for a shared document service. | [Proposal](../changes/tpl54-qualify-organization-scoped-documents/proposal.md) |
+| `TPL-55` | Verified and archived. The three active proposals now have unique identifiers and all former archive mappings still resolve. | [Archived evidence](../changes/archive/2026-11-26-tpl55-reconcile-audit-work-item-identifiers/evidence.md) |
