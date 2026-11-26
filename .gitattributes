@@ -11,3 +11,4 @@ policy-packs/**/*.json text eol=lf
 cmd/team-cli/*.sh text eol=lf
 tests/regression/test_team_cli_backend_distribution.sh text eol=lf
 tests/regression/test_optional_vision_authorization.sh text eol=lf
+tests/regression/test_team_cli_output_contract.sh text eol=lf

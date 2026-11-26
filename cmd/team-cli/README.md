@@ -65,7 +65,7 @@ team [command] [flags]
 ### Global Flags
 
 - `-p, --project string` - Project name (required for most commands)
-- `-o, --output string` - Output format: `text`, `json` (default: `text`)
+- `-o, --output string` - Output format: `text`, `json` (default: `text`). Global JSON is supported by `status`, `query`, and `history`; unsupported command/output combinations fail before the command runs.
 - `--version` - Show version information
 
 ## Commands
@@ -244,9 +244,18 @@ team phase-gate -p web-platform --from 1 --to 2
 
 ### JSON Output for Scripting
 
+Global JSON output is available for `status`, `query`, and `history`. A selected-phase
+status is one object; status without `--phase` is an array of phase objects.
+
 ```bash
 # Get status in JSON format for automation
-team status -p web-platform -o json | jq '.teams[] | select(.phase == "Phase 1")'
+team status -p web-platform -o json | jq '.[] | select(.phase | startswith("Phase 1"))'
+
+# Filter the teams as JSON
+team query -p web-platform -o json | jq '.[].name'
+
+# Read a team's history as JSON
+team history -p web-platform --team 1 -o json | jq '.'
 ```
 
 ## Environment Variables

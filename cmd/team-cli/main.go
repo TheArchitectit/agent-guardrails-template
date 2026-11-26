@@ -37,6 +37,20 @@ var (
 	infoStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("#3B82F6"))
 )
 
+func validateOutputFormat(cmd *cobra.Command, args []string) error {
+	if output != "text" && output != "json" {
+		return fmt.Errorf("unsupported output format %q (use text or json)", output)
+	}
+	if output == "json" {
+		switch cmd.Name() {
+		case "status", "query", "history":
+		default:
+			return fmt.Errorf("JSON output is not supported for %q; use text", cmd.Name())
+		}
+	}
+	return nil
+}
+
 func main() {
 	rootCmd := &cobra.Command{
 		Use:   "team",
@@ -47,6 +61,7 @@ A command-line tool for managing standardized team structures across projects.
 Integrates with the team_manager.py backend to provide team initialization,
 role assignments, and status tracking.`,
 		Version: fmt.Sprintf("%s (built: %s, commit: %s)", version, buildTime, gitCommit),
+		PersistentPreRunE: validateOutputFormat,
 	}
 
 	// Global flags

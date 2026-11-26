@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/spf13/cobra"
 )
 
 func TestVersionDefaults(t *testing.T) {
@@ -119,4 +121,33 @@ func TestExportCmdUnsupportedFormat(t *testing.T) {
 	if err := cmd.Execute(); err == nil || !strings.Contains(err.Error(), "unsupported export format") {
 		t.Errorf("export --format xml: got err = %v, want unsupported-export-format error", err)
 	}
+}
+
+func TestValidateOutputFormatBeforeCommand(t *testing.T) {
+	tests := []struct {
+		name       string
+		format     string
+		command    *cobra.Command
+		wantErr    string
+	}{
+		{name: "text supported for mutation", format: "text", command: assignCmd()},
+		{name: "status json supported", format: "json", command: statusCmd()},
+		{name: "query json supported", format: "json", command: queryCmd()},
+		{name: "history json supported", format: "json", command: historyCmd()},
+		{name: "mutation json rejected", format: "json", command: assignCmd(), wantErr: "JSON output is not supported"},
+		{name: "unknown format rejected", format: "xml", command: assignCmd(), wantErr: "unsupported output format"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			output = tt.format
+			err := validateOutputFormat(tt.command, nil)
+			if tt.wantErr == "" && err != nil {
+				t.Fatalf("validateOutputFormat() error = %v, want nil", err)
+			}
+			if tt.wantErr != "" && (err == nil || !strings.Contains(err.Error(), tt.wantErr)) {
+				t.Fatalf("validateOutputFormat() error = %v, want substring %q", err, tt.wantErr)
+			}
+		})
+	}
+	output = "text"
 }
