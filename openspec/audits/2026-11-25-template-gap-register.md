@@ -109,3 +109,13 @@ recovery results from that topology. TPL-32, TPL-34, TPL-35, and TPL-38 cover th
 checks and release identity that need to be observable for the chosen release.
 This sequencing keeps an owner-approved optional deployment decision separate
 from implementation and evidence.
+
+## Future-state integration audit
+
+The [integration audit](2026-11-25-template-future-integration-audit.md) records repository boundaries and the [verification queue](2026-11-25-template-verification-queue.md) orders local evidence work.
+
+| ID | Evidence gap | OpenSpec |
+|---|---|---|
+| `TPL-49` | The optional Vision dispatch runs ahead of the common MCP authorization and decision audit. Vision REST has its own registration group. An adopter needs a verified decision boundary for every enabled path. | [Proposal](../changes/tpl49-enforce-optional-surface-authorization/proposal.md) |
+| `TPL-50` | Session state is process-local and the existing Kubernetes example requests two replicas. Adopters require a route and restart contract for each supported profile. | [Proposal](../changes/tpl50-qualify-mcp-session-topology/proposal.md) |
+| `TPL-51` | The generic document store supports ID, slug, category and full-text paths. Those paths do not establish the current source permission and trusted organization isolation required for a shared document service. | [Proposal](../changes/tpl51-qualify-organization-scoped-documents/proposal.md) |
