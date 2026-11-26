@@ -147,9 +147,11 @@ The implementation is acceptable when all of the following are reproducible:
 8. CI verifies the checked-in lock record matches the declared pack
    revisions and content digests.
 
-The test harness, fixtures, lock schema, resolver, and runtime integration do
-not yet exist. This section specifies acceptance; it is not evidence that any
-criterion currently passes.
+**Historical baseline:** the test harness, fixtures, lock schema, resolver,
+and runtime integration were pending when this acceptance section was
+written. The dated implementation notes record the portions subsequently
+implemented and tested. The opening status and current residuals define the
+remaining acceptance work.
 
 ## 6. Dependencies and sequencing
 

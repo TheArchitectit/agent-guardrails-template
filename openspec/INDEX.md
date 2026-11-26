@@ -6,7 +6,7 @@
 > `Status:` line. Run the pinned strict spec validator after editing. Never
 > merge rows by short slug or infer status from archive task checkboxes.
 
-**40 specs** — CLOSED 16 | PARTIAL 0 | OPEN 0 | UNKNOWN 24
+**45 specs** — CLOSED 18 | PARTIAL 0 | OPEN 0 | UNKNOWN 27
 
 | Spec path | Title | Status | Evidence |
 |---|---|---|---|
@@ -19,20 +19,25 @@
 | [`evidence-and-conformance/spec.md`](specs/evidence-and-conformance/spec.md) | evidence-and-conformance Specification | **CLOSED** | Status: CLOSED (EXERCISED 6) |
 | [`gitlab-python-job-dependencies/spec.md`](specs/gitlab-python-job-dependencies/spec.md) | gitlab-python-job-dependencies Specification | **UNKNOWN** | No status or closure table |
 | [`gitleaks-runner-installation/spec.md`](specs/gitleaks-runner-installation/spec.md) | gitleaks-runner-installation Specification | **UNKNOWN** | No status or closure table |
+| [`go-advisory-automation/spec.md`](specs/go-advisory-automation/spec.md) | go-advisory-automation Specification | **CLOSED** | Status: CLOSED (EXERCISED 1) |
 | [`go-advisory-evidence/spec.md`](specs/go-advisory-evidence/spec.md) | go-advisory-evidence Specification | **CLOSED** | Status: CLOSED (EXERCISED 1) |
 | [`ide-client-initialization/spec.md`](specs/ide-client-initialization/spec.md) | ide-client-initialization Specification | **UNKNOWN** | No status or closure table |
 | [`ide-rest-endpoint/spec.md`](specs/ide-rest-endpoint/spec.md) | ide-rest-endpoint Specification | **UNKNOWN** | No status or closure table |
+| [`ide-selection-contract/spec.md`](specs/ide-selection-contract/spec.md) | ide-selection-contract Specification | **CLOSED** | Status: CLOSED (EXERCISED 1) |
 | [`indirect-injection-provenance-records/spec.md`](specs/indirect-injection-provenance-records/spec.md) | Provenance Records | **CLOSED** | Status: CLOSED (EXERCISED 3) |
 | [`isolation-levels/spec.md`](specs/isolation-levels/spec.md) | isolation-levels Specification | **CLOSED** | Status: CLOSED (EXERCISED 3) |
 | [`legacy-ci-go-toolchain-selection/spec.md`](specs/legacy-ci-go-toolchain-selection/spec.md) | legacy-ci-go-toolchain-selection Specification | **UNKNOWN** | No status or closure table |
 | [`local-docker-compose-pilot/spec.md`](specs/local-docker-compose-pilot/spec.md) | local-docker-compose-pilot Specification | **UNKNOWN** | No status or closure table |
 | [`local-draft-ci-evidence/spec.md`](specs/local-draft-ci-evidence/spec.md) | local-draft-ci-evidence Specification | **UNKNOWN** | No status or closure table |
 | [`mcp-docker-context/spec.md`](specs/mcp-docker-context/spec.md) | mcp-docker-context Specification | **UNKNOWN** | No status or closure table |
+| [`numbered-design-status-evidence/spec.md`](specs/numbered-design-status-evidence/spec.md) | numbered-design-status-evidence Specification | **UNKNOWN** | No status or closure table |
 | [`openspec-archive-provenance/spec.md`](specs/openspec-archive-provenance/spec.md) | openspec-archive-provenance Specification | **UNKNOWN** | No status or closure table |
 | [`openspec-catalog-identity/spec.md`](specs/openspec-catalog-identity/spec.md) | openspec-catalog-identity Specification | **UNKNOWN** | No status or closure table |
 | [`openspec-strict-validation/spec.md`](specs/openspec-strict-validation/spec.md) | openspec-strict-validation Specification | **UNKNOWN** | No status or closure table |
 | [`pi-mcp-sdk-development/spec.md`](specs/pi-mcp-sdk-development/spec.md) | pi-mcp-sdk-development Specification | **UNKNOWN** | No status or closure table |
+| [`pi-package-identity/spec.md`](specs/pi-package-identity/spec.md) | pi-package-identity Specification | **UNKNOWN** | No status or closure table |
 | [`platform-skill-file-destinations/spec.md`](specs/platform-skill-file-destinations/spec.md) | platform-skill-file-destinations Specification | **UNKNOWN** | No status or closure table |
+| [`platform-state-evidence/spec.md`](specs/platform-state-evidence/spec.md) | platform-state-evidence Specification | **UNKNOWN** | No status or closure table |
 | [`policy-and-conformance/spec.md`](specs/policy-and-conformance/spec.md) | policy-and-conformance Specification | **CLOSED** | Status: CLOSED (EXERCISED 2) |
 | [`postgres-connection-credential-encoding/spec.md`](specs/postgres-connection-credential-encoding/spec.md) | postgres-connection-credential-encoding Specification | **UNKNOWN** | No status or closure table |
 | [`prompt-injection-classification-and-mediation/spec.md`](specs/prompt-injection-classification-and-mediation/spec.md) | Prompt Injection Classification and Mediation | **CLOSED** | Status: CLOSED (EXERCISED 3) |

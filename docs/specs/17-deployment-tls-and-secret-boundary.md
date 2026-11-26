@@ -1,8 +1,11 @@
 # OpenSpec 17: Deployment TLS and secret boundary
 
-**Status:** Proposed; NOT implemented. Source observations below describe the current files, not deployed guarantees. Re-check at implementation time.
+**Status (2026-11-25):** PARTIAL — selected requirements have implementation
+and test evidence in the dated companion notes. The source observations below
+preserve the historical 2026-10-03 baseline. Production acceptance requires
+resolving the remaining limits against the supported deployment and evidence.
 
-**Implementation notes.** Several requirements have since been implemented and evidenced; the dated notes are in the companion files [`17-implementation-notes.md`](17-implementation-notes.md) and [`17-implementation-notes-2.md`](17-implementation-notes-2.md) (split out to stay within the 500-line Markdown limit, Spec 19 R19-11). The source observations in Sec. 1 and the proposals in Sec. 2–Sec. 4 are the original baseline and are not rewritten by those notes.
+**Implementation notes.** Several requirements have since been implemented and evidenced; the dated notes are in the companion files [`17-implementation-notes.md`](17-implementation-notes.md), [`17-implementation-notes-2.md`](17-implementation-notes-2.md), and [`17-implementation-notes-3.md`](17-implementation-notes-3.md) (split out to stay within the 500-line Markdown limit, Spec 19 R19-11). The source observations in Sec. 1 and the proposals in Sec. 2–Sec. 4 are the original baseline and are not rewritten by those notes.
 **Owner:** Solo maintainer (deployment/security owner); no separate operations team assumed.
 **Dependencies:** [Spec 11](11-authorization-scopes-and-roles.md) owns scoped credentials and role intersection; [Spec 12](12-web-exposure-boundary.md) owns route classes, CORS, proxy trust and bind profiles; [Spec 16](16-authentication-authorization-and-evidence-remediation.md) owns fail-closed registry loading, config-resource redaction, audit, lifecycle and release gates. This spec adds transport, deployment and secret-source gates; it does not mark those dependencies shipped.
 

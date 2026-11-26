@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -125,5 +126,61 @@ func TestValidateSelectionRouteAgainstDisposablePostgres(t *testing.T) {
 				t.Fatalf("violations = %#v; want exact fixture match %q", response.Violations, strings.TrimSpace(selectedText))
 			}
 		})
+	}
+	requestDir := os.Getenv("IDE_SELECTION_CLIENT_REQUEST_DIR")
+	if requestDir != "" {
+		entries, err := os.ReadDir(requestDir)
+		if err != nil {
+			t.Fatalf("read captured client requests: %v", err)
+		}
+		clientFiles := []string{
+			"client-vscode.json",
+			"client-jetbrains.json",
+			"client-vim.json",
+			"client-neovim.json",
+		}
+		expectedFiles := make(map[string]bool, len(clientFiles))
+		for _, name := range clientFiles {
+			expectedFiles[name] = true
+		}
+		foundFiles := make(map[string]bool, len(clientFiles))
+		for _, entry := range entries {
+			if filepath.Ext(entry.Name()) != ".json" {
+				continue
+			}
+			if entry.IsDir() || !expectedFiles[entry.Name()] {
+				t.Fatalf("unexpected captured client request entry %q", entry.Name())
+			}
+			foundFiles[entry.Name()] = true
+		}
+		for _, name := range clientFiles {
+			if !foundFiles[name] {
+				t.Fatalf("missing captured client request %q", name)
+			}
+		}
+		for _, name := range clientFiles {
+			body, err := os.ReadFile(filepath.Join(requestDir, name))
+			if err != nil {
+				t.Fatalf("read captured client request %s: %v", name, err)
+			}
+			t.Run("captured client "+strings.TrimSuffix(name, ".json"), func(t *testing.T) {
+				req := httptest.NewRequest(http.MethodPost, "/ide/validate/selection", strings.NewReader(string(body)))
+				req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+				rec := httptest.NewRecorder()
+				e.ServeHTTP(rec, req)
+				if rec.Code != http.StatusOK {
+					t.Fatalf("POST /ide/validate/selection status = %d, want 200: %s", rec.Code, rec.Body.String())
+				}
+				var response struct {
+					Violations []ValidationViolation `json:"violations"`
+				}
+				if err := json.Unmarshal(rec.Body.Bytes(), &response); err != nil {
+					t.Fatalf("decode selection response: %v", err)
+				}
+				if len(response.Violations) != 1 || response.Violations[0].Match != strings.TrimSpace(selectedText) {
+					t.Fatalf("violations = %#v; want exact fixture match %q", response.Violations, strings.TrimSpace(selectedText))
+				}
+			})
+		}
 	}
 }

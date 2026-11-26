@@ -1,0 +1,60 @@
+name: Go Source Advisory Gate
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+permissions:
+  contents: read
+
+jobs:
+  go-advisories:
+    # Private runners are reserved for same-repository pull requests.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, Linux, X64, guardrails-ucs03]
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Set up Go from module declaration
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version-file: mcp-server/go.mod
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.11'
+
+      - name: Test the classifier fixtures
+        run: |
+          python3 -m pip install pytest
+          python3 -m pytest mcp-server/tests/test_govulncheck_gate.py -q
+
+      - name: Install pinned govulncheck
+        run: GOTOOLCHAIN=local go install golang.org/x/vuln/cmd/govulncheck@v1.10.0
+
+      - name: Scan and classify Go advisories
+        env:
+          GOTOOLCHAIN: local
+          SCAN_JSON: ${{ runner.temp }}/govulncheck.json
+        run: |
+          set -euo pipefail
+          trap 'rm -f "$SCAN_JSON"' EXIT
+          report='mcp-server/.govulncheck-report/summary.json'
+          rm -rf mcp-server/.govulncheck-report
+          mkdir -p "$(dirname "$report")"
+          cd mcp-server
+          "$(go env GOPATH)/bin/govulncheck" -json ./... > "$SCAN_JSON"
+          python3 scripts/govulncheck_gate.py --input "$SCAN_JSON" --report .govulncheck-report/summary.json
+
+      - name: Upload redacted advisory summary
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: go-advisory-summary
+          path: mcp-server/.govulncheck-report/summary.json
+          if-no-files-found: ignore
+          retention-days: 14
