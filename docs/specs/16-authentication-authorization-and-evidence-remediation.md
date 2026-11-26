@@ -1,8 +1,9 @@
 # OpenSpec 16: Authentication, authorization, and evidence remediation
 
 **Status:** PARTIAL — Gates 1 and 2 exercised; Gate 3 partially exercised (see
-Sec. 6 Implementation status, 2026-10-18). Source snapshot: `178d076`; every claim
-below has been re-verified against the live tree and the stale ones are marked.
+Sec. 5 Implementation status, 2026-10-18). The discrepancy table preserves
+the historical source snapshot `178d076` from 2026-10-04. The dated implementation
+status records the subsequent evidence and open items.
 This remains a release gate, not a claim that Spec 11, 12, 14, or 15 has
 shipped. Owner approval is still required for the permission matrix, public
 routes, lifecycle bounds, and cross-product rollout.

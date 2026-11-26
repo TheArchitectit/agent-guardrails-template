@@ -4,10 +4,11 @@
 committed as `mcp-server/internal/mcp/streamable_http_listing_test.go`:
 `TestStreamableHTTPListingSequence`.
 
-**Priority:** High — it is the one remaining gap in spec 20 R20.3 (and spec 10
-Sec. 4.2.1): the real transport is exercised for `initialize` and `tools/call` and
-`resources/read`, but there is **no live `tools/list` or `resources/list`
-sequence test** in `mcp-server/internal/mcp`.
+**Priority (historical, before closure below):** High — at the 2026-10-10
+baseline this was the remaining gap in spec 20 R20.3 (and spec 10 Sec. 4.2.1).
+The live listing sequence was subsequently implemented and its recorded
+closure evidence appears in Sec. 5. The statements below preserve the earlier
+baseline.
 
 **Purpose:** Add a same-commit test that drives the production Streamable HTTP
 transport (`POST /mcp`) through the full protocol sequence a real client uses:
@@ -19,8 +20,8 @@ not by enumerating the registry in-process.
 
 Spec 20 R20.3 requires CI to exercise the production transport for
 `initialize`, capability exchange, **tool/resource listing**, one successful and
-one rejected `tools/call`, and shutdown. On 2026-10-10 the `internal/mcp`
-package has:
+one rejected `tools/call`, and shutdown. Before the closure recorded below,
+the 2026-10-10 baseline of the `internal/mcp` package had:
 
 - `initialize`: `TestMCPEndpointBehindBearer` (real `POST /mcp`).
 - `tools/call` allow + deny and `resources/read`:

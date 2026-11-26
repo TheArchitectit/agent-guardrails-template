@@ -5,12 +5,12 @@ identifies the owning change and its acceptance tasks.
 
 ## Current batch
 
-- [ ] PKG-02. Verify the packed name, new test exclusion, clean locked package
+- [x] PKG-02. Verify the packed name, new test exclusion, clean locked package
   suite, and temporary-home installer help. Archive after strict validation.
 - [ ] IDE-03. Run the four IDE request builders against the selection contract,
   verify the real server route and legacy compatibility, and finish the locked
   VS Code install, compile, and test run.
-- [ ] TPL-35. Rehearse the checked-in release coverage gate in disposable Git
+- [x] TPL-35. Rehearse the checked-in release coverage gate in disposable Git
   repositories. Record matching, missing, lightweight, and stale tag outcomes
   and the changelog control. Release metadata preparation remains pending.
 
@@ -22,7 +22,7 @@ identifies the owning change and its acceptance tasks.
 
 ## Following batch
 
-- [ ] LEGACY-01. Reconcile the five dated design statements against source
+- [x] LEGACY-01. Reconcile the five dated design statements against source
   and named tests, retaining open acceptance criteria.
 - [ ] TPL-34. Add the recurring source advisory check and exercise the specified
   reachability and tool-failure controls.
