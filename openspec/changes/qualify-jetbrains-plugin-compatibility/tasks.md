@@ -9,3 +9,5 @@
 ## 2. Review and archive
 
 - [ ] 2.1 Independently review all scenarios, record exact build and runtime evidence, run strict OpenSpec and repository gates, then archive the accepted change.
+
+The [packaging evidence](evidence.md) verifies the installable ZIP for the pinned IntelliJ build. The declared IDE range and installed runtime acceptance remain open.
