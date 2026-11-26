@@ -3,10 +3,15 @@ package mcp
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"encoding/json"
+	"image"
+	"image/png"
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -15,6 +20,7 @@ import (
 	"github.com/thearchitectit/guardrail-mcp/internal/auth"
 	"github.com/thearchitectit/guardrail-mcp/internal/config"
 	"github.com/thearchitectit/guardrail-mcp/internal/models"
+	"github.com/thearchitectit/guardrail-mcp/internal/vision"
 )
 
 // These tests drive the real StreamableHTTP MCP endpoint through httptest —
@@ -37,9 +43,14 @@ const (
 // fullPathServer builds a minimal MCPServer with the real tool/resource
 // surface registered but no database, for hermetic transport tests.
 func fullPathServer(cfg *config.Config) *MCPServer {
+	return fullPathServerWithVision(cfg, nil)
+}
+
+func fullPathServerWithVision(cfg *config.Config, visionTools *VisionToolSet) *MCPServer {
 	s := &MCPServer{
-		config:   cfg,
-		sessions: make(map[string]*models.Session),
+		config:      cfg,
+		sessions:    make(map[string]*models.Session),
+		visionTools: visionTools,
 	}
 	s.mcpServer = server.NewMCPServer("full-path-test", "1.0",
 		server.WithResourceCapabilities(true, true))
@@ -50,6 +61,10 @@ func fullPathServer(cfg *config.Config) *MCPServer {
 // newFullPathServer wires a full-path httptest MCP endpoint behind the real
 // credential-registry middleware.
 func newFullPathServer(t *testing.T, cfg *config.Config, records []auth.Record) (*MCPServer, *httptest.Server) {
+	return newFullPathServerWithVision(t, cfg, records, nil)
+}
+
+func newFullPathServerWithVision(t *testing.T, cfg *config.Config, records []auth.Record, visionTools *VisionToolSet) (*MCPServer, *httptest.Server) {
 	t.Helper()
 	raw, err := json.Marshal(records)
 	if err != nil {
@@ -59,7 +74,7 @@ func newFullPathServer(t *testing.T, cfg *config.Config, records []auth.Record) 
 	if err != nil {
 		t.Fatalf("LoadFromSources: %v", err)
 	}
-	s := fullPathServer(cfg)
+	s := fullPathServerWithVision(cfg, visionTools)
 	httpSrv := server.NewStreamableHTTPServer(
 		s.mcpServer,
 		server.WithEndpointPath("/mcp"),
@@ -274,7 +289,7 @@ func TestStreamableHTTPToolsCallAuthorizesAndDenies(t *testing.T) {
 		args := map[string]interface{}{
 			"name": "guardrail_project_delete",
 			"arguments": map[string]interface{}{
-				"project_id": "proj-b",
+				"project_id":   "proj-b",
 				"principal_id": "principal-allow", // must be ignored
 			},
 		}
@@ -344,6 +359,110 @@ func TestStreamableHTTPResourceReadOmitsSecrets(t *testing.T) {
 	if code != http.StatusUnauthorized {
 		t.Fatalf("unauthenticated read status = %d, want 401", code)
 	}
+}
+
+type countingVisionClient struct{ calls int }
+
+func (c *countingVisionClient) ReviewImage(_ context.Context, _ string, _ string, _ []vision.Finding) (*vision.ReviewResponse, error) {
+	c.calls++
+	return &vision.ReviewResponse{Confidence: 1, BackendUsed: "synthetic", ModelUsed: "fixture"}, nil
+}
+
+func (c *countingVisionClient) HealthCheck(context.Context) (vision.HealthStatus, error) {
+	return vision.HealthStatus{Backend: "synthetic", Healthy: true}, nil
+}
+
+// TestOptionalVisionToolsUseCommonAuthorization proves the enabled Vision
+// tools are registered on the real StreamableHTTP boundary and pass through
+// common operation authorization before the vision handler can read or mutate
+// report state.
+func TestOptionalVisionToolsUseCommonAuthorization(t *testing.T) {
+	root := t.TempDir()
+	imagePath := filepath.Join(root, "synthetic.png")
+	imageFile, err := os.Create(imagePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := png.Encode(imageFile, image.NewRGBA(image.Rect(0, 0, 1, 1))); err != nil {
+		_ = imageFile.Close()
+		t.Fatal(err)
+	}
+	if err := imageFile.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	storage, err := vision.NewStorage(filepath.Join(root, "vision.sqlite"))
+	if err != nil {
+		t.Fatalf("create synthetic Vision store: %v", err)
+	}
+	if err := storage.CreateReview(&vision.Review{
+		ID: "review-42", ScreenshotPath: imagePath,
+		Status: vision.StatusCompleted, CreatedAt: time.Now(),
+	}); err != nil {
+		t.Fatalf("seed synthetic Vision review: %v", err)
+	}
+	client := &countingVisionClient{}
+	engine := vision.NewReviewEngine(client, storage, vision.ReviewEngineConfig{})
+	visionTools := &VisionToolSet{enabled: true, engine: engine}
+	cfg := &config.Config{SchemaVersion: "1.0", MCPAPIKey: fullPathLegacyKey}
+	_, ts := newFullPathServerWithVision(t, cfg, recordsForFullPath(), visionTools)
+
+	t.Run("authorized read reaches report handler", func(t *testing.T) {
+		code, env := rpcPost(t, ts, "allow-secret", "tools/call", map[string]interface{}{
+			"name": "vision_get_report", "arguments": map[string]interface{}{"review_id": "review-42"},
+		})
+		if code != http.StatusOK {
+			t.Fatalf("status = %d, want 200", code)
+		}
+		result := decodeToolResult(t, env)
+		if result.IsError || !strings.Contains(result.text(), "review-42") {
+			t.Fatalf("authorized report read did not return the synthetic report: isError=%v text=%q", result.IsError, result.text())
+		}
+	})
+
+	t.Run("denied mutation never invokes provider or writes report state", func(t *testing.T) {
+		before, err := storage.ListIterations("review-42")
+		if err != nil {
+			t.Fatal(err)
+		}
+		code, env := rpcPost(t, ts, "noscope-secret", "tools/call", map[string]interface{}{
+			"name": "vision_iterate_review", "arguments": map[string]interface{}{"review_id": "review-42"},
+		})
+		if code != http.StatusOK {
+			t.Fatalf("status = %d, want 200", code)
+		}
+		result := decodeToolResult(t, env)
+		if !result.IsError || result.text() != auth.FormatDenyError() {
+			t.Fatalf("want stable permission denial, got isError=%v text=%q", result.IsError, result.text())
+		}
+		after, err := storage.ListIterations("review-42")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if client.calls != 0 || len(after) != len(before) {
+			t.Fatalf("denied vision operation reached provider or mutated storage: calls=%d iterations=%d -> %d", client.calls, len(before), len(after))
+		}
+	})
+
+	t.Run("allowed mutation is audit-gated before dispatch", func(t *testing.T) {
+		code, env := rpcPost(t, ts, "allow-secret", "tools/call", map[string]interface{}{
+			"name": "vision_iterate_review", "arguments": map[string]interface{}{"review_id": "review-42"},
+		})
+		if code != http.StatusOK {
+			t.Fatalf("status = %d, want 200", code)
+		}
+		result := decodeToolResult(t, env)
+		if !result.IsError || result.text() != "authorization audit unavailable" {
+			t.Fatalf("missing durable decision audit must block Vision mutation, got isError=%v text=%q", result.IsError, result.text())
+		}
+		iterations, err := storage.ListIterations("review-42")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if client.calls != 0 || len(iterations) != 0 {
+			t.Fatalf("audit failure reached provider or mutated storage: calls=%d iterations=%d", client.calls, len(iterations))
+		}
+	})
 }
 
 // TestStreamableHTTPConfiguredBrokenRegistryDeniesAll proves the fail-closed

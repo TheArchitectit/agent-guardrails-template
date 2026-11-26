@@ -146,6 +146,28 @@ func TestAPIKeyAuth_LegacyKeyUnchangedWithoutRegistry(t *testing.T) {
 	}
 }
 
+func TestAPIKeyAuth_OptionalVisionRequiresRegisteredCredential(t *testing.T) {
+	cfg := &config.Config{MCPAPIKey: "legacy-mcp-key", IDEAPIKey: "legacy-ide-key"}
+
+	code, principal := runAuth(cfg, http.MethodPost, "/v1/vision/review", "legacy-mcp-key")
+	if code != http.StatusForbidden || principal != "" {
+		t.Fatalf("legacy credential reached optional Vision route: status=%d principal=%q", code, principal)
+	}
+}
+
+func TestAPIKeyAuth_OptionalVisionMutationRequiresDurableAudit(t *testing.T) {
+	cfg := registryConfig(t, "registered-secret", "principal-alpha")
+	code, principal := runAuth(cfg, http.MethodPost, "/v1/vision/review", "registered-secret")
+	if code != http.StatusServiceUnavailable || principal != "" {
+		t.Fatalf("Vision mutation without audit reached handler: status=%d principal=%q", code, principal)
+	}
+
+	code, principal = runAuth(cfg, http.MethodGet, "/v1/vision/health", "registered-secret")
+	if code != http.StatusOK || principal != "principal-alpha" {
+		t.Fatalf("registered read did not pass policy: status=%d principal=%q", code, principal)
+	}
+}
+
 // TestAPIKeyAuth_SecretNeverInErrorOrResponse ensures a presented secret is not
 // echoed in a denial response.
 func TestAPIKeyAuth_SecretNeverInErrorOrResponse(t *testing.T) {

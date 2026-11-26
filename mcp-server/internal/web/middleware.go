@@ -48,6 +48,7 @@ func APIKeyAuthWithRegistry(cfg *config.Config, auditLogger *audit.Logger, regis
 			// Use the actual request URL path, not the route pattern.
 			requestPath := c.Request().URL.Path
 			method := c.Request().Method
+			optionalVisionRoute := requestPath == "/v1/vision" || strings.HasPrefix(requestPath, "/v1/vision/")
 
 			// Spec 12 Sec. 3.1: the declared exposure registry is the single source of
 			// truth for this middleware and for RateLimitMiddleware, so the two
@@ -141,10 +142,19 @@ func APIKeyAuthWithRegistry(cfg *config.Config, auditLogger *audit.Logger, regis
 						"path", path,
 						"ip", c.RealIP(),
 					)
-					restAuditDecision(c, auditLogger, legacyCaller, auth.ActionRequest{
-						Name: method + " " + requestPath, Kind: "unknown",
-					}, auth.Decision{Allow: false, Code: auth.ReasonLegacyNotAllowed, Reason: "legacy acceptance window closed"}, false)
+					action := auth.ActionRequest{Name: method + " " + requestPath, Kind: "unknown"}
+					if optionalVisionRoute {
+						action = auth.ClassifyREST(method, requestPath)
+					}
+					restAuditDecision(c, auditLogger, legacyCaller, action,
+						auth.Decision{Allow: false, Code: auth.ReasonLegacyNotAllowed, Reason: "legacy acceptance window closed"}, false)
 					return echo.NewHTTPError(http.StatusForbidden, "legacy credential acceptance window closed")
+				}
+				if optionalVisionRoute {
+					action := auth.ClassifyREST(method, requestPath)
+					decision := auth.Decision{Allow: false, Code: auth.ReasonLegacyNotAllowed, Reason: "optional Vision routes require a registered credential"}
+					restAuditDecision(c, auditLogger, legacyCaller, action, decision, false)
+					return echo.NewHTTPError(http.StatusForbidden, "registered credential required")
 				}
 
 				caller = legacyCaller
@@ -190,7 +200,7 @@ func APIKeyAuthWithRegistry(cfg *config.Config, auditLogger *audit.Logger, regis
 			// Registered credentials and legacy keys under a configured
 			// registry both pass through this gate. Migration mode (no
 			// registry) preserves the legacy surface without the intersection.
-			enforce := !isLegacy || registry.Enabled()
+			enforce := !isLegacy || registry.Enabled() || optionalVisionRoute
 			if enforce {
 				decision := auth.Decide(caller, action)
 				if !decision.Allow {
@@ -209,7 +219,7 @@ func APIKeyAuthWithRegistry(cfg *config.Config, auditLogger *audit.Logger, regis
 
 				// Security-sensitive mutations require a durable audit record
 				// before the effect. Fail closed if it cannot be written.
-				required := action.Kind == auth.ActionAdmin
+				required := action.Kind == auth.ActionAdmin || (optionalVisionRoute && action.Kind == auth.ActionMutate)
 				if err := restAuditDecision(c, auditLogger, caller, action, decision, required); err != nil {
 					slog.Error("required audit failed; denying security-sensitive mutation",
 						"error", err,
