@@ -9,7 +9,7 @@ import unittest
 from pathlib import Path
 
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
+REPO_ROOT = Path(__file__).resolve().parents[1]
 BACKEND = REPO_ROOT / "scripts" / "team_manager.py"
 FIXTURE = REPO_ROOT / ".teams" / "fixtures" / "full-project.json"
 
