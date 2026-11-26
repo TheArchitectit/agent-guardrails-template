@@ -2990,6 +2990,8 @@ def main():
     # Status command
     status_parser = subparsers.add_parser("status", help="Show phase status")
     status_parser.add_argument("--phase", help="Phase name")
+    status_parser.add_argument("--format", choices=["text", "json"], default="text",
+                               help="Output format (default: text)")
 
     # Validate-size command
     validate_size_parser = subparsers.add_parser("validate-size", help="Validate team sizes (4-6 members)")
@@ -3114,7 +3116,7 @@ def main():
         manager.initialize_project()
         print(f"\nTeams configuration saved to: {manager.config_path}")
 
-    elif args.command in ["list", "assign", "unassign", "start", "complete", "status", "validate-size", "delete-team", "delete-project", "list-backups", "restore", "audit", "import-csv", "export-csv", "import-json", "export-json"]:
+    elif args.command in ["list", "query", "assign", "unassign", "start", "complete", "status", "validate-size", "delete-team", "delete-project", "list-backups", "restore", "audit", "team-history", "import-csv", "export-csv", "import-json", "export-json"]:
         if args.command in ["delete-team", "delete-project"]:
             # For delete commands, project may not exist yet (delete-project)
             if args.command == "delete-team" and not manager.load():
@@ -3177,16 +3179,23 @@ def main():
         elif args.command == "status":
             if args.phase:
                 status = manager.get_phase_status(args.phase)
-                print(f"\n{status['phase']}")
-                print(f"  Progress: {status['progress_pct']:.0f}%")
-                print(f"  Teams: {status['completed']}/{status['total_teams']} complete")
-                print(f"  Active: {status['active']}, Not started: {status['not_started']}")
+                if args.format == "json":
+                    print(json.dumps(status))
+                else:
+                    print(f"\n{status['phase']}")
+                    print(f"  Progress: {status['progress_pct']:.0f}%")
+                    print(f"  Teams: {status['completed']}/{status['total_teams']} complete")
+                    print(f"  Active: {status['active']}, Not started: {status['not_started']}")
             else:
                 # Show all phases
                 phases = set(t.phase for t in manager.teams.values())
-                for phase in sorted(phases, key=lambda p: p.split(":")[0]):
-                    status = manager.get_phase_status(phase)
-                    print(f"\n{status['phase']}: {status['progress_pct']:.0f}% complete")
+                statuses = [manager.get_phase_status(phase)
+                            for phase in sorted(phases, key=lambda p: p.split(":")[0])]
+                if args.format == "json":
+                    print(json.dumps(statuses))
+                else:
+                    for status in statuses:
+                        print(f"\n{status['phase']}: {status['progress_pct']:.0f}% complete")
 
         elif args.command == "validate-size":
             results = manager.validate_team_size(args.team)
