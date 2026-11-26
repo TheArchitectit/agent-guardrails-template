@@ -6,7 +6,7 @@
 > `Status:` line. Run the pinned strict spec validator after editing. Never
 > merge rows by short slug or infer status from archive task checkboxes.
 
-**44 specs** — CLOSED 17 | PARTIAL 0 | OPEN 0 | UNKNOWN 27
+**45 specs** — CLOSED 18 | PARTIAL 0 | OPEN 0 | UNKNOWN 27
 
 | Spec path | Title | Status | Evidence |
 |---|---|---|---|
@@ -23,6 +23,7 @@
 | [`go-advisory-evidence/spec.md`](specs/go-advisory-evidence/spec.md) | go-advisory-evidence Specification | **CLOSED** | Status: CLOSED (EXERCISED 1) |
 | [`ide-client-initialization/spec.md`](specs/ide-client-initialization/spec.md) | ide-client-initialization Specification | **UNKNOWN** | No status or closure table |
 | [`ide-rest-endpoint/spec.md`](specs/ide-rest-endpoint/spec.md) | ide-rest-endpoint Specification | **UNKNOWN** | No status or closure table |
+| [`ide-selection-contract/spec.md`](specs/ide-selection-contract/spec.md) | ide-selection-contract Specification | **CLOSED** | Status: CLOSED (EXERCISED 1) |
 | [`indirect-injection-provenance-records/spec.md`](specs/indirect-injection-provenance-records/spec.md) | Provenance Records | **CLOSED** | Status: CLOSED (EXERCISED 3) |
 | [`isolation-levels/spec.md`](specs/isolation-levels/spec.md) | isolation-levels Specification | **CLOSED** | Status: CLOSED (EXERCISED 3) |
 | [`legacy-ci-go-toolchain-selection/spec.md`](specs/legacy-ci-go-toolchain-selection/spec.md) | legacy-ci-go-toolchain-selection Specification | **UNKNOWN** | No status or closure table |

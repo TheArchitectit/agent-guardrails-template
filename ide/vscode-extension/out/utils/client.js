@@ -60,7 +60,7 @@ class GuardrailClient {
         return this.post('/ide/validate/file', request);
     }
     async validateSelection(code, language) {
-        return this.post('/ide/validate/selection', { code, language });
+        return this.post('/ide/validate/selection', { selection: code, language });
     }
     async getRules(projectSlug) {
         const url = projectSlug

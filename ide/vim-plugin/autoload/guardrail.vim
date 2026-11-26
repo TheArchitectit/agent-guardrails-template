@@ -164,7 +164,7 @@ function! guardrail#ValidateSelection()
   " Build curl command
   let l:url = l:config.server_url . '/ide/validate/selection'
   let l:body = json_encode({
-    \ 'code': l:code,
+    \ 'selection': l:code,
     \ 'language': l:language
   \ })
   

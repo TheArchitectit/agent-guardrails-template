@@ -71,7 +71,7 @@ function M.validate_selection(code, language, callback)
   end
 
   local body = vim.fn.json_encode({
-    code = code,
+    selection = code,
     language = language,
   })
 

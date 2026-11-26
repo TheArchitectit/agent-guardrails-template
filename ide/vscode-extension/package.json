@@ -148,7 +148,7 @@
     "watch": "tsc -watch -p ./",
     "pretest": "npm run compile && npm run lint",
     "lint": "eslint src --ext ts",
-    "test": "node ../../tests/regression/test_vscode_extension_initialization_regression_FAIL_4c35b1a8.js && node ../../tests/regression/test_vscode_configure_override_regression_FAIL-a01027ef.js",
+    "test": "node ../../tests/regression/test_vscode_extension_initialization_regression_FAIL_4c35b1a8.js && node ../../tests/regression/test_vscode_configure_override_regression_FAIL-a01027ef.js && node ../../tests/regression/test_ide_selection_payload_regression_FAIL-e912933d.js",
     "package": "vsce package",
     "publish": "vsce publish"
   },

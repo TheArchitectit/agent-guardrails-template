@@ -7,7 +7,7 @@ identifies the owning change and its acceptance tasks.
 
 - [x] PKG-02. Verify the packed name, new test exclusion, clean locked package
   suite, and temporary-home installer help. Archive after strict validation.
-- [ ] IDE-03. Run the four IDE request builders against the selection contract,
+- [x] IDE-03. Run the four IDE request builders against the selection contract,
   verify the real server route and legacy compatibility, and finish the locked
   VS Code install, compile, and test run.
 - [x] TPL-35. Rehearse the checked-in release coverage gate in disposable Git

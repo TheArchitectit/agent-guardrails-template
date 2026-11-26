@@ -43,7 +43,7 @@ export class GuardrailClient {
     }
 
     async validateSelection(code: string, language: string): Promise<ValidationResponse> {
-        return this.post('/ide/validate/selection', { code, language });
+        return this.post('/ide/validate/selection', { selection: code, language });
     }
 
     async getRules(projectSlug?: string): Promise<unknown> {
