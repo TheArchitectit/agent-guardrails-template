@@ -4,6 +4,7 @@ import com.intellij.lang.annotation.AnnotationHolder
 import com.intellij.lang.annotation.ExternalAnnotator
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
+import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiFile
 
 /**
@@ -84,8 +85,8 @@ class GuardrailAnnotator : ExternalAnnotator<GuardrailAnnotator.Info, List<Viola
     }
 
     private fun getOffset(file: PsiFile, line: Int, column: Int): Int {
-        val document = com.intellij.openapi.editor.DocumentUtil.getDocument(file) ?: return 0
-        val lineNumber = (line - 1).coerceIn(0, document.lineCount - 1)
+        val document = PsiDocumentManager.getInstance(file.project).getDocument(file) ?: return 0
+        val lineNumber = (line - 1).coerceIn(0, document.getLineCount() - 1)
         val lineStart = document.getLineStartOffset(lineNumber)
         val lineEnd = document.getLineEndOffset(lineNumber)
         return (lineStart + (column - 1)).coerceIn(lineStart, lineEnd)
