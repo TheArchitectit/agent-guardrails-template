@@ -25,7 +25,7 @@ identifies the owning change and its acceptance tasks.
 
 - [x] LEGACY-01. Reconcile the five dated design statements against source
   and named tests, retaining open acceptance criteria.
-- [ ] TPL-34. Add the recurring source advisory check and exercise the specified
+- [x] TPL-34. Add the recurring source advisory check and exercise the specified
   reachability and tool-failure controls.
 - [ ] DIST-01. Install the Team CLI and its Python backend into temporary
   prefixes, then verify external-directory invocation and uninstall ownership.

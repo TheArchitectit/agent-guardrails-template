@@ -132,7 +132,7 @@ The table records each tracked change at the audited revision. Task totals come 
 | [fix-gitlab-requirements-inputs](../changes/archive/2026-11-25-fix-gitlab-requirements-inputs/tasks.md) | Active | 0/3 | 1 | — |
 | [fix-regression-guard-step-output](../changes/archive/2026-11-25-fix-regression-guard-step-output/tasks.md) | Active | 4/5 | 1 | [Receipt](../changes/archive/2026-11-25-fix-regression-guard-step-output/evidence.md) |
 | [fix-windsurf-single-skill-target](../changes/archive/2026-11-25-fix-windsurf-single-skill-target/tasks.md) | Active | 0/3 | 1 | — |
-| [go-tpl34-automate-source-advisory-checks](../changes/go-tpl34-automate-source-advisory-checks/tasks.md) | Active | 0/4 | 1 | — |
+| [go-tpl34-automate-source-advisory-checks](../changes/archive/2026-11-26-go-tpl34-automate-source-advisory-checks/tasks.md) | Active | 0/4 | 1 | — |
 | [ide01-initialize-vscode-client](../changes/archive/2026-11-25-ide01-initialize-vscode-client/tasks.md) | Active | 0/4 | 1 | — |
 | [ide02-align-ide-rest-endpoint](../changes/archive/2026-11-25-ide02-align-ide-rest-endpoint/tasks.md) | Active | 0/4 | 1 | — |
 | [ide03-align-selection-payload](../changes/ide03-align-selection-payload/tasks.md) | Active | 0/4 | 1 | — |
