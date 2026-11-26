@@ -368,12 +368,18 @@ var SensitiveMCPTools = map[string]bool{
 	// the same audit-before-effect path as a delete.
 	"rotate_webhook_key":           true,
 	"guardrail_team_config_update": true,
-	"guardrail_team_assign":       true,
-	"guardrail_team_remove":       true,
-	"delete_webhook":              true,
-	"delete_budget":               true,
-	"transition_agent_state":      true,
-	"guardrail_team_init":         true,
+	"guardrail_team_assign":        true,
+	"guardrail_team_remove":        true,
+	"delete_webhook":               true,
+	"delete_budget":                true,
+	"transition_agent_state":       true,
+	"guardrail_team_init":          true,
+	// Vision mutations call a provider, write review data or trigger a capture.
+	// Require their allow decision to be durable before dispatch begins.
+	"vision_capture_screenshot": true,
+	"vision_analyze_screenshot": true,
+	"vision_iterate_review":     true,
+	"vision_guardrail_check":    true,
 }
 
 // MCPToolAction returns the action class for a tool name. Unknown tools deny.
@@ -404,10 +410,21 @@ func ClassifyMCPTool(name string, args map[string]interface{}) ActionRequest {
 	if !known {
 		return ActionRequest{Name: name, Kind: "unknown", Scopes: nil}
 	}
+	resource := SafeResourceID(args)
+	if name == "vision_get_report" || name == "vision_iterate_review" {
+		// These operations always target a specific report. Do not turn a
+		// missing, malformed or unrelated resource argument into an unscoped
+		// request that Decide would allow.
+		reviewID, _ := args["review_id"].(string)
+		if reviewID == "" || SafeResourceID(map[string]interface{}{"review_id": reviewID}) != reviewID {
+			return ActionRequest{Name: name, Kind: "unknown", Scopes: nil}
+		}
+		resource = reviewID
+	}
 	return ActionRequest{
 		Name:     name,
 		Kind:     kind,
-		Resource: SafeResourceID(args),
+		Resource: resource,
 		Scopes:   RequiredScopeForKind(kind, "mcp"),
 	}
 }
@@ -603,6 +620,9 @@ func LegacyRESTAction(class, method, requestPath string) (ActionRequest, bool) {
 func ClassifyREST(method, requestPath string) ActionRequest {
 	p := normalizePath(requestPath)
 	name := method + " " + p
+	if p == "/v1/vision" || strings.HasPrefix(p, "/v1/vision/") {
+		return classifyVisionREST(method, p)
+	}
 	resource := restResourceFromPath(p)
 
 	// IDE surface.
@@ -651,6 +671,45 @@ func ClassifyREST(method, requestPath string) ActionRequest {
 	}
 	// Unknown method denies.
 	return ActionRequest{Name: name, Kind: "unknown"}
+}
+
+// classifyVisionREST maps only the optional Vision REST routes that the
+// VisionServer registers. Unknown verbs and paths under the surface deny
+// instead of inheriting a generic method classification.
+func classifyVisionREST(method, p string) ActionRequest {
+	action := ActionRequest{Name: "optional Vision REST unknown route", Kind: "unknown"}
+	set := func(name string, kind ActionKind, resource string) ActionRequest {
+		return ActionRequest{
+			Name: name, Kind: kind, Resource: resource,
+			Scopes: RequiredScopeForKind(kind, "rest"),
+		}
+	}
+	switch {
+	case method == http.MethodPost && p == "/v1/vision/review":
+		return set("POST /v1/vision/review", ActionMutate, "")
+	case method == http.MethodGet && p == "/v1/vision/reviews":
+		return set("GET /v1/vision/reviews", ActionRead, "")
+	case method == http.MethodGet && p == "/v1/vision/events":
+		return set("GET /v1/vision/events", ActionRead, "")
+	case method == http.MethodGet && p == "/v1/vision/health":
+		return set("GET /v1/vision/health", ActionRead, "")
+	case method == http.MethodPost && p == "/v1/vision/capture/trigger":
+		return set("POST /v1/vision/capture/trigger", ActionMutate, "")
+	}
+	parts := strings.Split(strings.Trim(p, "/"), "/")
+	if len(parts) == 4 && parts[0] == "v1" && parts[1] == "vision" && parts[2] == "review" && validOpaqueResourceID(parts[3]) {
+		if method == http.MethodGet {
+			return set("GET /v1/vision/review/:id", ActionRead, parts[3])
+		}
+	}
+	if len(parts) == 5 && parts[0] == "v1" && parts[1] == "vision" && parts[2] == "review" && parts[4] == "iterate" && validOpaqueResourceID(parts[3]) && method == http.MethodPost {
+		return set("POST /v1/vision/review/:id/iterate", ActionMutate, parts[3])
+	}
+	return action
+}
+
+func validOpaqueResourceID(value string) bool {
+	return value != "" && SafeResourceID(map[string]interface{}{"review_id": value}) == value
 }
 
 // restResourceFromPath pulls an opaque ID from /api/{collection}/{id}.

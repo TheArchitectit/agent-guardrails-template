@@ -181,7 +181,7 @@ services:
       - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-*}
       - CORS_MAX_AGE=${CORS_MAX_AGE:-86400}
       # Vision Pipeline Configuration
-      - VISION_ENABLED=${VISION_ENABLED:-true}
+      - VISION_ENABLED=${VISION_ENABLED:-false}
       - LOCAL_LLAMA_URL=${LOCAL_LLAMA_URL:-http://host.docker.internal:8080/v1}
       - LOCAL_LLAMA_MODEL=${LOCAL_LLAMA_MODEL:-nemotron-vision-local}
       - FALLBACK_PROVIDER=${FALLBACK_PROVIDER:-}

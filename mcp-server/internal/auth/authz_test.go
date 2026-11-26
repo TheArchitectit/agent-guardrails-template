@@ -2,6 +2,7 @@ package auth
 
 import (
 	"net/http"
+	"strings"
 	"testing"
 )
 
@@ -25,11 +26,11 @@ func TestDecideScopeRoleResourceIntersection(t *testing.T) {
 	adminAction := ActionRequest{Name: "delete", Kind: ActionAdmin, Resource: "proj-a", Scopes: []string{ScopeAdminManage}}
 
 	cases := []struct {
-		name    string
-		caller  Caller
-		action  ActionRequest
-		want    bool
-		reason  string
+		name   string
+		caller Caller
+		action ActionRequest
+		want   bool
+		reason string
 	}{
 		{
 			name:   "reader + rest:read allows read",
@@ -262,6 +263,76 @@ func TestClassifyRESTActions(t *testing.T) {
 		a := ClassifyREST(tc.method, tc.path)
 		if a.Kind != tc.kind {
 			t.Fatalf("ClassifyREST(%s,%s)=%s want %s", tc.method, tc.path, a.Kind, tc.kind)
+		}
+	}
+}
+
+func TestClassifyOptionalVisionRESTSurface(t *testing.T) {
+	cases := []struct {
+		name, method, path string
+		kind               ActionKind
+		resource           string
+		scope              string
+	}{
+		{"create review", http.MethodPost, "/v1/vision/review", ActionMutate, "", ScopeRESTWrite},
+		{"get review", http.MethodGet, "/v1/vision/review/review-42", ActionRead, "review-42", ScopeRESTRead},
+		{"iterate review", http.MethodPost, "/v1/vision/review/review-42/iterate", ActionMutate, "review-42", ScopeRESTWrite},
+		{"list reviews", http.MethodGet, "/v1/vision/reviews", ActionRead, "", ScopeRESTRead},
+		{"events", http.MethodGet, "/v1/vision/events", ActionRead, "", ScopeRESTRead},
+		{"capture trigger", http.MethodPost, "/v1/vision/capture/trigger", ActionMutate, "", ScopeRESTWrite},
+		{"health", http.MethodGet, "/v1/vision/health", ActionRead, "", ScopeRESTRead},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			action := ClassifyREST(tc.method, tc.path)
+			if action.Kind != tc.kind || action.Resource != tc.resource || len(action.Scopes) != 1 || action.Scopes[0] != tc.scope {
+				t.Fatalf("ClassifyREST(%s,%s) = %+v; want kind=%s resource=%q scope=%q", tc.method, tc.path, action, tc.kind, tc.resource, tc.scope)
+			}
+			if strings.Contains(action.Name, "review-42") {
+				t.Errorf("action name contains resource ID, want a fixed audit route label: %q", action.Name)
+			}
+		})
+	}
+
+	for _, tc := range []struct{ method, path string }{
+		{http.MethodPut, "/v1/vision/review/review-42"},
+		{http.MethodPost, "/v1/vision/review/review-42"},
+		{http.MethodGet, "/v1/vision/review/unsafe%2Fid"},
+		{http.MethodGet, "/v1/vision/unknown"},
+	} {
+		action := ClassifyREST(tc.method, tc.path)
+		if action.Kind != "unknown" || len(action.Scopes) != 0 {
+			t.Errorf("unregistered Vision route %s %s classified as %+v; want unknown action", tc.method, tc.path, action)
+		}
+	}
+}
+
+func TestClassifyVisionMCPReportResource(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		args     map[string]interface{}
+		kind     ActionKind
+		resource string
+	}{
+		{"get report", map[string]interface{}{"review_id": "review-42"}, ActionRead, "review-42"},
+		{"iterate review", map[string]interface{}{"review_id": "review-42"}, ActionMutate, "review-42"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			action := ClassifyMCPTool(map[ActionKind]string{ActionRead: "vision_get_report", ActionMutate: "vision_iterate_review"}[tc.kind], tc.args)
+			if action.Kind != tc.kind || action.Resource != tc.resource {
+				t.Fatalf("ClassifyMCPTool returned %+v; want kind=%s resource=%q", action, tc.kind, tc.resource)
+			}
+		})
+	}
+	for _, args := range []map[string]interface{}{
+		nil,
+		{},
+		{"review_id": "../other"},
+		{"project_id": "review-42"},
+	} {
+		action := ClassifyMCPTool("vision_get_report", args)
+		if action.Kind != "unknown" || len(action.Scopes) != 0 {
+			t.Errorf("missing or invalid report target classified as %+v; want unknown action", action)
 		}
 	}
 }

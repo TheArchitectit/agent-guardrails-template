@@ -10,3 +10,4 @@ policy-packs/**/*.json text eol=lf
 # Team CLI install and packaging checks run under Bash on Linux and macOS.
 cmd/team-cli/*.sh text eol=lf
 tests/regression/test_team_cli_backend_distribution.sh text eol=lf
+tests/regression/test_optional_vision_authorization.sh text eol=lf

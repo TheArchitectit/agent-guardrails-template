@@ -293,12 +293,6 @@ func (s *MCPServer) setupHandlers() {
 		s.mcpServer.AddTool(tool, func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 			name := req.Params.Name
 			arguments := req.GetArguments()
-			if s.visionTools != nil {
-				result, err := s.visionTools.dispatch(ctx, name, arguments)
-				if err == nil {
-					return result, nil
-				}
-			}
 			return s.handleToolCall(ctx, name, arguments)
 		})
 	}
@@ -484,6 +478,12 @@ func (s *MCPServer) dispatchToolCall(ctx context.Context, name string, args map[
 	// handler then succeeded — "exercised" claims the control was invoked, not
 	// that the invocation passed.
 	s.recordExercise(name)
+	if strings.HasPrefix(name, "vision_") {
+		if s.visionTools == nil {
+			return errorResult("vision tools not enabled"), nil
+		}
+		return s.visionTools.dispatch(ctx, name, args)
+	}
 
 	switch name {
 	case "guardrail_init_session":
