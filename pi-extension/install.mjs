@@ -6,9 +6,9 @@
  * Copies the npm package contents to ~/.pi/agent/extensions/pi-guardrails.
  *
  * Usage:
- *   npx @thearchitectit/pi-guardrails          # Install or update extension
- *   npx @thearchitectit/pi-guardrails --remove  # Remove the extension
- *   npx @thearchitectit/pi-guardrails --help     # Show this help
+ *   npx @architectit/pi-guardrails          # Install or update extension
+ *   npx @architectit/pi-guardrails --remove  # Remove the extension
+ *   npx @architectit/pi-guardrails --help     # Show this help
  */
 
 import * as fs from "node:fs";
@@ -32,9 +32,9 @@ if (isHelp) {
 pi-guardrails v${VERSION} - Four Laws guardrails enforcement for pi coding agent
 
 Usage:
-  npx @thearchitectit/pi-guardrails          Install or update extension
-  npx @thearchitectit/pi-guardrails --remove  Remove the extension
-  npx @thearchitectit/pi-guardrails --help     Show this help
+  npx @architectit/pi-guardrails          Install or update extension
+  npx @architectit/pi-guardrails --remove  Remove the extension
+  npx @architectit/pi-guardrails --help     Show this help
 
 Extension directory: ${EXTENSION_DIR}
 `);

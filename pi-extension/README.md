@@ -1,17 +1,17 @@
-# @thearchitectit/pi-guardrails
+# @architectit/pi-guardrails
 
 Four Laws guardrails enforcement for the pi coding agent. Works standalone (no MCP server required) and can bridge to the existing Go MCP server when available.
 
 ## Installation
 
 ```bash
-pi install npm:@thearchitectit/pi-guardrails
+pi install npm:@architectit/pi-guardrails
 ```
 
 Or manually:
 
 ```bash
-npx @thearchitectit/pi-guardrails
+npx @architectit/pi-guardrails
 ```
 
 ## Architecture
