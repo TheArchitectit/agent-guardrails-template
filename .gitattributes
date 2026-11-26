@@ -12,3 +12,4 @@ cmd/team-cli/*.sh text eol=lf
 tests/regression/test_team_cli_backend_distribution.sh text eol=lf
 tests/regression/test_optional_vision_authorization.sh text eol=lf
 tests/regression/test_team_cli_output_contract.sh text eol=lf
+tests/regression/test_jetbrains_bytecode_compatibility_regression_FAIL-3b71d9a2.sh text eol=lf

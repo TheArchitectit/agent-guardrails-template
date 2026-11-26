@@ -29,12 +29,12 @@ kotlin {
 
 tasks {
     withType<JavaCompile> {
-        sourceCompatibility = "21"
-        targetCompatibility = "21"
+        options.release.set(17)
     }
 
     withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
-        kotlinOptions.jvmTarget = "21"
+        kotlinOptions.jvmTarget = "17"
+        kotlinOptions.freeCompilerArgs += "-Xjdk-release=17"
     }
 
     patchPluginXml {
