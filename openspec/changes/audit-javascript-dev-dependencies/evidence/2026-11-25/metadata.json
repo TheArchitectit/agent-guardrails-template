@@ -1,0 +1,72 @@
+{
+  "auditDateUtc": "2026-11-26T04:07:06.691Z",
+  "sourceCommit": "7c52f2091b9b0fa508500daa1d93acd3f091a396",
+  "nodeVersion": "v22.20.0",
+  "npmVersion": "10.9.3",
+  "registry": "https://registry.npmjs.org/",
+  "installFlags": [
+    "ci",
+    "--ignore-scripts",
+    "--no-audit",
+    "--no-fund"
+  ],
+  "lifecycleScriptsEnabled": false,
+  "packages": [
+    {
+      "name": "pi-extension",
+      "package": "@architectit/pi-guardrails",
+      "packageVersion": "0.2.0",
+      "manifestPath": "pi-extension/package.json",
+      "manifestRawGitBlobSha256": "2a7acd0bf110fc99aacb14b78697043459bec4e0debb2bd75eea966eaaea7415",
+      "lockfilePath": "pi-extension/package-lock.json",
+      "lockfileRawGitBlobSha256": "42100c30908fb0a36993ae5400876a80301e94633a8b3efe2253f1b27480dace",
+      "npmCiExitCode": 0,
+      "fullAuditExitCode": 1,
+      "fullFindings": 10,
+      "fullSeverityCounts": {
+        "info": 0,
+        "low": 0,
+        "moderate": 3,
+        "high": 5,
+        "critical": 2
+      },
+      "omitDevAuditExitCode": 0,
+      "omitDevFindings": 0,
+      "omitDevSeverityCounts": {
+        "info": 0,
+        "low": 0,
+        "moderate": 0,
+        "high": 0,
+        "critical": 0
+      }
+    },
+    {
+      "name": "vscode-extension",
+      "package": "guardrail-vscode",
+      "packageVersion": "1.0.0",
+      "manifestPath": "ide/vscode-extension/package.json",
+      "manifestRawGitBlobSha256": "20be8afefff604b57d28a078caa673241d3763054bbec954635eba7e962fa55d",
+      "lockfilePath": "ide/vscode-extension/package-lock.json",
+      "lockfileRawGitBlobSha256": "edfa88305337b827cf5f19246ebea47f4de24c5593d4e45ee5127bfc836f371c",
+      "npmCiExitCode": 0,
+      "fullAuditExitCode": 1,
+      "fullFindings": 14,
+      "fullSeverityCounts": {
+        "info": 0,
+        "low": 0,
+        "moderate": 4,
+        "high": 10,
+        "critical": 0
+      },
+      "omitDevAuditExitCode": 0,
+      "omitDevFindings": 0,
+      "omitDevSeverityCounts": {
+        "info": 0,
+        "low": 0,
+        "moderate": 0,
+        "high": 0,
+        "critical": 0
+      }
+    }
+  ]
+}
