@@ -278,7 +278,9 @@ class MigrationManager:
     """
 
     CURRENT_VERSION = "1.0.0"
-    MIGRATIONS_DIR = Path("scripts/migrations")
+    # Migrations are package resources, not project data. Resolve them beside
+    # this backend so installed commands work from any caller directory.
+    MIGRATIONS_DIR = Path(__file__).resolve().parent / "migrations"
 
     def __init__(self, project_name: str):
         self.project_name = project_name

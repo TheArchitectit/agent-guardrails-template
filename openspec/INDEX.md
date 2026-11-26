@@ -6,7 +6,7 @@
 > `Status:` line. Run the pinned strict spec validator after editing. Never
 > merge rows by short slug or infer status from archive task checkboxes.
 
-**45 specs** — CLOSED 18 | PARTIAL 0 | OPEN 0 | UNKNOWN 27
+**46 specs** — CLOSED 19 | PARTIAL 0 | OPEN 0 | UNKNOWN 27
 
 | Spec path | Title | Status | Evidence |
 |---|---|---|---|
@@ -52,6 +52,7 @@
 | [`sandbox-isolation-levels/spec.md`](specs/sandbox-isolation-levels/spec.md) | Sandbox Isolation Levels | **CLOSED** | Status: CLOSED (EXERCISED 3) |
 | [`semantic-filtering-categories-and-actions/spec.md`](specs/semantic-filtering-categories-and-actions/spec.md) | Semantic Filtering Categories and Actions | **CLOSED** | Status: CLOSED (EXERCISED 3) |
 | [`semantic-filtering-evidence-and-conformance/spec.md`](specs/semantic-filtering-evidence-and-conformance/spec.md) | Semantic Filtering Evidence and Conformance | **CLOSED** | Status: CLOSED (EXERCISED 3) |
+| [`team-cli-backend-distribution/spec.md`](specs/team-cli-backend-distribution/spec.md) | team-cli-backend-distribution Specification | **CLOSED** | Status: CLOSED (EXERCISED 2) |
 | [`test-fixture-permissions/spec.md`](specs/test-fixture-permissions/spec.md) | test-fixture-permissions Specification | **UNKNOWN** | No status or closure table |
 | [`validation-regex-cache/spec.md`](specs/validation-regex-cache/spec.md) | validation-regex-cache Specification | **UNKNOWN** | No status or closure table |
 | [`vscode-extension-linting/spec.md`](specs/vscode-extension-linting/spec.md) | vscode-extension-linting Specification | **UNKNOWN** | No status or closure table |

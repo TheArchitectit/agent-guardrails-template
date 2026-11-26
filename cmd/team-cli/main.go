@@ -91,23 +91,32 @@ func getTeamManagerPath() string {
 	// Try to find relative to executable
 	exe, err := os.Executable()
 	if err == nil {
-		dir := filepath.Dir(exe)
-		// Try multiple relative paths
-		candidates := []string{
-			filepath.Join(dir, "..", "..", "..", "scripts", "team_manager.py"),
-			filepath.Join(dir, "..", "..", "scripts", "team_manager.py"),
-			filepath.Join(dir, "..", "scripts", "team_manager.py"),
-			filepath.Join(dir, "scripts", "team_manager.py"),
-		}
-		for _, candidate := range candidates {
-			if _, err := os.Stat(candidate); err == nil {
-				return candidate
-			}
+		if path, ok := findTeamManagerPath(exe); ok {
+			return path
 		}
 	}
 
 	// Default path
 	return "scripts/team_manager.py"
+}
+
+// findTeamManagerPath checks the installation-owned payload first, then keeps
+// the existing source-checkout layouts available to developers.
+func findTeamManagerPath(executablePath string) (string, bool) {
+	dir := filepath.Dir(executablePath)
+	candidates := []string{
+		filepath.Join(dir, "..", "share", "agent-guardrails-template", "team-cli", "scripts", "team_manager.py"),
+		filepath.Join(dir, "..", "..", "..", "scripts", "team_manager.py"),
+		filepath.Join(dir, "..", "..", "scripts", "team_manager.py"),
+		filepath.Join(dir, "..", "scripts", "team_manager.py"),
+		filepath.Join(dir, "scripts", "team_manager.py"),
+	}
+	for _, candidate := range candidates {
+		if info, err := os.Stat(candidate); err == nil && !info.IsDir() {
+			return candidate, true
+		}
+	}
+	return "", false
 }
 
 // runTeamManager executes the team_manager.py script with the given arguments

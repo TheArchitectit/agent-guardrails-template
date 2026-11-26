@@ -1,7 +1,7 @@
 # Team CLI Makefile
 # Build automation for the team management CLI tool
 
-.PHONY: all build clean test install lint fmt deps
+.PHONY: all build clean test install uninstall lint fmt deps check-backend
 
 # Build variables
 BINARY_NAME := team
@@ -21,8 +21,14 @@ GOMOD := $(GOCMD) mod
 GOFMT := $(GOCMD) fmt
 
 # Installation directories
-PREFIX := /usr/local
+PREFIX ?= /usr/local
+ifeq ($(strip $(PREFIX)),)
+$(error PREFIX must not be empty)
+endif
 BINDIR := $(PREFIX)/bin
+DATADIR := $(PREFIX)/share/agent-guardrails-template/team-cli
+REPO_ROOT := $(abspath ../..)
+TEAM_MANAGER_SOURCE := $(REPO_ROOT)/scripts
 
 # Default target
 all: deps build
@@ -72,17 +78,32 @@ lint:
 	golangci-lint run ./...
 
 # Install binary to system
-install: build
-	@mkdir -p $(BINDIR)
-	@install -m 755 $(BINARY_NAME) $(BINDIR)/$(BINARY_NAME)
-	@ln -sf $(BINDIR)/$(BINARY_NAME) $(BINDIR)/$(BINARY_NAME_ALT) 2>/dev/null || true
-	@echo "Installed $(BINARY_NAME) to $(BINDIR)"
+check-backend:
+	@test -f "$(TEAM_MANAGER_SOURCE)/team_manager.py" -a -f "$(TEAM_MANAGER_SOURCE)/batch_operations.py" -a -f "$(TEAM_MANAGER_SOURCE)/encryption.py" -a -f "$(TEAM_MANAGER_SOURCE)/migrations/__init__.py" -a -f "$(TEAM_MANAGER_SOURCE)/migrations/v1_to_v2.py" || { echo "Python backend payload is incomplete: $(TEAM_MANAGER_SOURCE)" >&2; exit 1; }
 
-# Uninstall binary
+install: check-backend build
+	@mkdir -p "$(BINDIR)" "$(DATADIR)/scripts/migrations"
+	@install -m 644 "$(TEAM_MANAGER_SOURCE)/team_manager.py" "$(DATADIR)/scripts/team_manager.py"
+	@install -m 644 "$(TEAM_MANAGER_SOURCE)/batch_operations.py" "$(DATADIR)/scripts/batch_operations.py"
+	@install -m 644 "$(TEAM_MANAGER_SOURCE)/encryption.py" "$(DATADIR)/scripts/encryption.py"
+	@install -m 644 "$(TEAM_MANAGER_SOURCE)/migrations/__init__.py" "$(DATADIR)/scripts/migrations/__init__.py"
+	@install -m 644 "$(TEAM_MANAGER_SOURCE)/migrations/v1_to_v2.py" "$(DATADIR)/scripts/migrations/v1_to_v2.py"
+	@install -m 755 "$(BINARY_NAME)" "$(BINDIR)/$(BINARY_NAME)"
+	@ln -sf "$(BINARY_NAME)" "$(BINDIR)/$(BINARY_NAME_ALT)"
+	@echo "Installed $(BINARY_NAME) and Python backend to $(BINDIR) and $(DATADIR)"
+
+# Uninstall the package-owned CLI payload
 uninstall:
-	@rm -f $(BINDIR)/$(BINARY_NAME)
-	@rm -f $(BINDIR)/$(BINARY_NAME_ALT)
-	@echo "Uninstalled $(BINARY_NAME) from $(BINDIR)"
+	@set -eu; for path in "$(PREFIX)" "$(BINDIR)" "$(PREFIX)/share" "$(PREFIX)/share/agent-guardrails-template" "$(DATADIR)" "$(DATADIR)/scripts" "$(DATADIR)/scripts/migrations"; do \
+	  if [ -L "$$path" ]; then echo "refusing to uninstall through symlink: $$path" >&2; exit 1; fi; \
+	done; \
+	rm -f "$(BINDIR)/$(BINARY_NAME)" "$(BINDIR)/$(BINARY_NAME_ALT)"; \
+	rm -f "$(DATADIR)/scripts/team_manager.py" "$(DATADIR)/scripts/batch_operations.py" "$(DATADIR)/scripts/encryption.py"; \
+	rm -f "$(DATADIR)/scripts/migrations/__init__.py" "$(DATADIR)/scripts/migrations/v1_to_v2.py"; \
+	rmdir "$(DATADIR)/scripts/migrations" 2>/dev/null || true; \
+	rmdir "$(DATADIR)/scripts" 2>/dev/null || true; \
+	rmdir "$(DATADIR)" 2>/dev/null || true
+	@echo "Uninstalled $(BINARY_NAME) and its backend from $(BINDIR) and $(DATADIR)"
 
 # Clean build artifacts
 clean:

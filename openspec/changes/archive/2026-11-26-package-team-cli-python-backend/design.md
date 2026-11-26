@@ -6,9 +6,10 @@
 
 ## Decisions
 
-- Define a stable install-owned data location for `team_manager.py` and make the installed executable resolve that location relative to its own installation, independent of the caller's working directory.
+- Define `PREFIX/share/agent-guardrails-template/team-cli/scripts` as the install-owned backend location. The executable checks the sibling `../share/agent-guardrails-template/team-cli/scripts/team_manager.py` path before the existing source-checkout and working-directory fallbacks.
+- Package `team_manager.py`, its sibling `batch_operations.py` and `encryption.py` modules, and the migrations directory together. Resolve migration resources beside `team_manager.py`; keep `.teams` project data relative to the caller's working directory.
 - Keep `TEAM_MANAGER_PATH` as the first-priority override.
-- Ensure both the Makefile install and shell installer copy the backend and any runtime files it requires, and make uninstall remove only files owned by this package.
+- Make the Makefile installer and shell installer honor the same `PREFIX` and install the identical payload. Uninstall removes the CLI binary, alias, and dedicated package data directory without deleting sibling user files or an external `TEAM_MANAGER_PATH` override.
 - Preserve source-tree lookup for development if it remains safe and documented.
 
 ## Compatibility and Rollback

@@ -27,8 +27,9 @@ identifies the owning change and its acceptance tasks.
   and named tests, retaining open acceptance criteria.
 - [x] TPL-34. Add the recurring source advisory check and exercise the specified
   reachability and tool-failure controls.
-- [ ] DIST-01. Install the Team CLI and its Python backend into temporary
+- [x] DIST-01. Install the Team CLI and its Python backend into temporary
   prefixes, then verify external-directory invocation and uninstall ownership.
+- [ ] DIST-02. Reconcile advertised Team CLI output modes and verify the installed JSON contract.
 - [ ] QA-04. Re-run the Pi and VS Code lockfile-backed audits and record the
   separate production and development results for review.
 
