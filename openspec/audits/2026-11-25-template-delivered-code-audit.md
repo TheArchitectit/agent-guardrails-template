@@ -146,10 +146,10 @@ The table records each tracked change at the audited revision. Task totals come 
 | [ops04-rehearse-operational-recovery](../changes/ops04-rehearse-operational-recovery/tasks.md) | Active | 0/3 | 1 | — |
 | [package-team-cli-python-backend](../changes/package-team-cli-python-backend/tasks.md) | Active | 0/3 | 1 | — |
 | [pkg01-declare-pi-mcp-sdk-dev-dependency](https://github.com/TheArchitectit/agent-guardrails-template/blob/30b63f63c0462809269a0c9aa9fd64515210cc20/openspec/changes/pkg01-declare-pi-mcp-sdk-dev-dependency/tasks.md) | Active | 0/4 | 1 | — |
-| [pkg02-align-pi-package-name](../changes/pkg02-align-pi-package-name/tasks.md) | Active | 0/4 | 1 | — |
+| [pkg02-align-pi-package-name](../changes/archive/2026-11-26-pkg02-align-pi-package-name/tasks.md) | Archived | 4/4 | 1 | [Receipt](../changes/archive/2026-11-26-pkg02-align-pi-package-name/evidence.md) |
 | [preserve-hidden-agent-install-paths](../changes/archive/2026-11-25-preserve-hidden-agent-install-paths/tasks.md) | Active | 0/3 | 1 | — |
 | [reconcile-devgate-pin-ownership](../changes/reconcile-devgate-pin-ownership/tasks.md) | Active | 0/4 | 1 | — |
-| [reconcile-platform-current-state](../changes/reconcile-platform-current-state/tasks.md) | Active | 0/4 | 1 | — |
+| [reconcile-platform-current-state](../changes/archive/2026-11-25-reconcile-platform-current-state/tasks.md) | Archived | 4/4 | 1 | [Receipt](../changes/archive/2026-11-25-reconcile-platform-current-state/evidence.md) |
 | [release-gate-conformance-reports](../changes/release-gate-conformance-reports/tasks.md) | Active | 0/3 | 2 | — |
 | [release-tpl35-publish-approved-main](../changes/release-tpl35-publish-approved-main/tasks.md) | Active | 0/4 | 1 | — |
 | [trace-action-and-ingress-boundaries](../changes/trace-action-and-ingress-boundaries/tasks.md) | Active | 0/4 | 2 | — |

@@ -12,3 +12,7 @@ Verification ran in the isolated Windows worktree at merged baseline `6ca7b12249
 ## Linux Docker verification
 
 A native Linux Docker checkout of commit `296b7533471a88d5bd0eab94346a846a5f2e75b3` completed `npm ci`, all 200 tests across 24 files, and `npm pack --json --dry-run`. The optional MCP SDK test passed. The dry-run package name was `@architectit/pi-guardrails`, and the installer help printed that identity with an empty temporary home directory.
+
+## Independent integrated-tree verification
+
+Docker Desktop's Linux engine ran the locked package checks from the final integrated implementation. Vitest passed all 200 tests across 24 files. The archive dry run reports @architectit/pi-guardrails@0.2.0, 70 files, and excludes the identity test. Strict OpenSpec passed for 67 current items and 31 archives. The link check resolved 1,280 references. The full npm install reported 10 dependency audit findings tracked separately in QA-04.
