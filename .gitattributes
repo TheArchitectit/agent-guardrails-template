@@ -6,3 +6,6 @@ policy-packs/**/*.json text eol=lf
 
 # Bash rejects CRLF in strict-mode options; keep workflow helper scripts LF-only.
 .github/scripts/*.sh text eol=lf
+
+# Team CLI install and packaging checks run under Bash on Linux and macOS.
+cmd/team-cli/*.sh text eol=lf

@@ -15,7 +15,30 @@ cd cmd/team-cli
 make install
 ```
 
-Or manually:
+Set `PREFIX` to install under a user-owned prefix instead of `/usr/local`:
+
+```bash
+PREFIX="$HOME/.local" make install
+```
+
+The install places the CLI in `PREFIX/bin` and its Python backend modules and
+migrations in `PREFIX/share/agent-guardrails-template/team-cli/scripts`. The
+installed CLI finds this payload independently of the caller's working
+directory. The source-tree lookup remains available for development builds.
+
+To remove the package-owned binary, alias, and backend payload:
+
+```bash
+PREFIX="$HOME/.local" make uninstall
+```
+
+The shell installer uses the same layout and accepts the same `PREFIX`:
+
+```bash
+PREFIX="$HOME/.local" ./cmd/team-cli/install.sh
+```
+
+Or manually build a development binary:
 
 ```bash
 cd cmd/team-cli
@@ -235,7 +258,7 @@ team status -p web-platform -o json | jq '.teams[] | select(.phase == "Phase 1")
 
 - Go 1.23.2 or later
 - Python 3.x (for team_manager.py backend)
-- team_manager.py must be accessible (usually in `../../scripts/` relative to the binary)
+- Installed distributions include `team_manager.py`; source checkouts resolve it from the repository.
 
 ## Development
 
@@ -244,6 +267,19 @@ team status -p web-platform -o json | jq '.teams[] | select(.phase == "Phase 1")
 ```bash
 make build
 ```
+
+### Verify install packaging
+
+On Linux or macOS, run the temporary-prefix parity check with Go and Python
+installed:
+
+```bash
+bash ./test-install.sh
+```
+
+It exercises both installation paths from an unrelated working directory,
+checks `TEAM_MANAGER_PATH` precedence, and confirms uninstall preserves files
+outside the package-owned directories.
 
 ### Test
 

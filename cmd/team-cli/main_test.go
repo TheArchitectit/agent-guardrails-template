@@ -1,6 +1,8 @@
 package main
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -28,6 +30,46 @@ func TestGetTeamManagerPath_Default(t *testing.T) {
 	t.Setenv("TEAM_MANAGER_PATH", "")
 	if got := getTeamManagerPath(); got != "scripts/team_manager.py" {
 		t.Errorf("getTeamManagerPath() = %q, want default %q", got, "scripts/team_manager.py")
+	}
+}
+
+func TestFindTeamManagerPath_InstalledLayout(t *testing.T) {
+	prefix := t.TempDir()
+	executable := filepath.Join(prefix, "bin", "team")
+	backend := filepath.Join(prefix, "share", "agent-guardrails-template", "team-cli", "scripts", "team_manager.py")
+	if err := os.MkdirAll(filepath.Dir(backend), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(backend, []byte("# packaged backend\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	got, ok := findTeamManagerPath(executable)
+	if !ok {
+		t.Fatal("findTeamManagerPath() did not find the install-owned backend")
+	}
+	if got != backend {
+		t.Errorf("findTeamManagerPath() = %q, want %q", got, backend)
+	}
+}
+
+func TestFindTeamManagerPath_SourceCheckoutLayout(t *testing.T) {
+	root := t.TempDir()
+	executable := filepath.Join(root, "cmd", "team-cli", "team")
+	backend := filepath.Join(root, "scripts", "team_manager.py")
+	if err := os.MkdirAll(filepath.Dir(backend), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(backend, []byte("# source backend\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	got, ok := findTeamManagerPath(executable)
+	if !ok {
+		t.Fatal("findTeamManagerPath() did not preserve source-checkout lookup")
+	}
+	if got != backend {
+		t.Errorf("findTeamManagerPath() = %q, want %q", got, backend)
 	}
 }
 

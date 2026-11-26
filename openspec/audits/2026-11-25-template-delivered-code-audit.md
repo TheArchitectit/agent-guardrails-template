@@ -144,7 +144,7 @@ The table records each tracked change at the audited revision. Task totals come 
 | [ops02-verify-external-consumer](../changes/ops02-verify-external-consumer/tasks.md) | Active | 0/3 | 1 | — |
 | [ops03-verify-multi-instance-revocation](../changes/ops03-verify-multi-instance-revocation/tasks.md) | Active | 0/3 | 1 | — |
 | [ops04-rehearse-operational-recovery](../changes/ops04-rehearse-operational-recovery/tasks.md) | Active | 0/3 | 1 | — |
-| [package-team-cli-python-backend](../changes/package-team-cli-python-backend/tasks.md) | Active | 0/3 | 1 | — |
+| [package-team-cli-python-backend](../changes/archive/2026-11-26-package-team-cli-python-backend/tasks.md) | Active | 0/3 | 1 | — |
 | [pkg01-declare-pi-mcp-sdk-dev-dependency](https://github.com/TheArchitectit/agent-guardrails-template/blob/30b63f63c0462809269a0c9aa9fd64515210cc20/openspec/changes/pkg01-declare-pi-mcp-sdk-dev-dependency/tasks.md) | Active | 0/4 | 1 | — |
 | [pkg02-align-pi-package-name](../changes/archive/2026-11-26-pkg02-align-pi-package-name/tasks.md) | Archived | 4/4 | 1 | [Receipt](../changes/archive/2026-11-26-pkg02-align-pi-package-name/evidence.md) |
 | [preserve-hidden-agent-install-paths](../changes/archive/2026-11-25-preserve-hidden-agent-install-paths/tasks.md) | Active | 0/3 | 1 | — |
