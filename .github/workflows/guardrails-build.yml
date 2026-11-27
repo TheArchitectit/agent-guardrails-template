@@ -11,7 +11,7 @@ jobs:
   isolated-build:
     name: Build and verify exact commit in isolated worker
     if: >-
-      (github.repository == 'TheArchitectit/agent-guardrails-template' || vars.GUARDRAILS_WORKER_URL != '') &&
+      (github.repository == 'TheArchitectit/agent-guardrails-template' || vars.GUARDRAILS_WORKER_SERVICE != '') &&
       (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: ${{ fromJSON(vars.CI_RUNNER_LABELS || '["ubuntu-latest"]') }}
     timeout-minutes: 80
@@ -20,12 +20,12 @@ jobs:
         env:
           ACTUAL_RUNNER: ${{ runner.name }}
           RUNNER_KIND: ${{ runner.environment }}
-          WORKER_URL: ${{ vars.GUARDRAILS_WORKER_URL }}
+          WORKER_SERVICE: ${{ vars.GUARDRAILS_WORKER_SERVICE }}
         run: |
           set -euo pipefail
           echo "Actual runner: $ACTUAL_RUNNER ($RUNNER_KIND; $RUNNER_OS/$RUNNER_ARCH); hostname=$(hostname)"
           test "$RUNNER_KIND" = self-hosted
-          test -n "$WORKER_URL"
+          test -n "$WORKER_SERVICE"
           if [[ "$GITHUB_REPOSITORY" == TheArchitectit/agent-guardrails-template ]]; then
             [[ "$ACTUAL_RUNNER" == ucs03-guardrails || "$ACTUAL_RUNNER" =~ ^ucs03-guardrails-spare[12]$ ]]
           fi
@@ -42,7 +42,8 @@ jobs:
         uses: ./.github/actions/verify-approved-aiggp
       - name: Request immutable build and verify signed receipt
         env:
-          GUARDRAILS_WORKER_URL: ${{ vars.GUARDRAILS_WORKER_URL }}
+          GUARDRAILS_WORKER_SERVICE: ${{ vars.GUARDRAILS_WORKER_SERVICE }}
+          SERVICE_MAP_FILE: /etc/guardrails-worker-services.json
           GUARDRAILS_WORKER_TLS_CERT_SHA256: ${{ vars.GUARDRAILS_WORKER_TLS_CERT_SHA256 }}
           GUARDRAILS_WORKER_CA_PEM: ${{ vars.GUARDRAILS_WORKER_CA_PEM }}
           GUARDRAILS_WORKER_RECEIPT_PUBLIC_KEY: ${{ vars.GUARDRAILS_WORKER_RECEIPT_PUBLIC_KEY }}
@@ -54,8 +55,9 @@ jobs:
           umask 077
           printf '%s\n' "$GUARDRAILS_WORKER_CA_PEM" > "$RUNNER_TEMP/worker-ca.pem"
           printf '%s\n' "$GUARDRAILS_WORKER_RECEIPT_PUBLIC_KEY" > "$RUNNER_TEMP/worker-receipt.pub"
+          endpoint=$(bash .devgate/templates/ci/service-endpoint.sh "$GUARDRAILS_WORKER_SERVICE")
           python3 -I .github/guardrails-build-client.py \
-            --url "$GUARDRAILS_WORKER_URL" \
+            --url "https://$endpoint/v1/build" \
             --cert-sha256 "$GUARDRAILS_WORKER_TLS_CERT_SHA256" \
             --receipt-public-key "$RUNNER_TEMP/worker-receipt.pub" \
             --ca-file "$RUNNER_TEMP/worker-ca.pem" \
