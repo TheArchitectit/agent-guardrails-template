@@ -1,0 +1,76 @@
+name: Guardrails isolated build
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  isolated-build:
+    name: Build and verify exact commit in isolated worker
+    if: >-
+      (github.repository == 'TheArchitectit/agent-guardrails-template' || vars.GUARDRAILS_WORKER_URL != '') &&
+      (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: ${{ fromJSON(vars.CI_RUNNER_LABELS || '["ubuntu-latest"]') }}
+    timeout-minutes: 80
+    steps:
+      - name: Verify runner placement and worker configuration
+        env:
+          ACTUAL_RUNNER: ${{ runner.name }}
+          RUNNER_KIND: ${{ runner.environment }}
+          WORKER_URL: ${{ vars.GUARDRAILS_WORKER_URL }}
+        run: |
+          set -euo pipefail
+          echo "Actual runner: $ACTUAL_RUNNER ($RUNNER_KIND; $RUNNER_OS/$RUNNER_ARCH); hostname=$(hostname)"
+          test "$RUNNER_KIND" = self-hosted
+          test -n "$WORKER_URL"
+          if [[ "$GITHUB_REPOSITORY" == TheArchitectit/agent-guardrails-template ]]; then
+            [[ "$ACTUAL_RUNNER" == ucs03-guardrails || "$ACTUAL_RUNNER" =~ ^ucs03-guardrails-spare[12]$ ]]
+          fi
+      - name: Check out pinned worker client
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          repository: TheArchitectit/agent-guardrails-template
+          ref: 7e3a63e908d8a9b3b3bf2276064bf9121a2aa191
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Verify client identity
+        run: test "$(git rev-parse HEAD)" = 7e3a63e908d8a9b3b3bf2276064bf9121a2aa191
+      - name: Verify approved AIGGP
+        uses: ./.github/actions/verify-approved-aiggp
+      - name: Request immutable build and verify signed receipt
+        env:
+          GUARDRAILS_WORKER_URL: ${{ vars.GUARDRAILS_WORKER_URL }}
+          GUARDRAILS_WORKER_TLS_CERT_SHA256: ${{ vars.GUARDRAILS_WORKER_TLS_CERT_SHA256 }}
+          GUARDRAILS_WORKER_CA_PEM: ${{ vars.GUARDRAILS_WORKER_CA_PEM }}
+          GUARDRAILS_WORKER_RECEIPT_PUBLIC_KEY: ${{ vars.GUARDRAILS_WORKER_RECEIPT_PUBLIC_KEY }}
+          GUARDRAILS_RECEIPT_FILE: ${{ runner.temp }}/guardrails-build-receipt.json
+        run: |
+          set -euo pipefail
+          test -n "$GUARDRAILS_WORKER_CA_PEM"
+          test -n "$GUARDRAILS_WORKER_RECEIPT_PUBLIC_KEY"
+          umask 077
+          printf '%s\n' "$GUARDRAILS_WORKER_CA_PEM" > "$RUNNER_TEMP/worker-ca.pem"
+          printf '%s\n' "$GUARDRAILS_WORKER_RECEIPT_PUBLIC_KEY" > "$RUNNER_TEMP/worker-receipt.pub"
+          python3 -I .github/guardrails-build-client.py \
+            --url "$GUARDRAILS_WORKER_URL" \
+            --cert-sha256 "$GUARDRAILS_WORKER_TLS_CERT_SHA256" \
+            --receipt-public-key "$RUNNER_TEMP/worker-receipt.pub" \
+            --ca-file "$RUNNER_TEMP/worker-ca.pem" \
+            --receipt-file "$GUARDRAILS_RECEIPT_FILE"
+      - name: Upload signed worker receipt
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: guardrails-build-receipt-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/guardrails-build-receipt.json
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Remove trusted checkouts
+        if: always()
+        run: |
+          rm -rf -- .devgate
+          rm -f -- "$RUNNER_TEMP/worker-ca.pem" "$RUNNER_TEMP/worker-receipt.pub" "$RUNNER_TEMP/guardrails-build-receipt.json"
+
