@@ -73,3 +73,6 @@ vision_data/
 
 # host-specific service configs (hardware paths, ports — keep local, never push)
 mcp-server/config/llama-server.env
+
+# Local approved AIGGP checkout (materialized by CI)
+/.devgate/

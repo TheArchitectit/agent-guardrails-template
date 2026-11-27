@@ -24,13 +24,13 @@ jobs:
     name: Check for Potential Regressions
 
     steps:
-      - name: Checkout code (with DevGate submodule)
+      - name: Checkout consumer repository
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           fetch-depth: 0
-          # .devgate carries the shared gate implementations. Overlay-not-fork:
-          # this repo keeps .guardrails/* as its policy and consumes the code.
-          submodules: recursive
+
+      - name: Check out and verify approved AIGGP for the charset gate
+        uses: ./.github/actions/verify-approved-aiggp
 
       - name: Set up Python
         uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
@@ -376,3 +376,28 @@ jobs:
           fi
 
           exit 0
+
+      - name: Post-job cleanup (AIGGP checkout)
+        if: always()
+        run: rm -rf -- .devgate
+
+  verify-approved-aiggp:
+    name: Verify approved AIGGP
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, Linux, X64, guardrails-ucs03]
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Check out consumer repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Verify approved AIGGP
+        uses: ./.github/actions/verify-approved-aiggp
+
+      - name: Post-job cleanup (AIGGP checkout)
+        if: always()
+        run: rm -rf -- .devgate
