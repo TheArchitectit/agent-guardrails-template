@@ -3,7 +3,7 @@
 ## 1. Implement and verify
 
 - [x] 1.1 Inventory session state, authentication, routing and resource ownership from the supported entry points. Define the observed modes and their bounds; see the source-pinned inventory in `evidence/2026-11-25-session-topology.md`.
-- [x] 1.2 Make render and preflight reject a profile whose replica or routing configuration is inconsistent with its session mode.
+- [ ] 1.2 Make render and preflight reject a profile whose replica or routing configuration is inconsistent with its session mode.
 - [ ] 1.3 Run an isolated deployment drill for restart, reinitialization, revocation, identity separation and mode-specific traffic routing. Attach image and profile digests.
 
 ## 2. Review and archive

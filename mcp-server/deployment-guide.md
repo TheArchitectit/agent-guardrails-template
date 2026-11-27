@@ -132,8 +132,9 @@ python scripts/render_k8s_profile.py \
 Preflight inspects the actual rendered Deployment, Service, and HPA. It
 requires one replica, `Recreate` (no overlapping revision), a ClusterIP
 Service with no session affinity, and an HPA pinned to `minReplicas=1` and
-`maxReplicas=1`. It also requires the `process-local` mode in both the pod
-annotation and `MCP_SESSION_MODE`. Any incompatible replicas, HPA max greater
+`maxReplicas=1`. It also requires the `process-local` mode in deployment pod
+metadata. The topology mode is deployment metadata only; it is not an
+application configuration switch. Any incompatible replicas, HPA max greater
 than one, rolling update, routing, or mode declaration fails before an output
 file is written. This profile requires fresh session initialization after a
 process replacement; restart/resumption, revocation, and principal-binding

@@ -8,7 +8,7 @@ import unittest
 import yaml
 
 sys.path.insert(0, str(Path(__file__).parents[1] / "scripts"))
-from render_k8s_profile import PreflightError, preflight, render  # noqa: E402
+from render_k8s_profile import PreflightError, preflight, render, validate_serialized  # noqa: E402
 
 
 ROOT = Path(__file__).parents[1]
@@ -30,6 +30,7 @@ class ProcessLocalProfileTests(unittest.TestCase):
         self.assertEqual(deployment["spec"]["strategy"], {"type": "Recreate"})
         self.assertEqual(service["spec"]["type"], "ClusterIP")
         self.assertEqual(hpa["spec"]["maxReplicas"], 1)
+        self.assertNotIn("MCP_SESSION_MODE", [item["name"] for item in deployment["spec"]["template"]["spec"]["containers"][0]["env"]])
 
     def assert_rejected(self, mutate, message):
         documents = deepcopy(self.documents)
@@ -39,6 +40,9 @@ class ProcessLocalProfileTests(unittest.TestCase):
 
     def test_rejects_more_than_one_replica(self):
         self.assert_rejected(lambda d: next(x for x in d if x["kind"] == "Deployment")["spec"].update(replicas=2), "replicas=1")
+
+    def test_rejects_boolean_replica(self):
+        self.assert_rejected(lambda d: next(x for x in d if x["kind"] == "Deployment")["spec"].update(replicas=True), "replicas=1")
 
     def test_rejects_hpa_max_greater_than_one(self):
         self.assert_rejected(lambda d: next(x for x in d if x["kind"] == "HorizontalPodAutoscaler")["spec"].update(maxReplicas=2), "minReplicas=maxReplicas=1")
@@ -53,6 +57,14 @@ class ProcessLocalProfileTests(unittest.TestCase):
             deployment = next(x for x in documents if x["kind"] == "Deployment")
             deployment["spec"]["template"]["metadata"]["annotations"]["guardrails.dev/session-mode"] = "stateless"
         self.assert_rejected(mutate, "session mode")
+
+    def test_serialized_validation_reads_actual_wire_yaml(self):
+        path = ROOT / "tests/.tmp-process-local.yaml"
+        try:
+            path.write_text("---\n" + yaml.safe_dump_all(self.documents, sort_keys=False), encoding="utf-8")
+            validate_serialized(path, PROFILE)
+        finally:
+            path.unlink(missing_ok=True)
 
 
 if __name__ == "__main__":
