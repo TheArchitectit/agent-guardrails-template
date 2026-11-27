@@ -53,7 +53,7 @@ import pathlib, secrets, sys
 d=pathlib.Path(sys.argv[1])
 def put(name, value):
  p=d/name; p.write_text(value+"\n"); p.chmod(0o600)
-def token(): return secrets.token_urlsafe(48)
+def token(): return 'aA7' + secrets.token_urlsafe(48)
 api,ide,db,red,jwt=(token() for _ in range(5))
 put("mcp-key.txt",api)
 put("postgres.env",f"POSTGRES_DB=guardrailsmoke\nPOSTGRES_USER=grsmoke\nPOSTGRES_PASSWORD={db}\nPGDATA=/var/lib/postgresql/data/pgdata")
@@ -85,10 +85,10 @@ podman build --pull=missing --label "$label" --build-arg VERSION=ci --build-arg 
   -f "$repo/mcp-server/deploy/Dockerfile" -t "$tag" "$repo/mcp-server" >/dev/null
 podman network create --internal --label "$label" "$net" >/dev/null
 podman run -d --name "$pg" --label "$label" --network "$net" --network-alias pg --env-file "$secrets/postgres.env" \
-  --tmpfs /var/lib/postgresql/data:rw,noexec,nosuid,size=768m,mode=1777 --health-cmd 'pg_isready -U grsmoke -d guardrailsmoke' \
+  --tmpfs /var/lib/postgresql/data:rw,noexec,nosuid,size=768m,mode=1777 --memory 1536m --cpus 1.0 --health-cmd 'pg_isready -U grsmoke -d guardrailsmoke' \
   --health-interval 2s --health-timeout 3s --health-retries 30 docker.io/library/postgres:16-alpine@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea >/dev/null
 podman run -d --name "$redis" --label "$label" --network "$net" --network-alias redis --env-file "$secrets/redis.env" \
-  --tmpfs /data:rw,noexec,nosuid,size=64m --health-cmd 'redis-cli ping' \
+  --tmpfs /data:rw,noexec,nosuid,size=64m --memory 256m --cpus 0.5 --health-cmd 'redis-cli ping' \
   --health-interval 2s --health-timeout 3s --health-retries 30 \
   docker.io/library/redis:7-alpine@sha256:858f009f9709ce576febc734aa78b8f6d624b82571f9ddb6bda4377c833b3499 \
   sh -c 'printf "requirepass %s\\n" "$REDIS_PASSWORD" >/tmp/redis.conf && exec redis-server /tmp/redis.conf' >/dev/null
@@ -105,7 +105,7 @@ podman run --rm --name "${prefix}-migrate" --label "$label" --network "$net" --e
   --entrypoint /run-migrations --workdir /app --read-only --tmpfs /tmp:rw,noexec,nosuid,size=16m "$tag" >/dev/null
 podman run -d --name "$app" --label "$label" --network "$net" --env-file "$secrets/server.env" \
   --read-only --tmpfs /tmp:rw,noexec,nosuid,size=64m --tmpfs /app/vision_data:rw,noexec,nosuid,size=64m \
-  --tmpfs /app/screenshots:rw,noexec,nosuid,size=64m --security-opt no-new-privileges --cap-drop ALL \
+  --tmpfs /app/screenshots:rw,noexec,nosuid,size=64m --memory 2g --cpus 2.0 --security-opt no-new-privileges --cap-drop ALL \
   --health-cmd '/server --health-check' --health-interval 10s --health-timeout 5s --health-retries 20 \
   -p 127.0.0.1::8080 "$tag" >/dev/null
 port=$(podman port "$app" 8080/tcp | sed -n 's/.*:\([0-9][0-9]*\)$/\1/p')
@@ -128,14 +128,19 @@ def call(method, params, ident):
    raw=next(line[5:].strip() for line in raw.splitlines() if line.startswith("data:"))
   return response.status, json.loads(raw)
 status, init=call("initialize",{"protocolVersion":"2025-03-26","capabilities":{},"clientInfo":{"name":"ci-probe","version":"1"}},1)
-assert status==200 and "result" in init, (status,init)
+if status != 200 or "result" not in init or not init["result"].get("protocolVersion"):
+ raise SystemExit("MCP initialize failed or did not negotiate a protocol version")
 status, listing=call("tools/list",{},2)
-assert status==200 and "result" in listing, (status,listing)
-assert any(t.get("name")=="guardrail_advisor_list" for t in listing["result"]["tools"])
+if status != 200 or "result" not in listing:
+ raise SystemExit("MCP tools/list failed")
+if not any(t.get("name")=="guardrail_advisor_list" for t in listing["result"]["tools"]):
+ raise SystemExit("MCP advisor tool is missing")
 status, called=call("tools/call",{"name":"guardrail_advisor_list","arguments":{}},3)
-assert status==200 and "result" in called and not called["result"].get("isError"), called
+if status != 200 or "result" not in called or called["result"].get("isError"):
+ raise SystemExit("MCP advisor tool call failed")
 payload=next(json.loads(c["text"]) for c in called["result"].get("content",[]) if c.get("type")=="text")
-assert payload.get("count")==9, payload
+if payload.get("count") != 9:
+ raise SystemExit("MCP advisor tool returned an unexpected count")
 print("MCP protocol OK: initialize, tools/list, guardrail_advisor_list=9")
 PY
 image_id=$(podman image inspect "$tag" -f '{{.Id}}')

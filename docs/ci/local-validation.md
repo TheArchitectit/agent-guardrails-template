@@ -54,10 +54,11 @@ Run this model-backed check only on demand; unattended builds should use
 deterministic image/protocol checks and spend no model tokens.
 
 `scripts/run_mcp_image_codex_harness.sh --receipt /path/outside/repo/receipt.txt`
-is the proposed rootless Podman image-and-protocol harness. It builds the
+is a rootless Podman image-and-protocol harness. It builds the
 production Dockerfile, starts uniquely named disposable dependencies, and
 checks MCP initialization, enumeration and a read-only call. The default does
-not invoke a model. The harness and its lab workflow integration still need
-qualification against a candidate build; do not infer a passing per-build gate
-from its presence in the repository. Use it only on an isolated authorized
-test host, never in an untrusted pull request with private host access.
+not invoke a model. A candidate run on AI05 is recorded in the
+[OpenSpec evidence](../../openspec/changes/qualify-ci-environment-and-mcp-client/evidence.md);
+the harness is not yet connected to an automatic per-build workflow. Use it
+only on an isolated authorized test host, never in an untrusted pull request
+with private host access.

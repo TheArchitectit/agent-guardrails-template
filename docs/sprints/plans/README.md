@@ -46,9 +46,9 @@ commitments. They exclude queue time, model/API availability, host provisioning,
 external review, and remediation discovered during execution. Parallel work can
 reduce elapsed time; shared fixtures should not be counted repeatedly. Record
 actual start/end times, model and reasoning settings, failures and retries in
-the sprint evidence before recalibrating. Use the configured available Luna
-model (for example `gpt-5.6-luna`) for bounded work; use the available lead model
-for architecture and sign-off. Do not infer that a given editor exposes a model.
+the sprint evidence before recalibrating. Use Luna for bounded work and evidence
+preparation; the lead owns architecture and sign-off. Treat model availability
+as environment-specific. Do not infer that a given editor exposes a model.
 
 ## Coding-platform qualification matrix
 
