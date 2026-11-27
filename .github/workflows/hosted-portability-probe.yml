@@ -13,8 +13,8 @@ jobs:
       - name: Check out the candidate
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
-          ref: 6d6b55eeaf738ce3d9169dee80509cd91e145e50
-          fetch-depth: 1
+          ref: 3bc87f1396d2b3a71311c5f20f56e1959d4e8a8d
+          fetch-depth: 0
           persist-credentials: false
       - name: Check out approved AIGGP
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
@@ -36,8 +36,14 @@ jobs:
         run: python3 -m pip install pytest pytest-cov PyYAML
       - name: Probe hosted runner isolation
         run: |
-          python3 scripts/runner_isolation_probe.py --workspace "$GITHUB_WORKSPACE" --sha 6d6b55eeaf738ce3d9169dee80509cd91e145e50 --repo "$GITHUB_REPOSITORY" --out "$RUNNER_TEMP/runner-isolation.json"
+          python3 scripts/runner_isolation_probe.py --workspace "$GITHUB_WORKSPACE" --sha 3bc87f1396d2b3a71311c5f20f56e1959d4e8a8d --repo "$GITHUB_REPOSITORY" --out "$RUNNER_TEMP/runner-isolation.json"
           python3 scripts/check_runner_isolation.py --repo . --attestation "$RUNNER_TEMP/runner-isolation.json"
+      - name: Install the pinned Go advisory scanner
+        run: |
+          GOTOOLCHAIN=local go install golang.org/x/vuln/cmd/govulncheck@v1.10.0
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+      - name: Run local event gates
+        run: scripts/run_local_event_gates.sh --event push --base-sha 42f562ac155c7a06ecd261c0bb1c327f177b91c7 --head-sha 3bc87f1396d2b3a71311c5f20f56e1959d4e8a8d
       - name: Run local validation entry point
         run: scripts/run_local_ci.sh
       - name: Upload coverage report
