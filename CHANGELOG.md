@@ -8,6 +8,55 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [3.8.12] - 2026-11-27
+
+### Added
+
+- **A local Windows Docker Compose pilot.** A PowerShell setup flow now
+  bootstraps the local stack, preserves user environment values during
+  upgrades, and starts the versioned pilot with its shared network.
+- **A process-local Kubernetes render profile.** The renderer and preflight
+  validate the actual Deployment, Service, and HPA, requiring one replica,
+  `Recreate`, ClusterIP routing without session affinity, and HPA bounds of
+  1..1. It writes YAML only; it does not connect to or apply to a cluster.
+- **MCP Docker build-context rules.** `.dockerignore` excludes Git metadata,
+  environment files, caches, and other local-only files while retaining
+  required build inputs. CI checks the Docker client's filtered context archive.
+
+### Changed
+
+- **IDE clients now share the canonical REST contract.** Saved endpoint
+  overrides are honored, selection requests use the canonical payload while
+  retaining legacy compatibility, and the VS Code client initializes against
+  the supported endpoint.
+- **Team CLI distribution and output.** The installed command now includes
+  its Python backend, and JSON status and export modes follow the documented
+  output contract.
+- **Extension build tooling.** Pi's development test runner uses Vitest 5.1.2.
+  VS Code packaging uses `@vscode/vsce` 4.1.2-4, includes the compiled
+  extension entrypoint, and requires Node 22 or newer; 4.1.2-4 was a prerelease
+  at verification time. The IntelliJ plugin is packaged for Java 17 and was
+  verified compatible with IDEA Community builds IC-223.8836.41 and
+  IC-241.19416.15; the verifier reported deprecated API uses at both builds.
+- **MCP Go dependencies and advisory coverage.** Dependencies were updated to
+  remediate reported source-reachable advisories, and a pinned `govulncheck`
+  gate scans for future Go advisories.
+- **CI test coverage.** Python suites and Go modules are discovered from the
+  repository and checked against declared test floors and module toolchains.
+  Each workflow also verifies the approved AIGGP revision and cleans its
+  temporary checkout after the job.
+
+### Fixed
+
+- **Python coverage reports are retained in GitHub Actions.** Uploads fail
+  visibly if the generated report is missing.
+- **Optional Vision surfaces now fail closed.** Authorization is enforced for
+  the optional Vision MCP and REST paths.
+- **Validation cache concurrency.** The regex validation cache is safe for
+  concurrent access.
+- **Agent setup path preservation.** Hidden install paths and Windsurf rules
+  are retained during setup.
+
 ## [3.8.11] - 2026-11-13
 
 ### Fixed

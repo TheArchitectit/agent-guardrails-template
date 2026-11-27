@@ -6,6 +6,7 @@ Release notes and testing guidance.
 
 | Version | Document | Notes |
 |---------|----------|-------|
+| v3.8.12 | [v3.8.12.md](v3.8.12.md) | Integration and CI hardening |
 | v3.8.7 | [v3.8.7.md](v3.8.7.md) | Secret scan no longer trips on its SARIF upload; release publisher works without `gh` |
 | v3.8.6 | [v3.8.6.md](v3.8.6.md) | All CI on the UCS03 fleet; per-job fork guard; R19-13 and its gate rewritten |
 | v3.8.5 | [v3.8.5.md](v3.8.5.md) | Release Coverage sees merge commits; reports-only exemption diffs against HEAD^1 |
