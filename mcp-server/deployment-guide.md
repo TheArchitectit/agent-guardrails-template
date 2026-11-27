@@ -111,6 +111,34 @@ podman run -d --pod guardrail-pod --name guardrail-mcp-server \
 
 ## Windows Docker Desktop Deployment
 
+## Kubernetes: process-local single-instance profile (render/preflight only)
+
+The Kubernetes example is a generic multi-replica manifest and is not a
+qualified topology for the server's process-local application session map.
+For a disposable or private single-instance session, render the explicitly
+supported profile below. The command is deterministic, writes only the
+rendered YAML, and performs no cluster connection or apply operation:
+
+```bash
+python scripts/render_k8s_profile.py \
+  --template mcp-server/deploy/k8s-deployment.yaml \
+  --profile mcp-server/deploy/profiles/process-local-single-instance.yaml \
+  --version fixture \
+  --build-time 1970-01-01T00:00:00Z \
+  --git-commit fixture \
+  --output artifacts/k8s/process-local-single-instance.yaml
+```
+
+Preflight inspects the actual rendered Deployment, Service, and HPA. It
+requires one replica, `Recreate` (no overlapping revision), a ClusterIP
+Service with no session affinity, and an HPA pinned to `minReplicas=1` and
+`maxReplicas=1`. It also requires the `process-local` mode in both the pod
+annotation and `MCP_SESSION_MODE`. Any incompatible replicas, HPA max greater
+than one, rolling update, routing, or mode declaration fails before an output
+file is written. This profile requires fresh session initialization after a
+process replacement; restart/resumption, revocation, and principal-binding
+qualification remain open.
+
 ### Prerequisites
 
 - Windows 10/11 with WSL2 enabled

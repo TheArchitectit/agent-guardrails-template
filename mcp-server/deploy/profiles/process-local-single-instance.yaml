@@ -1,0 +1,9 @@
+name: process-local-single-instance
+session_mode: process-local
+replicas: 1
+strategy: Recreate
+service_session_affinity: None
+hpa:
+  minReplicas: 1
+  maxReplicas: 1
+routing: cluster-ip
