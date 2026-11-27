@@ -192,6 +192,11 @@ echo "== Every Go inventory module =="
 while IFS=$'\t' read -r path floor test_command build_command; do
   [[ -n "$path" ]] || continue
   echo "-- $path (floor $floor)"
+  # Race builds and mutation fixtures can take longer on a local machine than
+  # on a CI runner. Keep the assertions unchanged and allow 30 minutes per test.
+  case "$test_command" in
+    "go test "*) test_command="go test -timeout=30m ${test_command#go test }" ;;
+  esac
   echo "test: $test_command"
   (cd "$path" && CGO_ENABLED=1 bash -euo pipefail -c "$test_command")
   echo "build: $build_command"

@@ -19,6 +19,7 @@ Prerequisites must already be available: Python 3, `pytest`, `pytest-cov`,
 PyYAML, Go, a C compiler for the Go race suite, Git, and `jq`. A missing prerequisite is reported before the checks
 start. Use a Go toolchain that satisfies the module declarations. Go may download
 the required toolchain or modules according to the local Go configuration.
+Local Go tests use a 30-minute per-test timeout to allow for slower machines.
 
 Python coverage is produced as `coverage.xml` in the checkout and validated
 for a non-empty report. The local command does not upload it. The
