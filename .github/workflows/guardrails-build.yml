@@ -33,11 +33,11 @@ jobs:
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           repository: TheArchitectit/agent-guardrails-template
-          ref: 7e3a63e908d8a9b3b3bf2276064bf9121a2aa191
+          ref: aedb761fdbbe7026611e0372d9a54a32c1d3e70b
           fetch-depth: 1
           persist-credentials: false
       - name: Verify client identity
-        run: test "$(git rev-parse HEAD)" = 7e3a63e908d8a9b3b3bf2276064bf9121a2aa191
+        run: test "$(git rev-parse HEAD)" = aedb761fdbbe7026611e0372d9a54a32c1d3e70b
       - name: Verify approved AIGGP
         uses: ./.github/actions/verify-approved-aiggp
       - name: Request immutable build and verify signed receipt
