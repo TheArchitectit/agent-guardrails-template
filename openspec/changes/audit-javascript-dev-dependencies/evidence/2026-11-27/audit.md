@@ -42,3 +42,9 @@ pending maintainer disposition.
 
 Both zero-finding JSON reports have SHA-256
 `c917bbd29c65824bac30d91875da052ebb739b9ffa267a7f3c965dee151e3979`.
+
+The UCS03 replay at `a5085359a8623d1749017cf2ca86b5f2eaa704a7` passed
+all 200 Pi tests in 24 files. Full and production-only npm audits each
+returned zero findings. OpenSpec 2.2.0 passed all 73 strict items.
+The [separate Go replay](go-replay.md) records both toolchain jobs and the
+historical laptop timeout.
