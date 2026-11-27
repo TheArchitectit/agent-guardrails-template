@@ -37,7 +37,7 @@ class WorkerReceiptContract(unittest.TestCase):
         self.temp.cleanup()
 
     def receipt(self):
-        return {"schema": "guardrails-build-receipt/v1", "repository": self.claims["repository"], "repository_id": self.claims["repository_id"], "event_name": self.claims["event_name"], "ref": self.claims["ref"], "run_id": self.claims["run_id"], "run_attempt": self.claims["run_attempt"], "check_run_id": self.claims["check_run_id"], "candidate_sha": self.claims["sha"], "result": {"status": "passed", "image_digest": "sha256:" + "b" * 64, "protocol": {"initialize": True, "tools_list_count": 7, "benign_tool": "guardrail_advisor_list", "benign_result_count": 9}, "cleanup": {"resources_created": ["guardrails-ci-9876-2-ephemeral"], "resources_removed": ["guardrails-ci-9876-2-ephemeral"]}}}
+        return {"schema": "guardrails-build-receipt/v1", "worker_host": "ai05", "vm_profile": "qemu-kvm-offline", "codex": "not-run", "repository": self.claims["repository"], "repository_id": self.claims["repository_id"], "event_name": self.claims["event_name"], "ref": self.claims["ref"], "run_id": self.claims["run_id"], "run_attempt": self.claims["run_attempt"], "check_run_id": self.claims["check_run_id"], "candidate_sha": self.claims["sha"], "result": {"status": "passed", "image_digest": "sha256:" + "b" * 64, "protocol": {"initialize": True, "tools_list_count": 7, "benign_tool": "guardrail_advisor_list", "benign_result_count": 9}, "cleanup": {"resources_created": ["guardrails-ci-9876-2-ephemeral"], "resources_removed": ["guardrails-ci-9876-2-ephemeral"]}}}
 
     def signed(self, receipt):
         payload, signature = Path(self.temp.name) / "receipt.json", Path(self.temp.name) / "receipt.sig"
@@ -53,6 +53,14 @@ class WorkerReceiptContract(unittest.TestCase):
         receipt = self.receipt(); receipt["candidate_sha"] = "c" * 40
         with self.assertRaisesRegex(RuntimeError, "identity"):
             client.verify_receipt(receipt, self.signed(receipt), str(self.public), self.claims)
+
+    def test_rejects_wrong_execution_environment(self):
+        for field, value in (("codex", "invoked"), ("vm_profile", "networked"), ("worker_host", "ucs03")):
+            with self.subTest(field=field):
+                receipt = self.receipt()
+                receipt[field] = value
+                with self.assertRaisesRegex(RuntimeError, "attest"):
+                    client.verify_receipt(receipt, self.signed(receipt), str(self.public), self.claims)
 
     def test_rejects_wrong_run_identity(self):
         receipt = self.receipt(); receipt["run_id"] = "9999"

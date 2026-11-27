@@ -102,6 +102,10 @@ def verify_receipt(receipt: dict, signature: str, key_path: str, token_claims: d
         expected = os.environ.get(env_name, "")
         if not expected or str(token_claims.get(claim_name, "")) != str(expected):
             raise RuntimeError("OIDC identity does not match current workflow environment")
+    if receipt.get("codex") != "not-run" or receipt.get("vm_profile") != "qemu-kvm-offline":
+        raise RuntimeError("receipt does not attest an offline, model-free build")
+    if token_claims["repository"] == "TheArchitectit/agent-guardrails-template" and receipt.get("worker_host") != "ai05":
+        raise RuntimeError("receipt does not attest the AI05 worker")
     result = receipt.get("result")
     if (receipt.get("schema") != "guardrails-build-receipt/v1"
             or not isinstance(result, dict) or result.get("status") not in ("passed", "failed")):
