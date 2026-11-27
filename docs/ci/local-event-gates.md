@@ -50,10 +50,9 @@ The script requires Bash 4+, Git, Python 3, and standard Linux utilities
 (`grep`, `find`, `cut`, `mktemp`, `curl`, `sha256sum`, `tar`). It needs network
 access to fetch missing Git history/base refs and download the digest-pinned
 Gitleaks release, but no GitHub token or repository secret. An ignored `.devgate`
-checkout may be present: the workflow's hardcoded-secret grep excludes that
-directory, while its `.env` and credential filename scans use whole-tree `find`
-commands and therefore also inspect it. The local helper preserves those
-current workflow filters.
+checkout may be present. The local filename and pattern scans exclude it,
+matching the workflow secret jobs' fresh consumer checkout, which does not
+populate the separate AIGGP repository.
 
 This command does not create GitHub Actions artifacts or step summaries, post
 PR comments, or test GitHub's actual event payload and runner assignment. For a

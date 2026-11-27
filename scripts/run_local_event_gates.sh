@@ -127,15 +127,16 @@ if [[ "$TOTAL_FILES" -gt 20 ]]; then
   echo "WARNING: Large change scope ($TOTAL_FILES files); consider splitting the change."
 fi
 
-# Secret Validation: this is the same pinned scanner and the same whole-checkout
-# local scans as the workflow. Gitleaks requires Linux x86_64 and public network
+# Secret Validation uses the pinned scanner and checks the consumer checkout.
+# The ignored AIGGP checkout is excluded because workflow secret jobs use a
+# fresh consumer checkout without it. Gitleaks requires Linux x86_64 and public network
 # access to download and digest-verify the pinned binary.
 echo "== Verified Gitleaks history scan =="
 bash .github/scripts/gitleaks-verified.sh
 
 echo "== .env file check =="
 echo "Checking for accidentally committed .env files..."
-ENV_FILES="$(find . -name '.env*' ! -name '.env.example' ! -name '.env.template' -type f 2>/dev/null || true)"
+ENV_FILES="$(find . -path './.devgate' -prune -o -name '.env*' ! -name '.env.example' ! -name '.env.template' -type f -print 2>/dev/null || true)"
 if [[ -n "$ENV_FILES" ]]; then
   printf 'ERROR: Found .env files that should not be committed:\n%s\n' "$ENV_FILES" >&2
   exit 1
@@ -160,7 +161,7 @@ for pattern in "${PATTERNS[@]}"; do
       fi
     done
     [[ "$allowed" == 1 ]] || FAILING+="$rel"$'\n'
-  done < <(find . -name "$pattern" -type f 2>/dev/null || true)
+  done < <(find . -path './.devgate' -prune -o -name "$pattern" -type f -print 2>/dev/null || true)
 done
 if [[ -n "$FAILING" ]]; then
   printf 'ERROR: Found credential files that are not allowlisted synthetic fixtures:\n%s\n' "$FAILING" >&2
