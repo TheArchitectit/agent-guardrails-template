@@ -22,7 +22,7 @@ This is an active engineering repository, not a finished security product. The s
 | Outbound webhooks | Webhook delivery enforces an SSRF policy at delivery time — non-public destinations, redirects, and private/loopback dial attempts are refused (`internal/notifications`, tested) | This covers the webhook dispatch path only; it is not a general egress firewall |
 | Authorization | Credentials resolve to scoped principals; scope × role × resource intersection is enforced and tested on web REST and the MCP full path | Credential lifecycle/rotation and some decision-audit rows are not yet exercised end to end |
 | Integrations | Copilot, IDE, Pi, and other client material exists at mixed maturity | Every client/server pair is not yet contract-tested |
-| CI | Every workflow runs on the repo-scoped UCS03 Podman runner (`guardrails-ucs03`); same-repository PRs run there behind a per-job fork guard, so fork PRs are skipped before runner assignment; trusted-main validation keeps its `refs/heads/main` guard; security-matrix jobs (fail-closed registry, MCP full-path authz, secret redaction, webhook SSRF, mutation-kill) on protected-branch pushes; Gitleaks secret validation with a reviewed baseline; pattern-based regression gates | Green CI does not prove every runtime guardrail is wired; the full-history Gitleaks scan still exits 1 on real-looking findings that are deliberately not allowlisted pending rotation |
+| CI | Workflows default to GitHub-hosted Linux and accept an owner-configured `CI_RUNNER_LABELS` JSON array for self-hosted runners. The lab uses repo-scoped UCS03 (`guardrails-ucs03`); same-repository PRs run there behind a per-job fork guard, so fork PRs are skipped before runner assignment; trusted-main validation keeps its `refs/heads/main` guard; security-matrix jobs (fail-closed registry, MCP full-path authz, secret redaction, webhook SSRF, mutation-kill) on protected-branch pushes; Gitleaks secret validation with a reviewed baseline; pattern-based regression gates | Green CI does not prove every runtime guardrail is wired; the full-history Gitleaks scan still exits 1 on real-looking findings that are deliberately not allowlisted pending rotation |
 
 The tool registry contains a core set plus conditional tools. The registry maximum is not the live startup inventory; configuration and initialization determine what is actually exposed. See the [tool reference](docs/mcp-server/tools-reference.md) and [gap reconciliation](docs/specs/guardrail-gaps-2026/STATUS.md). Security-row status (WIRED / EXERCISED / NOT_EXERCISED / NOT_RUN) is reconciled against source per sprint in [docs/sprints/](docs/sprints/).
 
@@ -60,6 +60,27 @@ go build ./cmd/server
 ```
 
 Some tests require Linux facilities or configured services. Record skipped or environment-specific failures; do not call an incomplete local run green. Running the service requires PostgreSQL, Redis, credentials, and an explicit migration step. The root Compose file is a local-development starting point, not a production deployment: it contains placeholder DB/Redis fallbacks and the application listeners are HTTP paths. Review [deployment and TLS](docs/specs/17-deployment-tls-and-secret-boundary.md), [readiness and migrations](docs/specs/18-migration-startup-and-readiness.md), and [Phase 0 CI gates](docs/specs/19-phase0-ci-security-gates.md) before exposing it.
+
+For the repository-wide local CI entry point, including the Python and Go
+inventories and deterministic policy gates, see [local validation](docs/ci/local-validation.md).
+
+## CI runner selection
+
+GitHub Actions defaults to `ubuntu-latest` when the repository variable
+`CI_RUNNER_LABELS` is unset. To use an owner-managed runner, set that repository
+variable to a JSON array of its GitHub Actions labels. For example,
+`["self-hosted","Linux","X64","your-repo-runner"]` selects a Linux runner
+with those labels. The Guardrails lab sets the final label to
+`guardrails-ucs03`. An invalid array or unavailable runner leaves the jobs
+failed or queued, so check the variable and runner registration if jobs do not
+start. Only repository administrators can change the variable.
+
+Same-repository pull requests run on the selected runner. The existing fork
+PR guard skips jobs before runner assignment, including when the hosted default
+is selected. A self-hosted runner needs repository isolation, an isolated
+workspace, and cleanup. The trusted-main job probes the actual checkout and
+retains its isolation checks on either runner type. Coverage reports are
+retained as GitHub Actions artifacts for seven days.
 
 ## Advisory client setup
 

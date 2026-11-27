@@ -15,12 +15,8 @@ jobs:
   release:
     needs: verify-approved-aiggp
     name: Publish the tagged release
-    # Fleet-routed like every other workflow in this repo. The R19-13
-    # least-privilege rule applies to team-validation-fleet.yml's trusted job;
-    # this publisher legitimately needs `contents: write` to create the release.
-    # `devgate` matched no runner this repo registers and left the publisher
-    # queued forever, so the label is the repo's own `guardrails-ucs03`.
-    runs-on: [self-hosted, Linux, X64, guardrails-ucs03]
+    # Publishing needs `contents: write` to create the GitHub Release.
+    runs-on: ${{ fromJSON(vars.CI_RUNNER_LABELS || '["ubuntu-latest"]') }}
     steps:
       - name: Checkout the tag
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8  # v5.0.0
@@ -140,7 +136,7 @@ jobs:
   verify-approved-aiggp:
     name: Verify approved AIGGP
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
-    runs-on: [self-hosted, Linux, X64, guardrails-ucs03]
+    runs-on: ${{ fromJSON(vars.CI_RUNNER_LABELS || '["ubuntu-latest"]') }}
     timeout-minutes: 10
     permissions:
       contents: read
