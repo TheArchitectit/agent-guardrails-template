@@ -169,7 +169,7 @@ jobs:
             --attestation "$RUNNER_TEMP/runner-isolation.json"
 
       # Spec 19 R19-13: post-job cleanup is part of the isolation contract, not
-      # housekeeping. The UCS03 pool is a persistent host, so a failed or
+      # housekeeping. A self-hosted pool may be persistent, so a failed or
       # cancelled run would otherwise leave a staged fixture, an exported file
       # or a build output for the next run — and the next run may be a different
       # commit. This runs unconditionally and last, so it cleans up after the
