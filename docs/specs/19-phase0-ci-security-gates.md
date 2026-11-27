@@ -360,16 +360,21 @@ there is no implicit green default.
 
 ### R19-13 — Runner trust and repository isolation
 
-All CI MUST execute on the repository's own UCS03 runner
-(`guardrails-ucs03`); GitHub-hosted runners MUST NOT be used.
-Same-repository pull requests MAY run on the fleet only when every job
-carries a fork guard evaluated before runner assignment, so fork PR code
-never executes on it; `pull_request_target` MUST NOT be used. The UCS03
-job MUST be repo-scoped and isolated: clean checkout, no cross-repository
-workspace/artifact/cache/credential reuse, least-privilege token, no
-production credentials, bounded concurrency, and post-job cleanup. A runner
-label alone is not isolation evidence. Release acceptance MUST include an
-isolation probe or recorded host attestation.
+CI jobs use the repository variable `CI_RUNNER_LABELS` as a JSON array of
+runner labels, defaulting to `["ubuntu-latest"]` when unset. The lab sets it
+to `["self-hosted","Linux","X64","guardrails-ucs03"]`. Local execution uses
+the same repository-owned checks without a GitHub runner. The repository owner
+controls the runner variable; workflow inputs and pull request content MUST NOT
+select runner labels.
+
+Same-repository pull requests MAY run on a self-hosted fleet only when every
+job carries a fork guard evaluated before runner assignment. Fork PR code MUST
+NOT reach the self-hosted fleet, and `pull_request_target` MUST NOT be used.
+Self-hosted jobs MUST be repo-scoped and isolated: clean checkout, no
+cross-repository workspace/artifact/cache/credential reuse, least-privilege
+token, no production credentials, bounded concurrency, and post-job cleanup.
+A runner label alone is not isolation evidence. Release acceptance MUST include
+an isolation probe or recorded host attestation for the selected runner.
 
 The fork guard is a job-level `if:` that GitHub evaluates before it assigns a
 runner:

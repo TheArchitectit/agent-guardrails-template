@@ -97,6 +97,11 @@ jobs:
       - run: echo ok
 """
 
+CONFIGURABLE_PR = FLEET_PR.replace(
+    "runs-on: [self-hosted, Linux, X64, guardrails-ucs03]",
+    f"runs-on: {gate.RUNNER_SELECTOR}",
+)
+
 
 def _write(root: Path, rel: str, body: str) -> None:
     p = root / rel
@@ -319,6 +324,27 @@ class FleetRoutingViolations(unittest.TestCase):
             )
         )
         self.assertTrue(any("is an expression" in x for x in v), v)
+
+    def test_approved_selector_passes_with_fork_guard(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            _write(root, gate.TRUSTED_WORKFLOW, TRUSTED)
+            _write(root, ".github/workflows/team-validation.yml", CONFIGURABLE_PR)
+            files, pr, routed, violations = gate.scan(root)
+            self.assertEqual(violations, [], violations)
+            self.assertEqual((files, pr, routed), (2, 1, 2))
+
+    def test_selector_requires_canonical_default_and_variable(self):
+        tampered = CONFIGURABLE_PR.replace(
+            gate.RUNNER_SELECTOR,
+            '${{ fromJSON(vars.OTHER_RUNNERS || \'["self-hosted"]\') }}',
+        )
+        v = self._violations(tampered)
+        self.assertTrue(any("is an expression" in x for x in v), v)
+
+    def test_approved_selector_does_not_replace_fork_guard(self):
+        v = self._violations(CONFIGURABLE_PR.replace(GUARD_LINE, ""))
+        self.assertTrue(any("lacks the fork guard" in x for x in v), v)
 
     def test_unrecognised_label_fails(self):
         v = self._violations(

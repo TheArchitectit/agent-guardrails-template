@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
 """check_runner_isolation.py — Spec 19 R19-13 runner trust and repository isolation.
 
-Spec 19 R19-13, verbatim:
+Spec 19 R19-13 runner-routing contract:
 
-    All CI MUST execute on the repository's own UCS03 runner
-    (`guardrails-ucs03`); GitHub-hosted runners MUST NOT be used.
-    Same-repository pull requests MAY run on the fleet only when every job
-    carries a fork guard evaluated before runner assignment, so fork PR code
-    never executes on it; `pull_request_target` MUST NOT be used. The UCS03
-    job MUST be repo-scoped and isolated: clean checkout, no cross-repository
-    workspace/artifact/cache/credential reuse, least-privilege token, no
-    production credentials, bounded concurrency, and post-job cleanup. A runner
-    label alone is not isolation evidence. Release acceptance MUST include an
-    isolation probe or recorded host attestation.
+    CI may use GitHub-hosted runners or an administrator-selected runner pool
+    through the single reviewed `CI_RUNNER_LABELS` selector. Its default is
+    GitHub-hosted Ubuntu. Same-repository pull requests that might be routed to
+    a private runner MUST carry a fork guard evaluated before runner assignment;
+    `pull_request_target` MUST NOT be used. The UCS03 lab job MUST be repo-scoped
+    and isolated: clean checkout, no cross-repository workspace/artifact/cache/
+    credential reuse, least-privilege token, no production credentials, bounded
+    concurrency, and post-job cleanup. A runner label alone is not isolation
+    evidence. Release acceptance MUST include an isolation probe or recorded
+    host attestation.
 
 That last sentence is the reason this gate exists in this shape. Before it, the
 only thing asserting the self-hosted posture was prose in a comment above the
@@ -22,20 +22,21 @@ workspace, a cache, or a token with a previous job on the same host.
 
 What is checked, per file and per job:
 
-1. **All CI runs on the repo-scoped UCS03 fleet.** Every job must target the
-   `guardrails-ucs03` label. A literal GitHub-hosted label (`ubuntu-*`,
-   `windows-*`, `macos-*`) is a VIOLATION, and so is an expression `runs-on:`
-   (e.g. `${{ inputs.runner }}`), because its value is not decidable at review
-   time.
-2. **Fork code never reaches the fleet.** Same-repository pull requests run on
-   the fleet, but every job in a workflow that declares `pull_request` MUST
-   carry the fork guard
+1. **Runner routing is constrained.** A job may use an explicit
+   `guardrails-ucs03` runner label or the single approved repository-variable
+   selector below. The selector defaults to GitHub-hosted Ubuntu and lets
+   repository administrators choose an alternate label or JSON label array.
+   Arbitrary expressions and literal runner pools are rejected. Jobs that may
+   reach a private runner still require the fork guard before assignment.
+2. **Fork code never reaches a private runner.** Every job in a workflow that
+   declares `pull_request` MUST carry the fork guard
 
        github.event_name != 'pull_request' ||
        github.event.pull_request.head.repo.full_name == github.repository
 
-   which GitHub evaluates before assigning a runner, so a fork PR's jobs are
-   skipped rather than dispatched. `pull_request_target` is a VIOLATION
+   which GitHub evaluates before assigning a runner, so fork PR jobs are
+   skipped even when the administrator selects the private runner. A missing
+   or incorrect guard is a VIOLATION. `pull_request_target` is a VIOLATION
    outright: it runs a base-repository workflow with a PR-controlled checkout
    and a writable token.
 3. **The trusted-main job's isolation posture is declared, not implied.** The
@@ -77,8 +78,11 @@ WORKFLOW_DIR = Path(".github") / "workflows"
 # The workflow whose job must carry the full isolation posture and the host
 # attestation (R19-13 clause 3 / clause 5).
 TRUSTED_WORKFLOW = ".github/workflows/team-validation-fleet.yml"
-# The label that identifies the fleet host pool. Every job targets it.
+# The label that identifies the private UCS03 lab pool.
 TRUSTED_LABEL = "guardrails-ucs03"
+# The only supported dynamic runner selector. The JSON default is intentionally
+# hosted so a missing repository variable never dispatches to a private runner.
+RUNNER_SELECTOR = "${{ fromJSON(vars.CI_RUNNER_LABELS || '[\"ubuntu-latest\"]') }}"
 # GitHub-hosted runner label prefixes. Any of these is a violation.
 HOSTED_PREFIXES = ("ubuntu-", "windows-", "macos-")
 
@@ -172,6 +176,11 @@ def _is_literal_hosted(labels: list[str]) -> bool:
 
 def _has_expression(labels: list[str]) -> bool:
     return any("${{" in label for label in labels)
+
+
+def _is_approved_runner_selector(labels: list[str]) -> bool:
+    """Accept only the reviewed, admin-configurable runner expression."""
+    return len(labels) == 1 and _normalise(labels[0]) == _normalise(RUNNER_SELECTOR)
 
 
 def _jobs(doc: dict) -> dict:
@@ -327,7 +336,7 @@ def scan(repo: Path) -> tuple[int, int, int, list[str]]:
     files = workflow_files(repo)
     violations: list[str] = []
     pr_workflows = 0
-    fleet_jobs = 0
+    routed_jobs = 0
 
     for wf in files:
         rel = wf.relative_to(repo).as_posix()
@@ -357,17 +366,31 @@ def scan(repo: Path) -> tuple[int, int, int, list[str]]:
             where = f"{rel}:{job_id}"
             labels = _as_labels(job.get("runs-on"))
 
-            if _has_expression(labels):
+            configurable = _is_approved_runner_selector(labels)
+            if _has_expression(labels) and not configurable:
                 violations.append(
                     f"{where}: `runs-on: {labels}` is an expression — its "
-                    f"value cannot be reviewed, and an input can resolve it to "
-                    f"a private or cloud runner (R19-13)"
+                    f"value is not the approved `CI_RUNNER_LABELS` selector "
+                    f"with a hosted default (R19-13)"
                 )
+                continue
+            if configurable:
+                routed_jobs += 1
+                violations.extend(check_reuse(job, where))
+                if is_pr and not _fork_guarded(job):
+                    violations.append(
+                        f"{where}: workflow declares `pull_request` and this job "
+                        f"lacks the fork guard (`if: {job.get('if') or '<absent>'}`) "
+                        f"— a fork PR could be routed to a private runner (R19-13)"
+                    )
+                if rel == TRUSTED_WORKFLOW:
+                    violations.extend(check_trusted_job(doc, job, triggers, where))
                 continue
             if _is_literal_hosted(labels):
                 violations.append(
                     f"{where}: `runs-on: {labels}` is a GitHub-hosted label — "
-                    f"all CI must run on the repo-scoped UCS03 fleet (R19-13)"
+                    f"use the approved `CI_RUNNER_LABELS` selector instead "
+                    f"(R19-13)"
                 )
                 continue
             if not _on_fleet(labels):
@@ -377,7 +400,7 @@ def scan(repo: Path) -> tuple[int, int, int, list[str]]:
                 )
                 continue
 
-            fleet_jobs += 1
+            routed_jobs += 1
             violations.extend(check_reuse(job, where))
 
             if is_pr and not _fork_guarded(job):
@@ -390,7 +413,7 @@ def scan(repo: Path) -> tuple[int, int, int, list[str]]:
             if rel == TRUSTED_WORKFLOW:
                 violations.extend(check_trusted_job(doc, job, triggers, where))
 
-    return len(files), pr_workflows, fleet_jobs, violations
+    return len(files), pr_workflows, routed_jobs, violations
 
 
 def check_attestation(path: Path) -> list[str]:
@@ -457,7 +480,7 @@ def main(argv: list[str]) -> int:
     args = ap.parse_args(argv)
 
     repo = Path(args.repo).resolve()
-    files, pr_workflows, fleet_jobs, violations = scan(repo)
+    files, pr_workflows, routed_jobs, violations = scan(repo)
 
     if files == 0:
         print(
@@ -473,10 +496,11 @@ def main(argv: list[str]) -> int:
             file=sys.stderr,
         )
         return EXIT_VIOLATIONS
-    if fleet_jobs == 0:
+    if routed_jobs == 0:
         print(
-            f"R19-13 FAIL: no job targets the fleet label `{TRUSTED_LABEL}`, so "
-            f"the fleet rules were not exercised against the tree (no vacuous "
+            f"R19-13 FAIL: no job targets the fleet label `{TRUSTED_LABEL}` or "
+            f"the approved runner selector, so runner rules were not exercised "
+            f"against the tree (no vacuous "
             f"green). If the fleet lane was retired, remove this assertion "
             f"deliberately rather than letting it pass on an empty set.",
             file=sys.stderr,
@@ -493,7 +517,8 @@ def main(argv: list[str]) -> int:
         return EXIT_VIOLATIONS
 
     print(
-        f"R19-13 OK: {files} workflow(s), {fleet_jobs} job(s) on `{TRUSTED_LABEL}`, "
+        f"R19-13 OK: {files} workflow(s), {routed_jobs} job(s) on `{TRUSTED_LABEL}` "
+        f"or the approved runner selector, "
         f"{pr_workflows} pull_request workflow(s) with a fork guard on every job, "
         f"and {TRUSTED_WORKFLOW} with least-privilege permissions, bounded "
         "concurrency, repo-scoped checkout and post-job cleanup"

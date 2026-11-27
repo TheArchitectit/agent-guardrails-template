@@ -20,7 +20,7 @@ jobs:
   check-doc-length:
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     name: Document line cap (500) and exemptions
-    runs-on: [self-hosted, Linux, X64, guardrails-ucs03]
+    runs-on: ${{ fromJSON(vars.CI_RUNNER_LABELS || '["ubuntu-latest"]') }}
 
     steps:
       - name: Checkout code
@@ -43,7 +43,7 @@ jobs:
   check-broken-links:
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     name: Internal Markdown links
-    runs-on: [self-hosted, Linux, X64, guardrails-ucs03]
+    runs-on: ${{ fromJSON(vars.CI_RUNNER_LABELS || '["ubuntu-latest"]') }}
 
     steps:
       - name: Checkout code
@@ -58,7 +58,7 @@ jobs:
   check-required-sections:
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     name: Check Required Sections
-    runs-on: [self-hosted, Linux, X64, guardrails-ucs03]
+    runs-on: ${{ fromJSON(vars.CI_RUNNER_LABELS || '["ubuntu-latest"]') }}
 
     steps:
       - name: Checkout code
@@ -99,7 +99,7 @@ jobs:
   check-trailing-whitespace:
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     name: Check Formatting
-    runs-on: [self-hosted, Linux, X64, guardrails-ucs03]
+    runs-on: ${{ fromJSON(vars.CI_RUNNER_LABELS || '["ubuntu-latest"]') }}
 
     steps:
       - name: Checkout code
@@ -121,7 +121,7 @@ jobs:
   verify-approved-aiggp:
     name: Verify approved AIGGP
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
-    runs-on: [self-hosted, Linux, X64, guardrails-ucs03]
+    runs-on: ${{ fromJSON(vars.CI_RUNNER_LABELS || '["ubuntu-latest"]') }}
     timeout-minutes: 10
     permissions:
       contents: read

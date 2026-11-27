@@ -86,7 +86,7 @@ def test_workflow_uses_verified_cli_and_preserves_read_only_guards() -> None:
     scan_job = workflow.split("  check-env-files:", 1)[0]
     assert "pull_request:" in workflow and "push:" in workflow
     assert "contents: read" in workflow
-    assert "runs-on: [self-hosted, Linux, X64, guardrails-ucs03]" in scan_job
+    assert '''runs-on: ${{ fromJSON(vars.CI_RUNNER_LABELS || '["ubuntu-latest"]') }}''' in scan_job
     assert "fetch-depth: 0" in scan_job
     assert "persist-credentials: false" in scan_job
     assert "run: bash .github/scripts/gitleaks-verified.sh" in scan_job
