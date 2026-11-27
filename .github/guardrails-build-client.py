@@ -160,7 +160,8 @@ def main() -> int:
             token = oidc_token()
             token_claims = claims(token)
             connection.request("POST", "/v1/build", body=body, headers={
-                "Authorization": "Bearer " + token, "Content-Type": "application/json",
+                "Authorization": f"Bearer {token}",
+                "Content-Type": "application/json",
                 "Content-Length": str(len(body)), "Cache-Control": "no-store", "Connection": "close"})
             response = connection.getresponse()
             raw = response.read(MAX_RESPONSE + 1)
