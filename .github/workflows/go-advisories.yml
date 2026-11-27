@@ -21,6 +21,7 @@ jobs:
       - name: Set up Go from module declaration
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
+          cache: false
           go-version-file: mcp-server/go.mod
 
       - name: Set up Python
@@ -58,3 +59,24 @@ jobs:
           path: mcp-server/.govulncheck-report/summary.json
           if-no-files-found: ignore
           retention-days: 14
+
+  verify-approved-aiggp:
+    name: Verify approved AIGGP
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, Linux, X64, guardrails-ucs03]
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Check out consumer repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Verify approved AIGGP
+        uses: ./.github/actions/verify-approved-aiggp
+
+      - name: Post-job cleanup (AIGGP checkout)
+        if: always()
+        run: rm -rf -- .devgate
