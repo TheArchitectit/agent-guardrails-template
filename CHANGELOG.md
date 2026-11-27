@@ -8,6 +8,33 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [3.8.13] - 2026-11-27
+
+### Added
+
+- **A local CI entry point.** `scripts/run_local_ci.sh` runs the declared
+  Python and Go suites, Go builds, positive test floors, and selected
+  regression-gate self-tests. It requires tools and a clean approved `.devgate`
+  checkout to be prepared by the user; it does not install dependencies.
+
+### Changed
+
+- **CI runner routing is configurable.** Workflows use the repository variable
+  `CI_RUNNER_LABELS` as a JSON label array, defaulting to GitHub-hosted Ubuntu.
+  Repository administrators can select the UCS03 runner labels. Per-job fork
+  guards remain in place, and the isolation validator accepts only the
+  reviewed selector or explicit UCS03 labels.
+- **Local Go race checks enable CGO.** The local runner sets `CGO_ENABLED=1`
+  for module tests, builds, and test discovery; a C compiler is a prerequisite.
+
+### Validation scope
+
+- The local entry point covers declared test/build inventory and selected
+  deterministic gates. It is not a replay of every GitHub Actions job. The
+  engine-backed Docker/Podman context test is opt-in, and local validation does
+  not provide GitHub event checks, hosted workflow results, or UCS03 host
+  attestation.
+
 ## [3.8.12] - 2026-11-27
 
 ### Added
