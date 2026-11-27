@@ -68,6 +68,9 @@ evidence, see [CI workflows and local validation](docs/ci/workflows.md).
 The [OpenSpec index](openspec/INDEX.md) lists the canonical specifications,
 active proposals, archived changes, and audit records, including the proposed
 [CI environment and MCP client qualification](openspec/changes/qualify-ci-environment-and-mcp-client/proposal.md).
+The [OpenSpec sprint plans](docs/sprints/plans/README.md) map specifications and
+proposals to agent roles, coding-platform qualification, model guidance, and
+estimated effort.
 
 ## CI runner selection
 

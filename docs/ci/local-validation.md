@@ -42,3 +42,22 @@ skipped. See the [workflow guide](workflows.md) for job and runner details.
 The current suite verifies Docker build-context transport; it does not build
 the production MCP image or prove a Codex connection. The associated work and
 evidence are tracked in the [OpenSpec change](../../openspec/changes/qualify-ci-environment-and-mcp-client/proposal.md).
+
+To exercise an already-running, disposable MCP server through a real Codex
+client, forward its test endpoint to loopback and run
+`scripts/codex_mcp_runtime_smoke.sh` with a synthetic `GUARDRAILS_SMOKE_MCP_KEY`
+in the environment. The installed Codex CLI needs its own model authorization.
+The script enables only the read-only advisor-list tool in a temporary Codex
+configuration and checks the actual tool result. It does not build the image,
+start the server, configure a service, or provide unattended per-build testing.
+Run this model-backed check only on demand; unattended builds should use
+deterministic image/protocol checks and spend no model tokens.
+
+`scripts/run_mcp_image_codex_harness.sh --receipt /path/outside/repo/receipt.txt`
+is the proposed rootless Podman image-and-protocol harness. It builds the
+production Dockerfile, starts uniquely named disposable dependencies, and
+checks MCP initialization, enumeration and a read-only call. The default does
+not invoke a model. The harness and its lab workflow integration still need
+qualification against a candidate build; do not infer a passing per-build gate
+from its presence in the repository. Use it only on an isolated authorized
+test host, never in an untrusted pull request with private host access.

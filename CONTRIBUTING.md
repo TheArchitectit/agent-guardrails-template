@@ -40,6 +40,8 @@ active proposals, archived changes, and audit records. When a change adds or
 archives a specification or proposal, update the index and validate the
 affected OpenSpec documents. Preserve the status and evidence in the source
 documents rather than assuming a proposal or archive is complete.
+Use the [OpenSpec sprint plans](docs/sprints/plans/README.md) to identify role
+assignments, client applicability and required evidence for the work.
 
 Before opening a pull request, use the [local CI instructions](docs/ci/local-validation.md)
 and, for an explicit event range, the [local event gates](docs/ci/local-event-gates.md).

@@ -1012,6 +1012,18 @@ jobs:
           MCP_DOCKER_CONTEXT_REQUIRE_CLI: "1"
         run: bash scripts/run_local_ci.sh
 
+      - name: Report MCP image and Codex coverage
+        if: always()
+        run: |
+          echo "MCP image build and deterministic protocol acceptance were not run by this job."
+          echo "Model-backed Codex tests are on-demand only and are not run in unattended CI."
+          echo "The Docker CLI context test does not build or run an image."
+          {
+            echo "### MCP image and Codex acceptance"
+            echo "Real-image protocol acceptance: not run in this job; an isolated test environment is required."
+            echo "Model-backed Codex acceptance: intentionally not run in unattended CI; run it on demand."
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Upload Python coverage report
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

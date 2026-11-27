@@ -38,3 +38,22 @@ The built MCP image SHALL be exercised by an actual Codex MCP client over the su
 
 - **WHEN** an acceptance receipt is stored
 - **THEN** it includes source commit, image digest, Codex version, protocol version, tool name, result summary, environment, and exit status without credentials or secret-bearing transcript content
+
+### Requirement: Candidate builds run deterministic MCP acceptance without model usage
+
+The build workflow SHALL associate deterministic real-image MCP protocol acceptance with the exact candidate source and image digest. The workflow SHALL show whether acceptance passed, failed, was skipped, or could not run, and SHALL NOT substitute a source-only or context-transport result for it. Unattended builds SHALL NOT invoke a model-backed Codex session. Actual Codex client acceptance SHALL be available on demand and reported separately. Access to a private host SHALL be scoped to trusted execution; the workflow SHALL NOT expose a host engine socket or private-host credential to untrusted pull-request code.
+
+#### Scenario: Candidate image is built
+
+- **WHEN** a candidate image is built for a reviewed source revision
+- **THEN** its workflow records deterministic MCP initialization, tool enumeration and benign tool-call results tied to that exact revision and image digest, without a model invocation
+
+#### Scenario: Codex acceptance is requested
+
+- **WHEN** an operator explicitly runs an on-demand Codex client test against the isolated image
+- **THEN** its result is recorded separately with the same source and image identities; unattended builds identify the model-backed test as intentionally not run
+
+#### Scenario: Acceptance prerequisites are unavailable
+
+- **WHEN** the image engine or isolated test host is unavailable
+- **THEN** the workflow visibly reports the missing prerequisite and does not report real-image protocol acceptance as passed
