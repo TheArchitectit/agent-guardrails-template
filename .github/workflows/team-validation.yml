@@ -935,8 +935,6 @@ jobs:
       contents: read
     env:
       CI_RUNNER_LABELS: ${{ vars.CI_RUNNER_LABELS || '["ubuntu-latest"]' }}
-      CI_RUNNER_NAME: ${{ runner.name }}
-      CI_RUNNER_ENVIRONMENT: ${{ runner.environment }}
     steps:
       - name: Check out consumer repository
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
@@ -945,6 +943,9 @@ jobs:
           persist-credentials: false
 
       - name: Record selected and actual runner
+        env:
+          CI_RUNNER_NAME: ${{ runner.name }}
+          CI_RUNNER_ENVIRONMENT: ${{ runner.environment }}
         run: |
           set -euo pipefail
           echo "Configured CI_RUNNER_LABELS: $CI_RUNNER_LABELS"
