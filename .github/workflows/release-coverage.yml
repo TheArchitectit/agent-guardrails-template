@@ -58,7 +58,7 @@ jobs:
           version="$(tr -d '[:space:]' < VERSION)"
           tag="v${version}"
           if ! git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
-            echo "::error::main has no tagged release $tag; run scripts/deploy.sh $version after updating the changelog"
+            echo "::error::main has no tagged release $tag; create an annotated tag after updating the changelog"
             exit 1
           fi
           if [ "$(git cat-file -t "$tag")" != "tag" ]; then
