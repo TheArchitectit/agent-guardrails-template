@@ -35,6 +35,17 @@ agent-guardrails-template/
 └── examples/               # per-language guardrail examples
 ```
 
+The [OpenSpec index](openspec/INDEX.md) lists the canonical specifications,
+active proposals, archived changes, and audit records. When a change adds or
+archives a specification or proposal, update the index and validate the
+affected OpenSpec documents. Preserve the status and evidence in the source
+documents rather than assuming a proposal or archive is complete.
+
+Before opening a pull request, use the [local CI instructions](docs/ci/local-validation.md)
+and, for an explicit event range, the [local event gates](docs/ci/local-event-gates.md).
+The [workflow guide](docs/ci/workflows.md) explains hosted and self-hosted runner
+selection, the CI parity job, and checks that require GitHub Actions.
+
 ## Go development workflow
 
 ```bash

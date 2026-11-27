@@ -41,7 +41,7 @@ scripts/run_local_event_gates.sh \
 
 For a pull request, provide `--event pull_request`, `--base-ref`, `--base-sha`, `--head-sha`, and `--pr-head-sha`. The helper fails closed when the checkout is dirty or the supplied range cannot be resolved. See [local validation](local-validation.md) and [local event gates](local-event-gates.md) for prerequisites and limits.
 
-The Docker CLI transport test sends a synthetic build context to a disposable loopback receiver and verifies filtering. It is a transport/context test, not a production image build or runtime test. Engine-backed Docker/Podman checks are opt-in. The current local entry point does not establish that the production MCP image runs or that Codex can initialize, list tools, and call a tool against it; those acceptance steps remain open in the linked OpenSpec change.
+The Docker CLI transport test sends a synthetic build context to a disposable loopback receiver and verifies filtering. It is a transport/context test, not a production image build or runtime test. Engine-backed Docker/Podman checks are opt-in. The current local entry point does not establish that the production MCP image runs or that Codex can initialize, list tools, and call a tool against it; those acceptance steps remain open in the [OpenSpec change](../../openspec/changes/qualify-ci-environment-and-mcp-client/proposal.md). Find the full catalog of specifications and proposals in the [OpenSpec index](../../openspec/INDEX.md).
 
 ## GitHub-only evidence
 

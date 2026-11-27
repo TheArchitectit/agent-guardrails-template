@@ -36,3 +36,9 @@ creates. No engine command runs by default.
 Use [local event gates](local-event-gates.md) with an explicit push or pull
 request commit range to run the event-scoped secret and lint checks locally.
 Neither command creates GitHub comments or artifacts, or attests a remote runner.
+The Team Validation parity job invokes these same entry points on its selected
+runner; manual dispatch has no event range, so its event gate is explicitly
+skipped. See the [workflow guide](workflows.md) for job and runner details.
+The current suite verifies Docker build-context transport; it does not build
+the production MCP image or prove a Codex connection. The associated work and
+evidence are tracked in the [OpenSpec change](../../openspec/changes/qualify-ci-environment-and-mcp-client/proposal.md).

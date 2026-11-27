@@ -3,8 +3,13 @@
 > **Maintained inventory.** This file has no checked-in generator. To update it,
 > enumerate every `openspec/specs/**/spec.md` by repository-relative path, sort
 > by full path, and derive status from that file's own closure table or explicit
-> `Status:` line. Run the pinned strict spec validator after editing. Never
-> merge rows by short slug or infer status from archive task checkboxes.
+> `Status:` line. Also enumerate active and archived change proposals and audit
+> records below. Run the pinned strict spec validator after editing. Never merge
+> rows by short slug or infer status from archive task checkboxes.
+
+[Canonical specs](#canonical-specifications) · [Active changes](#active-changes) · [Archived changes](#archived-changes) · [Audit records](#audit-records)
+
+## Canonical specifications
 
 **46 specs** — CLOSED 19 | PARTIAL 0 | OPEN 0 | UNKNOWN 27
 
@@ -68,7 +73,96 @@
   a documentation gap, not a claim that the work is unfinished.
 
 The audit snapshot at `943bcf6` contained 15 specs (the eight verbose paths and
-seven short paths). This later inventory contains 40 paths as archived
-changes added specifications; every added path remains independently listed.
+seven short paths). This inventory contains 46 paths as archived changes added specifications;
+every added path remains independently listed.
 See the [2026-11-25 template inventory evidence](changes/archive/2026-11-25-inv01-canonical-openspec-inventory/evidence.md)
 for the count reconciliation and the historically distinct AIGGP specs.
+
+## Active changes
+
+These directories contain proposals still outside the archive. Directory placement is not a completion claim; review each change’s tasks and evidence.
+
+- [audit-javascript-dev-dependencies](changes/audit-javascript-dev-dependencies/proposal.md) · [tasks](changes/audit-javascript-dev-dependencies/tasks.md)
+- [bind-assembly-to-runtime-evidence](changes/bind-assembly-to-runtime-evidence/proposal.md) · [tasks](changes/bind-assembly-to-runtime-evidence/tasks.md)
+- [bind-decision-evidence-context](changes/bind-decision-evidence-context/proposal.md) · [tasks](changes/bind-decision-evidence-context/tasks.md)
+- [dep01-render-kubernetes-profile](changes/dep01-render-kubernetes-profile/proposal.md) · [tasks](changes/dep01-render-kubernetes-profile/tasks.md)
+- [dep02-reconcile-production-guide](changes/dep02-reconcile-production-guide/proposal.md) · [tasks](changes/dep02-reconcile-production-guide/tasks.md)
+- [ide03-jetbrains-runtime-followup](changes/ide03-jetbrains-runtime-followup/proposal.md) · [tasks](changes/ide03-jetbrains-runtime-followup/tasks.md)
+- [implement-semantic-redaction-evidence](changes/implement-semantic-redaction-evidence/proposal.md) · [tasks](changes/implement-semantic-redaction-evidence/tasks.md)
+- [ops01-approve-rollout-inventory](changes/ops01-approve-rollout-inventory/proposal.md) · [tasks](changes/ops01-approve-rollout-inventory/tasks.md)
+- [ops02-verify-external-consumer](changes/ops02-verify-external-consumer/proposal.md) · [tasks](changes/ops02-verify-external-consumer/tasks.md)
+- [ops03-verify-multi-instance-revocation](changes/ops03-verify-multi-instance-revocation/proposal.md) · [tasks](changes/ops03-verify-multi-instance-revocation/tasks.md)
+- [ops04-rehearse-operational-recovery](changes/ops04-rehearse-operational-recovery/proposal.md) · [tasks](changes/ops04-rehearse-operational-recovery/tasks.md)
+- [qualify-ci-environment-and-mcp-client](changes/qualify-ci-environment-and-mcp-client/proposal.md) · [tasks](changes/qualify-ci-environment-and-mcp-client/tasks.md)
+- [qualify-jetbrains-plugin-compatibility](changes/qualify-jetbrains-plugin-compatibility/proposal.md) · [tasks](changes/qualify-jetbrains-plugin-compatibility/tasks.md)
+- [reconcile-devgate-pin-ownership](changes/reconcile-devgate-pin-ownership/proposal.md) · [tasks](changes/reconcile-devgate-pin-ownership/tasks.md)
+- [reconcile-team-cli-output-contract](changes/reconcile-team-cli-output-contract/proposal.md) · [tasks](changes/reconcile-team-cli-output-contract/tasks.md)
+- [release-gate-conformance-reports](changes/release-gate-conformance-reports/proposal.md) · [tasks](changes/release-gate-conformance-reports/tasks.md)
+- [release-tpl35-publish-approved-main](changes/release-tpl35-publish-approved-main/proposal.md) · [tasks](changes/release-tpl35-publish-approved-main/tasks.md)
+- [tpl43-windows-cold-start-acceptance](changes/tpl43-windows-cold-start-acceptance/proposal.md) · [tasks](changes/tpl43-windows-cold-start-acceptance/tasks.md)
+- [tpl44-pi-consumer-runtime-evidence](changes/tpl44-pi-consumer-runtime-evidence/proposal.md) · [tasks](changes/tpl44-pi-consumer-runtime-evidence/tasks.md)
+- [tpl45-policy-pack-activation-evidence](changes/tpl45-policy-pack-activation-evidence/proposal.md) · [tasks](changes/tpl45-policy-pack-activation-evidence/tasks.md)
+- [tpl46-multi-agent-enforcement-evidence](changes/tpl46-multi-agent-enforcement-evidence/proposal.md) · [tasks](changes/tpl46-multi-agent-enforcement-evidence/tasks.md)
+- [tpl47-compliance-live-probe-evidence](changes/tpl47-compliance-live-probe-evidence/proposal.md) · [tasks](changes/tpl47-compliance-live-probe-evidence/tasks.md)
+- [tpl52-enforce-optional-surface-authorization](changes/tpl52-enforce-optional-surface-authorization/proposal.md) · [tasks](changes/tpl52-enforce-optional-surface-authorization/tasks.md)
+- [tpl53-qualify-mcp-session-topology](changes/tpl53-qualify-mcp-session-topology/proposal.md) · [tasks](changes/tpl53-qualify-mcp-session-topology/tasks.md)
+- [tpl54-qualify-organization-scoped-documents](changes/tpl54-qualify-organization-scoped-documents/proposal.md) · [tasks](changes/tpl54-qualify-organization-scoped-documents/tasks.md)
+- [trace-action-and-ingress-boundaries](changes/trace-action-and-ingress-boundaries/proposal.md) · [tasks](changes/trace-action-and-ingress-boundaries/tasks.md)
+- [verify-sandbox-runtime-conformance](changes/verify-sandbox-runtime-conformance/proposal.md) · [tasks](changes/verify-sandbox-runtime-conformance/tasks.md)
+- [verify-semantic-conformance-evidence](changes/verify-semantic-conformance-evidence/proposal.md) · [tasks](changes/verify-semantic-conformance-evidence/tasks.md)
+
+## Archived changes
+
+Archives preserve the recorded proposals and their historical evidence. Archive placement does not independently prove production acceptance.
+
+- [2026-11-06-aiggp-03-prompt-injection-defense](changes/archive/2026-11-06-aiggp-03-prompt-injection-defense/proposal.md)
+- [2026-11-06-aiggp-04-semantic-content-filtering](changes/archive/2026-11-06-aiggp-04-semantic-content-filtering/proposal.md)
+- [2026-11-06-aiggp-05-runtime-sandbox-isolation](changes/archive/2026-11-06-aiggp-05-runtime-sandbox-isolation/proposal.md)
+- [2026-11-06-aiggp-06-indirect-injection-provenance](changes/archive/2026-11-06-aiggp-06-indirect-injection-provenance/proposal.md)
+- [2026-11-25-align-legacy-ci-go-toolchains](changes/archive/2026-11-25-align-legacy-ci-go-toolchains/proposal.md)
+- [2026-11-25-arc01-archive-reference-provenance](changes/archive/2026-11-25-arc01-archive-reference-provenance/proposal.md)
+- [2026-11-25-docker-tpl33-bound-build-context](changes/archive/2026-11-25-docker-tpl33-bound-build-context/proposal.md)
+- [2026-11-25-encode-postgres-connection-credentials](changes/archive/2026-11-25-encode-postgres-connection-credentials/proposal.md)
+- [2026-11-25-fix-commit-attribution-record-parsing](changes/archive/2026-11-25-fix-commit-attribution-record-parsing/proposal.md)
+- [2026-11-25-fix-gitlab-requirements-inputs](changes/archive/2026-11-25-fix-gitlab-requirements-inputs/proposal.md)
+- [2026-11-25-fix-regression-guard-step-output](changes/archive/2026-11-25-fix-regression-guard-step-output/proposal.md)
+- [2026-11-25-fix-windsurf-single-skill-target](changes/archive/2026-11-25-fix-windsurf-single-skill-target/proposal.md)
+- [2026-11-25-ide01-initialize-vscode-client](changes/archive/2026-11-25-ide01-initialize-vscode-client/proposal.md)
+- [2026-11-25-ide02-align-ide-rest-endpoint](changes/archive/2026-11-25-ide02-align-ide-rest-endpoint/proposal.md)
+- [2026-11-25-inv01-canonical-openspec-inventory](changes/archive/2026-11-25-inv01-canonical-openspec-inventory/proposal.md)
+- [2026-11-25-isolate-gitleaks-runner-install](changes/archive/2026-11-25-isolate-gitleaks-runner-install/proposal.md)
+- [2026-11-25-make-permission-tests-umask-independent](changes/archive/2026-11-25-make-permission-tests-umask-independent/proposal.md)
+- [2026-11-25-normalize-audit-proposal-text](changes/archive/2026-11-25-normalize-audit-proposal-text/proposal.md)
+- [2026-11-25-pkg01-declare-pi-mcp-sdk-dev-dependency](changes/archive/2026-11-25-pkg01-declare-pi-mcp-sdk-dev-dependency/proposal.md)
+- [2026-11-25-preserve-hidden-agent-install-paths](changes/archive/2026-11-25-preserve-hidden-agent-install-paths/proposal.md)
+- [2026-11-25-qa01-openspec-strict-scenario-structure](changes/archive/2026-11-25-qa01-openspec-strict-scenario-structure/proposal.md)
+- [2026-11-25-qa05-source-reachable-go-toolchain-remediation](changes/archive/2026-11-25-qa05-source-reachable-go-toolchain-remediation/proposal.md)
+- [2026-11-25-reconcile-platform-current-state](changes/archive/2026-11-25-reconcile-platform-current-state/proposal.md)
+- [2026-11-25-register-root-python-test-suite](changes/archive/2026-11-25-register-root-python-test-suite/proposal.md)
+- [2026-11-25-regression-tpl32-committed-diff-coverage](changes/archive/2026-11-25-regression-tpl32-committed-diff-coverage/proposal.md)
+- [2026-11-25-repair-laptop-docker-compose](changes/archive/2026-11-25-repair-laptop-docker-compose/proposal.md)
+- [2026-11-25-repair-validation-regex-cache-concurrency](changes/archive/2026-11-25-repair-validation-regex-cache-concurrency/proposal.md)
+- [2026-11-25-restore-vscode-extension-lint-config](changes/archive/2026-11-25-restore-vscode-extension-lint-config/proposal.md)
+- [2026-11-25-use-timezone-aware-python-utc](changes/archive/2026-11-25-use-timezone-aware-python-utc/proposal.md)
+- [2026-11-25-verify-draft-workflows-locally](changes/archive/2026-11-25-verify-draft-workflows-locally/proposal.md)
+- [2026-11-26-go-tpl34-automate-source-advisory-checks](changes/archive/2026-11-26-go-tpl34-automate-source-advisory-checks/proposal.md)
+- [2026-11-26-ide03-align-selection-payload](changes/archive/2026-11-26-ide03-align-selection-payload/proposal.md)
+- [2026-11-26-legacy01-stale-numbered-design-claims](changes/archive/2026-11-26-legacy01-stale-numbered-design-claims/proposal.md)
+- [2026-11-26-package-team-cli-python-backend](changes/archive/2026-11-26-package-team-cli-python-backend/proposal.md)
+- [2026-11-26-pkg02-align-pi-package-name](changes/archive/2026-11-26-pkg02-align-pi-package-name/proposal.md)
+- [2026-11-26-tpl55-reconcile-audit-work-item-identifiers](changes/archive/2026-11-26-tpl55-reconcile-audit-work-item-identifiers/proposal.md)
+
+## Audit records
+
+These are dated snapshots; newer specifications or evidence may supersede their observations.
+
+- [2026-11-25-openspec-traceability](audits/2026-11-25-openspec-traceability.md)
+- [2026-11-25-qa-and-gap-review](audits/2026-11-25-qa-and-gap-review.md)
+- [2026-11-25-template-delivered-code-audit](audits/2026-11-25-template-delivered-code-audit.md)
+- [2026-11-25-template-future-integration-audit](audits/2026-11-25-template-future-integration-audit.md)
+- [2026-11-25-template-gap-register](audits/2026-11-25-template-gap-register.md)
+- [2026-11-25-template-open-closed-coded](audits/2026-11-25-template-open-closed-coded.md)
+- [2026-11-25-template-qa-reaudit](audits/2026-11-25-template-qa-reaudit.md)
+- [2026-11-25-template-requirement-trace](audits/2026-11-25-template-requirement-trace.md)
+- [2026-11-25-template-verification-queue](audits/2026-11-25-template-verification-queue.md)
+- [Superseded audit proposals](audits/superseded-changes/README.md)
