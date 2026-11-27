@@ -6,6 +6,7 @@ Release notes and testing guidance.
 
 | Version | Document | Notes |
 |---------|----------|-------|
+| v3.8.14 | [v3.8.14.md](v3.8.14.md) | Local CI gate parity |
 | v3.8.13 | [v3.8.13.md](v3.8.13.md) | CI runner portability and local inventory-driven validation; release candidate |
 | v3.8.12 | [v3.8.12.md](v3.8.12.md) | Integration and CI hardening |
 | v3.8.7 | [v3.8.7.md](v3.8.7.md) | Secret scan no longer trips on its SARIF upload; release publisher works without `gh` |

@@ -16,20 +16,23 @@ must already be checked out cleanly in the ignored `.devgate/` directory at
 that exact commit. The command does not clone it or install anything.
 
 Prerequisites must already be available: Python 3, `pytest`, `pytest-cov`,
-PyYAML, Go, a C compiler for the Go race suite, Git, and `jq`. A missing prerequisite is reported before the checks
+PyYAML, Go, a C compiler for the Go race suite, Git, `jq`, the Docker CLI,
+and `govulncheck` v1.10.0. Install the pinned scanner with
+`GOTOOLCHAIN=local go install golang.org/x/vuln/cmd/govulncheck@v1.10.0`. A missing prerequisite is reported before the checks
 start. Use a Go toolchain that satisfies the module declarations. Go may download
 the required toolchain or modules according to the local Go configuration.
 Local Go tests use a 30-minute per-test timeout to allow for slower machines.
 
 Python coverage is produced as `coverage.xml` in the checkout and validated
 for a non-empty report. The local command does not upload it. The
-Docker/Podman context integration test is skipped by default. To opt in, set
+Docker CLI transport test runs without a daemon. The Docker/Podman
+engine-backed integration test is skipped by default. To opt in, set
 `MCP_DOCKER_CONTEXT_ENGINE=docker` or `MCP_DOCKER_CONTEXT_ENGINE=podman`; the
 workflow-compatible `MCP_DOCKER_CONTEXT_DAEMON=available` selects Docker. An
 opt-in requires the selected engine and daemon to be available. The command
 only checks engine availability; the test owns any temporary resources it
 creates. No engine command runs by default.
 
-This is a local code-validation command, not a replacement for event-bound
-workflow evidence. It does not create a PR or push range, run PR-only analysis
-or comments, attest the actual UCS03 runner host, or upload GitHub artifacts.
+Use [local event gates](local-event-gates.md) with an explicit push or pull
+request commit range to run the event-scoped secret and lint checks locally.
+Neither command creates GitHub comments or artifacts, or attests a remote runner.

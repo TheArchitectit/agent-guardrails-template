@@ -8,6 +8,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [3.8.14] - 2026-11-27
+
+### Changed
+
+- Local CI also runs the documentation and Go advisory gates, the team CLI
+  smoke checks, and the Docker client context-transport test. A separate local
+  event command runs secret and lint checks against an explicit push or PR
+  commit range. GitHub event actions, artifacts, and remote runner attestations
+  remain tied to their respective CI environments.
+
 ## [3.8.13] - 2026-11-27
 
 ### Added
