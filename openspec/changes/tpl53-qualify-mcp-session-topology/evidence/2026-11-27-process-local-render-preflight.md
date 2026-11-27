@@ -1,8 +1,8 @@
 # TPL-53 task 1.2 — rendered process-local profile preflight
 
-The render command and separate file validation passed on an intermediate revision. After additional type and routing checks were staged, the laptop verification image lacked PyYAML and the run moved to the lab. The lines below show the expected output. The final candidate still needs both commands, the negative tests, and strict OpenSpec validation. This change covers render/preflight only. It does not contact Kubernetes and
-does not run `kubectl apply`, a cluster drill, a restart, or an application
-pilot.
+The laptop passed the intermediate render and file validator. Its final image
+lacked PyYAML. The UCS03 results below cover the original candidate and the
+subsequent routing corrections. All commands used synthetic files.
 
 ## Supported fixture
 
@@ -35,6 +35,23 @@ validation PASS: artifacts/k8s/process-local-single-instance.yaml
 ```
 
 ## Negative fixtures
+
+At `0707208b86284ab96b6464a5c43b1c273d34107b`, the UCS03 lab rendered and
+validated the fixture with PyYAML 6.0.1. Its SHA-256 was
+`a844757301aedd92db85ef8537aeb3c916089eaf4b9540d505a5cacf6d597db8`.
+All seven fixture tests and all 73 strict OpenSpec 2.2.0 items passed.
+An invalid replica count preserved an existing output byte for byte. The CLI
+rejected malformed YAML, a mismatched namespace and an unknown target port.
+It accepted a ClusterIP Service with its entire ports list missing. The
+[Regression Guard job](https://github.com/TheArchitectit/agent-guardrails-template/actions/runs/46022116381/job/140584100131)
+also required a new test under `tests/regression/`.
+
+The regression at `tests/regression/test_process_local_service_ports.py`
+exercises both CLI entry points with a missing, empty or mapping-valued ports
+field and checks that a rejected render preserves the previous output.
+The serialized validator also accepted an invalid two-replica profile alongside
+a valid manifest. A fixture now varies the requested replica count, HPA,
+rollout strategy and affinity while holding the rendered file constant.
 
 `tests/test_render_k8s_profile.py` mutates the rendered fixture and verifies a
 `PreflightError` for each of the following before output is written:

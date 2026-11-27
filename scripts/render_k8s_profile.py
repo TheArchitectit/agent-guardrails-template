@@ -76,6 +76,15 @@ def _profile(profile: Any) -> dict[str, Any]:
     hpa = profile["hpa"]
     if not isinstance(hpa, dict) or not isinstance(hpa.get("minReplicas"), int) or isinstance(hpa.get("minReplicas"), bool) or not isinstance(hpa.get("maxReplicas"), int) or isinstance(hpa.get("maxReplicas"), bool):
         raise PreflightError("profile HPA minReplicas and maxReplicas must be integers")
+    if profile["session_mode"] == "process-local":
+        if profile["replicas"] != 1:
+            raise PreflightError("process-local profile requires replicas=1")
+        if (hpa["minReplicas"], hpa["maxReplicas"]) != (1, 1):
+            raise PreflightError("process-local profile requires HPA minReplicas=maxReplicas=1")
+        if profile["strategy"] != "Recreate":
+            raise PreflightError("process-local profile requires strategy.type=Recreate")
+        if profile["routing"] != "cluster-ip" or profile["service_session_affinity"] != "None":
+            raise PreflightError("process-local profile requires ClusterIP routing with no session affinity")
     return profile
 
 
@@ -95,8 +104,11 @@ def _port_map(deployment: dict[str, Any]) -> tuple[dict[str, int], set[int]]:
 
 
 def _validate_service_ports(service: dict[str, Any], deployment: dict[str, Any]) -> None:
+    ports = service.get("spec", {}).get("ports")
+    if not isinstance(ports, list) or not ports:
+        raise PreflightError("Service ports must be a non-empty list for ClusterIP routing")
     named, numeric = _port_map(deployment)
-    for port in service.get("spec", {}).get("ports", []):
+    for port in ports:
         if not isinstance(port, dict) or not isinstance(port.get("port"), int) or isinstance(port.get("port"), bool):
             raise PreflightError("Service ports must use integer port values")
         target = port.get("targetPort")

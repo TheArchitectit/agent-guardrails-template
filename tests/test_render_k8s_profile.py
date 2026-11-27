@@ -3,6 +3,7 @@
 from copy import deepcopy
 from pathlib import Path
 import sys
+import tempfile
 import unittest
 
 import yaml
@@ -65,6 +66,23 @@ class ProcessLocalProfileTests(unittest.TestCase):
             validate_serialized(path, PROFILE)
         finally:
             path.unlink(missing_ok=True)
+
+    def test_valid_artifact_cannot_mask_an_unsupported_profile(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+            manifest = directory / "manifest.yaml"
+            manifest.write_text(yaml.safe_dump_all(self.documents), encoding="utf-8")
+            profile = directory / "profile.yaml"
+            for change, conflict in (
+                ({"replicas": 2}, "replicas=1"),
+                ({"hpa": {"minReplicas": 1, "maxReplicas": 2}}, "HPA"),
+                ({"strategy": "RollingUpdate"}, "Recreate"),
+                ({"service_session_affinity": "ClientIP"}, "session affinity"),
+            ):
+                with self.subTest(change=change):
+                    profile.write_text(yaml.safe_dump({**self.profile, **change}), encoding="utf-8")
+                    with self.assertRaisesRegex(PreflightError, conflict):
+                        validate_serialized(manifest, profile)
 
 
 if __name__ == "__main__":
