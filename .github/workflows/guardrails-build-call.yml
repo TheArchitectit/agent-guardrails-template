@@ -14,7 +14,7 @@ permissions:
 jobs:
   isolated-build:
     if: (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && !github.event.deleted
-    uses: TheArchitectit/agent-guardrails-template/.github/workflows/guardrails-build.yml@c874121709faa4681a7fda8d0f5998396306814c # reusable workflow commit
+    uses: TheArchitectit/agent-guardrails-template/.github/workflows/guardrails-build.yml@e9f49cf59e088d15e48c9e55fc2b84bb147a2418 # reusable workflow commit
     permissions:
       contents: read
       id-token: write

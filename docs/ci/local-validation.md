@@ -58,7 +58,8 @@ is a rootless Podman image-and-protocol harness. It builds the
 production Dockerfile, starts uniquely named disposable dependencies, and
 checks MCP initialization, enumeration and a read-only call. The default does
 not invoke a model. A candidate run on AI05 is recorded in the
-[OpenSpec evidence](../../openspec/changes/qualify-ci-environment-and-mcp-client/evidence.md);
-the harness is not yet connected to an automatic per-build workflow. Use it
-only on an isolated authorized test host, never in an untrusted pull request
-with private host access.
+[OpenSpec evidence](../../openspec/changes/qualify-ci-environment-and-mcp-client/evidence.md).
+The public per-build workflow delegates this acceptance to the isolated worker;
+the local harness remains a separate operator-run path. Use it only on an
+isolated authorized test host, never in an untrusted pull request with private
+host access.

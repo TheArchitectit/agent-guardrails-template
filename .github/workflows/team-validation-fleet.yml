@@ -13,6 +13,15 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  guardrails-build-trusted-main-manual:
+    # Manual-only actual-image/protocol coverage on trusted main. Pushes are
+    # covered by the canonical per-build caller, avoiding duplicate builds.
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    uses: TheArchitectit/agent-guardrails-template/.github/workflows/guardrails-build.yml@e9f49cf59e088d15e48c9e55fc2b84bb147a2418
+    permissions:
+      contents: read
+      id-token: write
+
   validate-trusted-main:
     name: Trusted main validation
     if: github.ref == 'refs/heads/main'

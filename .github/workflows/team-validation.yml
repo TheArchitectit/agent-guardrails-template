@@ -17,6 +17,15 @@ permissions:
   contents: read
 
 jobs:
+  guardrails-build-manual:
+    # Manual-only actual-image/protocol coverage. Push and PR runs deliberately
+    # skip this job; the canonical per-build caller owns those event paths.
+    if: github.event_name == 'workflow_dispatch'
+    uses: TheArchitectit/agent-guardrails-template/.github/workflows/guardrails-build.yml@e9f49cf59e088d15e48c9e55fc2b84bb147a2418
+    permissions:
+      contents: read
+      id-token: write
+
   validate-teams:
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ${{ fromJSON(vars.CI_RUNNER_LABELS || '["ubuntu-latest"]') }}

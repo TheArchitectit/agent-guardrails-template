@@ -28,7 +28,7 @@
 
 ## Remaining evidence
 
-The complete local/hosted/UCS03 parity matrix, AI03-AI05 synthetic isolation, and automated per-build image and Codex acceptance still require evidence. Tasks remain unchecked until all associated scenarios pass.
+The complete local/hosted/UCS03 parity matrix and AI03-AI05 synthetic isolation still require additional evidence. Model-backed Codex testing runs only on operator request. Tasks remain unchecked until all associated scenarios pass.
 
 ## Real MCP image and Codex client on AI05
 
@@ -36,10 +36,14 @@ The complete local/hosted/UCS03 parity matrix, AI03-AI05 synthetic isolation, an
 - Image manifest digest: `sha256:5b43e9aee686160814dc4fb2de96df7a570e90ae8eee78110849af9fc2214bda`. Image ID: `sha256:b176adaef5db453ecb9bc6b89491f89001cf7c11d547499de1844f15948f4efa`.
 - The unique scratch stack used synthetic credentials, temporary PostgreSQL and Redis, and a loopback-only endpoint. Nineteen bundled migrations applied. Direct MCP initialization negotiated `2025-03-26`, `tools/list` returned 50 tools, and `guardrail_advisor_list` returned nine advisors.
 - A real Codex CLI `0.171.0-alpha.13.2` connected through a temporary SSH tunnel and completed `guardrail_advisor_list`, with nine advisors in its MCP result. The first attempt was refused by Codex's approval policy; the successful attempt explicitly enabled and authorized only that read-only test tool in temporary config. Raw Codex JSONL SHA-256: `a1da6fc6e3356bebd387b5f2bda49a4fe0f1005f8161febd304746d0b8d029a4`. The synthetic key was absent from the retained evidence.
-- This is a one-time lab acceptance, not a per-build GitHub workflow gate. No AI05 credential or image-engine socket is available to UCS03 jobs. The user chose to skip model-backed testing on unattended builds; deterministic image/protocol testing still needs trusted, isolated per-build wiring. Do not report this as automated coverage.
+- This is a one-time lab acceptance, not a per-build GitHub workflow gate. No AI05 credential or image-engine socket is available to UCS03 jobs. Model-backed Codex testing runs only on demand. The automated workflow uses the deterministic MCP protocol probe.
 
 ## Token-free image harness qualification on AI05
 
 - Candidate source `821cb8e28d542f018751321d29d8168f9b14e916` ran the image harness through `bash` on AI05. It built image ID `sha256:9f318656eeca69051bf870e3b0f83aa21b41910d56d9d21deb21d8fda572e505`, manifest digest `sha256:2b175602c0a92be3d85d33b7ec43572c507266f66c8f70bc8097fe171228761d`, applied migrations, and passed deterministic MCP initialize, tool listing and the nine-advisor read-only call. The receipt recorded `codex=not-run`, so no model was invoked.
-- Direct invocation first failed before any container was created because the initial commit recorded the script as non-executable. The file mode is corrected in the follow-up. The harness is not yet connected to an unattended GitHub workflow; the private-host trust boundary and result publication remain open.
+- Direct invocation first failed before any container was created because the initial commit recorded the script as non-executable. The file mode is corrected in the follow-up. This earlier run exercised the standalone harness. The per-build worker uses its own fixed guest entry point and signed receipts.
 - Direct invocation was repeated successfully on AI05 for `28febdf2beed26b079d58a9d2dfccd26638c9516`, using the corrected executable mode, bounded resources, and fail-closed protocol checks. The receipt records image ID `sha256:d197d32c3073c08a7fc13924a3f5b7b55a361e026aa5f27ef91a5796caa64465`, manifest digest `sha256:2f017a37133044984bc4e27003150508eea8bcd28533732dc469a9092aca8f2a`, `mcp_protocol=passed`, and `codex=not-run`.
+
+## UCS03 and AI05 worker qualification
+
+The initial [branch push](https://github.com/TheArchitectit/agent-guardrails-template/actions/runs/46080207476/job/140777179526) for `3de91ef24937c5374e07610a25b809014e9e753a` reached AI05. Its offline guest failed at the production Dockerfile's Go module download. The independently verified Ed25519 receipt recorded the correct commit, check ID, AI05 host, offline VM profile, failure and `codex=not-run`. The first [PR job](https://github.com/TheArchitectit/agent-guardrails-template/actions/runs/46080211523/job/140777192832) exposed a missing runner-local service map. After the map was installed on all three UCS03 runners, the [PR retry](https://github.com/TheArchitectit/agent-guardrails-template/actions/runs/46080211523/job/140778448109) reached AI05 and reproduced the dependency failure on synthetic merge commit `cb23d4dffa847350f573f211d8764cfb13ba481a`.

@@ -82,6 +82,13 @@ TRUSTED_WORKFLOW = ".github/workflows/team-validation-fleet.yml"
 # The label that identifies the private UCS03 lab pool.
 TRUSTED_LABEL = "guardrails-ucs03"
 REUSABLE_CALL_WORKFLOW = "TheArchitectit/agent-guardrails-template/.github/workflows/guardrails-build.yml"
+REUSABLE_CALL_PIN = "e9f49cf59e088d15e48c9e55fc2b84bb147a2418"
+MANUAL_WORKER_CALLS = {
+    (".github/workflows/team-validation.yml", "guardrails-build-manual"):
+        "github.event_name == 'workflow_dispatch'",
+    (".github/workflows/team-validation-fleet.yml", "guardrails-build-trusted-main-manual"):
+        "github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'",
+}
 # The only supported dynamic runner selector. The JSON default is intentionally
 # hosted so a missing repository variable never dispatches to a private runner.
 RUNNER_SELECTOR = "${{ fromJSON(vars.CI_RUNNER_LABELS || '[\"ubuntu-latest\"]') }}"
@@ -283,9 +290,22 @@ def _is_guardrails_reusable_call(job: dict) -> bool:
                 and re.fullmatch(r"[0-9a-f]{40}", ref))
 
 
-def _check_reusable_call(job: dict, where: str, repo: Path) -> list[str]:
+def _check_manual_worker_call(job: dict, where: str, rel: str) -> list[str]:
+    expected = MANUAL_WORKER_CALLS.get((rel, where.rsplit(":", 1)[-1]))
+    if expected is None:
+        return []
     problems: list[str] = []
-    if not _fork_guarded(job):
+    uses = str(job.get("uses") or "")
+    if uses != f"{REUSABLE_CALL_WORKFLOW}@{REUSABLE_CALL_PIN}":
+        problems.append(f"{where}: manual worker call must use the approved canonical pin {REUSABLE_CALL_PIN} (R19-13)")
+    if _normalise(job.get("if")) != _normalise(expected):
+        problems.append(f"{where}: manual worker call must be guarded only by `{expected}` (R19-13)")
+    return problems
+
+
+def _check_reusable_call(job: dict, where: str, repo: Path, *, manual_only: bool = False) -> list[str]:
+    problems: list[str] = []
+    if not manual_only and not _fork_guarded(job):
         problems.append(f"{where}: worker caller lacks the required fork guard (R19-13)")
     if not _is_guardrails_reusable_call(job):
         problems.append(f"{where}: reusable workflow call must use the canonical repository/path and a full commit SHA (R19-13)")
@@ -399,10 +419,12 @@ def scan(repo: Path) -> tuple[int, int, int, list[str]]:
                 continue
             where = f"{rel}:{job_id}"
             if "uses" in job and "runs-on" not in job:
-                if rel != ".github/workflows/guardrails-build-call.yml":
+                manual = (rel, str(job_id)) in MANUAL_WORKER_CALLS
+                if rel != ".github/workflows/guardrails-build-call.yml" and not manual:
                     violations.append(f"{where}: reusable workflow call is not an approved caller (R19-13)")
                 else:
-                    violations.extend(_check_reusable_call(job, where, repo))
+                    violations.extend(_check_reusable_call(job, where, repo, manual_only=manual))
+                    violations.extend(_check_manual_worker_call(job, where, rel))
                 continue
             if "uses" in job and "runs-on" in job:
                 violations.append(f"{where}: reusable workflow caller must not declare `runs-on` (R19-13)")

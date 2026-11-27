@@ -201,6 +201,30 @@ jobs:
             import shutil
             shutil.rmtree(root)
 
+    def test_manual_worker_calls_require_exact_dispatch_guards_and_pin(self):
+        for rel, job_id in gate.MANUAL_WORKER_CALLS:
+            guard = gate.MANUAL_WORKER_CALLS[(rel, job_id)]
+            caller = f"""name: manual\non:\n  workflow_dispatch:\njobs:\n  {job_id}:\n    if: {guard}\n    uses: {gate.REUSABLE_CALL_WORKFLOW}@{gate.REUSABLE_CALL_PIN}\n    permissions:\n      contents: read\n      id-token: write\n"""
+            root = self._worker_tree(caller)
+            try:
+                _write(root, rel, caller)
+                self.assertFalse(any("manual worker call" in x for x in gate.scan(root)[3]))
+            finally:
+                import shutil
+                shutil.rmtree(root)
+
+    def test_manual_worker_call_rejects_guard_or_pin_drift(self):
+        rel, job_id = next(iter(gate.MANUAL_WORKER_CALLS))
+        caller = f"""name: manual\non:\n  workflow_dispatch:\njobs:\n  {job_id}:\n    if: github.event_name == 'push'\n    uses: {gate.REUSABLE_CALL_WORKFLOW}@{'a' * 40}\n    permissions:\n      contents: read\n      id-token: write\n"""
+        root = self._worker_tree(caller)
+        try:
+            _write(root, rel, caller)
+            violations = gate.scan(root)[3]
+            self.assertTrue(any("manual worker call" in x for x in violations))
+        finally:
+            import shutil
+            shutil.rmtree(root)
+
 
 class NonVacuity(unittest.TestCase):
     def test_zero_workflows_fails(self):

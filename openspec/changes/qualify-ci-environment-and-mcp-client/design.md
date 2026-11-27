@@ -15,7 +15,7 @@ At main `e8949f5fed43bbeda75343bd48b9e68985a1eb9f`, the workflow selector is `ru
 5. Keep synthetic Docker context checks distinct from image-build and protocol acceptance. Run synthetic boundary fixtures on AI03, AI04, and AI05 in unique temporary directories. Do not mount `/var/run/docker.sock`, use privileged containers, or modify runner services. The engine-backed build/client test must use an explicitly approved disposable engine and test environment.
 6. Store redacted receipts. Do not store credentials, environment values, request secrets, or full client transcripts when a summary is sufficient.
 
-## Proposed unattended lab integration
+## Unattended lab integration
 
 The canonical repository always runs the reusable workflow for trusted pushes,
 tags, same-repository pull requests, dispatches and reruns; missing worker
@@ -28,12 +28,14 @@ consumer variables are the service name, TLS certificate SHA-256, CA PEM and
 receipt public key. These are not caller-controlled workflow inputs. When
 configured, the UCS03 job uses a short-lived GitHub Actions identity. The
 worker validates issuer, audience, repository, workflow, event, ref, run
-identity and expiry; rejects replays; fetches the exact candidate SHA
-independently; and runs only the fixed, bounded, disposable-VM harness. Its
-signed receipt binds source SHA, image digest, observed nonzero tool inventory,
-the nine-advisor benign call, protocol stages and outcome to the requesting
-run. It exposes no shell, host socket, private-host credential, or model
-credential. Unattended execution never invokes Codex or a model.
+identity and expiry; rejects replays; and invokes only the fixed, bounded,
+disposable-VM harness. The unprivileged broker fetches and verifies Git objects
+from the fixed public repository, then seals them into a read-only guest input;
+the guest performs checkout, build and protocol probing. The AI05 broker removes the per-run disks before signing. Its signed
+receipt binds source SHA, image digest, observed nonzero tool inventory, the
+nine-advisor benign call, protocol stages and outcome to the requesting run. It
+exposes no shell, host socket, private-host credential, or model credential.
+Unattended execution never invokes Codex or a model.
 
 This remains a deployment contract, not repository-only proof. TLS, token-claim
 validation, denial behavior, resource limits, VM isolation and negative testing
