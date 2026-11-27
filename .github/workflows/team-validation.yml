@@ -57,6 +57,9 @@ jobs:
           path: teams-export.json
 
   test-python:
+    permissions:
+      contents: read
+      id-token: write
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: [self-hosted, Linux, X64, guardrails-ucs03]
     env:
@@ -121,9 +124,12 @@ jobs:
           done
 
       - name: Upload coverage
-        uses: codecov/codecov-action@ab904c41d6ece82784817410c45d8b8c02684457 # v3.1.6
+        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
         with:
           files: ./coverage.xml
+          disable_search: true
+          use_oidc: true
+          fail_ci_if_error: true
 
   test-go:
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
