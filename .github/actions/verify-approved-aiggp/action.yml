@@ -1,0 +1,55 @@
+name: Verify approved AIGGP
+description: Check out the approved AIGGP source and run its consumer charset gate and self-test.
+runs:
+  using: composite
+  steps:
+    - name: Check out approved AIGGP source
+      uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      with:
+        repository: TheArchitectit/AIGGP-Agentic-Framework
+        ref: 7d17d6f1baa4357110e57d3a6ffd55fbacdd77f7
+        path: .devgate
+        fetch-depth: 1
+        persist-credentials: false
+
+    - name: Verify AIGGP identity and charset control
+      shell: bash
+      run: |
+        set -euo pipefail
+        expected=7d17d6f1baa4357110e57d3a6ffd55fbacdd77f7
+        actual="$(git -C .devgate rev-parse --verify HEAD)"
+        if [[ "$actual" != "$expected" ]]; then
+          echo "::error::AIGGP checkout mismatch: expected $expected, got $actual"
+          exit 1
+        fi
+        remote="$(git -C .devgate remote get-url origin)"
+        case "$remote" in
+          https://github.com/TheArchitectit/AIGGP-Agentic-Framework|https://github.com/TheArchitectit/AIGGP-Agentic-Framework.git) ;;
+          *)
+            echo "::error::unexpected AIGGP origin: $remote"
+            exit 1
+            ;;
+        esac
+        actual_tool_root="$(git -C .devgate rev-parse --show-toplevel)"
+        expected_tool_root="$(cd "$GITHUB_WORKSPACE/.devgate" && pwd -P)"
+        if [[ "$actual_tool_root" != "$expected_tool_root" ]]; then
+          echo "::error::AIGGP is not checked out at the exact .devgate root"
+          exit 1
+        fi
+        if git ls-files --error-unmatch -- .devgate >/dev/null 2>&1; then
+          echo "::error::.devgate must remain an untracked consumer checkout"
+          exit 1
+        fi
+        if ! git check-ignore -q -- .devgate; then
+          echo "::error::.devgate is not ignored by the consumer repository"
+          exit 1
+        fi
+        tool_status="$(git -C .devgate status --porcelain --untracked-files=all)"
+        if [[ -n "$tool_status" ]]; then
+          echo "::error::AIGGP tool checkout is not clean"
+          printf '%s\n' "$tool_status"
+          exit 1
+        fi
+        python3 .devgate/scripts/check_charset.py --repo .
+        python3 .devgate/tests/test_check_charset.py
+        echo "Guardrails AIGGP verified: 7d17d6f1baa4357110e57d3a6ffd55fbacdd77f7"
