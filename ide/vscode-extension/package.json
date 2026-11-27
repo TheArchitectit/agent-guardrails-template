@@ -153,13 +153,12 @@
     "publish": "vsce publish"
   },
   "devDependencies": {
-    "@types/vscode": "^1.60.0",
     "@types/node": "16.x",
+    "@types/vscode": "^1.60.0",
     "@typescript-eslint/eslint-plugin": "^5.31.0",
     "@typescript-eslint/parser": "^5.31.0",
+    "@vscode/vsce": "^4.1.1",
     "eslint": "^8.20.0",
-    "typescript": "^4.7.4",
-    "vsce": "^2.10.0"
-  },
-  "dependencies": {}
+    "typescript": "^4.7.4"
+  }
 }

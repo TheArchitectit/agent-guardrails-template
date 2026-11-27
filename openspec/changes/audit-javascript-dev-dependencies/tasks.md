@@ -8,3 +8,6 @@
 ## 2. Integrate review
 
 - [x] 2.1 Add the dated audit record to the release review process and verify a release checklist links to the record and captures disposition.
+
+QA-04 VS Code packaging evidence is recorded in
+[the 2026-11-27 candidate note](evidence/2026-11-27/vscode-package.md).
