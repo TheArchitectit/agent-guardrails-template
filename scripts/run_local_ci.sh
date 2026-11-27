@@ -193,10 +193,10 @@ while IFS=$'\t' read -r path floor test_command build_command; do
   [[ -n "$path" ]] || continue
   echo "-- $path (floor $floor)"
   echo "test: $test_command"
-  (cd "$path" && bash -euo pipefail -c "$test_command")
+  (cd "$path" && CGO_ENABLED=1 bash -euo pipefail -c "$test_command")
   echo "build: $build_command"
-  (cd "$path" && bash -euo pipefail -c "$build_command")
-  listing="$(cd "$path" && go test -list '^Test' ./...)"
+  (cd "$path" && CGO_ENABLED=1 bash -euo pipefail -c "$build_command")
+  listing="$(cd "$path" && CGO_ENABLED=1 go test -list '^Test' ./...)"
   count="$(printf '%s\n' "$listing" | grep -c '^Test' || true)"
   echo "$path: discovered $count tests (floor: $floor)"
   if ((count < floor)); then

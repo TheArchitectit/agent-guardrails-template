@@ -16,7 +16,7 @@ must already be checked out cleanly in the ignored `.devgate/` directory at
 that exact commit. The command does not clone it or install anything.
 
 Prerequisites must already be available: Python 3, `pytest`, `pytest-cov`,
-PyYAML, Go, Git, and `jq`. A missing prerequisite is reported before the checks
+PyYAML, Go, a C compiler for the Go race suite, Git, and `jq`. A missing prerequisite is reported before the checks
 start. Use a Go toolchain that satisfies the module declarations. Go may download
 the required toolchain or modules according to the local Go configuration.
 
