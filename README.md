@@ -63,6 +63,8 @@ Some tests require Linux facilities or configured services. Record skipped or en
 
 For the repository-wide local CI entry point, including the Python and Go
 inventories and deterministic policy gates, see [local validation](docs/ci/local-validation.md).
+For workflow triggers, runner selection, event-specific checks, and GitHub-only
+evidence, see [CI workflows and local validation](docs/ci/workflows.md).
 
 ## CI runner selection
 

@@ -923,6 +923,107 @@ jobs:
           go test ./internal/config -run 'TestValidateAcceptsAnUnconfiguredEvidenceStore|TestValidateRefusesRetentionWithNoStore|TestValidateRefusesAStoreWithNoRetentionWindow|TestValidateEvidenceRetentionBounds|TestValidateEvidenceRetentionCouplesSigningToProfile|TestValidateCouplesEvidenceRetentionToStartup' -count=1 -v
           go test ./internal/mcp -run 'TestControlPlaneResourceReportsEvidenceRetention|TestControlPlaneResourceOmitsRetentionWhenUnconfigured' -count=1 -v
 
+  # Prove the developer entry points stay usable on the runner selected for
+  # this repository. This executes source tests/builds only: no container
+  # engine socket is exposed and no MCP image is built or started here.
+  local-ci-parity:
+    name: Local CI parity (configured runner)
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ${{ fromJSON(vars.CI_RUNNER_LABELS || '["ubuntu-latest"]') }}
+    timeout-minutes: 90
+    permissions:
+      contents: read
+    env:
+      CI_RUNNER_LABELS: ${{ vars.CI_RUNNER_LABELS || '["ubuntu-latest"]' }}
+      CI_RUNNER_NAME: ${{ runner.name }}
+      CI_RUNNER_ENVIRONMENT: ${{ runner.environment }}
+    steps:
+      - name: Check out consumer repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Record selected and actual runner
+        run: |
+          set -euo pipefail
+          echo "Configured CI_RUNNER_LABELS: $CI_RUNNER_LABELS"
+          echo "Actual runner: $CI_RUNNER_NAME ($CI_RUNNER_ENVIRONMENT; $RUNNER_OS/$RUNNER_ARCH)"
+          echo "Checked out SHA: $(git rev-parse HEAD)"
+          echo "Docker CLI: $(docker --version) (daemon not queried)"
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.11'
+
+      - name: Set up Go from module declaration
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          cache: false
+          go-version-file: mcp-server/go.mod
+
+      - name: Install declared Python test dependencies
+        run: python3 -m pip install pytest pytest-cov pyyaml
+
+      - name: Install pinned govulncheck
+        run: |
+          set -euo pipefail
+          GOTOOLCHAIN=local go install golang.org/x/vuln/cmd/govulncheck@v1.10.0
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+          "$(go env GOPATH)/bin/govulncheck" -version
+
+      - name: Check out and verify approved AIGGP
+        uses: ./.github/actions/verify-approved-aiggp
+
+      - name: Run event-aware local gates
+        if: github.event_name == 'push' || github.event_name == 'pull_request'
+        env:
+          LOCAL_EVENT_NAME: ${{ github.event_name }}
+          LOCAL_BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+          LOCAL_HEAD_SHA: ${{ github.sha }}
+          LOCAL_BASE_REF: ${{ github.event.pull_request.base.ref || '' }}
+          LOCAL_PR_HEAD_SHA: ${{ github.event.pull_request.head.sha || '' }}
+        run: |
+          set -euo pipefail
+          if [[ "$LOCAL_EVENT_NAME" == pull_request ]]; then
+            bash scripts/run_local_event_gates.sh \
+              --event pull_request \
+              --base-sha "$LOCAL_BASE_SHA" \
+              --head-sha "$LOCAL_HEAD_SHA" \
+              --base-ref "$LOCAL_BASE_REF" \
+              --pr-head-sha "$LOCAL_PR_HEAD_SHA"
+          else
+            bash scripts/run_local_event_gates.sh \
+              --event push \
+              --base-sha "$LOCAL_BASE_SHA" \
+              --head-sha "$LOCAL_HEAD_SHA"
+          fi
+
+      - name: Explain event-gate scope for manual dispatch
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          echo "Local event-range gates not run: workflow_dispatch has no push or pull-request base boundary."
+
+      - name: Run the canonical local CI entry point
+        env:
+          # The CLI transport test needs the Docker client, not a daemon.
+          MCP_DOCKER_CONTEXT_REQUIRE_CLI: "1"
+        run: bash scripts/run_local_ci.sh
+
+      - name: Upload Python coverage report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: local-ci-coverage-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ./coverage.xml
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Clean up approved AIGGP checkout
+        if: always()
+        run: rm -rf -- .devgate
+
   verify-approved-aiggp:
     name: Verify approved AIGGP
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
