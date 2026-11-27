@@ -26,6 +26,7 @@ This directory contains operational workflow documentation for AI agents. These 
 | [CODE_REVIEW.md](code-review.md) | Review process and escalation | After code changes |
 | [MCP_CHECKPOINTING.md](mcp-checkpointing.md) | MCP checkpoint integration | Before/after critical tasks |
 | [DOCUMENTATION_UPDATES.md](documentation-updates.md) | Post-sprint doc updates | After completing sprints |
+| [Per-build isolated worker](../ci/guardrails-per-build-worker.md) | Opt-in signed image/protocol acceptance and deployment contract | When reviewing CI worker coverage or receipts |
 
 ---
 

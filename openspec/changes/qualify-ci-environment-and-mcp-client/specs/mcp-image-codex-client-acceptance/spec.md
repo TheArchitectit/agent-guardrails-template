@@ -57,3 +57,21 @@ The build workflow SHALL associate deterministic real-image MCP protocol accepta
 
 - **WHEN** the image engine or isolated test host is unavailable
 - **THEN** the workflow visibly reports the missing prerequisite and does not report real-image protocol acceptance as passed
+
+#### Scenario: A UCS03 job submits an eligible build to AI05
+
+- **WHEN** GitHub creates a branch or tag push build, a same-repository pull request build, or a manual run of the lab workflow
+- **THEN** the UCS03 job identifies its assigned runner, resolves the configured worker service, submits the event SHA, and verifies a signed AI05 receipt bound to the repository, check, run and attempt
+- **AND** the guest checks out the push commit or pull request merge commit, starts the built image with synthetic data, and is destroyed before the worker signs a passing receipt
+
+#### Scenario: Missing lab configuration or a fork pull request
+
+- **WHEN** an eligible lab build lacks its worker configuration or cannot obtain valid evidence
+- **THEN** its acceptance check fails
+- **WHEN** a fork pull request triggers the workflow
+- **THEN** the private job is skipped before runner assignment
+
+#### Scenario: Retry after a transport interruption
+
+- **WHEN** the same job requests the same SHA again in the same run attempt
+- **THEN** the worker serves its recorded state or signed receipt and starts at most one VM for that attempt

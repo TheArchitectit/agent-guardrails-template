@@ -17,25 +17,30 @@ At main `e8949f5fed43bbeda75343bd48b9e68985a1eb9f`, the workflow selector is `ru
 
 ## Proposed unattended lab integration
 
-The current workflow does not dispatch the image harness to AI03–AI05. A
-candidate design is a narrowly scoped test worker on an authorized AI03–AI05
-host, invoked by the UCS03 job using a short-lived GitHub Actions identity. The
-worker would validate the token issuer, audience, repository, workflow, event,
-ref, run identity and expiry against an explicit trust policy; reject replays;
-fetch the exact candidate SHA independently; and run only the fixed, bounded,
-rootless image/protocol harness. Its receipt would bind source SHA, image
-digest, host, protocol stages and outcome to the requesting run. It would not
-expose a shell, a host container socket, reusable private-host credentials, or
-model credentials to the job. Unattended execution must not invoke Codex or a
-model; the separately authorized Codex smoke remains on demand.
+The canonical repository always runs the reusable workflow for trusted pushes,
+tags, same-repository pull requests, dispatches and reruns; missing worker
+configuration fails closed. Other consumers opt in with the operator-owned
+`GUARDRAILS_WORKER_SERVICE` name. The endpoint is resolved by the pinned AIGGP
+`templates/ci/service-endpoint.sh` helper, falling back to the runner-owned
+`/etc/guardrails-worker-services.json` registry by stable name. The registry
+contains tailnet TLS endpoints; no static host address is committed. The only
+consumer variables are the service name, TLS certificate SHA-256, CA PEM and
+receipt public key. These are not caller-controlled workflow inputs. When
+configured, the UCS03 job uses a short-lived GitHub Actions identity. The
+worker validates issuer, audience, repository, workflow, event, ref, run
+identity and expiry; rejects replays; fetches the exact candidate SHA
+independently; and runs only the fixed, bounded, disposable-VM harness. Its
+signed receipt binds source SHA, image digest, observed nonzero tool inventory,
+the nine-advisor benign call, protocol stages and outcome to the requesting
+run. It exposes no shell, host socket, private-host credential, or model
+credential. Unattended execution never invokes Codex or a model.
 
-This is a design option, not a deployed gate. The lab currently has no such
-worker or trusted runner-to-AI05 endpoint, and routing, TLS, token-claim
-validation, denial behavior, resource limits and isolation still need design
-review and live negative testing. Repository-only events are not automatically
-trusted merely because they can trigger a workflow. Implement the worker and
-fleet wiring through the infrastructure repository before reporting per-build
-runtime coverage.
+This remains a deployment contract, not repository-only proof. TLS, token-claim
+validation, denial behavior, resource limits, VM isolation and negative testing
+require infrastructure review. Repository events are not trusted merely
+because they can trigger a workflow. The worker replies busy while admission
+is serialized; the client retries with fresh OIDC tokens until a monotonic
+70-minute deadline and treats signed interrupted/failed receipts as terminal.
 
 ## Risks and verification
 

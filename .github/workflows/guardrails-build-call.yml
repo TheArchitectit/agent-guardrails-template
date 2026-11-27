@@ -1,0 +1,20 @@
+name: Guardrails per-build acceptance
+
+on:
+  push:
+    branches: ['**']
+    tags: ['**']
+  pull_request:
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  isolated-build:
+    if: (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && !github.event.deleted
+    uses: TheArchitectit/agent-guardrails-template/.github/workflows/guardrails-build.yml@c874121709faa4681a7fda8d0f5998396306814c # reusable workflow commit
+    permissions:
+      contents: read
+      id-token: write

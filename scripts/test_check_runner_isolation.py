@@ -131,6 +131,77 @@ class CleanTreePasses(unittest.TestCase):
         self.assertGreater(fleet, 0)
 
 
+class ReusableWorkerContract(unittest.TestCase):
+    """The one reusable call is allowed only when its callee is protected."""
+
+    def _worker_tree(self, caller: str, callee_if: str = gate.FORK_GUARD):
+        root = Path(tempfile.mkdtemp())
+        _tree(root)
+        _write(root, ".github/workflows/guardrails-build.yml", f"""\
+name: worker
+on:
+  workflow_call:
+permissions:
+  contents: read
+jobs:
+  isolated-build:
+    if: {callee_if}
+    runs-on: {gate.RUNNER_SELECTOR}
+    steps:
+      - run: true
+""")
+        _write(root, ".github/workflows/guardrails-build-call.yml", caller)
+        return root
+
+    def test_canonical_pinned_call_without_runs_on_is_allowed(self):
+        caller = f"""\
+name: caller
+on:
+  pull_request:
+jobs:
+  isolated-build:
+    uses: {gate.REUSABLE_CALL_WORKFLOW}@{'a' * 40}
+    if: {gate.FORK_GUARD}
+    permissions:
+      contents: read
+      id-token: write
+"""
+        root = self._worker_tree(caller)
+        try:
+            self.assertEqual(gate.scan(root)[3], [])
+        finally:
+            import shutil
+            shutil.rmtree(root)
+
+    def test_mutable_or_alternate_reusable_call_is_rejected(self):
+        for ref in ("main", "TheArchitectit/other/.github/workflows/guardrails-build.yml@" + "a" * 40):
+            caller = f"""name: caller\non:\n  pull_request:\njobs:\n  isolated-build:\n    uses: {gate.REUSABLE_CALL_WORKFLOW}@{ref}\n"""
+            root = self._worker_tree(caller)
+            try:
+                self.assertTrue(gate.scan(root)[3], ref)
+            finally:
+                import shutil
+                shutil.rmtree(root)
+
+    def test_reusable_callee_must_keep_fork_guard(self):
+        caller = f"""name: caller\non:\n  pull_request:\njobs:\n  isolated-build:\n    uses: {gate.REUSABLE_CALL_WORKFLOW}@{'a' * 40}\n"""
+        root = self._worker_tree(caller, callee_if="github.event_name == 'push'")
+        try:
+            self.assertTrue(any("reusable workflow lacks" in x for x in gate.scan(root)[3]))
+        finally:
+            import shutil
+            shutil.rmtree(root)
+
+    def test_reusable_caller_must_not_declare_runs_on(self):
+        caller = f"""name: caller\non:\n  pull_request:\njobs:\n  isolated-build:\n    uses: {gate.REUSABLE_CALL_WORKFLOW}@{'a' * 40}\n    runs-on: [self-hosted, Linux, X64, guardrails-ucs03]\n"""
+        root = self._worker_tree(caller)
+        try:
+            self.assertTrue(any("must not declare `runs-on`" in x for x in gate.scan(root)[3]))
+        finally:
+            import shutil
+            shutil.rmtree(root)
+
+
 class NonVacuity(unittest.TestCase):
     def test_zero_workflows_fails(self):
         with tempfile.TemporaryDirectory() as d:

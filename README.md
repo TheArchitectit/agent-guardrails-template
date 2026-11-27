@@ -63,8 +63,9 @@ Some tests require Linux facilities or configured services. Record skipped or en
 
 For the repository-wide local CI entry point, including the Python and Go
 inventories and deterministic policy gates, see [local validation](docs/ci/local-validation.md).
-For workflow triggers, runner selection, event-specific checks, and GitHub-only
-evidence, see [CI workflows and local validation](docs/ci/workflows.md).
+For workflow triggers, runner selection, event-specific checks, GitHub-only
+evidence, and the opt-in signed per-build worker contract, see [CI workflows
+and local validation](docs/ci/workflows.md) and [per-build worker](docs/ci/guardrails-per-build-worker.md).
 The [OpenSpec index](openspec/INDEX.md) lists the canonical specifications,
 active proposals, archived changes, and audit records, including the proposed
 [CI environment and MCP client qualification](openspec/changes/qualify-ci-environment-and-mcp-client/proposal.md).

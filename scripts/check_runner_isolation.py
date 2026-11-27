@@ -64,6 +64,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -80,6 +81,7 @@ WORKFLOW_DIR = Path(".github") / "workflows"
 TRUSTED_WORKFLOW = ".github/workflows/team-validation-fleet.yml"
 # The label that identifies the private UCS03 lab pool.
 TRUSTED_LABEL = "guardrails-ucs03"
+REUSABLE_CALL_WORKFLOW = "TheArchitectit/agent-guardrails-template/.github/workflows/guardrails-build.yml"
 # The only supported dynamic runner selector. The JSON default is intentionally
 # hosted so a missing repository variable never dispatches to a private runner.
 RUNNER_SELECTOR = "${{ fromJSON(vars.CI_RUNNER_LABELS || '[\"ubuntu-latest\"]') }}"
@@ -230,7 +232,7 @@ def check_permissions(doc: dict, job: dict, where: str) -> list[str]:
     return problems
 
 
-def check_reuse(job: dict, where: str) -> list[str]:
+def check_reuse(job: dict, where: str, *, allow_worker_checkouts: bool = False) -> list[str]:
     """No cross-repository reuse in any job that runs on the fleet.
 
     A shared action cache on a persistent host is restored across runs and
@@ -258,12 +260,44 @@ def check_reuse(job: dict, where: str) -> list[str]:
                     f"non-default workspace path is shared state, not a "
                     f"repo-scoped checkout (R19-13)"
                 )
-            if "repository" in with_:
+            trusted_client = (
+                allow_worker_checkouts
+                and with_.get("repository") == "TheArchitectit/agent-guardrails-template"
+                and re.fullmatch(r"[0-9a-f]{40}", str(with_.get("ref", "")))
+                and with_.get("persist-credentials") is False
+            )
+            if "repository" in with_ and not trusted_client:
                 problems.append(
                     f"{label}: checkout pulls `repository: "
                     f"{with_['repository']}` — cross-repository checkout in "
                     f"a fleet job (R19-13)"
                 )
+    return problems
+
+
+def _is_guardrails_reusable_call(job: dict) -> bool:
+    """Recognise only the canonical, immutable worker workflow call."""
+    uses = str(job.get("uses") or "")
+    prefix, sep, ref = uses.partition("@")
+    return bool(sep and prefix == REUSABLE_CALL_WORKFLOW
+                and re.fullmatch(r"[0-9a-f]{40}", ref))
+
+
+def _check_reusable_call(job: dict, where: str, repo: Path) -> list[str]:
+    problems: list[str] = []
+    if not _fork_guarded(job):
+        problems.append(f"{where}: worker caller lacks the required fork guard (R19-13)")
+    if not _is_guardrails_reusable_call(job):
+        problems.append(f"{where}: reusable workflow call must use the canonical repository/path and a full commit SHA (R19-13)")
+        return problems
+    target = repo / ".github/workflows/guardrails-build.yml"
+    try:
+        doc = yaml.safe_load(target.read_text(encoding="utf-8"))
+    except (OSError, yaml.YAMLError) as exc:
+        return [f"{where}: canonical reusable workflow is unreadable ({exc}) (R19-13)"]
+    target_job = _jobs(doc).get("isolated-build", {}) if isinstance(doc, dict) else {}
+    if not isinstance(target_job, dict) or not _fork_guarded(target_job):
+        problems.append(f"{where}: canonical reusable workflow lacks the required fork guard (R19-13)")
     return problems
 
 
@@ -364,6 +398,15 @@ def scan(repo: Path) -> tuple[int, int, int, list[str]]:
             if not isinstance(job, dict):
                 continue
             where = f"{rel}:{job_id}"
+            if "uses" in job and "runs-on" not in job:
+                if rel != ".github/workflows/guardrails-build-call.yml":
+                    violations.append(f"{where}: reusable workflow call is not an approved caller (R19-13)")
+                else:
+                    violations.extend(_check_reusable_call(job, where, repo))
+                continue
+            if "uses" in job and "runs-on" in job:
+                violations.append(f"{where}: reusable workflow caller must not declare `runs-on` (R19-13)")
+                continue
             labels = _as_labels(job.get("runs-on"))
 
             configurable = _is_approved_runner_selector(labels)
@@ -376,7 +419,7 @@ def scan(repo: Path) -> tuple[int, int, int, list[str]]:
                 continue
             if configurable:
                 routed_jobs += 1
-                violations.extend(check_reuse(job, where))
+                violations.extend(check_reuse(job, where, allow_worker_checkouts=(rel == ".github/workflows/guardrails-build.yml")))
                 if is_pr and not _fork_guarded(job):
                     violations.append(
                         f"{where}: workflow declares `pull_request` and this job "
@@ -401,7 +444,7 @@ def scan(repo: Path) -> tuple[int, int, int, list[str]]:
                 continue
 
             routed_jobs += 1
-            violations.extend(check_reuse(job, where))
+            violations.extend(check_reuse(job, where, allow_worker_checkouts=(rel == ".github/workflows/guardrails-build.yml")))
 
             if is_pr and not _fork_guarded(job):
                 violations.append(
