@@ -13,7 +13,7 @@ jobs:
       - name: Check out the candidate
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
-          ref: 6ec33578748f80000c2dbbfc3b32dc619b98a4a8
+          ref: c8ac1ed1d00d08f85b012a7f99a13f80627f4251
           fetch-depth: 1
           persist-credentials: false
       - name: Check out approved AIGGP
@@ -36,7 +36,7 @@ jobs:
         run: python3 -m pip install pytest pytest-cov PyYAML
       - name: Probe hosted runner isolation
         run: |
-          python3 scripts/runner_isolation_probe.py --workspace "$GITHUB_WORKSPACE" --sha 6ec33578748f80000c2dbbfc3b32dc619b98a4a8 --repo "$GITHUB_REPOSITORY" --out "$RUNNER_TEMP/runner-isolation.json"
+          python3 scripts/runner_isolation_probe.py --workspace "$GITHUB_WORKSPACE" --sha c8ac1ed1d00d08f85b012a7f99a13f80627f4251 --repo "$GITHUB_REPOSITORY" --out "$RUNNER_TEMP/runner-isolation.json"
           python3 scripts/check_runner_isolation.py --repo . --attestation "$RUNNER_TEMP/runner-isolation.json"
       - name: Run local validation entry point
         run: scripts/run_local_ci.sh
