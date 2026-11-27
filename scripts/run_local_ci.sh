@@ -7,12 +7,16 @@ usage() {
   cat <<'EOF'
 Usage: scripts/run_local_ci.sh
 
-Run approved AIGGP charset checks and self-test, then the repository-declared
-Python and Go suites/builds with their discovery gates and positive floors.
-Python coverage is written to ./coverage.xml. Prerequisites must already be
-installed; nothing is installed automatically.
+Run approved AIGGP charset checks, documentation gates, team CLI smoke checks,
+Go advisory checks, and the repository-declared Python and Go suites/builds
+with their discovery gates and positive floors. Python coverage is written to
+./coverage.xml. Python dependencies, the Docker CLI, and govulncheck v1.10.0
+must already be installed; nothing is installed automatically. If needed, the
+pinned scanner can be installed manually with:
+  GOTOOLCHAIN=local go install golang.org/x/vuln/cmd/govulncheck@v1.10.0
 
-The Docker/Podman context integration test is skipped by default. To opt in,
+The Docker CLI transport test always runs, but no Docker daemon is required.
+The Docker/Podman engine-backed context integration test is skipped by default. To opt in,
 set MCP_DOCKER_CONTEXT_ENGINE=docker or podman (or the workflow-compatible
 MCP_DOCKER_CONTEXT_DAEMON=available). An opted-in engine must already be
 installed and its daemon available. This script will only query engine info;
@@ -57,6 +61,28 @@ if missing:
     print("Install prerequisites yourself; this command never runs pip install.", file=sys.stderr)
     raise SystemExit(2)
 PY
+
+# The advisory workflow pins the scanner instead of silently accepting a
+# globally installed version. Keep installation under the caller's control.
+if ! command -v govulncheck >/dev/null 2>&1; then
+  echo "error: missing govulncheck v1.10.0; install it manually with GOTOOLCHAIN=local go install golang.org/x/vuln/cmd/govulncheck@v1.10.0" >&2
+  exit 2
+fi
+govulncheck_version="$(govulncheck -version 2>&1 || true)"
+if ! grep -q '^Scanner: govulncheck@v1\.10\.0$' <<< "$govulncheck_version"; then
+  echo "error: expected govulncheck v1.10.0; found:" >&2
+  printf '%s\n' "$govulncheck_version" >&2
+  echo "Install the pinned scanner manually with GOTOOLCHAIN=local go install golang.org/x/vuln/cmd/govulncheck@v1.10.0" >&2
+  exit 2
+fi
+
+# Team Validation requires the Docker CLI loopback transport test. The daemon
+# remains opt-in below; this is only a prerequisite check for the CLI test.
+if ! command -v docker >/dev/null 2>&1; then
+  echo "error: Docker CLI is required for workflow-equivalent context transport verification; install the CLI (a daemon is not required)" >&2
+  exit 2
+fi
+export MCP_DOCKER_CONTEXT_REQUIRE_CLI=1
 
 python_version="$(python3 --version 2>&1)"
 go_version="$(go version 2>&1)"
@@ -126,6 +152,27 @@ echo "== Approved AIGGP charset gate and self-test =="
 python3 .devgate/scripts/check_charset.py --repo .
 python3 .devgate/tests/test_check_charset.py
 
+echo "== Documentation line-cap and internal-link gates =="
+python3 scripts/check_doc_length.py .
+python3 scripts/test_check_doc_length.py
+bash scripts/check-doc-links.sh .
+
+echo "== Team CLI fixture smoke checks =="
+team_tmp="$(mktemp -d "${TMPDIR:-/tmp}/guardrails-local-ci-teams.XXXXXX")"
+trap 'rm -rf -- "$team_tmp"' EXIT
+mkdir -p "$team_tmp/.teams"
+cp .teams/rules.json "$team_tmp/.teams/rules.json"
+cp .teams/fixtures/full-project.json "$team_tmp/.teams/example.json"
+(
+  cd "$team_tmp"
+  python3 "$repo_root/scripts/team_manager.py" --project example validate-size
+  python3 "$repo_root/scripts/team_manager.py" --project example status
+  python3 "$repo_root/scripts/team_manager.py" --project example export-json --file teams-export.json
+  [[ -s teams-export.json ]]
+)
+rm -rf -- "$team_tmp"
+trap - EXIT
+
 echo "== Python discovery gate and self-test =="
 python3 scripts/check_python_tests.py --repo .
 python3 scripts/test_check_python_tests.py
@@ -187,6 +234,20 @@ PY
 echo "== Go module discovery gate and self-test =="
 python3 scripts/check_go_modules.py --repo .
 python3 scripts/test_check_go_modules.py
+
+echo "== Go advisory classifier and pinned vulnerability scan =="
+python3 -m pytest mcp-server/tests/test_govulncheck_gate.py -q
+advisory_tmp="$(mktemp -d "${TMPDIR:-/tmp}/guardrails-local-ci-advisories.XXXXXX")"
+trap 'rm -rf -- "$advisory_tmp"' EXIT
+(
+  cd mcp-server
+  GOTOOLCHAIN=local govulncheck -json ./... > "$advisory_tmp/govulncheck.json"
+  python3 scripts/govulncheck_gate.py \
+    --input "$advisory_tmp/govulncheck.json" \
+    --report "$advisory_tmp/summary.json"
+)
+rm -rf -- "$advisory_tmp"
+trap - EXIT
 
 echo "== Every Go inventory module =="
 while IFS=$'\t' read -r path floor test_command build_command; do
