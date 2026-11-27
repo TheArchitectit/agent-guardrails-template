@@ -29,6 +29,7 @@ jobs:
     timeout-minutes: 45
     env:
       CGO_ENABLED: "1"
+      MCP_DOCKER_CONTEXT_REQUIRE_CLI: "1"
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 

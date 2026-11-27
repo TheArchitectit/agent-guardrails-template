@@ -4,15 +4,15 @@
     {
       "suite": "tests",
       "path": "tests",
-      "setup_command": "python3 -m pip install pytest",
+      "setup_command": "python3 -m pip install pytest pyyaml",
       "test_command": "python3 -m pytest tests/ -v",
       "min_tests": 11,
-      "applicability": "required always: root regression suite; the daemon-backed Docker context case is collected and conditionally skipped unless explicitly enabled"
+      "applicability": "required always: root regression suite; UCS03 fleet requires the Docker client transport test; the live-engine test runs when Docker or rootless Podman is explicitly selected"
     },
     {
       "suite": "tests/regression",
       "path": "tests/regression",
-      "setup_command": "python3 -m pip install pytest",
+      "setup_command": "python3 -m pip install pytest pyyaml",
       "test_command": "python3 -m pytest tests/regression/ -v",
       "min_tests": 1,
       "applicability": "required always: committed PR fix regressions consumed by the Regression Guard hard gate"
