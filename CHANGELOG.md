@@ -8,6 +8,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [3.8.15] - 2026-11-27
+
+### Added
+
+- Guardrails CI builds and exercises the production MCP image on AI05 from
+  each trusted candidate. The UCS03 job verifies its signed source, image,
+  protocol and cleanup receipt. Codex client testing is available on demand.
+- The OpenSpec index links the qualification evidence and sprint plans with
+  role assignments, model choices and time estimates.
+
 ## [3.8.14] - 2026-11-27
 
 ### Changed

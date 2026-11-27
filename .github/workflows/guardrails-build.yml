@@ -75,4 +75,3 @@ jobs:
         run: |
           rm -rf -- .devgate
           rm -f -- "$RUNNER_TEMP/worker-ca.pem" "$RUNNER_TEMP/worker-receipt.pub" "$RUNNER_TEMP/guardrails-build-receipt.json"
-

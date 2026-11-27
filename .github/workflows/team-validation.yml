@@ -1024,14 +1024,11 @@ jobs:
       - name: Report MCP image and Codex coverage
         if: always()
         run: |
-          echo "MCP image build and deterministic protocol acceptance run in the separate opt-in guardrails-build-call workflow."
-          echo "Model-backed Codex tests are on-demand only and are not run in unattended CI."
-          echo "The Docker CLI context test does not build or run an image."
           {
             echo "### MCP image and Codex acceptance"
-            echo "Real-image protocol acceptance: delegated to the pinned opt-in guardrails-build-call reusable workflow when operator worker variables are configured."
-            echo "Model-backed Codex acceptance: intentionally not run in unattended CI; run it on demand."
-          } >> "$GITHUB_STEP_SUMMARY"
+            echo "The Guardrails lab requires the signed AI05 image and MCP receipt for each build. On a push or PR, open **Guardrails per-build acceptance**. On a manual Team Validation run, open the isolated build job in this run."
+            echo "Unattended builds run the deterministic protocol probe. An operator can request the model-backed Codex test separately."
+          } | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Upload Python coverage report
         if: always()

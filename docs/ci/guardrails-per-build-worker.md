@@ -33,9 +33,25 @@ skipped because the dedicated acceptance workflow owns the build.
    failures before the worker replies have no signed receipt.
 
 Unattended acceptance uses **zero model tokens**. An operator can request the
-real Codex client separately on an authorized application test host with
-`GUARDRAILS_SMOKE_CODEX_AUTH=1 scripts/run_mcp_image_codex_harness.sh --receipt FILE --run-codex`.
+real Codex client separately from a clean checkout on an authorized application
+test host. Choose a new receipt path outside the checkout.
+
+```bash
+receipt_dir=$(mktemp -d)
+GUARDRAILS_SMOKE_CODEX_AUTH=1 scripts/run_mcp_image_codex_harness.sh \
+  --receipt "$receipt_dir/codex-receipt.txt" --run-codex
+```
+
 See the [qualification evidence](../../openspec/changes/qualify-ci-environment-and-mcp-client/evidence.md).
+
+### When the worker cannot complete a build
+
+The worker runs one guest at a time. UCS03 retries busy, rate-limited or
+temporarily unavailable admission for up to 70 minutes. A guest has 24
+minutes to finish. A terminal failure stays associated with its original run
+attempt. After correcting the cause, rerun the acceptance job for a fresh
+attempt. A change to pinned base images or Go dependencies can require the
+operator to refresh the sealed guest's offline dependencies.
 
 ## Consumer configuration
 

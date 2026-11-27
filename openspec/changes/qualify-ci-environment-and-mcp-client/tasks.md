@@ -14,7 +14,7 @@
 - [x] 2.2 Start the built image using the supported MCP transport and connect with an actual Codex MCP client. Verify `initialize`, `tools/list`, and one benign `tools/call`; record Codex version, negotiated protocol, tool name, redacted result summary, image digest, and exit status; see [AI05 evidence](evidence.md).
 - [ ] 2.3 Verify the same documented build/client flow in local, GitHub-hosted, and registered self-hosted environments, or record a specific unavailable prerequisite without treating that environment as passed.
 - [ ] 2.4 Review logs and image contents for synthetic secret leakage and unintended build-context files. Remove only disposable images and fixtures created by this qualification.
-- [ ] 2.5 Wire deterministic exact-image MCP protocol acceptance to each candidate build through the pinned public reusable workflow and fixed client. Publish signed SHA- and digest-bound results, including terminal failure receipts; fail the lab job when required configuration is absent and skip private execution for fork pull requests. Unattended builds never invoke model-backed Codex calls.
+- [x] 2.5 Wire deterministic exact-image MCP protocol acceptance to each candidate build through the pinned public reusable workflow and fixed client. Publish signed SHA- and digest-bound results, including terminal failure receipts; fail the lab job when required configuration is absent and skip private execution for fork pull requests. Unattended builds never invoke model-backed Codex calls.
 
 ## 3. Document and review
 

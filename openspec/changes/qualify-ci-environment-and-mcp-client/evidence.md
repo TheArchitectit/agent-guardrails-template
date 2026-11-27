@@ -28,7 +28,7 @@
 
 ## Remaining evidence
 
-The complete local/hosted/UCS03 parity matrix and AI03-AI05 synthetic isolation still require additional evidence. Model-backed Codex testing runs only on operator request. Tasks remain unchecked until all associated scenarios pass.
+Event-specific parity and synthetic isolation across AI03, AI04 and AI05 remain separate qualification tasks. Model-backed Codex testing runs only on operator request. Tasks remain unchecked until all associated scenarios pass.
 
 ## Real MCP image and Codex client on AI05
 
@@ -47,3 +47,52 @@ The complete local/hosted/UCS03 parity matrix and AI03-AI05 synthetic isolation 
 ## UCS03 and AI05 worker qualification
 
 The initial [branch push](https://github.com/TheArchitectit/agent-guardrails-template/actions/runs/46080207476/job/140777179526) for `3de91ef24937c5374e07610a25b809014e9e753a` reached AI05. Its offline guest failed at the production Dockerfile's Go module download. The independently verified Ed25519 receipt recorded the correct commit, check ID, AI05 host, offline VM profile, failure and `codex=not-run`. The first [PR job](https://github.com/TheArchitectit/agent-guardrails-template/actions/runs/46080211523/job/140777192832) exposed a missing runner-local service map. After the map was installed on all three UCS03 runners, the [PR retry](https://github.com/TheArchitectit/agent-guardrails-template/actions/runs/46080211523/job/140778448109) reached AI05 and reproduced the dependency failure on synthetic merge commit `cb23d4dffa847350f573f211d8764cfb13ba481a`.
+
+After the sealed guest gained its own verified Go module cache, the [branch
+push job](https://github.com/TheArchitectit/agent-guardrails-template/actions/runs/46082099235/job/140783170514)
+passed for `a39ebc26a708575d670ec516318d5dc7d811a9f1`. The GitHub job and
+runner banner agreed on `ucs03-guardrails-spare2`. Independent Ed25519
+verification bound the check to AI05, its offline KVM guest and image
+`sha256:6d7e15d972da0a354e062190711e223897f792c47933bb28e7138dad949976d8`.
+MCP initialized, listed 50 tools and returned nine advisors. The worker
+removed the named run directory before signing. The receipt recorded
+`codex=not-run`; its file SHA-256 was
+`1e5b13400a811531dd1f7d9b8af21a6a73a0acc5a4ec5029d6b5f87626964b31`.
+
+The same Guardrails commit also passed the canonical local CI command in the
+[default hosted job](https://github.com/TheArchitectit/ci-runner-selector-proof-20261127/actions/runs/46082172369/job/140783403023).
+The proof repository had no `CI_RUNNER_LABELS` variable. Its job banner
+identified `GitHub Actions 1000032572`; the hosted-environment assertion and
+candidate/AIGGP identity checks passed. The guard for an unexpected selector
+override was skipped as intended. Proof commit
+`81bd5c01da652c78465339f9e9ace27534337c25`; full log SHA-256
+`9eb1d4c9ec5f799d578763e87c33af009303223f1fd7aaf29fe8da696dcf0d95`.
+
+The [PR job on the UCS03 primary](https://github.com/TheArchitectit/agent-guardrails-template/actions/runs/46082103594/job/140783183592)
+passed on its own signed merge commit
+`b901eaf3abb0e09ae896ec94d141883cb97f4588`. The Git commit object named
+`a39ebc26a708575d670ec516318d5dc7d811a9f1` as its second parent.
+AI05 returned digest
+`sha256:c8285e182c2091708d60fd9cee27457b47fcc66393edcf310fd4976dccad48e2`,
+50 tools, nine advisors, scoped cleanup and `codex=not-run`. The downloaded
+receipt's SHA-256 was
+`da64e69c2eb32c31a3f1dfa5373fb1cf4c92469ae5e657f030c59284ecd88264`.
+
+The same source and approved AIGGP pin ran locally on AI05, in a fresh
+two-CPU builder, from `2026-11-27T23:25:45Z` to `23:35:48Z`. It exited
+zero. The local and hosted logs recorded the same four Python suite outcomes:
+68 passed and one skipped, 12 passed, 289 passed and 32 passed. Both ran
+the Docker CLI context-transport test and skipped the optional live-engine
+context fixture. Both ran the Go inventories and their builds. The separate
+worker receipts above cover the live MCP image. The full local log SHA-256 is
+`279a62d6d8c31769fbb6c229c36f93a7978718c28a6d20bf233ef31fc1db5db8`.
+
+A [non-release tag push](https://github.com/TheArchitectit/agent-guardrails-template/actions/runs/46082853450/job/140785604355)
+exercised the `refs/tags/ci-proof/ai05-worker-a39ebc2` path on
+`ucs03-guardrails-spare1`. Its signed commit was
+`a39ebc26a708575d670ec516318d5dc7d811a9f1`, with image digest
+`sha256:920a8a48697c185e88add2100bd9b64a01d85e320495a273453c3abc2dafb7b9`.
+It passed the same MCP assertions and recorded `codex=not-run`.
+The branch, PR and tag jobs together exercised all three UCS03 fleet members.
+Each digest identifies the particular per-run image, which carries a unique
+ownership label. No persistent application container is deployed by this check.
