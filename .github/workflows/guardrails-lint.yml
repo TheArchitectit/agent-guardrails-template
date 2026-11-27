@@ -260,3 +260,24 @@ jobs:
           echo "| AI Attribution | ${{ needs.check-ai-attribution.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "See [Agent Guardrails](docs/AGENT_GUARDRAILS.md) for compliance requirements." >> $GITHUB_STEP_SUMMARY
+
+  verify-approved-aiggp:
+    name: Verify approved AIGGP
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, Linux, X64, guardrails-ucs03]
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Check out consumer repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Verify approved AIGGP
+        uses: ./.github/actions/verify-approved-aiggp
+
+      - name: Post-job cleanup (AIGGP checkout)
+        if: always()
+        run: rm -rf -- .devgate

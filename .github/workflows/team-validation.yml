@@ -132,12 +132,8 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
+          cache: false
           go-version-file: mcp-server/go.mod
-          cache-dependency-path: |
-            mcp-server/go.sum
-            cmd/team-cli/go.sum
-            examples/go/go.sum
-
       # Spec 19 R19-10: enumerate modules from the repository rather than
       # assuming a go.work workspace (there is none). scripts/check_go_modules.py
       # is the fail-closed discovery gate: every go.mod in the tree MUST have a
@@ -194,6 +190,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
+          cache: false
           go-version-file: mcp-server/go.mod
 
       - name: Build CLI
@@ -226,9 +223,8 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
+          cache: false
           go-version-file: mcp-server/go.mod
-          cache-dependency-path: mcp-server/go.sum
-
       - name: Web fail-closed middleware + REST authorization row
         run: |
           cd mcp-server
@@ -246,9 +242,8 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
+          cache: false
           go-version-file: mcp-server/go.mod
-          cache-dependency-path: mcp-server/go.sum
-
       - name: MCP full-path authz + live revocation bound row
         run: |
           cd mcp-server
@@ -264,9 +259,8 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
+          cache: false
           go-version-file: mcp-server/go.mod
-          cache-dependency-path: mcp-server/go.sum
-
       - name: Registry fail-closed + lifecycle row
         run: |
           cd mcp-server
@@ -286,9 +280,8 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
+          cache: false
           go-version-file: mcp-server/go.mod
-          cache-dependency-path: mcp-server/go.sum
-
       - name: Secret-leak / redaction row
         run: |
           cd mcp-server
@@ -326,9 +319,8 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
+          cache: false
           go-version-file: mcp-server/go.mod
-          cache-dependency-path: mcp-server/go.sum
-
       - name: Webhook URL SSRF guard row
         run: |
           cd mcp-server
@@ -349,9 +341,8 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
+          cache: false
           go-version-file: mcp-server/go.mod
-          cache-dependency-path: mcp-server/go.sum
-
       - name: Client-IP trust boundary row
         run: |
           cd mcp-server
@@ -373,9 +364,8 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
+          cache: false
           go-version-file: mcp-server/go.mod
-          cache-dependency-path: mcp-server/go.sum
-
       - name: Readiness and lifecycle row
         run: |
           cd mcp-server
@@ -397,9 +387,8 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
+          cache: false
           go-version-file: mcp-server/go.mod
-          cache-dependency-path: mcp-server/go.sum
-
       - name: CORS posture and declared-preflight row
         run: |
           cd mcp-server
@@ -419,9 +408,8 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
+          cache: false
           go-version-file: mcp-server/go.mod
-          cache-dependency-path: mcp-server/go.sum
-
       - name: Declared exposure registry row
         run: |
           cd mcp-server
@@ -443,9 +431,8 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
+          cache: false
           go-version-file: mcp-server/go.mod
-          cache-dependency-path: mcp-server/go.sum
-
       - name: Static-asset bypass controls row
         run: |
           cd mcp-server
@@ -465,9 +452,8 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
+          cache: false
           go-version-file: mcp-server/go.mod
-          cache-dependency-path: mcp-server/go.sum
-
       - name: Web UI shell path-confinement row
         run: |
           cd mcp-server
@@ -487,9 +473,8 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
+          cache: false
           go-version-file: mcp-server/go.mod
-          cache-dependency-path: mcp-server/go.sum
-
       - name: Resource permission matrix + per-resource authorization row
         run: |
           cd mcp-server
@@ -513,9 +498,8 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
+          cache: false
           go-version-file: mcp-server/go.mod
-          cache-dependency-path: mcp-server/go.sum
-
       - name: MCP decision/effect audit durability row
         run: |
           cd mcp-server
@@ -540,9 +524,8 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
+          cache: false
           go-version-file: mcp-server/go.mod
-          cache-dependency-path: mcp-server/go.sum
-
       - name: Credential rotation operator-audit row
         run: |
           cd mcp-server
@@ -564,9 +547,8 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
+          cache: false
           go-version-file: mcp-server/go.mod
-          cache-dependency-path: mcp-server/go.sum
-
       - name: Webhook signing-key rotation row
         run: |
           cd mcp-server
@@ -588,9 +570,8 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
+          cache: false
           go-version-file: mcp-server/go.mod
-          cache-dependency-path: mcp-server/go.sum
-
       - name: Legacy-acceptance removal switch row
         run: |
           cd mcp-server
@@ -612,9 +593,8 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
+          cache: false
           go-version-file: mcp-server/go.mod
-          cache-dependency-path: mcp-server/go.sum
-
       - name: Security headers + HSTS posture row
         run: |
           cd mcp-server
@@ -634,9 +614,8 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
+          cache: false
           go-version-file: mcp-server/go.mod
-          cache-dependency-path: mcp-server/go.sum
-
       - name: Storage transit posture row
         run: |
           cd mcp-server
@@ -654,9 +633,8 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
+          cache: false
           go-version-file: mcp-server/go.mod
-          cache-dependency-path: mcp-server/go.sum
-
       - name: Default-credential rejection row
         run: |
           cd mcp-server
@@ -676,9 +654,8 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
+          cache: false
           go-version-file: mcp-server/go.mod
-          cache-dependency-path: mcp-server/go.sum
-
       - name: Secret-source row
         run: |
           cd mcp-server
@@ -699,9 +676,8 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
+          cache: false
           go-version-file: mcp-server/go.mod
-          cache-dependency-path: mcp-server/go.sum
-
       - name: Webhook signing-material at-rest encryption row
         run: |
           cd mcp-server
@@ -722,9 +698,8 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
+          cache: false
           go-version-file: mcp-server/go.mod
-          cache-dependency-path: mcp-server/go.sum
-
       - name: Debug endpoint posture row
         run: |
           cd mcp-server
@@ -744,9 +719,8 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
+          cache: false
           go-version-file: mcp-server/go.mod
-          cache-dependency-path: mcp-server/go.sum
-
       - name: Verifier-key strength row
         run: |
           cd mcp-server
@@ -768,9 +742,8 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
+          cache: false
           go-version-file: mcp-server/go.mod
-          cache-dependency-path: mcp-server/go.sum
-
       - name: Ingress posture row
         run: |
           cd mcp-server
@@ -792,9 +765,8 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
+          cache: false
           go-version-file: mcp-server/go.mod
-          cache-dependency-path: mcp-server/go.sum
-
       - name: Credential validity bound row
         run: |
           cd mcp-server
@@ -821,9 +793,8 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
+          cache: false
           go-version-file: mcp-server/go.mod
-          cache-dependency-path: mcp-server/go.sum
-
       - name: Credential issuance and authoring row
         run: |
           cd mcp-server
@@ -876,9 +847,8 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
+          cache: false
           go-version-file: mcp-server/go.mod
-          cache-dependency-path: mcp-server/go.sum
-
       - name: Mutation-kill control row
         run: |
           cd mcp-server
@@ -906,9 +876,8 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
+          cache: false
           go-version-file: mcp-server/go.mod
-          cache-dependency-path: mcp-server/go.sum
-
       - name: Tool schema/handler conformance row
         run: |
           cd mcp-server
@@ -930,12 +899,32 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
+          cache: false
           go-version-file: mcp-server/go.mod
-          cache-dependency-path: mcp-server/go.sum
-
       - name: Control-plane evidence retention row
         run: |
           cd mcp-server
           go test ./internal/controlplane -run 'TestEvidenceStore|TestNewEvidenceStore|TestStoredRecord|TestPromoteRetainsItsAcceptanceEvidence|TestPromoteStatesWhenEvidenceIsNotRetained' -count=1 -v
           go test ./internal/config -run 'TestValidateAcceptsAnUnconfiguredEvidenceStore|TestValidateRefusesRetentionWithNoStore|TestValidateRefusesAStoreWithNoRetentionWindow|TestValidateEvidenceRetentionBounds|TestValidateEvidenceRetentionCouplesSigningToProfile|TestValidateCouplesEvidenceRetentionToStartup' -count=1 -v
           go test ./internal/mcp -run 'TestControlPlaneResourceReportsEvidenceRetention|TestControlPlaneResourceOmitsRetentionWhenUnconfigured' -count=1 -v
+
+  verify-approved-aiggp:
+    name: Verify approved AIGGP
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, Linux, X64, guardrails-ucs03]
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Check out consumer repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Verify approved AIGGP
+        uses: ./.github/actions/verify-approved-aiggp
+
+      - name: Post-job cleanup (AIGGP checkout)
+        if: always()
+        run: rm -rf -- .devgate
