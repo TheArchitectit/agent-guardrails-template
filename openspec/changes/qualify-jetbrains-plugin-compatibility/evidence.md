@@ -68,3 +68,9 @@ loopback fixture recorded a POST to `/ide/validate/selection` with
 
 This receipt covers one product, build and runtime. Cross-build and
 cross-product verification remain open.
+
+JetBrains Plugin Verifier 1.411 checked this same ZIP against Community
+2022.3.3 (`IC-223.8836.41`) and Community 2024.1.7 (`IC-241.19416.15`).
+Both reports returned Compatible, with one use of an API scheduled for removal
+and two deprecated API uses. These are binary-compatibility results. The
+interactive selection run used `IC-233.13135.103`.
