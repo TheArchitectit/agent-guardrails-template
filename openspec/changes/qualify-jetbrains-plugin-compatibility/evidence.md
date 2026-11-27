@@ -46,3 +46,25 @@ The decisive log checks were `IDE STARTED`, `IDE: IntelliJ IDEA (build #IC-233.1
 ## Canonical selection boundary attempt
 
 The packaged artifact does register `Guardrail.ValidateSelection` in `META-INF/plugin.xml` to `com.guardrail.plugin.actions.ValidateSelectionAction`, and the compiled action calls `GuardrailService.validateSelection(selectedText, language)`. The service builds the canonical `selection` JSON field. The actual IDE launch above proved plugin loading, but no ActionManager/editor fixture or loopback capture was run in this bounded session; therefore the end-to-end selection event remains open rather than being inferred from source registration. A future fixture should open a synthetic editor, select deterministic text, invoke `Guardrail.ValidateSelection` through ActionManager, capture the loopback JSON, and dismiss the resulting validation dialog.
+
+## Installed selection action on UCS03
+
+At commit `681bedeb84b8535ab39eb7c82f916a7467739210`, the lab verified the
+retained plugin ZIP against SHA-256
+`f55b283c138f43aa4c5f4512adec40f68d3aebbee755f5e7bd23a90da8b61556`.
+The official IntelliJ Community 2023.3.2 archive matched JetBrains' published
+`d252110141046388e728532c5e7a312a6d40d6b75dabb493e88c0e2b8a914574`.
+IntelliJ build `IC-233.13135.103` with bundled JBR `17.0.9+7-b1087.9`
+reported `Loaded custom plugins: Guardrail (1.0.0)` in an isolated Xvfb profile.
+
+With the synthetic selection highlighted in a Kotlin editor, Find Action
+invoked the installed `Guardrail.ValidateSelection` action. The private
+loopback fixture recorded a POST to `/ide/validate/selection` with
+`application/json; charset=utf-8` and this body.
+
+```json
+{"selection":"IDE05_SELECTION_SENTINEL_7f31","language":"kotlin"}
+```
+
+This receipt covers one product, build and runtime. Cross-build and
+cross-product verification remain open.

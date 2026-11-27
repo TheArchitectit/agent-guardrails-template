@@ -11,6 +11,6 @@
 
 - [ ] 2.1 Independently review all scenarios, record exact build and runtime evidence, run strict OpenSpec and repository gates, then archive the accepted change.
 
-The [packaging evidence](evidence.md) verifies the installable ZIP for the pinned IntelliJ build. The installed-runtime observation now verifies actual loading for that one build; the declared IDE range, broader product matrix, and canonical selection event remain open.
+The [packaging evidence](evidence.md) verifies the installable ZIP for the pinned IntelliJ build. The UCS03 run verified loading and the canonical selection request on IntelliJ Community 2023.3.2. The declared IDE range and broader product matrix remain open.
 
 The runtime evidence uses only explicit, hash-pinned JetBrains and plugin artifacts in a disposable container/profile. It does not scan or execute arbitrary host runtimes, alter host IDE profiles, or claim UI/service acceptance beyond the observed plugin load.
